@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Client;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ServiceAreasController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,8 @@ Route::get('/trial',    fn () => view('trial'))->name('trial');
 Route::get('/service-areas',           [ServiceAreasController::class, 'index'])->name('service-areas.index');
 Route::get('/service-areas/{slug}',    [ServiceAreasController::class, 'show'])->name('service-areas.show')
     ->where('slug', '[a-z\-]+');
+
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 /*
 |--------------------------------------------------------------------------
