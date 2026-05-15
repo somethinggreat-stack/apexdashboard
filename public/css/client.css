@@ -1,0 +1,16 @@
+@import url('admin.css');
+
+:root {
+    --primary: #0ea5e9;
+    --primary-dark: #0284c7;
+    --sidebar: #0c4a6e;
+}
+
+.sidebar-brand .badge-portal { background: var(--primary); }
+.sidebar-nav a:hover, .sidebar-nav a.active { border-left-color: var(--primary); }
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.timeline-item::before { background: var(--primary); }
+.timeline-marker { color: var(--primary); }
+.auth-body { background: linear-gradient(135deg, #0c4a6e 0%, #0ea5e9 100%); }

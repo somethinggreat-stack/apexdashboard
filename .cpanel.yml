@@ -1,0 +1,27 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/apexgrow/public_html/
+    - /bin/cp -R app $DEPLOYPATH
+    - /bin/cp -R bootstrap $DEPLOYPATH
+    - /bin/cp -R config $DEPLOYPATH
+    - /bin/cp -R database $DEPLOYPATH
+    - /bin/cp -R public $DEPLOYPATH
+    - /bin/cp -R resources $DEPLOYPATH
+    - /bin/cp -R routes $DEPLOYPATH
+    - /bin/cp -R storage $DEPLOYPATH
+    - /bin/cp -R tests $DEPLOYPATH
+    - /bin/cp -R .well-known $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH
+    - /bin/cp artisan $DEPLOYPATH
+    - /bin/cp composer.json $DEPLOYPATH
+    - /bin/cp composer.lock $DEPLOYPATH
+    - /bin/cp package.json $DEPLOYPATH
+    - /bin/cp package-lock.json $DEPLOYPATH
+    - /bin/cp phpunit.xml $DEPLOYPATH
+    - /bin/cp vite.config.js $DEPLOYPATH
+    - /bin/cp README.md $DEPLOYPATH
+    - cd $DEPLOYPATH && /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
+    - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
+    - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
+    - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
