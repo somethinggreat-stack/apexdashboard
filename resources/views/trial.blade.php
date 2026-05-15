@@ -7,6 +7,7 @@
 <title>Try 5 Test Clients — Pay After Results | Apex Growth Systems</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ============================================
@@ -870,7 +871,13 @@ footer {
     </div>
   </div>
   <div class="hero-image-wrap reveal">
-    <img src="/Images/heroimage.png" alt="Apex Growth Systems fulfillment workflow on a credit repair client file" class="hero-image" loading="eager">
+    <picture>
+        <source srcset="/Images/heroimage.webp" type="image/webp">
+        <img src="/Images/heroimage.png" alt="Apex Growth Systems fulfillment workflow on a credit repair client file"
+             class="hero-image"
+             width="1200" height="900"
+             loading="eager" decoding="async" fetchpriority="high">
+    </picture>
   </div>
 </section>
 

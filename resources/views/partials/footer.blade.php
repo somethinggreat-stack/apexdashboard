@@ -127,7 +127,10 @@ footer a { color: inherit; text-decoration: none; }
   <div class="footer-grid">
     <div class="footer-brand">
       <a href="/" class="logo">
-        <img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img" style="height: 64px; filter: brightness(0) invert(1); opacity: 0.9;">
+        <picture>
+          <source srcset="/Images/logo.webp" type="image/webp">
+          <img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img" width="192" height="64" loading="lazy" decoding="async" style="height: 64px; filter: brightness(0) invert(1); opacity: 0.9;">
+        </picture>
       </a>
       <p>Backend credit repair fulfillment for credit repair businesses. Dispute preparation, bureau follow-up calls, CFPB / FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports. We are not a law firm and do not provide legal advice.</p>
     </div>

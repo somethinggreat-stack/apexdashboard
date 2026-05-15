@@ -957,14 +957,16 @@ footer {
   <div class="section-inner">
     <h2 class="section-headline reveal">Documented <em>Fulfillment Outcomes</em></h2>
     <div class="results-image-grid">
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test1.png" alt="Client file workflow 1" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test2.png" alt="Client file workflow 2" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test3.png" alt="Client file workflow 3" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test4.png" alt="Client file workflow 4" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test5.png" alt="Client file workflow 5" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test6.png" alt="Client file workflow 6" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test7.png" alt="Client file workflow 7" loading="lazy"></div>
-      <div class="result-image-card reveal" onclick="openLightbox(this)"><img src="/Images/test8.png" alt="Client file workflow 8" loading="lazy"></div>
+      @for ($i = 1; $i <= 8; $i++)
+        <div class="result-image-card reveal" onclick="openLightbox(this)">
+          <picture>
+            <source srcset="/Images/test{{ $i }}.webp" type="image/webp">
+            <img src="/Images/test{{ $i }}.png" alt="Client file workflow {{ $i }}"
+                 width="800" height="600"
+                 loading="lazy" decoding="async">
+          </picture>
+        </div>
+      @endfor
     </div>
     <div class="view-more-wrap reveal">
       <a href="/contact" class="view-more-btn">Book A Fulfillment Call <span>&rarr;</span></a>

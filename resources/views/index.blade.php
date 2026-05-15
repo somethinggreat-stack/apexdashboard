@@ -7,6 +7,7 @@
 <title>Apex Growth Systems | Credit Repair Fulfillment Partner For Credit Repair Businesses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" imagesrcset="/Images/heroimage.webp 1x" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ============================================
@@ -2339,7 +2340,12 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
 
     <div class="hero-right">
       <div class="hero-image" data-parallax="0.05">
-        <img src="/Images/heroimage.png" alt="Apex Growth Systems" />
+        <picture>
+          <source srcset="/Images/heroimage.webp" type="image/webp">
+          <img src="/Images/heroimage.png" alt="Apex Growth Systems backend credit repair workflow"
+               width="1200" height="900"
+               loading="eager" decoding="async" fetchpriority="high">
+        </picture>
       </div>
     </div>
   </div>
@@ -2567,14 +2573,16 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
     </div>
 
     <div class="proof-grid reveal-stagger">
-      <div class="proof-img"><img src="/Images/test1.png" alt="Client file workflow 1" /></div>
-      <div class="proof-img"><img src="/Images/test2.png" alt="Client file workflow 2" /></div>
-      <div class="proof-img"><img src="/Images/test3.png" alt="Client file workflow 3" /></div>
-      <div class="proof-img"><img src="/Images/test4.png" alt="Client file workflow 4" /></div>
-      <div class="proof-img"><img src="/Images/test5.png" alt="Client file workflow 5" /></div>
-      <div class="proof-img"><img src="/Images/test6.png" alt="Client file workflow 6" /></div>
-      <div class="proof-img"><img src="/Images/test7.png" alt="Client file workflow 7" /></div>
-      <div class="proof-img"><img src="/Images/test8.png" alt="Client file workflow 8" /></div>
+      @for ($i = 1; $i <= 8; $i++)
+        <div class="proof-img">
+          <picture>
+            <source srcset="/Images/test{{ $i }}.webp" type="image/webp">
+            <img src="/Images/test{{ $i }}.png" alt="Client file workflow {{ $i }}"
+                 width="800" height="600"
+                 loading="lazy" decoding="async">
+          </picture>
+        </div>
+      @endfor
     </div>
     <div class="proof-view-more">
       <a href="/results"><span>View More Business Results</span> <span class="arrow">→</span></a>

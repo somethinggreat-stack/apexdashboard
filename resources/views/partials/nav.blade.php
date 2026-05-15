@@ -160,7 +160,12 @@
 
 <nav class="nav" id="nav">
   <div class="nav-inner">
-    <a href="/" class="logo"><img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img"></a>
+    <a href="/" class="logo">
+      <picture>
+        <source srcset="/Images/logo.webp" type="image/webp">
+        <img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img" width="240" height="80" decoding="async">
+      </picture>
+    </a>
     <ul class="nav-links" id="navLinks">
       <li><a href="/#services">Services</a></li>
       <li><a href="/results">Business Results</a></li>
