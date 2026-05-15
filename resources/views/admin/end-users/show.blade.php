@@ -215,7 +215,7 @@
             <input type="file" id="bulkFileInput" multiple
                    accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.doc,.docx,.xls,.xlsx,.csv,.txt">
             <div class="dropzone-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -223,8 +223,8 @@
             </div>
             <div class="dropzone-title">Drag &amp; drop documents here</div>
             <div class="dropzone-sub">Upload multiple files at once, or click to browse.</div>
-            <div class="dz-list" id="bulkList"></div>
         </div>
+        <div class="dz-list" id="bulkList"></div>
 
         @if ($identityDocs->isNotEmpty())
             <h4 class="doc-cat-head">Identity Documents ({{ $identityDocs->count() }})</h4>

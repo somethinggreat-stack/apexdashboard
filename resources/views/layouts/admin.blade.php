@@ -24,7 +24,7 @@
                 <form method="POST" action="{{ route('admin.client-selector.clear') }}">
                     @csrf
                     <button type="submit" class="sw-switch">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <polyline points="17 1 21 5 17 9"></polyline>
                             <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                             <polyline points="7 23 3 19 7 15"></polyline>
@@ -38,7 +38,7 @@
             <div class="sidebar-working sidebar-working--none">
                 <div class="sw-label">No Business Owner Selected</div>
                 <a href="{{ route('admin.client-selector.index') }}" class="sw-switch">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="7"></circle>
                         <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
                     </svg>
