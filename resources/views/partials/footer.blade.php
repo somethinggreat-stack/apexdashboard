@@ -32,6 +32,7 @@
         <li><a href="/results">Business Results</a></li>
         <li><a href="/contact">Contact</a></li>
         <li><a href="/trial">Pay-After-Results Trial</a></li>
+        <li><a href="/service-areas">Service Areas (All 50 States)</a></li>
       </ul>
     </div>
     <div class="footer-col">
