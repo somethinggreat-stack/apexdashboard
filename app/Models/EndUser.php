@@ -38,17 +38,19 @@ class EndUser extends Model
 
     protected $fillable = [
         'client_id',
-        'first_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
+        'first_name', 'middle_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
         'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
         'current_score', 'goal_score', 'status', 'rounds', 'start_date',
+        'intake_status', 'intake_submitted_ip', 'intake_submitted_at',
     ];
     protected $casts = [
         'start_date' => 'date',
         'date_of_birth' => 'date',
         'rounds' => 'array',
+        'intake_submitted_at' => 'datetime',
         'ssn' => 'encrypted',
         'credit_monitoring_password' => 'encrypted',
         'credit_monitoring_security_answer' => 'encrypted',
@@ -93,8 +95,9 @@ class EndUser extends Model
 
     public function getFullNameAttribute(): string
     {
+        $middle = $this->middle_name ? " {$this->middle_name}" : '';
         $suffix = $this->suffix && $this->suffix !== 'None' ? " {$this->suffix}" : '';
-        return trim("{$this->first_name} {$this->last_name}{$suffix}");
+        return trim("{$this->first_name}{$middle} {$this->last_name}{$suffix}");
     }
 
     public function getMaskedSsnAttribute(): ?string

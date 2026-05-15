@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Client;
+use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ServiceAreasController;
 use App\Http\Controllers\SitemapController;
@@ -38,6 +39,18 @@ Route::middleware('throttle:10,1')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Public Intake Form (per-BO secret-token URLs)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/intake/{token}',          [IntakeController::class, 'show'])->name('intake.show')->where('token', '[A-Za-z0-9]+');
+    Route::middleware('throttle:5,1')->post('/intake/{token}', [IntakeController::class, 'store'])->name('intake.store')->where('token', '[A-Za-z0-9]+');
+    Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9]+');
+});
+
+/*
+|--------------------------------------------------------------------------
 | VA Admin (admin guard)
 |--------------------------------------------------------------------------
 */
@@ -65,6 +78,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Business-owner CRUD — accessible without a selection so VAs can manage BOs
         Route::resource('clients', Admin\ClientController::class);
+        Route::post('clients/{client}/regenerate-intake-token', [Admin\ClientController::class, 'regenerateIntakeToken'])
+            ->name('clients.regenerate-intake-token');
+        Route::delete('clients/{client}/intake-logo', [Admin\ClientController::class, 'removeIntakeLogo'])
+            ->name('clients.intake-logo.remove');
 
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
