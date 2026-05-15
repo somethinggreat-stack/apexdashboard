@@ -80,6 +80,9 @@ class EndUserController extends Controller
         if (array_key_exists('credit_monitoring_password', $data) && $data['credit_monitoring_password'] === null) {
             unset($data['credit_monitoring_password']);
         }
+        if (array_key_exists('credit_monitoring_security_answer', $data) && $data['credit_monitoring_security_answer'] === null) {
+            unset($data['credit_monitoring_security_answer']);
+        }
         if (array_key_exists('cfpb_password', $data) && $data['cfpb_password'] === null) {
             unset($data['cfpb_password']);
         }
@@ -116,6 +119,7 @@ class EndUserController extends Controller
             'credit_monitoring_name'      => "$reqOrNullable|string|max:100",
             'credit_monitoring_username'  => "$reqOrNullable|string|max:255",
             'credit_monitoring_password'  => "$reqOrNullable|string|max:255",
+            'credit_monitoring_security_answer' => "$reqOrNullable|string|max:255",
             'cfpb_email'                  => 'nullable|email|max:255',
             'cfpb_password'               => 'nullable|string|max:255',
             'start_date'                  => "$req|date",

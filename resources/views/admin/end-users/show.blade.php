@@ -134,6 +134,17 @@
                     @endif
                 </div>
             </div>
+            <div>
+                <label>Security Question Answer</label>
+                <div class="password-cell">
+                    <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_security_answer }}">
+                        @if ($endUser->credit_monitoring_security_answer) ••••••••• @else — @endif
+                    </span>
+                    @if ($endUser->credit_monitoring_security_answer)
+                        <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <h4 class="profile-section-head">CFPB</h4>
@@ -460,7 +471,7 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Password <span class="muted">(leave blank to keep current)</span></label><input type="text" name="credit_monitoring_password" autocomplete="off"></div>
-                    <div class="form-group"></div>
+                    <div class="form-group"><label>Security Question Answer <span class="muted">(leave blank to keep current)</span></label><input type="text" name="credit_monitoring_security_answer" autocomplete="off"></div>
                 </div>
             </div>
 

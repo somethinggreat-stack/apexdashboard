@@ -188,7 +188,11 @@
                         <input type="text" name="credit_monitoring_password" value="{{ old('credit_monitoring_password') }}" required autocomplete="off" maxlength="255">
                         @error('credit_monitoring_password')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
-                    <div class="form-group"></div>
+                    <div class="form-group">
+                        <label>Security Question Answer *</label>
+                        <input type="text" name="credit_monitoring_security_answer" value="{{ old('credit_monitoring_security_answer') }}" required autocomplete="off" maxlength="255">
+                        @error('credit_monitoring_security_answer')<small class="field-error">{{ $message }}</small>@enderror
+                    </div>
                 </div>
             </div>
 

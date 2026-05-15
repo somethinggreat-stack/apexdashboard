@@ -108,6 +108,7 @@
             <div><label>Service Name</label><div>{{ $endUser->credit_monitoring_name ?? '—' }}</div></div>
             <div><label>Username / Email</label><div>{{ $endUser->credit_monitoring_username ?? '—' }}</div></div>
             <div><label>Password</label><div>{{ $endUser->credit_monitoring_password ? '•••••••••' : '—' }}</div></div>
+            <div><label>Security Question Answer</label><div>{{ $endUser->credit_monitoring_security_answer ? '•••••••••' : '—' }}</div></div>
         </div>
 
         <h4 class="profile-section-head">CFPB</h4>

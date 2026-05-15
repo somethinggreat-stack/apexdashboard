@@ -33,6 +33,7 @@ class EndUser extends Model
         'first_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
         'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
+        'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
         'current_score', 'goal_score', 'status', 'start_date',
     ];
@@ -41,9 +42,10 @@ class EndUser extends Model
         'date_of_birth' => 'date',
         'ssn' => 'encrypted',
         'credit_monitoring_password' => 'encrypted',
+        'credit_monitoring_security_answer' => 'encrypted',
         'cfpb_password' => 'encrypted',
     ];
-    protected $hidden = ['ssn', 'credit_monitoring_password', 'cfpb_password'];
+    protected $hidden = ['ssn', 'credit_monitoring_password', 'credit_monitoring_security_answer', 'cfpb_password'];
 
     public function client()
     {

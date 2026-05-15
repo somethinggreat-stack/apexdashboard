@@ -88,6 +88,7 @@ class EndUserController extends Controller
             'credit_monitoring_name'      => 'required|string|max:100',
             'credit_monitoring_username'  => 'required|string|max:255',
             'credit_monitoring_password'  => 'required|string|max:255',
+            'credit_monitoring_security_answer' => 'required|string|max:255',
             'cfpb_email'                  => 'nullable|email|max:255',
             'cfpb_password'               => 'nullable|string|max:255',
             'start_date'                  => 'required|date',
