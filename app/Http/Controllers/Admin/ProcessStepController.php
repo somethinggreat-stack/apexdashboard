@@ -59,7 +59,6 @@ class ProcessStepController extends Controller
 
         $created = 0;
         $skipped = 0;
-        $firstStepId = null;
 
         foreach (array_unique($data['step_types']) as $type) {
             $exists = ProcessStep::where('end_user_id', $data['end_user_id'])
@@ -73,14 +72,13 @@ class ProcessStepController extends Controller
                 continue;
             }
 
-            $step = ProcessStep::create($shared + ['step_type' => $type]);
-            $firstStepId = $firstStepId ?? $step->id;
+            ProcessStep::create($shared + ['step_type' => $type]);
             $created++;
         }
 
         $msg = match (true) {
-            $created > 0 && $skipped > 0 => "{$created} process step(s) logged. {$skipped} skipped (already existed for this round & week).",
-            $created > 0                 => "{$created} process step(s) logged.",
+            $created > 0 && $skipped > 0 => "Process step(s) logged. {$created} created, {$skipped} skipped (already existed for this round & week).",
+            $created > 0                 => 'Process step(s) logged.',
             default                      => 'No new steps created — all selected steps already exist for this round & week.',
         };
 
@@ -88,14 +86,9 @@ class ProcessStepController extends Controller
             return response()->json(['created' => $created, 'skipped' => $skipped]);
         }
 
-        $redirect = back()->with('status', $msg);
-
-        // Only auto-open the upload modal when exactly one new step was made.
-        if ($created === 1 && $firstStepId) {
-            $redirect->with('new_step_id', $firstStepId);
-        }
-
-        return $redirect;
+        // No document-upload prompt. Logging a step only creates the
+        // timeline entry and shows a success message.
+        return back()->with('status', $msg);
     }
 
     public function update(Request $request, string $id)

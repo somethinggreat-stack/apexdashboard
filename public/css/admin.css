@@ -226,7 +226,7 @@ a:hover { text-decoration: underline; }
 /* Timeline */
 .timeline { position: relative; padding-left: 30px; }
 .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
-.timeline-item { position: relative; padding-bottom: 24px; }
+.timeline-item { position: relative; padding-bottom: 14px; }
 .timeline-item::before {
     content: ''; position: absolute; left: -26px; top: 6px;
     width: 12px; height: 12px; background: var(--primary); border-radius: 50%; border: 2px solid white;
@@ -261,7 +261,9 @@ a:hover { text-decoration: underline; }
 .pagination-wrap nav a, .pagination-wrap nav span { padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; }
 
 /* Process step timeline */
-.timeline-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.timeline-head { display: flex; gap: 8px; align-items: center; margin-bottom: 0; flex-wrap: wrap; }
+.timeline-delete { margin: 0 0 0 auto; display: inline; }
+.timeline-delete .btn-sm { padding: 3px 10px; }
 .step-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .stat-pill { padding: 3px 10px; background: #e2e8f0; color: var(--text); border-radius: 999px; font-size: 12px; font-weight: 500; }
 .stat-pill.stat-success { background: #dcfce7; color: #166534; }

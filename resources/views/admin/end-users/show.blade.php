@@ -190,21 +190,7 @@
                             <span class="badge">Week {{ $step->week }}</span>
                             <span class="badge step-badge">{{ $step->step_type_label }}</span>
                             <span class="timeline-date">{{ $step->step_date?->format('M d, Y') }}</span>
-                        </div>
-                        @include('admin.end-users.partials.step-metrics', ['step' => $step])
-                        @if ($step->documents->count())
-                            <div class="step-docs">
-                                <strong>{{ $step->documents->count() }} documents:</strong>
-                                @foreach ($step->documents as $doc)
-                                    <a href="{{ $doc->url }}" target="_blank" class="doc-chip" title="{{ $doc->description }}">
-                                        {{ $documentCategories[$doc->category] ?? $doc->category }}
-                                    </a>
-                                @endforeach
-                            </div>
-                        @endif
-                        <div class="step-actions">
-                            <button class="btn btn-sm" onclick="openUploadModal({{ $step->id }})">+ Upload Document</button>
-                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" style="display:inline" onsubmit="return confirm('Delete this step and its documents?')">
+                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" class="timeline-delete" onsubmit="return confirm('Delete this process step?')">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
@@ -773,10 +759,6 @@
     }
 
     sync();
-
-    @if (session('new_step_id'))
-        window.addEventListener('load', () => openUploadModal({{ session('new_step_id') }}));
-    @endif
 
     /* ===== Bulk drag-and-drop document upload ===== */
     (function () {
