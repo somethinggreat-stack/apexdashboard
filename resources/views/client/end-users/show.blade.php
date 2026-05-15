@@ -53,6 +53,7 @@
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
     <button class="tab" data-target="tab-notes">Notes ({{ $endUser->notes->count() }})</button>
+    <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 
 <div id="tab-profile" class="tab-panel active">
@@ -210,6 +211,16 @@
         @empty
             <div class="empty">No notes yet.</div>
         @endforelse
+    </div>
+</div>
+
+<div id="tab-status-report" class="tab-panel">
+    <div class="card">
+        <div class="card-header">
+            <h3>Status Report</h3>
+            <button class="btn btn-secondary" onclick="window.print()">Print / Save PDF</button>
+        </div>
+        @include('partials.status-report', ['endUser' => $endUser])
     </div>
 </div>
 

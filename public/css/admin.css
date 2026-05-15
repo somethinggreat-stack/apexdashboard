@@ -359,3 +359,186 @@ a:hover { text-decoration: underline; }
 .picker-card:active { transform: scale(0.99); }
 .picker-card-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
 .picker-card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #64748b; }
+
+/* ============================================
+   Mobile menu trigger
+   ============================================ */
+.mobile-menu-toggle {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+.mobile-menu-toggle span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--text);
+    position: relative;
+}
+.mobile-menu-toggle span::before,
+.mobile-menu-toggle span::after {
+    content: '';
+    position: absolute;
+    left: 0; width: 100%; height: 2px;
+    background: var(--text);
+}
+.mobile-menu-toggle span::before { top: -6px; }
+.mobile-menu-toggle span::after  { top: 6px; }
+
+.sidebar-scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 32, 67, 0.45);
+    z-index: 998;
+}
+.sidebar-scrim.open { display: block; }
+
+/* ============================================
+   Tablet (<= 900px)
+   ============================================ */
+@media (max-width: 900px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.28s ease;
+        z-index: 999;
+        width: 260px;
+        box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .main {
+        margin-left: 0;
+        padding: 16px;
+        width: 100%;
+    }
+    .content { width: 100%; }
+
+    .topbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+        align-items: center;
+    }
+    .topbar .page-title { font-size: 20px; flex: 1 1 auto; min-width: 0; }
+    .topbar-right { flex-wrap: wrap; gap: 8px; }
+    .topbar-right .working-on { font-size: 12px; padding: 4px 10px; }
+
+    .mobile-menu-toggle { display: inline-flex; }
+
+    /* Stack form rows on tablet */
+    .form-row { grid-template-columns: 1fr; }
+
+    /* Tabs scroll horizontally instead of wrapping */
+    .tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    .tab { white-space: nowrap; padding: 10px 14px; font-size: 13px; }
+
+    /* Tables: wrap in a scroll container; we add .data-table-wrap or rely on overflow-x on .card */
+    .card { padding: 16px; overflow-x: visible; }
+    .data-table { font-size: 13px; }
+    .data-table th, .data-table td { padding: 8px 10px; }
+
+    /* Info grid: single column */
+    .info-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-grid > div > div { font-size: 14px; }
+
+    /* Stat cards smaller */
+    .stat-card { padding: 14px; }
+    .stat-value { font-size: 22px; }
+
+    /* Picker grid */
+    .picker-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Modal full width with margin */
+    .modal-content { width: 92vw; max-width: 92vw; max-height: 88vh; overflow-y: auto; }
+
+    /* Filter bar wraps */
+    .filter-bar { flex-wrap: wrap; }
+    .filter-bar input, .filter-bar select { flex: 1 1 140px; }
+
+    /* Chat shell adapts */
+    .chat-shell { height: calc(100vh - 160px); border-radius: 6px; }
+    .chat-msg { max-width: 88%; }
+    .chat-scroll { padding: 12px; }
+    .chat-form { padding: 8px; gap: 6px; }
+    .chat-form textarea { font-size: 16px; /* prevents iOS zoom */ }
+    .chat-form .btn { padding: 8px 12px; }
+
+    /* Bureau rows stack */
+    .bureau-row { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   Phone (<= 600px)
+   ============================================ */
+@media (max-width: 600px) {
+    .main { padding: 12px; }
+    .topbar { gap: 6px; }
+    .topbar .page-title { font-size: 18px; width: 100%; order: 2; }
+    .topbar-right { width: 100%; order: 3; justify-content: flex-end; }
+    .mobile-menu-toggle { order: 1; }
+
+    .info-grid { grid-template-columns: 1fr; }
+    .picker-grid { grid-template-columns: 1fr; }
+
+    /* Table cells wrap content; force action buttons to next line cleanly */
+    .data-table th, .data-table td { padding: 8px; font-size: 12px; }
+    .data-table .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+    .card { padding: 14px; }
+    .card-header { flex-wrap: wrap; gap: 8px; }
+    .card-header h3 { font-size: 16px; }
+
+    .alert { padding: 10px 12px; font-size: 13px; }
+
+    .btn { padding: 7px 12px; font-size: 13px; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    .form-actions { flex-wrap: wrap; }
+    .form-actions .btn { flex: 1 1 auto; }
+
+    /* Timeline marker shrinks */
+    .timeline-marker { font-size: 11px; }
+
+    /* Chat: smaller header, tighter bubbles */
+    .chat-shell { height: calc(100vh - 140px); }
+    .chat-msg { max-width: 92%; margin-bottom: 10px; }
+    .chat-bubble { padding: 9px 12px; font-size: 13px; }
+    .chat-meta { font-size: 10px; }
+    .chat-header { padding: 10px 12px; }
+    .chat-header strong { font-size: 13px; }
+    .chat-actions-btn { opacity: 1; width: 28px; height: 28px; }
+    .chat-actions-menu { min-width: 160px; }
+    .chat-pinned-strip { font-size: 11px; padding: 6px 12px; }
+
+    /* Status report stack */
+    .status-report-stats { grid-template-columns: 1fr 1fr; }
+    .status-report-title h2 { font-size: 18px; }
+
+    /* Sidebar wider so it's easier to tap */
+    .sidebar { width: 82vw; max-width: 300px; }
+
+    /* Hide the auth-side login chrome's marketing flourish on small screens */
+    .auth-header h1 { font-size: 20px; }
+}
+
+/* ============================================
+   Print
+   ============================================ */
+@media print {
+    .sidebar, .topbar, .tabs, .card-header button, .mobile-menu-toggle, .sidebar-scrim { display: none !important; }
+    .main { margin-left: 0; padding: 0; }
+    .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+}

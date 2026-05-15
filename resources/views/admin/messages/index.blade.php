@@ -70,6 +70,13 @@
 
 .chat-meta { font-size:11px; color:#94a3b8; margin-top:4px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .from-admin .chat-meta { justify-content:flex-end; }
+
+/* WhatsApp-style delivery ticks */
+.chat-ticks { display:inline-flex; align-items:center; color:#94a3b8; font-size:13px; line-height:1; margin-left:2px; }
+.chat-ticks.read { color:#1a6fc4; }
+.chat-ticks svg { width:16px; height:11px; }
+.chat-ticks .tick { stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.chat-ticks .tick.second { transform:translateX(-4px); }
 .chat-meta .badge { display:inline-flex; align-items:center; gap:3px; padding:1px 6px; border-radius:10px; background:#e2e8f0; color:#475569; font-weight:500; }
 .chat-meta .badge.pinned { background:#fef3c7; color:#92400e; }
 .chat-meta .badge.starred { background:#fef9c3; color:#a16207; }
@@ -232,6 +239,17 @@
                 </div>
                 <div class="chat-meta">
                     {{ $who }} &middot; {{ $msg->created_at->diffForHumans() }}
+                    @if ($msg->isFromAdmin())
+                        @php $isRead = (bool) $msg->client_read_at; @endphp
+                        <span class="chat-ticks {{ $isRead ? 'read' : '' }}"
+                              title="{{ $isRead ? 'Read ' . $msg->client_read_at->diffForHumans() : 'Delivered' }}"
+                              aria-label="{{ $isRead ? 'Read' : 'Delivered' }}">
+                            <svg viewBox="0 0 18 11" xmlns="http://www.w3.org/2000/svg">
+                                <polyline class="tick" points="1,6 4.5,9.5 10,1"/>
+                                <polyline class="tick second" points="8,6 11.5,9.5 17,1"/>
+                            </svg>
+                        </span>
+                    @endif
                     @if ($msg->pinned_at) <span class="badge pinned" title="Pinned">📌 Pinned</span> @endif
                     @if ($msg->starred_at) <span class="badge starred" title="Starred">★ Starred</span> @endif
                     @if ($msg->note) <span class="badge noted" title="Has note" data-open-note="{{ $msg->id }}">📝 Note added</span> @endif
