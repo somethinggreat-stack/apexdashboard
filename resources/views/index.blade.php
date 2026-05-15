@@ -2275,6 +2275,8 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
 </style>
 </head>
 <body>
+@include('partials.loader')
+
 
 @include('partials.bg-animation')
 

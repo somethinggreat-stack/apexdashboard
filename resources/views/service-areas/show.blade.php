@@ -227,6 +227,8 @@ section { padding: 96px 24px; }
 </style>
 </head>
 <body>
+@include('partials.loader')
+
 
 @include('partials.nav')
 

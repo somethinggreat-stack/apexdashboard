@@ -913,6 +913,8 @@ footer {
 </style>
 </head>
 <body>
+@include('partials.loader')
+
 
 @include('partials.bg-animation')
 
