@@ -211,20 +211,21 @@
             <button class="btn btn-secondary" onclick="openUploadModal(null)">+ Single (categorised)</button>
         </div>
 
-        <div class="dropzone" id="bulkDropzone" tabindex="0" role="button" aria-label="Drag and drop documents here, or click to browse">
+        <div class="upcard" id="bulkDropzone" tabindex="0" role="button" aria-label="Drag and drop documents here, or click to choose a file">
             <input type="file" id="bulkFileInput" multiple
                    accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.doc,.docx,.xls,.xlsx,.csv,.txt">
-            <div class="dropzone-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <div class="upcard-icon" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
             </div>
-            <div class="dropzone-title">Drag &amp; drop documents here</div>
-            <div class="dropzone-sub">Upload multiple files at once, or click to browse.</div>
+            <div class="upcard-title">Drag &amp; Drop</div>
+            <div class="upcard-sub">or <button type="button" class="upcard-link" id="bulkBrowse">choose a file</button></div>
+            <div class="upcard-hint">PDF, image, audio &amp; office files — multiple at once</div>
         </div>
-        <div class="dz-list" id="bulkList"></div>
+        <div class="dz-list" id="bulkList" aria-live="polite"></div>
 
         @if ($identityDocs->isNotEmpty())
             <h4 class="doc-cat-head">Identity Documents ({{ $identityDocs->count() }})</h4>
@@ -330,22 +331,17 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Step Type(s)</label>
-                <div class="msel" id="stepMsel">
-                    <div class="msel-control" id="stepMselControl" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
-                        <div class="msel-chips" id="stepMselChips">
-                            <span class="msel-placeholder">Select one or multiple process steps</span>
-                        </div>
-                        <span class="msel-caret" aria-hidden="true">&#9662;</span>
+                <div class="msel2-head">
+                    <label>Step Type(s)</label>
+                    <span class="msel2-count" id="stepMselCount">0 steps selected</span>
+                </div>
+                <div class="msel2" id="stepMsel">
+                    <input type="text" class="msel2-search" id="stepMselSearch" placeholder="Search process steps&hellip;" autocomplete="off">
+                    <div class="msel2-actions">
+                        <button type="button" class="msel2-btn" id="stepMselAll">Select All</button>
+                        <button type="button" class="msel2-btn" id="stepMselClear">Clear All</button>
                     </div>
-                    <div class="msel-panel" id="stepMselPanel" hidden>
-                        <input type="text" class="msel-search" id="stepMselSearch" placeholder="Search steps&hellip;" autocomplete="off">
-                        <div class="msel-actions">
-                            <button type="button" id="stepMselAll">Select All</button>
-                            <button type="button" id="stepMselClear">Clear All</button>
-                        </div>
-                        <div class="msel-options" id="stepMselOptions"></div>
-                    </div>
+                    <div class="msel2-list" id="stepMselOptions" role="listbox" aria-multiselectable="true"></div>
                 </div>
                 <div id="stepMselInputs"></div>
                 <small class="msel-hint" id="stepMselHint">Pick one or more. Each becomes its own timeline entry for the chosen round &amp; week.</small>
@@ -586,14 +582,11 @@
     const weekSel   = document.getElementById('stepWeek');
     const w4s2Fields = document.getElementById('w4s2-fields');
 
-    const msel        = document.getElementById('stepMsel');
-    const mselControl = document.getElementById('stepMselControl');
-    const mselChips   = document.getElementById('stepMselChips');
-    const mselPanel   = document.getElementById('stepMselPanel');
     const mselSearch  = document.getElementById('stepMselSearch');
     const mselOptions = document.getElementById('stepMselOptions');
     const mselInputs  = document.getElementById('stepMselInputs');
     const mselHint    = document.getElementById('stepMselHint');
+    const mselCount   = document.getElementById('stepMselCount');
     const mselAllBtn  = document.getElementById('stepMselAll');
     const mselClrBtn  = document.getElementById('stepMselClear');
 
@@ -603,7 +596,7 @@
     function currentRound() { return parseInt(roundSel.value, 10); }
     function currentOpts()  { return stepTypesByWeek[currentWeek()] || {}; }
 
-    function isDupe(key) {
+    function isExisting(key) {
         return existingSet.has(currentRound() + '-' + currentWeek() + '-' + key);
     }
 
@@ -612,35 +605,7 @@
         w4s2Fields.hidden = !(currentWeek() === 4 && selected.has('record_deletions'));
     }
 
-    function renderChips() {
-        const opts = currentOpts();
-        mselChips.innerHTML = '';
-        if (selected.size === 0) {
-            const ph = document.createElement('span');
-            ph.className = 'msel-placeholder';
-            ph.textContent = 'Select one or multiple process steps';
-            mselChips.appendChild(ph);
-        } else {
-            selected.forEach(function (key) {
-                const chip = document.createElement('span');
-                chip.className = 'msel-chip';
-                const txt = document.createElement('span');
-                txt.textContent = opts[key] || key;
-                const x = document.createElement('button');
-                x.type = 'button';
-                x.setAttribute('aria-label', 'Remove');
-                x.innerHTML = '&times;';
-                x.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    selected.delete(key);
-                    sync();
-                });
-                chip.appendChild(txt);
-                chip.appendChild(x);
-                mselChips.appendChild(chip);
-            });
-        }
-    }
+    var checkMark = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
     function renderOptions() {
         const opts = currentOpts();
@@ -651,31 +616,45 @@
         });
         if (entries.length === 0) {
             const empty = document.createElement('div');
-            empty.className = 'msel-empty';
+            empty.className = 'msel2-empty';
             empty.textContent = 'No matching steps for this week.';
             mselOptions.appendChild(empty);
             return;
         }
         entries.forEach(function ([key, label]) {
-            const dupe = isDupe(key);
-            const row = document.createElement('label');
-            row.className = 'msel-opt' + (selected.has(key) ? ' is-selected' : '') + (dupe ? ' is-dupe' : '');
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = selected.has(key);
-            cb.addEventListener('change', function () {
-                if (cb.checked) selected.add(key); else selected.delete(key);
-                sync();
-            });
-            const span = document.createElement('span');
-            span.textContent = label;
-            row.appendChild(cb);
-            row.appendChild(span);
-            if (dupe) {
-                const tag = document.createElement('span');
-                tag.className = 'dupe-tag';
-                tag.textContent = 'Already exists';
-                row.appendChild(tag);
+            const existing = isExisting(key);
+            const isSel = selected.has(key);
+            const row = document.createElement('div');
+            row.className = 'msel2-opt'
+                + (isSel ? ' is-selected' : '')
+                + (existing ? ' is-existing' : '');
+            row.setAttribute('role', 'option');
+            row.setAttribute('aria-selected', isSel ? 'true' : 'false');
+            if (existing) row.setAttribute('aria-disabled', 'true');
+
+            const box = document.createElement('span');
+            box.className = 'msel2-box';
+            box.innerHTML = isSel ? checkMark : '';
+
+            const txt = document.createElement('span');
+            txt.className = 'msel2-txt';
+            txt.textContent = label;
+
+            row.appendChild(box);
+            row.appendChild(txt);
+
+            if (existing) {
+                const badge = document.createElement('span');
+                badge.className = 'msel2-badge';
+                badge.textContent = 'Exists';
+                row.appendChild(badge);
+            }
+
+            if (!existing) {
+                row.addEventListener('click', function () {
+                    if (selected.has(key)) selected.delete(key); else selected.add(key);
+                    sync();
+                });
             }
             mselOptions.appendChild(row);
         });
@@ -692,50 +671,37 @@
         });
     }
 
+    function renderCount() {
+        const n = selected.size;
+        mselCount.textContent = n + (n === 1 ? ' step selected' : ' steps selected');
+        mselCount.classList.toggle('has', n > 0);
+    }
+
     function renderHint() {
-        let dupes = 0;
-        selected.forEach(function (k) { if (isDupe(k)) dupes++; });
-        if (dupes > 0) {
-            mselHint.className = 'msel-hint warn';
-            mselHint.textContent = dupes + ' selected step(s) already exist for R' + currentRound()
-                + '·W' + currentWeek() + ' and will be skipped. The rest will be created.';
-        } else {
-            mselHint.className = 'msel-hint';
-            mselHint.textContent = 'Pick one or more. Each becomes its own timeline entry for the chosen round & week.';
-        }
+        mselHint.className = 'msel-hint';
+        mselHint.textContent = 'Each selected step becomes its own timeline entry for the chosen round & week. Steps marked "Exists" are already logged and can’t be re-added.';
     }
 
     function sync() {
-        renderChips();
         renderOptions();
         renderInputs();
+        renderCount();
         renderHint();
         refreshTrackingFields();
     }
 
     function rebuildForWeek() {
-        // Drop any selections not valid for the newly chosen week.
         const opts = currentOpts();
         selected.forEach(function (k) { if (!(k in opts)) selected.delete(k); });
         mselSearch.value = '';
         sync();
     }
 
-    function openPanel()  { msel.classList.add('open'); mselPanel.hidden = false; mselControl.setAttribute('aria-expanded', 'true'); mselSearch.focus(); }
-    function closePanel() { msel.classList.remove('open'); mselPanel.hidden = true; mselControl.setAttribute('aria-expanded', 'false'); }
-
-    mselControl.addEventListener('click', function () {
-        msel.classList.contains('open') ? closePanel() : openPanel();
-    });
-    mselControl.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); msel.classList.contains('open') ? closePanel() : openPanel(); }
-    });
-    document.addEventListener('click', function (e) {
-        if (!msel.contains(e.target)) closePanel();
-    });
     mselSearch.addEventListener('input', renderOptions);
     mselAllBtn.addEventListener('click', function () {
-        Object.keys(currentOpts()).forEach(function (k) { selected.add(k); });
+        Object.keys(currentOpts()).forEach(function (k) {
+            if (!isExisting(k)) selected.add(k);
+        });
         sync();
     });
     mselClrBtn.addEventListener('click', function () {
@@ -753,7 +719,7 @@
                 e.preventDefault();
                 mselHint.className = 'msel-hint warn';
                 mselHint.textContent = 'Select at least one process step before saving.';
-                openPanel();
+                mselSearch.focus();
             }
         });
     }
@@ -771,10 +737,18 @@
         var endpoint = "{{ route('admin.documents.bulk') }}";
         var endUserId = {{ $endUser->id }};
 
+        var browseBtn = document.getElementById('bulkBrowse');
+
         zone.addEventListener('click', function (e) {
             if (e.target === input) return;
             input.click();
         });
+        if (browseBtn) {
+            browseBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                input.click();
+            });
+        }
         zone.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
         });
@@ -807,7 +781,9 @@
             var rows = files.map(function (f) {
                 var row = document.createElement('div');
                 row.className = 'dz-item';
-                row.innerHTML = '<span class="dz-name">' + escapeHtml(f.name) + '</span>'
+                row.innerHTML =
+                      '<span class="dz-ico"><span class="dz-spin" aria-hidden="true"></span></span>'
+                    + '<span class="dz-name">' + escapeHtml(f.name) + '</span>'
                     + '<span class="dz-bar"><span></span></span>'
                     + '<span class="dz-state uploading">Uploading…</span>';
                 list.appendChild(row);
@@ -833,20 +809,32 @@
                 });
             });
 
+            var checkSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            var errSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
             xhr.onload = function () {
                 var ok = xhr.status >= 200 && xhr.status < 300;
                 rows.forEach(function (r) {
                     var s = r.querySelector('.dz-state');
                     var bar = r.querySelector('.dz-bar span');
-                    if (ok) { s.className = 'dz-state done'; s.textContent = 'Uploaded'; if (bar) bar.style.width = '100%'; }
-                    else    { s.className = 'dz-state error'; s.textContent = 'Failed'; }
+                    var ico = r.querySelector('.dz-ico');
+                    if (ok) {
+                        s.className = 'dz-state done'; s.textContent = 'Done';
+                        if (bar) bar.style.width = '100%';
+                        if (ico) { ico.className = 'dz-ico ok'; ico.innerHTML = checkSvg; }
+                    } else {
+                        s.className = 'dz-state error'; s.textContent = 'Failed';
+                        if (ico) { ico.className = 'dz-ico bad'; ico.innerHTML = errSvg; }
+                    }
                 });
-                if (ok) { setTimeout(function () { window.location.reload(); }, 700); }
+                if (ok) { setTimeout(function () { window.location.reload(); }, 900); }
             };
             xhr.onerror = function () {
                 rows.forEach(function (r) {
                     var s = r.querySelector('.dz-state');
+                    var ico = r.querySelector('.dz-ico');
                     s.className = 'dz-state error'; s.textContent = 'Failed';
+                    if (ico) { ico.className = 'dz-ico bad'; ico.innerHTML = errSvg; }
                 });
             };
             xhr.send(fd);
