@@ -225,12 +225,18 @@
             <button class="btn btn-secondary" onclick="openUploadModal(null)">+ Single (categorised)</button>
         </div>
 
-        <div class="dropzone" id="bulkDropzone" tabindex="0" role="button" aria-label="Bulk upload documents">
+        <div class="dropzone" id="bulkDropzone" tabindex="0" role="button" aria-label="Drag and drop documents here, or click to browse">
             <input type="file" id="bulkFileInput" multiple
                    accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.doc,.docx,.xls,.xlsx,.csv,.txt">
-            <div class="dropzone-icon">&#8682;</div>
-            <div class="dropzone-title">Drag &amp; drop files here</div>
-            <div class="dropzone-sub">Drop any number of files at once — or click to browse. No need to pick a type; everything uploads instantly and you can categorise later if needed.</div>
+            <div class="dropzone-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <div class="dropzone-title">Drag &amp; drop documents here</div>
+            <div class="dropzone-sub">Upload multiple files at once, or click to browse.</div>
             <div class="dz-list" id="bulkList"></div>
         </div>
 
@@ -315,7 +321,7 @@
 <div id="addStepModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Add Process Step</h3>
+            <h3>Add Process Step(s)</h3>
             <button class="modal-close" onclick="closeModal('addStepModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.process-steps.store') }}">
@@ -338,8 +344,25 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Step Type</label>
-                <select name="step_type" id="stepType" required></select>
+                <label>Step Type(s)</label>
+                <div class="msel" id="stepMsel">
+                    <div class="msel-control" id="stepMselControl" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                        <div class="msel-chips" id="stepMselChips">
+                            <span class="msel-placeholder">Select one or multiple process steps</span>
+                        </div>
+                        <span class="msel-caret" aria-hidden="true">&#9662;</span>
+                    </div>
+                    <div class="msel-panel" id="stepMselPanel" hidden>
+                        <input type="text" class="msel-search" id="stepMselSearch" placeholder="Search steps&hellip;" autocomplete="off">
+                        <div class="msel-actions">
+                            <button type="button" id="stepMselAll">Select All</button>
+                            <button type="button" id="stepMselClear">Clear All</button>
+                        </div>
+                        <div class="msel-options" id="stepMselOptions"></div>
+                    </div>
+                </div>
+                <div id="stepMselInputs"></div>
+                <small class="msel-hint" id="stepMselHint">Pick one or more. Each becomes its own timeline entry for the chosen round &amp; week.</small>
             </div>
             <div class="form-group"><label>Date</label><input type="date" name="step_date" value="{{ now()->toDateString() }}" required></div>
             <div id="w4s2-fields" class="w4s2-fields" hidden>
@@ -374,7 +397,7 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addStepModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Step</button>
+                <button type="submit" class="btn btn-primary">Save Step(s)</button>
             </div>
         </form>
     </div>
@@ -568,39 +591,188 @@
     }
     window.togglePassword = togglePassword;
 
+    /* ===== Multi-select Process Step Type ===== */
     const stepTypesByWeek = @json($stepTypesByWeek);
-    const weekSel = document.getElementById('stepWeek');
-    const stepSel = document.getElementById('stepType');
+    const existingCombos = @json($endUser->processSteps->map(fn ($s) => $s->round . '-' . $s->week . '-' . $s->step_type)->values());
+    const existingSet = new Set(existingCombos);
+
+    const roundSel  = document.getElementById('stepRound');
+    const weekSel   = document.getElementById('stepWeek');
     const w4s2Fields = document.getElementById('w4s2-fields');
 
-    function isW4S2() {
-        return weekSel && stepSel
-            && parseInt(weekSel.value, 10) === 4
-            && stepSel.value === 'record_deletions';
+    const msel        = document.getElementById('stepMsel');
+    const mselControl = document.getElementById('stepMselControl');
+    const mselChips   = document.getElementById('stepMselChips');
+    const mselPanel   = document.getElementById('stepMselPanel');
+    const mselSearch  = document.getElementById('stepMselSearch');
+    const mselOptions = document.getElementById('stepMselOptions');
+    const mselInputs  = document.getElementById('stepMselInputs');
+    const mselHint    = document.getElementById('stepMselHint');
+    const mselAllBtn  = document.getElementById('stepMselAll');
+    const mselClrBtn  = document.getElementById('stepMselClear');
+
+    let selected = new Set(); // step_type keys selected for current week
+
+    function currentWeek()  { return parseInt(weekSel.value, 10); }
+    function currentRound() { return parseInt(roundSel.value, 10); }
+    function currentOpts()  { return stepTypesByWeek[currentWeek()] || {}; }
+
+    function isDupe(key) {
+        return existingSet.has(currentRound() + '-' + currentWeek() + '-' + key);
     }
 
     function refreshTrackingFields() {
         if (!w4s2Fields) return;
-        w4s2Fields.hidden = !isW4S2();
+        w4s2Fields.hidden = !(currentWeek() === 4 && selected.has('record_deletions'));
     }
 
-    function refreshStepTypes() {
-        const week = parseInt(weekSel.value, 10);
-        const opts = stepTypesByWeek[week] || {};
-        stepSel.innerHTML = '';
-        for (const [key, label] of Object.entries(opts)) {
-            const o = document.createElement('option');
-            o.value = key;
-            o.textContent = label;
-            stepSel.appendChild(o);
+    function renderChips() {
+        const opts = currentOpts();
+        mselChips.innerHTML = '';
+        if (selected.size === 0) {
+            const ph = document.createElement('span');
+            ph.className = 'msel-placeholder';
+            ph.textContent = 'Select one or multiple process steps';
+            mselChips.appendChild(ph);
+        } else {
+            selected.forEach(function (key) {
+                const chip = document.createElement('span');
+                chip.className = 'msel-chip';
+                const txt = document.createElement('span');
+                txt.textContent = opts[key] || key;
+                const x = document.createElement('button');
+                x.type = 'button';
+                x.setAttribute('aria-label', 'Remove');
+                x.innerHTML = '&times;';
+                x.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    selected.delete(key);
+                    sync();
+                });
+                chip.appendChild(txt);
+                chip.appendChild(x);
+                mselChips.appendChild(chip);
+            });
         }
+    }
+
+    function renderOptions() {
+        const opts = currentOpts();
+        const q = (mselSearch.value || '').toLowerCase();
+        mselOptions.innerHTML = '';
+        const entries = Object.entries(opts).filter(function (e) {
+            return e[1].toLowerCase().includes(q);
+        });
+        if (entries.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'msel-empty';
+            empty.textContent = 'No matching steps for this week.';
+            mselOptions.appendChild(empty);
+            return;
+        }
+        entries.forEach(function ([key, label]) {
+            const dupe = isDupe(key);
+            const row = document.createElement('label');
+            row.className = 'msel-opt' + (selected.has(key) ? ' is-selected' : '') + (dupe ? ' is-dupe' : '');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = selected.has(key);
+            cb.addEventListener('change', function () {
+                if (cb.checked) selected.add(key); else selected.delete(key);
+                sync();
+            });
+            const span = document.createElement('span');
+            span.textContent = label;
+            row.appendChild(cb);
+            row.appendChild(span);
+            if (dupe) {
+                const tag = document.createElement('span');
+                tag.className = 'dupe-tag';
+                tag.textContent = 'Already exists';
+                row.appendChild(tag);
+            }
+            mselOptions.appendChild(row);
+        });
+    }
+
+    function renderInputs() {
+        mselInputs.innerHTML = '';
+        selected.forEach(function (key) {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'step_types[]';
+            inp.value = key;
+            mselInputs.appendChild(inp);
+        });
+    }
+
+    function renderHint() {
+        let dupes = 0;
+        selected.forEach(function (k) { if (isDupe(k)) dupes++; });
+        if (dupes > 0) {
+            mselHint.className = 'msel-hint warn';
+            mselHint.textContent = dupes + ' selected step(s) already exist for R' + currentRound()
+                + '·W' + currentWeek() + ' and will be skipped. The rest will be created.';
+        } else {
+            mselHint.className = 'msel-hint';
+            mselHint.textContent = 'Pick one or more. Each becomes its own timeline entry for the chosen round & week.';
+        }
+    }
+
+    function sync() {
+        renderChips();
+        renderOptions();
+        renderInputs();
+        renderHint();
         refreshTrackingFields();
     }
-    if (weekSel && stepSel) {
-        weekSel.addEventListener('change', refreshStepTypes);
-        stepSel.addEventListener('change', refreshTrackingFields);
-        refreshStepTypes();
+
+    function rebuildForWeek() {
+        // Drop any selections not valid for the newly chosen week.
+        const opts = currentOpts();
+        selected.forEach(function (k) { if (!(k in opts)) selected.delete(k); });
+        mselSearch.value = '';
+        sync();
     }
+
+    function openPanel()  { msel.classList.add('open'); mselPanel.hidden = false; mselControl.setAttribute('aria-expanded', 'true'); mselSearch.focus(); }
+    function closePanel() { msel.classList.remove('open'); mselPanel.hidden = true; mselControl.setAttribute('aria-expanded', 'false'); }
+
+    mselControl.addEventListener('click', function () {
+        msel.classList.contains('open') ? closePanel() : openPanel();
+    });
+    mselControl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); msel.classList.contains('open') ? closePanel() : openPanel(); }
+    });
+    document.addEventListener('click', function (e) {
+        if (!msel.contains(e.target)) closePanel();
+    });
+    mselSearch.addEventListener('input', renderOptions);
+    mselAllBtn.addEventListener('click', function () {
+        Object.keys(currentOpts()).forEach(function (k) { selected.add(k); });
+        sync();
+    });
+    mselClrBtn.addEventListener('click', function () {
+        selected.clear();
+        sync();
+    });
+    roundSel.addEventListener('change', function () { sync(); });
+    weekSel.addEventListener('change', rebuildForWeek);
+
+    // Guard: block submit if nothing selected.
+    const stepForm = document.querySelector('#addStepModal form');
+    if (stepForm) {
+        stepForm.addEventListener('submit', function (e) {
+            if (selected.size === 0) {
+                e.preventDefault();
+                mselHint.className = 'msel-hint warn';
+                mselHint.textContent = 'Select at least one process step before saving.';
+                openPanel();
+            }
+        });
+    }
+
+    sync();
 
     @if (session('new_step_id'))
         window.addEventListener('load', () => openUploadModal({{ session('new_step_id') }}));

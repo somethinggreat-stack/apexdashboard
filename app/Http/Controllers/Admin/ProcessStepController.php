@@ -13,15 +13,89 @@ class ProcessStepController extends Controller
 {
     public function store(Request $request)
     {
-        $data = $this->validatedPayload($request, true);
-        $data['created_by_admin_id'] = Auth::guard('admin')->id();
-        $step = ProcessStep::create($data);
+        $clientId = session('selected_client_id');
+        $week = $request->integer('week');
+        $allowedSteps = array_keys(ProcessStep::stepTypesByWeek()[$week] ?? []);
 
-        if ($request->wantsJson()) {
-            return response()->json(['process_step' => $step]);
+        $endUserRule = Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $clientId));
+
+        // Backward-compat: a singular step_type still works as a one-element array.
+        if ($request->filled('step_type') && !$request->has('step_types')) {
+            $request->merge(['step_types' => [$request->input('step_type')]]);
         }
 
-        return back()->with('status', 'Process step logged.')->with('new_step_id', $step->id);
+        $data = $request->validate([
+            'end_user_id'                  => ['required', $endUserRule],
+            'round'                        => 'required|integer|between:1,4',
+            'week'                         => 'required|integer|between:1,4',
+            'step_types'                   => 'required|array|min:1',
+            'step_types.*'                 => ['string', Rule::in($allowedSteps ?: array_keys(ProcessStep::allStepTypes()))],
+            'step_date'                    => 'required|date',
+            'experian_accounts_disputed'   => 'nullable|integer|min:0',
+            'experian_inquiries_disputed'  => 'nullable|integer|min:0',
+            'transunion_accounts_disputed' => 'nullable|integer|min:0',
+            'transunion_inquiries_disputed' => 'nullable|integer|min:0',
+            'equifax_accounts_disputed'    => 'nullable|integer|min:0',
+            'equifax_inquiries_disputed'   => 'nullable|integer|min:0',
+            'previous_credit_score'        => 'nullable|integer|min:300|max:850',
+            'credit_score_now'             => 'nullable|integer|min:300|max:850',
+        ]);
+
+        $shared = [
+            'end_user_id'                   => $data['end_user_id'],
+            'round'                         => $data['round'],
+            'week'                          => $data['week'],
+            'step_date'                     => $data['step_date'],
+            'created_by_admin_id'           => Auth::guard('admin')->id(),
+            'experian_accounts_disputed'    => $data['experian_accounts_disputed'] ?? null,
+            'experian_inquiries_disputed'   => $data['experian_inquiries_disputed'] ?? null,
+            'transunion_accounts_disputed'  => $data['transunion_accounts_disputed'] ?? null,
+            'transunion_inquiries_disputed' => $data['transunion_inquiries_disputed'] ?? null,
+            'equifax_accounts_disputed'     => $data['equifax_accounts_disputed'] ?? null,
+            'equifax_inquiries_disputed'    => $data['equifax_inquiries_disputed'] ?? null,
+            'previous_credit_score'         => $data['previous_credit_score'] ?? null,
+            'credit_score_now'              => $data['credit_score_now'] ?? null,
+        ];
+
+        $created = 0;
+        $skipped = 0;
+        $firstStepId = null;
+
+        foreach (array_unique($data['step_types']) as $type) {
+            $exists = ProcessStep::where('end_user_id', $data['end_user_id'])
+                ->where('round', $data['round'])
+                ->where('week', $data['week'])
+                ->where('step_type', $type)
+                ->exists();
+
+            if ($exists) {
+                $skipped++;
+                continue;
+            }
+
+            $step = ProcessStep::create($shared + ['step_type' => $type]);
+            $firstStepId = $firstStepId ?? $step->id;
+            $created++;
+        }
+
+        $msg = match (true) {
+            $created > 0 && $skipped > 0 => "{$created} process step(s) logged. {$skipped} skipped (already existed for this round & week).",
+            $created > 0                 => "{$created} process step(s) logged.",
+            default                      => 'No new steps created — all selected steps already exist for this round & week.',
+        };
+
+        if ($request->wantsJson()) {
+            return response()->json(['created' => $created, 'skipped' => $skipped]);
+        }
+
+        $redirect = back()->with('status', $msg);
+
+        // Only auto-open the upload modal when exactly one new step was made.
+        if ($created === 1 && $firstStepId) {
+            $redirect->with('new_step_id', $firstStepId);
+        }
+
+        return $redirect;
     }
 
     public function update(Request $request, string $id)

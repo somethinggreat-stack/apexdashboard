@@ -23,13 +23,27 @@
                 <div class="sw-name">{{ $selectedClient->business_name }}</div>
                 <form method="POST" action="{{ route('admin.client-selector.clear') }}">
                     @csrf
-                    <button type="submit" class="sw-switch">&#8646; Switch Business Owner</button>
+                    <button type="submit" class="sw-switch">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="17 1 21 5 17 9"></polyline>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <polyline points="7 23 3 19 7 15"></polyline>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                        <span>Switch Business Owner</span>
+                    </button>
                 </form>
             </div>
         @else
             <div class="sidebar-working sidebar-working--none">
                 <div class="sw-label">No Business Owner Selected</div>
-                <a href="{{ route('admin.client-selector.index') }}" class="sw-switch">Select One &rarr;</a>
+                <a href="{{ route('admin.client-selector.index') }}" class="sw-switch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+                    </svg>
+                    <span>Select Business Owner</span>
+                </a>
             </div>
         @endisset
 
