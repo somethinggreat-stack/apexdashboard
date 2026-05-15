@@ -43,6 +43,7 @@
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
         <div><label>Total Deletions</label><div>{{ $endUser->total_deletions }}</div></div>
         <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
+        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
         <div><label>Started</label><div>{{ $endUser->start_date?->format('M d, Y') }}</div></div>
     </div>
 </div>

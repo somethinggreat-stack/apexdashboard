@@ -47,6 +47,7 @@
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
         <div><label>Total Deletions</label><div>{{ $endUser->total_deletions }}</div></div>
         <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
+        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
     </div>
     <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" class="inline-update">
         @csrf @method('PUT')
@@ -485,6 +486,7 @@
 
             <div class="form-section">
                 <h4>Status</h4>
+                <input type="hidden" name="rounds_present" value="1">
                 <div class="form-row">
                     <div class="form-group"><label>Start Date</label><input type="date" name="start_date" value="{{ old('start_date', $endUser->start_date?->toDateString()) }}" required></div>
                     <div class="form-group">
@@ -494,6 +496,17 @@
                                 <option value="{{ $s }}" @selected($endUser->status === $s)>{{ ucfirst($s) }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Round <span class="muted">(hold Ctrl / Cmd to pick multiple)</span></label>
+                        @php $selectedRounds = old('rounds', $endUser->rounds ?? []); @endphp
+                        <select name="rounds[]" multiple size="5">
+                            @foreach (\App\Models\EndUser::ROUND_OPTIONS as $round)
+                                <option value="{{ $round }}" @selected(in_array($round, $selectedRounds, true))>{{ $round }}</option>
+                            @endforeach
+                        </select>
+                        @error('rounds')<small class="field-error">{{ $message }}</small>@enderror
+                        @error('rounds.*')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                 </div>
             </div>

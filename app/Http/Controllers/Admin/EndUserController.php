@@ -90,6 +90,15 @@ class EndUserController extends Controller
             unset($data['ssn']);
         }
 
+        // Rounds only persist when the submitting form includes the rounds section
+        // (hidden `rounds_present` flag). This lets the inline status-only form leave
+        // existing rounds untouched, while allowing the edit modal to clear them.
+        if ($request->has('rounds_present')) {
+            $data['rounds'] = $request->input('rounds', []) ?: null;
+        } else {
+            unset($data['rounds']);
+        }
+
         $files = $this->handleFileUploads($request, $endUser);
         $data = array_merge($data, $files);
 
@@ -124,6 +133,8 @@ class EndUserController extends Controller
             'cfpb_password'               => 'nullable|string|max:255',
             'start_date'                  => "$req|date",
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
+            'rounds'                      => 'nullable|array|max:5',
+            'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),
             'photo_id'                    => "$reqOrNullable|file|mimes:pdf,jpg,jpeg,png|max:10240",
             'proof_of_address'            => "$reqOrNullable|file|mimes:pdf,jpg,jpeg,png|max:10240",
             'ssn_picture'                 => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',

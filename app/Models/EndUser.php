@@ -12,6 +12,14 @@ class EndUser extends Model
 {
     use HasFactory;
 
+    public const ROUND_OPTIONS = [
+        '1st Round',
+        '2nd Round',
+        '3rd Round',
+        '4th Round',
+        '5th Round',
+    ];
+
     protected static function booted(): void
     {
         static::deleting(function (EndUser $user) {
@@ -35,11 +43,12 @@ class EndUser extends Model
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
-        'current_score', 'goal_score', 'status', 'start_date',
+        'current_score', 'goal_score', 'status', 'rounds', 'start_date',
     ];
     protected $casts = [
         'start_date' => 'date',
         'date_of_birth' => 'date',
+        'rounds' => 'array',
         'ssn' => 'encrypted',
         'credit_monitoring_password' => 'encrypted',
         'credit_monitoring_security_answer' => 'encrypted',

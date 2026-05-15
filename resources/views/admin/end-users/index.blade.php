@@ -28,7 +28,7 @@
             <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Score</th>
+                <th>Round</th>
                 <th>Steps Logged</th>
                 <th>Days Active</th>
                 <th>Status</th>
@@ -40,7 +40,7 @@
                 <tr>
                     <td>{{ $eu->full_name }}</td>
                     <td>{{ $eu->email }}</td>
-                    <td>{{ $eu->current_score ?? '—' }}</td>
+                    <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
                     <td>{{ $eu->process_steps_count }}</td>
                     <td>{{ $eu->days_active }}</td>
                     <td><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
