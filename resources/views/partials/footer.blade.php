@@ -1,3 +1,118 @@
+<style>
+/* ============================================
+   APEX FOOTER — single source of truth, self-contained.
+   Uses literal values rather than CSS variables so the partial
+   styles correctly regardless of the host page's :root scope.
+   ============================================ */
+footer {
+  background: linear-gradient(180deg, #0F2043 0%, #081530 100%);
+  color: #FFFFFF;
+  padding: 100px 48px 48px;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+}
+footer * { box-sizing: border-box; }
+footer a { color: inherit; text-decoration: none; }
+.footer-top {
+  max-width: 1440px;
+  margin: 0 auto 64px;
+  padding-bottom: 56px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 80px;
+  align-items: end;
+}
+.footer-top h3 {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(36px, 4.5vw, 56px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: #FFFFFF;
+  margin: 0;
+}
+.footer-top h3 em {
+  font-weight: 700;
+  font-style: normal;
+  background: linear-gradient(135deg, #60B5FF 0%, #2196F3 50%, #1A6FC4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.footer-contact { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+.footer-contact a {
+  font-size: 22px;
+  font-weight: 500;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  transition: color 0.3s, text-shadow 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.footer-contact a:hover { color: #DBEAFE; text-shadow: 0 0 20px rgba(33, 150, 243, 0.3); }
+
+.footer-grid {
+  max-width: 1440px;
+  margin: 0 auto 60px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 64px;
+}
+.footer-brand p { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.65; margin-top: 24px; max-width: 360px; }
+.footer-col h5 {
+  font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  margin: 0 0 24px;
+  font-weight: 500;
+}
+.footer-col ul { list-style: none; padding: 0; margin: 0; }
+.footer-col li { margin-bottom: 14px; }
+.footer-col a { font-size: 14px; color: rgba(255,255,255,0.7); transition: color 0.3s; }
+.footer-col a:hover { color: #DBEAFE; }
+
+.footer-disclaimer {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.75;
+}
+.footer-disclaimer strong { color: rgba(255,255,255,0.7); }
+.footer-disclaimer p { margin: 0; }
+
+.footer-bottom {
+  max-width: 1440px;
+  margin: 40px auto 0;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+  letter-spacing: 0.15em;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-top { grid-template-columns: 1fr; gap: 40px; }
+}
+@media (max-width: 720px) {
+  footer { padding: 70px 24px 32px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+</style>
 <footer>
   <div class="footer-top">
     <h3>Ready to <em>scale?</em><br>Let's run your fulfillment.</h3>

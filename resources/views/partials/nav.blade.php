@@ -3,11 +3,9 @@
     <a href="/" class="logo"><img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img"></a>
     <ul class="nav-links" id="navLinks">
       <li><a href="/">Home</a></li>
-      <li><a href="/#process">Fulfillment Process</a></li>
       <li><a href="/#services">Services</a></li>
       <li><a href="/results">Business Results</a></li>
       <li><a href="/service-areas">Service Areas</a></li>
-      <li><a href="/#faq">FAQ</a></li>
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
