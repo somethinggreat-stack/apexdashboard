@@ -179,14 +179,112 @@ em {
    HERO SECTION
    ============================================ */
 .hero {
-  background: var(--white);
-  padding: 120px 40px 100px;
+  background: linear-gradient(180deg, var(--white) 0%, var(--paper) 100%);
+  padding: 120px 40px 80px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -120px; left: 50%;
+  transform: translateX(-50%);
+  width: 720px; height: 720px;
+  background: radial-gradient(circle, rgba(33,150,243,0.10) 0%, rgba(33,150,243,0) 60%);
+  pointer-events: none;
 }
 
 .hero-inner {
-  max-width: 800px;
+  max-width: 880px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 40px;
+}
+.hero-cta .btn-gradient,
+.hero-cta .btn-ghost {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 16px 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.35s var(--ease);
+  cursor: pointer;
+}
+.hero-cta .btn-gradient {
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+  color: var(--white);
+  box-shadow: 0 12px 32px rgba(26,111,196,0.28);
+  border: none;
+}
+.hero-cta .btn-gradient:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 44px rgba(26,111,196,0.40);
+}
+.hero-cta .btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--bone);
+}
+.hero-cta .btn-ghost:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.hero-trust {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+.hero-trust span::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.hero-image-wrap {
+  max-width: 1100px;
+  margin: 64px auto 0;
+  padding: 0 40px;
+  position: relative;
+  z-index: 1;
+}
+.hero-image {
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  box-shadow:
+    0 32px 80px rgba(15, 32, 67, 0.18),
+    0 0 0 1px rgba(15, 32, 67, 0.04);
+  display: block;
+}
+@media (max-width: 720px) {
+  .hero { padding: 96px 24px 64px; }
+  .hero-image-wrap { padding: 0 24px; margin-top: 44px; }
+  .hero-cta .btn-gradient,
+  .hero-cta .btn-ghost { width: 100%; justify-content: center; }
 }
 
 .eyebrow {
@@ -221,8 +319,41 @@ em {
    ============================================ */
 .mission {
   background: var(--white);
-  padding: 80px 40px 100px;
+  padding: 100px 40px 110px;
+  position: relative;
 }
+.mission::before {
+  content: 'HOW IT WORKS';
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 12px;
+}
+.mission::after {
+  content: 'Six steps from handoff to results — without a dollar out of your pocket.';
+  display: block;
+  font-family: var(--display);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 56px;
+  line-height: 1.25;
+}
+.mission-card .mission-icon {
+  background: linear-gradient(135deg, rgba(33,150,243,0.14), rgba(26,111,196,0.10));
+}
+.mission-card:hover .mission-icon {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: var(--white);
+}
+.mission-card:hover .mission-icon svg { stroke: var(--white); }
 
 .mission-inner {
   max-width: 1200px;
@@ -715,21 +846,7 @@ footer {
 <!-- ============================================
      NAV
      ============================================ -->
-<nav class="nav" id="nav">
-  <div class="nav-inner">
-    <a href="/" class="logo"><img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img"></a>
-    <ul class="nav-links">
-      <li><a href="/">Home</a></li>
-      <li><a href="/#process">Fulfillment Process</a></li>
-      <li><a href="/#services">Services</a></li>
-      <li><a href="/results">Business Results</a></li>
-      <li><a href="/#faq">FAQ</a></li>
-      <li><a href="/contact">Contact</a></li>
-      <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
-    </ul>
-    <a href="/contact" class="btn btn-primary"><span>Contact Us To Start</span> <span class="arrow">&rarr;</span></a>
-  </div>
-</nav>
+@include('partials.nav')
 
 <!-- ============================================
      HERO
@@ -738,43 +855,70 @@ footer {
   <div class="hero-inner reveal">
     <p class="eyebrow">PAY-AFTER-RESULTS TRIAL</p>
     <h1>We'll run 5 test clients for you. <em>You pay only once the results are in.</em></h1>
-    <p>Don't move your full client base on a promise. Hand us 5 active client files and we'll execute the full Apex fulfillment workflow at our cost &mdash; certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report. You only pay once the results are in. Not before. That's how confident we are in the workflow &mdash; and how we earn full trust on your side before you scale.</p>
+    <p>Don't move your full client base on a promise. Hand us 5 active client files and we'll execute the full Apex fulfillment workflow at our cost &mdash; certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report. You only pay once the results are in. Not before.</p>
+    <div class="hero-cta">
+      <a href="/contact" class="btn-gradient"><span>Contact Us To Start</span> <span>&rarr;</span></a>
+      <a href="/contact" class="btn-ghost"><span>Book A Fulfillment Call</span></a>
+    </div>
+    <div class="hero-trust">
+      <span>$0 Upfront</span>
+      <span>No Contract</span>
+      <span>Pay After Results</span>
+      <span>White-Label Friendly</span>
+    </div>
+  </div>
+  <div class="hero-image-wrap reveal">
+    <img src="/Images/heroimage.png" alt="Apex Growth Systems fulfillment workflow on a credit repair client file" class="hero-image" loading="eager">
   </div>
 </section>
 
 <!-- ============================================
-     HOW THE TRIAL WORKS
+     HOW THE TRIAL WORKS — 6 steps, 3x2 grid
      ============================================ -->
 <section class="mission">
   <div class="mission-inner">
     <div class="mission-grid">
       <div class="mission-card reveal">
         <div class="mission-icon">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <h3>1. Free scoping call</h3>
+        <p>A 15-minute call. We confirm your CRM (CRC, DisputeFox, GHL, Client Dispute Manager), the white-label setup, and which 5 files you want us to run. No pressure. No contract.</p>
+      </div>
+      <div class="mission-card reveal">
+        <div class="mission-icon">
           <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         </div>
-        <h3>1. You hand off 5 files</h3>
-        <p>Pick any 5 active clients from your roster &mdash; the ones already drowning your queue. Send us the disputes, IDs, addresses, and bureau access. No upfront fees. No deposit. No contract trapping you in months of billing.</p>
+        <h3>2. You hand off 5 files</h3>
+        <p>Pick the 5 most active clients drowning your queue. Send us the disputes, IDs, addresses, and bureau access. No upfront fees. No deposit. No long-term billing trap.</p>
       </div>
       <div class="mission-card reveal">
         <div class="mission-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         </div>
-        <h3>2. We run the full workflow</h3>
-        <p>Day 1 certified letters to Experian, Equifax, TransUnion, Innovis. Day 7-8 bureau follow-up calls. CFPB &amp; FTC complaint documentation where appropriate. Small-bureau freeze support. 30-day response window tracking. All of it &mdash; on our dime.</p>
+        <h3>3. Day 1: certified letters</h3>
+        <p>Letters go out to all four bureaus &mdash; Experian, Equifax, TransUnion, Innovis &mdash; certified, tracked, and logged in your dispute trail with timestamps and tracking numbers.</p>
       </div>
       <div class="mission-card reveal">
         <div class="mission-icon">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </div>
-        <h3>3. Week 4 results delivered</h3>
-        <p>You receive a full Week 4 client status report &mdash; every letter sent, every call documented, every bureau response logged, every 30-day window tracked. Delivered in your brand. You judge the quality firsthand.</p>
+        <h3>4. Day 7-8: bureau calls</h3>
+        <p>We call TU, EX, and EQ directly during US business hours. Every call documented &mdash; rep names, ticket numbers, timestamps &mdash; captured to the client file for audit.</p>
+      </div>
+      <div class="mission-card reveal">
+        <div class="mission-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        </div>
+        <h3>5. Week 4: results delivered</h3>
+        <p>A full client status report &mdash; every action, every response, every escalation &mdash; delivered in your brand. Ready to ship straight to the client. You judge the quality firsthand.</p>
       </div>
       <div class="mission-card reveal">
         <div class="mission-icon">
           <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
-        <h3>4. You pay &mdash; only now</h3>
-        <p>Results are in. The work is documented. If we delivered, you pay. If we didn't, you don't. Then we scope the full handoff for the rest of your client base &mdash; pricing, white-label setup, monthly cadence &mdash; confirmed on a fulfillment call.</p>
+        <h3>6. You pay &mdash; only now</h3>
+        <p>Results in. Work documented. If we delivered, you pay. If we didn't, you don't &mdash; you keep 5 professionally worked files free. Then we scope the full handoff for your client base.</p>
       </div>
     </div>
   </div>
@@ -889,26 +1033,7 @@ footer {
 <!-- ============================================
      FOOTER
      ============================================ -->
-<footer>
-  <div class="footer-top">
-    <h3>Ready to <em>scale?</em><br>Let's run your fulfillment.</h3>
-    <div class="footer-contact">
-      <a href="tel:+10000000000">(000) 000-0000</a>
-      <a href="mailto:hello@apexgrowthsystems.com">hello@apexgrowthsystems.com</a>
-    </div>
-  </div>
-  <div class="footer-grid">
-    <div class="footer-brand">
-      <a href="/" class="logo"><img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img" style="height:64px;filter:brightness(0) invert(1);opacity:0.9;"></a>
-      <p>Backend credit repair fulfillment for credit repair businesses. Dispute preparation, bureau follow-up calls, complaint documentation, response monitoring, and weekly client status reports. We are not a law firm and do not provide legal advice.</p>
-    </div>
-    <div class="footer-col"><h5>Services</h5><ul><li><a href="/#services">Dispute Letter Prep</a></li><li><a href="/#services">Bureau Follow-Up</a></li><li><a href="/#services">CFPB / FTC Documentation</a></li><li><a href="/#services">Weekly Reporting</a></li></ul></div>
-    <div class="footer-col"><h5>Company</h5><ul><li><a href="/about">About</a></li><li><a href="/results">Business Results</a></li><li><a href="/contact">Contact</a></li><li><a href="/trial">Pay-After-Results Trial</a></li></ul></div>
-    <div class="footer-col"><h5>Legal</h5><ul><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
-  </div>
-  <div class="footer-disclaimer" style="max-width:1200px;margin:24px auto 0;padding:24px;font-size:11px;line-height:1.7;color:rgba(255,255,255,0.55);"><p>Apex Growth Systems provides administrative credit repair fulfillment support, credit report review assistance, dispute preparation, documentation support, and operational services for credit repair companies. We are not a law firm and do not provide legal advice. Credit repair results vary by client profile, documentation, creditor response, bureau investigation, and whether information is inaccurate, incomplete, unverifiable, or outdated. We do not guarantee score increases, funding approvals, or removal of accurate / verifiable information.</p></div>
-  <div class="footer-bottom"><span>&copy; 2026 APEX GROWTH SYSTEMS LLC</span><span>BACKEND CREDIT REPAIR FULFILLMENT</span></div>
-</footer>
+@include('partials.footer')
 
 @include('partials.popup')
 
