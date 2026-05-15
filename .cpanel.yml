@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/apexgrow/public_html/
+    - export DEPLOYPATH=/home2/apexgrow/public_html/
     - /bin/cp -R app $DEPLOYPATH
     - /bin/cp -R bootstrap $DEPLOYPATH
     - /bin/cp -R config $DEPLOYPATH
@@ -9,9 +9,7 @@ deployment:
     - /bin/cp -R public $DEPLOYPATH
     - /bin/cp -R resources $DEPLOYPATH
     - /bin/cp -R routes $DEPLOYPATH
-    - /bin/cp -R storage $DEPLOYPATH
     - /bin/cp -R tests $DEPLOYPATH
-    - /bin/cp -R .well-known $DEPLOYPATH
     - /bin/cp .htaccess $DEPLOYPATH
     - /bin/cp artisan $DEPLOYPATH
     - /bin/cp composer.json $DEPLOYPATH
@@ -22,6 +20,10 @@ deployment:
     - /bin/cp vite.config.js $DEPLOYPATH
     - /bin/cp README.md $DEPLOYPATH
     - cd $DEPLOYPATH && /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
+    - cd $DEPLOYPATH && php artisan config:clear 2>&1 || true
+    - cd $DEPLOYPATH && php artisan route:clear 2>&1 || true
+    - cd $DEPLOYPATH && php artisan view:clear 2>&1 || true
+    - cd $DEPLOYPATH && php artisan migrate --force 2>&1 || true
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
