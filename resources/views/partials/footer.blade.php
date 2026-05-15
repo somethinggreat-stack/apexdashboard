@@ -42,7 +42,7 @@
   </div>
 
   <div class="footer-disclaimer">
-    <p><strong>Required Legal Disclosures.</strong> Apex Growth Systems provides administrative credit repair fulfillment support, credit report review assistance, dispute preparation, documentation support, and operational services for credit repair companies. We are not a law firm and do not provide legal advice. Credit repair results vary by client profile, documentation, creditor response, bureau investigation, and whether information is inaccurate, incomplete, unverifiable, or outdated. We do not guarantee score increases, funding approvals, or removal of accurate / verifiable information. Under the Credit Repair Organizations Act (CROA), end consumers have the right to dispute inaccurate information in their credit report themselves, without paying a fee. We do not provide legal advice; credit repair businesses engaging Apex Growth Systems are responsible for their own client contracts, billing, and CROA compliance disclosures.</p>
+    <p><strong>Disclosures.</strong> Apex Growth Systems is a backend fulfillment partner for credit repair businesses &mdash; not a law firm, and we do not provide legal advice. Results vary; we do not guarantee score increases or removal of accurate or verifiable information. Under the Credit Repair Organizations Act (CROA), consumers may dispute inaccurate information directly with the bureaus for free. Credit repair businesses engaging us are responsible for their own client contracts, billing, and CROA compliance.</p>
   </div>
 
   <div class="footer-bottom">
