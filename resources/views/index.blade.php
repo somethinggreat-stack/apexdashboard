@@ -2320,7 +2320,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         Backend Credit Repair Fulfillment · Est. 2026
       </div>
       <h1>
-        <span class="word" style="animation-delay: 0.4s">Scale</span>
+        <span class="word" style="animation-delay: 0.4s">GOO</span>
         <span class="word" style="animation-delay: 0.5s">Your</span>
         <span class="word" style="animation-delay: 0.6s">Credit</span><br>
         <span class="word" style="animation-delay: 0.7s">Repair</span>
