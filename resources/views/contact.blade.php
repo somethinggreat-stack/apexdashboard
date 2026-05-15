@@ -786,7 +786,7 @@ footer {
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
-    <a href="/contact" class="btn btn-primary"><span>Send 5 Test Clients</span> <span class="arrow">&rarr;</span></a>
+    <a href="/contact" class="btn btn-primary"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">&rarr;</span></a>
     <div class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
       <span></span><span></span><span></span>
     </div>
@@ -972,7 +972,7 @@ footer {
         <div class="accordion-icon"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
       </button>
       <div class="accordion-body">
-        <div class="accordion-body-inner">A short fulfillment call, a signed scope agreement, your CRM access (CRC, DisputeFox, GHL, Client Dispute Manager, etc.), and the client files you want us to run. Most credit repair businesses start with 5 test clients before scaling.</div>
+        <div class="accordion-body-inner">A short fulfillment call, a signed scope agreement, your CRM access (CRC, DisputeFox, GHL, Client Dispute Manager, etc.), and the client files you want us to run. Most credit repair businesses start with our pay-after-results trial — 5 test clients we run for you, billed only after Week 4 results are in — before scaling.</div>
       </div>
     </div>
 
@@ -993,7 +993,7 @@ footer {
   <div class="cta-inner reveal">
     <h2>Ready to scale your credit repair fulfillment?</h2>
     <div class="cta-buttons">
-      <a href="/contact" class="btn-cta-primary"><span>Send 5 Test Clients</span> <span>&rarr;</span></a>
+      <a href="/contact" class="btn-cta-primary"><span>Try 5 Test Clients — Pay After Results</span> <span>&rarr;</span></a>
       <a href="tel:+10000000000" class="btn-cta-ghost"><span>Book A Fulfillment Call</span></a>
     </div>
   </div>
@@ -1014,7 +1014,7 @@ footer {
       <p>Backend credit repair fulfillment for credit repair businesses. Dispute preparation, bureau follow-up calls, complaint documentation, response monitoring, and weekly client status reports. We are not a law firm and do not provide legal advice.</p>
     </div>
     <div class="footer-col"><h5>Services</h5><ul><li><a href="/#services">Dispute Letter Prep</a></li><li><a href="/#services">Bureau Follow-Up</a></li><li><a href="/#services">CFPB / FTC Documentation</a></li><li><a href="/#services">Weekly Reporting</a></li></ul></div>
-    <div class="footer-col"><h5>Company</h5><ul><li><a href="/about">About</a></li><li><a href="/results">Business Results</a></li><li><a href="/contact">Contact</a></li><li><a href="/contact">Send 5 Test Clients</a></li></ul></div>
+    <div class="footer-col"><h5>Company</h5><ul><li><a href="/about">About</a></li><li><a href="/results">Business Results</a></li><li><a href="/contact">Contact</a></li><li><a href="/contact">Pay-After-Results Trial</a></li></ul></div>
     <div class="footer-col"><h5>Legal</h5><ul><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
   </div>
   <div class="footer-disclaimer" style="max-width:1200px;margin:24px auto 0;padding:24px;font-size:11px;line-height:1.7;color:rgba(255,255,255,0.55);"><p>Apex Growth Systems provides administrative credit repair fulfillment support, credit report review assistance, dispute preparation, documentation support, and operational services for credit repair companies. We are not a law firm and do not provide legal advice. Credit repair results vary by client profile, documentation, creditor response, bureau investigation, and whether information is inaccurate, incomplete, unverifiable, or outdated. We do not guarantee score increases, funding approvals, or removal of accurate / verifiable information.</p></div>

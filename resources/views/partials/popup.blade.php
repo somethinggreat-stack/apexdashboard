@@ -15,7 +15,7 @@
     <div class="popup-step active" data-step="1">
       <div class="popup-badge">Hand off the dispute workload</div>
       <h3>Hand off the dispute workload.</h3>
-      <p>Send 5 test clients. We'll run certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a weekly client status report &mdash; so you can judge the quality before moving your full client base.</p>
+      <p>We'll run 5 test clients for you &mdash; certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a weekly client status report. You only pay once the results are in. Not before.</p>
       <div class="popup-options">
         <button class="popup-opt" data-value="1-25" onclick="popupSelect(this)">
           <span class="popup-opt-label">1 &ndash; 25 active clients</span>

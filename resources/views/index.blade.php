@@ -2293,7 +2293,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
-    <a href="/contact" class="btn btn-primary"><span>Send 5 Test Clients</span> <span class="arrow">→</span></a>
+    <a href="/contact" class="btn btn-primary"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
   </div>
 </nav>
 
@@ -2320,7 +2320,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         Backend Credit Repair Fulfillment · Est. 2026
       </div>
       <h1>
-        <span class="word" style="animation-delay: 0.4s">GOO</span>
+        <span class="word" style="animation-delay: 0.4s">Scale</span>
         <span class="word" style="animation-delay: 0.5s">Your</span>
         <span class="word" style="animation-delay: 0.6s">Credit</span><br>
         <span class="word" style="animation-delay: 0.7s">Repair</span>
@@ -2332,7 +2332,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         Apex Growth Systems is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — so your credit repair business can scale without drowning in manual work.
       </p>
       <div class="hero-cta">
-        <a href="/contact" class="btn btn-gold"><span>Send 5 Test Clients</span> <span class="arrow">→</span></a>
+        <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
         <a href="/contact" class="btn btn-ghost"><span>Book A Fulfillment Call</span></a>
       </div>
       <div class="trust-row">
@@ -2443,7 +2443,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
     <div class="section-label">02 · Services</div>
     <div class="section-head">
       <h2 class="section-title">Everything your credit repair business<br>needs to <em>execute on every client file.</em></h2>
-      <p class="section-intro">A complete backend fulfillment stack. Run it on 5 test clients first. Scale it across your full client base when the workflow proves out. White-label friendly — letters and weekly client status reports can ship under your credit repair business name.</p>
+      <p class="section-intro">A complete backend fulfillment stack. We'll run it on 5 test clients first — at our cost. You only pay once the results are in. Scale it across your full client base when the workflow proves out. White-label friendly — letters and weekly client status reports can ship under your credit repair business name.</p>
     </div>
 
     <div class="targets-grid">
@@ -2719,18 +2719,18 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
 <!-- ============ TEST CLIENT OFFER ============ -->
 <section class="pricing" id="test-clients">
   <div class="container">
-    <div class="section-label" style="text-align:center;display:block;">07 · Test Client Offer</div>
+    <div class="section-label" style="text-align:center;display:block;">07 · Pay-After-Results Trial</div>
     <div class="section-head" style="display:flex;flex-direction:column;align-items:center;text-align:center;max-width:800px;margin:0 auto 90px;">
-      <h2 class="section-title">Send 5 test clients. <em>Judge the workflow.</em></h2>
-      <p class="section-intro">Don't move your full client base on a promise. Send us 5 active client files. We'll execute the full Apex fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report — so you can judge the quality firsthand. Results vary; we do not guarantee removal of accurate or verifiable information.</p>
+      <h2 class="section-title">We'll run 5 test clients. <em>You pay only after results.</em></h2>
+      <p class="section-intro">Don't move your full client base on a promise. Hand us 5 active client files — we'll execute the full Apex fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report — and you only pay once the results are in. Not before. That's how confident we are in the workflow — and how we earn full trust on your side before you scale. Results vary; we do not guarantee removal of accurate or verifiable information.</p>
     </div>
 
     <div class="pricing-grid reveal-stagger" style="grid-template-columns: 1fr; max-width: 720px; margin: 0 auto;">
       <div class="price-card featured">
         <div class="price-tier">Test Client Engagement</div>
-        <h3>The 5-Client Trial</h3>
+        <h3>The Pay-After-Results Trial</h3>
         <div class="price-amount" style="font-size: 32px; line-height: 1.3;"><span class="num" style="font-size: 32px;">Backend Fulfillment</span></div>
-        <div class="price-note">Send 5 active client files. We run the full multi-channel workflow on each one. Scope, white-label setup, and rate confirmed on the fulfillment call.</div>
+        <div class="price-note">Hand off 5 active client files. We run the full multi-channel workflow on each one — at our cost upfront. You pay only once Week 4 results are in. Scope, white-label setup, and rate confirmed on the fulfillment call.</div>
         <ul class="price-features">
           <li>Day 1 certified letters — Experian, Equifax, TransUnion, Innovis</li>
           <li>CFPB &amp; FTC complaint documentation where appropriate</li>
@@ -2740,7 +2740,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
           <li>Week 4 client status report — delivered in your brand</li>
           <li>Round 2 escalation prep on non-deletions</li>
         </ul>
-        <a href="/contact" class="btn btn-gold"><span>Send 5 Test Clients</span> <span class="arrow">→</span></a>
+        <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
       </div>
     </div>
 
@@ -2914,9 +2914,9 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
 <section class="cta-final" id="contact">
   <div class="cta-final-inner">
     <h2>Scale your credit repair fulfillment <em>this week.</em></h2>
-    <p>Send 5 test clients. We'll execute the full Apex fulfillment workflow — Day 1 letters, Day 7-8 bureau calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report — so you can judge the quality before moving your full client base. Results vary; we do not guarantee removal of accurate or verifiable information.</p>
+    <p>Hand us 5 test clients. We'll execute the full Apex fulfillment workflow — Day 1 letters, Day 7-8 bureau calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report — and you only pay once the results are in. Not before. Full trust on your side, full skin in the game on ours. Results vary; we do not guarantee removal of accurate or verifiable information.</p>
     <div class="hero-cta">
-      <a href="/contact" class="btn btn-gold"><span>Send 5 Test Clients</span> <span class="arrow">→</span></a>
+      <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
       <a href="/contact" class="btn btn-ghost"><span>Book A Fulfillment Call</span></a>
     </div>
   </div>
@@ -2954,7 +2954,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         <li><a href="/about">About</a></li>
         <li><a href="/results">Business Results</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a href="/contact">Send 5 Test Clients</a></li>
+        <li><a href="/contact">Pay-After-Results Trial</a></li>
       </ul>
     </div>
     <div class="footer-col">
