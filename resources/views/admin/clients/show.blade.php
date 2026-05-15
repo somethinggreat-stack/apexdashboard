@@ -90,10 +90,10 @@
         </thead>
         <tbody>
             @forelse ($client->endUsers as $eu)
-                <tr>
+                <tr class="row-link" data-href="{{ route('admin.end-users.show', $eu) }}">
                     <td>{{ $eu->full_name }}</td>
-                    <td>{{ $eu->email }}</td>
-                    <td>
+                    <td class="no-link">{{ $eu->email }}</td>
+                    <td class="no-link">
                         @if ($eu->intake_status === 'pending_review')
                             <span class="pill" style="background:#fef3c7; color:#92400e;">📝 Pending Review</span>
                         @elseif ($eu->intake_submitted_at)
@@ -102,9 +102,15 @@
                             <span class="muted">Manual</span>
                         @endif
                     </td>
-                    <td><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
-                    <td>{{ $eu->start_date?->format('M d, Y') }}</td>
-                    <td><a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">View</a></td>
+                    <td class="no-link"><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
+                    <td class="no-link">{{ $eu->start_date?->format('M d, Y') }}</td>
+                    <td class="no-link">
+                        <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
+                        <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="empty">No clients yet.</td></tr>

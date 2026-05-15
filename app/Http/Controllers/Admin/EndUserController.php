@@ -107,6 +107,16 @@ class EndUserController extends Controller
         return back()->with('status', 'Client updated.');
     }
 
+    public function destroy(string $id)
+    {
+        // The EndUser deleting hook removes its documents and identity files.
+        $endUser = $this->scoped()->findOrFail($id);
+        $name = $endUser->full_name;
+        $endUser->delete();
+
+        return redirect()->route('admin.end-users.index')->with('status', "Client {$name} deleted.");
+    }
+
     private function scoped()
     {
         return EndUser::forClient(session('selected_client_id'));

@@ -16,6 +16,23 @@
             <strong>Credit Repair</strong>
             <span class="badge-portal">VA Admin</span>
         </div>
+
+        @isset($selectedClient)
+            <div class="sidebar-working">
+                <div class="sw-label">Working On</div>
+                <div class="sw-name">{{ $selectedClient->business_name }}</div>
+                <form method="POST" action="{{ route('admin.client-selector.clear') }}">
+                    @csrf
+                    <button type="submit" class="sw-switch">&#8646; Switch Business Owner</button>
+                </form>
+            </div>
+        @else
+            <div class="sidebar-working sidebar-working--none">
+                <div class="sw-label">No Business Owner Selected</div>
+                <a href="{{ route('admin.client-selector.index') }}" class="sw-switch">Select One &rarr;</a>
+            </div>
+        @endisset
+
         <nav class="sidebar-nav">
             @isset($selectedClient)
                 <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
@@ -89,6 +106,19 @@
     });
     window.addEventListener('resize', function () {
         if (window.innerWidth > 900) close();
+    });
+})();
+
+/* Make any <tr data-href> fully clickable, while leaving real
+   interactive controls (links, buttons, forms, inputs) working. */
+(function () {
+    document.addEventListener('click', function (e) {
+        var row = e.target.closest('tr[data-href]');
+        if (!row) return;
+        if (e.target.closest('a, button, form, input, select, textarea, label')) return;
+        var url = row.getAttribute('data-href');
+        if (e.metaKey || e.ctrlKey) { window.open(url, '_blank'); }
+        else { window.location = url; }
     });
 })();
 </script>

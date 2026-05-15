@@ -32,19 +32,25 @@
                 <th>Steps Logged</th>
                 <th>Days Active</th>
                 <th>Status</th>
-                <th></th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($endUsers as $eu)
-                <tr>
+                <tr class="row-link" data-href="{{ route('admin.end-users.show', $eu) }}">
                     <td>{{ $eu->full_name }}</td>
-                    <td>{{ $eu->email }}</td>
-                    <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
-                    <td>{{ $eu->process_steps_count }}</td>
-                    <td>{{ $eu->days_active }}</td>
-                    <td><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
-                    <td><a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">View</a></td>
+                    <td class="no-link">{{ $eu->email }}</td>
+                    <td class="no-link">{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
+                    <td class="no-link">{{ $eu->process_steps_count }}</td>
+                    <td class="no-link">{{ $eu->days_active }}</td>
+                    <td class="no-link"><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
+                    <td class="no-link">
+                        <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
+                        <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="7" class="empty">No clients found.</td></tr>

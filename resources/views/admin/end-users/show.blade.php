@@ -37,7 +37,14 @@
 <div class="card">
     <div class="card-header">
         <h2>{{ $endUser->full_name }}</h2>
-        <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary">← All Clients</a>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary">← All Clients</a>
+            <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
+                  onsubmit="return confirm('Delete client {{ $endUser->full_name }} and ALL their documents, notes, and process steps? This cannot be undone.')">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn btn-danger">Delete Client</button>
+            </form>
+        </div>
     </div>
     <div class="info-grid">
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
@@ -215,8 +222,18 @@
     <div class="card">
         <div class="card-header">
             <h3>All Documents</h3>
-            <button class="btn btn-primary" onclick="openUploadModal(null)">+ Upload Document</button>
+            <button class="btn btn-secondary" onclick="openUploadModal(null)">+ Single (categorised)</button>
         </div>
+
+        <div class="dropzone" id="bulkDropzone" tabindex="0" role="button" aria-label="Bulk upload documents">
+            <input type="file" id="bulkFileInput" multiple
+                   accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.doc,.docx,.xls,.xlsx,.csv,.txt">
+            <div class="dropzone-icon">&#8682;</div>
+            <div class="dropzone-title">Drag &amp; drop files here</div>
+            <div class="dropzone-sub">Drop any number of files at once — or click to browse. No need to pick a type; everything uploads instantly and you can categorise later if needed.</div>
+            <div class="dz-list" id="bulkList"></div>
+        </div>
+
         @if ($identityDocs->isNotEmpty())
             <h4 class="doc-cat-head">Identity Documents ({{ $identityDocs->count() }})</h4>
             <div class="doc-grid">
@@ -588,6 +605,105 @@
     @if (session('new_step_id'))
         window.addEventListener('load', () => openUploadModal({{ session('new_step_id') }}));
     @endif
+
+    /* ===== Bulk drag-and-drop document upload ===== */
+    (function () {
+        var zone  = document.getElementById('bulkDropzone');
+        var input = document.getElementById('bulkFileInput');
+        var list  = document.getElementById('bulkList');
+        if (!zone || !input) return;
+
+        var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        var endpoint = "{{ route('admin.documents.bulk') }}";
+        var endUserId = {{ $endUser->id }};
+
+        zone.addEventListener('click', function (e) {
+            if (e.target === input) return;
+            input.click();
+        });
+        zone.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+        });
+
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) {
+                e.preventDefault(); e.stopPropagation();
+                zone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) {
+                e.preventDefault(); e.stopPropagation();
+                zone.classList.remove('dragover');
+            });
+        });
+
+        zone.addEventListener('drop', function (e) {
+            if (e.dataTransfer && e.dataTransfer.files.length) {
+                uploadFiles(e.dataTransfer.files);
+            }
+        });
+        input.addEventListener('change', function () {
+            if (input.files.length) uploadFiles(input.files);
+        });
+
+        function uploadFiles(fileList) {
+            var files = Array.prototype.slice.call(fileList);
+            list.innerHTML = '';
+            var rows = files.map(function (f) {
+                var row = document.createElement('div');
+                row.className = 'dz-item';
+                row.innerHTML = '<span class="dz-name">' + escapeHtml(f.name) + '</span>'
+                    + '<span class="dz-bar"><span></span></span>'
+                    + '<span class="dz-state uploading">Uploading…</span>';
+                list.appendChild(row);
+                return row;
+            });
+
+            var fd = new FormData();
+            fd.append('end_user_id', endUserId);
+            files.forEach(function (f) { fd.append('files[]', f); });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', endpoint, true);
+            xhr.setRequestHeader('X-CSRF-TOKEN', csrf);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+
+            xhr.upload.addEventListener('progress', function (e) {
+                if (!e.lengthComputable) return;
+                var pct = Math.round((e.loaded / e.total) * 100);
+                rows.forEach(function (r) {
+                    var bar = r.querySelector('.dz-bar span');
+                    if (bar) bar.style.width = pct + '%';
+                });
+            });
+
+            xhr.onload = function () {
+                var ok = xhr.status >= 200 && xhr.status < 300;
+                rows.forEach(function (r) {
+                    var s = r.querySelector('.dz-state');
+                    var bar = r.querySelector('.dz-bar span');
+                    if (ok) { s.className = 'dz-state done'; s.textContent = 'Uploaded'; if (bar) bar.style.width = '100%'; }
+                    else    { s.className = 'dz-state error'; s.textContent = 'Failed'; }
+                });
+                if (ok) { setTimeout(function () { window.location.reload(); }, 700); }
+            };
+            xhr.onerror = function () {
+                rows.forEach(function (r) {
+                    var s = r.querySelector('.dz-state');
+                    s.className = 'dz-state error'; s.textContent = 'Failed';
+                });
+            };
+            xhr.send(fd);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function (c) {
+                return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+            });
+        }
+    })();
 </script>
 @endpush
 @endsection

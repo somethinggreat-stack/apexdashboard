@@ -97,12 +97,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
             Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->name('end-users.show');
             Route::put('end-users/{id}', [Admin\EndUserController::class, 'update'])->name('end-users.update');
+            Route::delete('end-users/{id}', [Admin\EndUserController::class, 'destroy'])->name('end-users.destroy');
 
             Route::post('process-steps', [Admin\ProcessStepController::class, 'store'])->name('process-steps.store');
             Route::put('process-steps/{id}', [Admin\ProcessStepController::class, 'update'])->name('process-steps.update');
             Route::delete('process-steps/{id}', [Admin\ProcessStepController::class, 'destroy'])->name('process-steps.destroy');
 
             Route::post('documents', [Admin\DocumentController::class, 'store'])->name('documents.store');
+            Route::post('documents/bulk', [Admin\DocumentController::class, 'bulkStore'])->name('documents.bulk');
             Route::delete('documents/{id}', [Admin\DocumentController::class, 'destroy'])->name('documents.destroy');
 
             Route::post('scores', [Admin\ScoreController::class, 'store'])->name('scores.store');

@@ -542,3 +542,129 @@ a:hover { text-decoration: underline; }
     .main { margin-left: 0; padding: 0; }
     .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
 }
+
+/* ============================================
+   v2 — Sidebar "Working On" panel + clickable rows
+   ============================================ */
+.sidebar-working {
+    margin: 14px 16px 6px;
+    padding: 14px;
+    background: var(--sidebar-active);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+}
+.sw-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #94a3b8;
+    margin-bottom: 5px;
+}
+.sw-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    word-break: break-word;
+    line-height: 1.25;
+}
+.sw-switch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--primary);
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.05s;
+    font-family: inherit;
+    text-decoration: none;
+}
+.sw-switch:hover { background: var(--primary-dark); text-decoration: none; color: #fff; }
+.sw-switch:active { transform: scale(0.985); }
+.sidebar-working--none { background: rgba(220, 38, 38, 0.12); border-color: rgba(220, 38, 38, 0.3); }
+.sidebar-working--none .sw-switch { background: var(--danger); }
+.sidebar-working--none .sw-switch:hover { background: #b91c1c; }
+
+/* Clickable table rows */
+.data-table tbody tr.row-link { cursor: pointer; transition: background 0.12s; }
+.data-table tbody tr.row-link:hover { background: #eff6ff; }
+.data-table tbody tr.row-link td:first-child {
+    font-weight: 600;
+    color: var(--primary);
+}
+.data-table tbody tr.row-link:hover td:first-child { text-decoration: underline; }
+.data-table tbody tr.row-link td.no-link { color: inherit; }
+
+/* Make the topbar Switch button visible (was invisible: light-on-light) */
+.working-on {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+.working-on-switch button.btn-link {
+    color: var(--primary) !important;
+    font-weight: 700;
+    text-decoration: underline;
+    padding: 2px 4px !important;
+}
+.working-on-switch button.btn-link:hover { color: var(--primary-dark) !important; }
+
+/* Sidebar nav polish */
+.sidebar-nav a { font-size: 14px; transition: background 0.15s, border-color 0.15s; }
+.sidebar-nav a.active { font-weight: 600; }
+
+/* Card header buttons line up nicely */
+.card-header { gap: 12px; flex-wrap: wrap; }
+
+/* ============================================
+   Bulk drag-and-drop document dropzone
+   ============================================ */
+.dropzone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 38px 24px;
+    text-align: center;
+    background: #f8fafc;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+}
+.dropzone:hover { border-color: var(--primary); background: #eff6ff; }
+.dropzone.dragover {
+    border-color: var(--primary);
+    background: #dbeafe;
+    transform: scale(1.005);
+}
+.dropzone-icon {
+    font-size: 34px;
+    line-height: 1;
+    margin-bottom: 10px;
+    color: var(--primary);
+}
+.dropzone-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.dropzone-sub { font-size: 13px; color: var(--muted); }
+.dropzone input[type=file] { display: none; }
+.dz-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.dz-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+}
+.dz-item .dz-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-item .dz-state { font-size: 12px; font-weight: 600; }
+.dz-item .dz-state.pending { color: var(--muted); }
+.dz-item .dz-state.uploading { color: var(--primary); }
+.dz-item .dz-state.done { color: #16a34a; }
+.dz-item .dz-state.error { color: var(--danger); }
+.dz-bar { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; width: 90px; }
+.dz-bar span { display: block; height: 100%; width: 0; background: var(--primary); transition: width 0.2s; }

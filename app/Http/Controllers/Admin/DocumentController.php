@@ -68,6 +68,69 @@ class DocumentController extends Controller
         return back()->with('status', 'Document uploaded.');
     }
 
+    /**
+     * Bulk upload: VA drops many files at once, no per-file category or
+     * description required. Everything lands as category "other" and can
+     * be re-categorised later from the single-upload modal if needed.
+     */
+    public function bulkStore(Request $request)
+    {
+        $clientId = session('selected_client_id');
+
+        $endUserRule = Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $clientId));
+
+        $data = $request->validate([
+            'end_user_id'     => ['required', $endUserRule],
+            'process_step_id' => 'nullable|integer',
+            'files'           => 'required|array|min:1|max:50',
+            'files.*'         => 'file|mimes:pdf,jpg,jpeg,png,mp3,wav,doc,docx,xls,xlsx,csv,txt|max:10240',
+        ]);
+
+        if (!empty($data['process_step_id'])) {
+            $stepBelongs = ProcessStep::forClient($clientId)
+                ->where('id', $data['process_step_id'])
+                ->where('end_user_id', $data['end_user_id'])
+                ->exists();
+            if (!$stepBelongs) {
+                abort(404);
+            }
+        }
+
+        $created = 0;
+
+        foreach ($request->file('files') as $file) {
+            $extension = strtolower($file->getClientOriginalExtension());
+            $fileType = match ($extension) {
+                'pdf'                => 'pdf',
+                'jpg', 'jpeg', 'png' => 'image',
+                'mp3', 'wav'         => 'audio',
+                default              => 'other',
+            };
+
+            $date = now()->toDateString();
+            $filename = time() . '_' . bin2hex(random_bytes(3)) . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
+            $directory = "uploads/{$data['end_user_id']}/{$date}";
+            $path = $file->storeAs($directory, $filename, 'private');
+
+            Document::create([
+                'end_user_id'     => $data['end_user_id'],
+                'process_step_id' => $data['process_step_id'] ?? null,
+                'file_name'       => $file->getClientOriginalName(),
+                'file_type'       => $fileType,
+                'file_path'       => $path,
+                'category'        => 'other',
+                'description'     => null,
+            ]);
+            $created++;
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['count' => $created]);
+        }
+
+        return back()->with('status', "{$created} document(s) uploaded.");
+    }
+
     public function destroy(string $id)
     {
         // Document::deleting hook removes the file from the private disk
