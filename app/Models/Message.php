@@ -16,16 +16,24 @@ class Message extends Model
     protected $fillable = [
         'client_id', 'sender_type', 'sender_id', 'body',
         'admin_read_at', 'client_read_at',
+        'reply_to_id', 'pinned_at', 'starred_at', 'note',
     ];
 
     protected $casts = [
         'admin_read_at'  => 'datetime',
         'client_read_at' => 'datetime',
+        'pinned_at'      => 'datetime',
+        'starred_at'     => 'datetime',
     ];
 
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function replyTo()
+    {
+        return $this->belongsTo(self::class, 'reply_to_id');
     }
 
     public function sender()

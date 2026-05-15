@@ -64,6 +64,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
             Route::post('messages', [Admin\MessageController::class, 'store'])->name('messages.store');
+            Route::post('messages/{id}/pin', [Admin\MessageController::class, 'togglePin'])->name('messages.pin');
+            Route::post('messages/{id}/star', [Admin\MessageController::class, 'toggleStar'])->name('messages.star');
+            Route::post('messages/{id}/note', [Admin\MessageController::class, 'saveNote'])->name('messages.note');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
