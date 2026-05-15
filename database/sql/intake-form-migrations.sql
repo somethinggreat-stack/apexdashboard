@@ -174,34 +174,25 @@ SELECT '2026_05_15_000005_add_middle_name_and_intake_to_end_users',
        );
 
 -- =====================================================================
--- 9) VERIFICATION (read-only)
+-- 9) VERIFICATION (read-only) — use SHOW so it's portable
 -- =====================================================================
-SELECT 'clients.intake_token'         AS object, IF(COUNT(*) = 1, 'present', 'MISSING') AS state
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = 'intake_token'
-UNION ALL
-SELECT 'clients.intake_token UNIQUE', IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND INDEX_NAME = 'clients_intake_token_unique'
-UNION ALL
-SELECT 'clients.intake_logo_path',    IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = 'intake_logo_path'
-UNION ALL
-SELECT 'clients.intake_display_name', IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients' AND COLUMN_NAME = 'intake_display_name'
-UNION ALL
-SELECT 'end_users.middle_name',       IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'end_users' AND COLUMN_NAME = 'middle_name'
-UNION ALL
-SELECT 'end_users.intake_status',     IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'end_users' AND COLUMN_NAME = 'intake_status'
-UNION ALL
-SELECT 'end_users.intake_submitted_ip', IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'end_users' AND COLUMN_NAME = 'intake_submitted_ip'
-UNION ALL
-SELECT 'end_users.intake_submitted_at', IF(COUNT(*) = 1, 'present', 'MISSING')
-  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'end_users' AND COLUMN_NAME = 'intake_submitted_at';
+-- Run these one at a time. Each should return rows for the new columns.
+
+SHOW COLUMNS FROM `clients`   LIKE 'intake\_%';
+SHOW COLUMNS FROM `end_users` LIKE 'middle\_name';
+SHOW COLUMNS FROM `end_users` LIKE 'intake\_%';
 
 -- Confirm every existing client has a token (none should be NULL).
 SELECT COUNT(*) AS clients_missing_token FROM `clients` WHERE `intake_token` IS NULL;
 
--- Show first few tokens so you can verify backfill worked.
-SELECT `id`, `business_name`, LEFT(`intake_token`, 12) AS token_preview FROM `clients` ORDER BY `id` LIMIT 5;
+-- Show the migration ledger so you can confirm both rows are recorded.
+SELECT `migration`, `batch` FROM `migrations`
+ WHERE `migration` IN (
+       '2026_05_15_000004_add_intake_to_clients',
+       '2026_05_15_000005_add_middle_name_and_intake_to_end_users'
+       )
+ ORDER BY `id`;
+
+-- Show first few tokens so you can confirm backfill worked.
+SELECT `id`, `business_name`, LEFT(`intake_token`, 12) AS token_preview
+  FROM `clients` ORDER BY `id` LIMIT 5;
