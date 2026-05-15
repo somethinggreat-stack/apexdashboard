@@ -117,8 +117,12 @@ em { background: linear-gradient(135deg, var(--gold-light), var(--gold) 40%, var
 .hero-ctas .btn-ghost { background: #fff; color: var(--ink); padding: 11px 20px; font-size: 14px; font-weight: 600; border: 1.5px solid var(--bone); border-radius: 8px; }
 .hero-ctas .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
 
-section { padding: 80px 40px; }
-.container { max-width: 1200px; margin: 0 auto; }
+section { padding: 96px 24px; }
+.container { max-width: 1440px; margin: 0 auto; padding: 0 24px; }
+.container-narrow { max-width: 1100px; margin: 0 auto; }
+.hero { padding: 80px 24px 96px; }
+.hero-inner { max-width: 1440px; margin: 0 auto; padding: 0 24px; }
+.crumbs { max-width: 1440px; margin: 0 auto; padding: 20px 48px 0; }
 .section-label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
 .section-title { font-size: clamp(26px, 3.4vw, 38px); font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 18px; max-width: 880px; }
 .section-intro { font-size: 16px; color: var(--smoke); max-width: 820px; margin-bottom: 32px; }
