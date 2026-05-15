@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Apex Growth Systems — backend credit repair fulfillment partner. We handle dispute workload, bureau follow-up calls, CFPB / FTC documentation, and weekly client reporting for credit repair businesses." />
-<title>About | Apex Growth Systems — Credit Repair Fulfillment Partner</title>
+<meta name="description" content="Try Apex on 5 test clients first. We run the full credit repair fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation, response monitoring, and Week 4 reporting — and you only pay once results are in. No upfront commitment." />
+<title>Try 5 Test Clients — Pay After Results | Apex Growth Systems</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -727,7 +727,7 @@ footer {
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
-    <a href="/trial" class="btn btn-primary"><span>Try 5 Test Clients</span> <span class="arrow">&rarr;</span></a>
+    <a href="/contact" class="btn btn-primary"><span>Contact Us To Start</span> <span class="arrow">&rarr;</span></a>
   </div>
 </nav>
 
@@ -736,38 +736,45 @@ footer {
      ============================================ -->
 <section class="hero">
   <div class="hero-inner reveal">
-    <p class="eyebrow">01 &middot; OUR STORY</p>
-    <h1>Built to handle the workload your credit repair business can't.</h1>
-    <p>Apex Growth Systems exists for one reason &mdash; credit repair businesses are growing faster than they can execute. Disputes pile up. Bureau calls go unmade. CFPB filings get delayed. Client updates slip past schedule. We are the backend operations team that picks up the dispute workload, runs the follow-up calls, files the complaint documentation, and sends weekly client status reports so the business owner can stay focused on sales, retention, and growth.</p>
+    <p class="eyebrow">PAY-AFTER-RESULTS TRIAL</p>
+    <h1>We'll run 5 test clients for you. <em>You pay only once the results are in.</em></h1>
+    <p>Don't move your full client base on a promise. Hand us 5 active client files and we'll execute the full Apex fulfillment workflow at our cost &mdash; certified letters, bureau follow-up calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report. You only pay once the results are in. Not before. That's how confident we are in the workflow &mdash; and how we earn full trust on your side before you scale.</p>
   </div>
 </section>
 
 <!-- ============================================
-     MISSION
+     HOW THE TRIAL WORKS
      ============================================ -->
 <section class="mission">
   <div class="mission-inner">
     <div class="mission-grid">
       <div class="mission-card reveal">
         <div class="mission-icon">
+          <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <h3>1. You hand off 5 files</h3>
+        <p>Pick any 5 active clients from your roster &mdash; the ones already drowning your queue. Send us the disputes, IDs, addresses, and bureau access. No upfront fees. No deposit. No contract trapping you in months of billing.</p>
+      </div>
+      <div class="mission-card reveal">
+        <div class="mission-icon">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </div>
-        <h3>Our Mission</h3>
-        <p>To give credit repair businesses a reliable execution arm &mdash; disputes prepared, bureaus called, complaints filed, and clients updated on time, every week, without the owner doing the work themselves.</p>
+        <h3>2. We run the full workflow</h3>
+        <p>Day 1 certified letters to Experian, Equifax, TransUnion, Innovis. Day 7-8 bureau follow-up calls. CFPB &amp; FTC complaint documentation where appropriate. Small-bureau freeze support. 30-day response window tracking. All of it &mdash; on our dime.</p>
       </div>
       <div class="mission-card reveal">
         <div class="mission-icon">
-          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         </div>
-        <h3>Our Vision</h3>
-        <p>A credit repair industry where business owners scale on volume and quality, not on burnout. Where every active client file gets professional, multi-channel dispute work &mdash; not template letters and silence between rounds.</p>
+        <h3>3. Week 4 results delivered</h3>
+        <p>You receive a full Week 4 client status report &mdash; every letter sent, every call documented, every bureau response logged, every 30-day window tracked. Delivered in your brand. You judge the quality firsthand.</p>
       </div>
       <div class="mission-card reveal">
         <div class="mission-icon">
-          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
-        <h3>Our Values</h3>
-        <p>Compliance first. Documentation always. We do not promise deletions. We do not claim guaranteed results. We run the workflow with discipline so your credit repair business is protected and your clients are served.</p>
+        <h3>4. You pay &mdash; only now</h3>
+        <p>Results are in. The work is documented. If we delivered, you pay. If we didn't, you don't. Then we scope the full handoff for the rest of your client base &mdash; pricing, white-label setup, monthly cadence &mdash; confirmed on a fulfillment call.</p>
       </div>
     </div>
   </div>
@@ -780,77 +787,89 @@ footer {
   <div class="numbers-inner">
     <div class="numbers-grid">
       <div class="stat-item reveal">
-        <div class="stat-number" data-target="72" data-suffix="hr">0</div>
-        <div class="stat-label">To Launch First Round</div>
+        <div class="stat-number" data-target="0" data-prefix="$" data-suffix="">0</div>
+        <div class="stat-label">Upfront Cost To Start</div>
       </div>
       <div class="stat-item reveal">
-        <div class="stat-number" data-target="100" data-suffix="%">0</div>
-        <div class="stat-label">Weekly Client File Updates</div>
+        <div class="stat-number" data-target="5" data-suffix="">0</div>
+        <div class="stat-label">Test Client Files</div>
       </div>
       <div class="stat-item reveal">
-        <div class="stat-number" data-target="4" data-suffix="">0</div>
-        <div class="stat-label">Bureaus Worked Every File</div>
+        <div class="stat-number" data-target="4" data-suffix=" wks">0</div>
+        <div class="stat-label">Until Results In Your Hands</div>
       </div>
       <div class="stat-item reveal">
-        <div class="stat-number" data-target="24" data-suffix="/7">0</div>
-        <div class="stat-label">US Daytime Coverage</div>
+        <div class="stat-number" data-target="0" data-suffix="">0</div>
+        <div class="stat-label">Long-Term Contract</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================
-     HOW WE'RE DIFFERENT
+     WHAT'S INCLUDED
      ============================================ -->
 <section class="different">
   <div class="different-inner">
     <div class="different-left reveal">
-      <h2>What makes Apex <em>different</em> from a typical fulfillment shop</h2>
+      <h2>Everything we run on your 5 trial files <em>before you ever pay a dollar</em></h2>
     </div>
     <div class="different-right">
       <div class="check-item reveal">
         <div class="check-icon">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <p><strong>Multi-channel dispute workflow</strong> &mdash; Certified letters, bureau follow-up calls, CFPB and FTC complaint documentation, and small-bureau freeze support &mdash; all in the same client file.</p>
+        <p><strong>Day 1 certified letters</strong> &mdash; Experian, Equifax, TransUnion, and Innovis. Tracked, mailed, and logged in your dispute trail.</p>
       </div>
       <div class="check-item reveal">
         <div class="check-icon">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <p><strong>US business-hour coverage</strong> &mdash; Pakistan night hours align with US daytime, so bureau calls and client communication happen during business hours, not after.</p>
+        <p><strong>Day 7-8 bureau follow-up calls</strong> &mdash; TU / EX / EQ called, documented, with rep names, ticket numbers, and timestamps captured for the file.</p>
       </div>
       <div class="check-item reveal">
         <div class="check-icon">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <p><strong>White-label friendly</strong> &mdash; We work behind your brand. Letters, reports, and client updates can ship under your credit repair business name.</p>
+        <p><strong>CFPB &amp; FTC documentation</strong> &mdash; Complaint packages prepared where the file profile supports it, with full evidence trail.</p>
       </div>
       <div class="check-item reveal">
         <div class="check-icon">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <p><strong>Documentation-driven</strong> &mdash; Every dispute, call, response, and 30-day window is tracked and shown back to you in weekly client status reports.</p>
+        <p><strong>Small-bureau freeze support</strong> &mdash; ChexSystems, ARS, Clarity, SageStream, LexisNexis &mdash; included on every applicable file.</p>
       </div>
       <div class="check-item reveal">
         <div class="check-icon">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <p><strong>Round 2 escalation built in</strong> &mdash; Non-deletions get stronger follow-up language citing failure to investigate properly. We don't stop at Round 1.</p>
+        <p><strong>Week 2-3 response monitoring</strong> &mdash; Every 30-day window tracked. No file falls into a black hole between rounds.</p>
+      </div>
+      <div class="check-item reveal">
+        <div class="check-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <p><strong>Week 4 client status report</strong> &mdash; Every action, every response, every escalation &mdash; delivered in your brand, ready to ship to the client.</p>
+      </div>
+      <div class="check-item reveal">
+        <div class="check-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <p><strong>Round 2 escalation prep</strong> &mdash; Non-deletions get stronger follow-up language citing failure to investigate properly. We don't stop at Round 1.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================
-     FOUNDER
+     WHY WE OFFER THIS
      ============================================ -->
 <section class="founder">
   <div class="founder-inner reveal">
-    <p class="eyebrow">02 &middot; WHY WE BUILT THIS</p>
-    <h2 class="founder-name">Built To Run The Workload Owners Hate Doing</h2>
-    <p class="founder-role">The Apex Growth Systems Team</p>
-    <p class="founder-bio">Apex Growth Systems was built after watching credit repair business owners win sales and then drown in fulfillment. The disputes, the bureau calls, the CFPB filings, the client updates &mdash; every piece of post-sale execution that doesn't generate revenue but determines whether clients stay or refund. Our team operates the entire backend so the business owner can sell, scale, and protect their reputation. We are not a law firm and we do not provide legal advice. We provide administrative dispute preparation, complaint documentation support, response monitoring, and weekly client reporting on behalf of credit repair businesses. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
+    <p class="eyebrow">WHY WE WORK THIS WAY</p>
+    <h2 class="founder-name">Full Trust On Your Side. Full Skin In The Game On Ours.</h2>
+    <p class="founder-role">The Apex Fulfillment Commitment</p>
+    <p class="founder-bio">Most fulfillment partners ask you to wire money, sign a contract, and hope. We won't. If you're being asked to scale your entire client base to a backend team you've never worked with, the only way to honestly de-risk that is for us to do the work first &mdash; in full, on live files, with a paper trail you can audit &mdash; and let the results decide whether we deserve to be paid. We absorb the cost of those 5 files. You absorb zero risk. If the workflow proves out, you pay for the trial and we scope the full handoff. If it doesn't, you walk away with nothing lost and 5 dispute files that were professionally worked at our expense. Apex Growth Systems is not a law firm and does not provide legal advice. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
   </div>
 </section>
 
@@ -859,9 +878,9 @@ footer {
      ============================================ -->
 <section class="cta">
   <div class="cta-inner reveal">
-    <h2>Ready to hand off the dispute workload?</h2>
+    <h2>Ready to hand us your 5 files?</h2>
     <div class="cta-buttons">
-      <a href="/trial" class="btn-gradient">Try 5 Test Clients <span>&rarr;</span></a>
+      <a href="/contact" class="btn-gradient">Contact Us To Start <span>&rarr;</span></a>
       <a href="/contact" class="btn-ghost">Book A Fulfillment Call</a>
     </div>
   </div>

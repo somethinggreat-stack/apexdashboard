@@ -2293,7 +2293,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
-    <a href="/contact" class="btn btn-primary"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
+    <a href="/trial" class="btn btn-primary"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
   </div>
 </nav>
 
@@ -2332,7 +2332,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         Apex Growth Systems is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — so your credit repair business can scale without drowning in manual work.
       </p>
       <div class="hero-cta">
-        <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
+        <a href="/trial" class="btn btn-gold"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
         <a href="/contact" class="btn btn-ghost"><span>Book A Fulfillment Call</span></a>
       </div>
       <div class="trust-row">
@@ -2740,7 +2740,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
           <li>Week 4 client status report — delivered in your brand</li>
           <li>Round 2 escalation prep on non-deletions</li>
         </ul>
-        <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
+        <a href="/trial" class="btn btn-gold"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
       </div>
     </div>
 
@@ -2916,7 +2916,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
     <h2>Scale your credit repair fulfillment <em>this week.</em></h2>
     <p>Hand us 5 test clients. We'll execute the full Apex fulfillment workflow — Day 1 letters, Day 7-8 bureau calls, CFPB / FTC documentation where appropriate, response monitoring, and a Week 4 client status report — and you only pay once the results are in. Not before. Full trust on your side, full skin in the game on ours. Results vary; we do not guarantee removal of accurate or verifiable information.</p>
     <div class="hero-cta">
-      <a href="/contact" class="btn btn-gold"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">→</span></a>
+      <a href="/trial" class="btn btn-gold"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
       <a href="/contact" class="btn btn-ghost"><span>Book A Fulfillment Call</span></a>
     </div>
   </div>
@@ -2954,7 +2954,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         <li><a href="/about">About</a></li>
         <li><a href="/results">Business Results</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a href="/contact">Pay-After-Results Trial</a></li>
+        <li><a href="/trial">Pay-After-Results Trial</a></li>
       </ul>
     </div>
     <div class="footer-col">

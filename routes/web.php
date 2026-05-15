@@ -15,6 +15,7 @@ Route::get('/',         fn () => view('index'))->name('home');
 Route::get('/about',    fn () => view('about'))->name('about');
 Route::get('/contact',  fn () => view('contact'))->name('contact');
 Route::get('/results',  fn () => view('results'))->name('results');
+Route::get('/trial',    fn () => view('trial'))->name('trial');
 
 /*
 |--------------------------------------------------------------------------

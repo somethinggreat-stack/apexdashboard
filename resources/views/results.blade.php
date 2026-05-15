@@ -932,7 +932,7 @@ footer {
       <li><a href="/contact">Contact</a></li>
       <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
     </ul>
-    <a href="/contact" class="btn btn-primary"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">&rarr;</span></a>
+    <a href="/trial" class="btn btn-primary"><span>Try 5 Test Clients</span> <span class="arrow">&rarr;</span></a>
   </div>
 </nav>
 
@@ -1142,7 +1142,7 @@ footer {
   <div class="cta-inner reveal">
     <h2 class="cta-headline">Scale your credit repair fulfillment <em>this week.</em></h2>
     <div class="cta-buttons">
-      <a href="/contact" class="btn-gradient"><span>Try 5 Test Clients — Pay After Results</span> <span class="arrow">&rarr;</span></a>
+      <a href="/trial" class="btn-gradient"><span>Try 5 Test Clients</span> <span class="arrow">&rarr;</span></a>
       <a href="/contact" class="btn-ghost"><span>Book A Fulfillment Call</span></a>
     </div>
   </div>
@@ -1177,7 +1177,7 @@ footer {
         <li><a href="/about">About</a></li>
         <li><a href="/results">Business Results</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a href="/contact">Pay-After-Results Trial</a></li>
+        <li><a href="/trial">Pay-After-Results Trial</a></li>
       </ul>
     </div>
     <div class="footer-col">
