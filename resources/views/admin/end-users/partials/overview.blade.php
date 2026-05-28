@@ -46,7 +46,25 @@
         ? $endUser->start_date->copy()->addDays(28 * $currentRoundNum)->format('M d, Y')
         : '—';
 
-    $isOnTrack = !$endUser->is_incomplete;
+    // Compute the week-by-week schedule locally so we don't depend on
+    // withCount (the controller's show() doesn't add it). This makes
+    // is_incomplete reliable for the overview regardless of how endUser
+    // was loaded.
+    $weekCounts = [];
+    for ($w = 1; $w <= 4; $w++) {
+        $weekCounts[$w] = $allSteps->where('week', $w)->count();
+    }
+    $daysActive = $endUser->days_active;
+    $missingWeek = null;
+    if ($daysActive >= 1  && $weekCounts[1] === 0) $missingWeek = 1;
+    elseif ($daysActive >= 8  && $weekCounts[2] === 0) $missingWeek = 2;
+    elseif ($daysActive >= 15 && $weekCounts[3] === 0) $missingWeek = 3;
+    elseif ($daysActive >= 22 && $weekCounts[4] === 0) $missingWeek = 4;
+    $isOnTrack    = $missingWeek === null;
+    $statusCaption = $isOnTrack ? 'On Track' : "Week {$missingWeek} due";
+    $statusMessage = $isOnTrack
+        ? 'Everything is on track. Keep going!'
+        : "Time to log Week {$missingWeek} — keep the momentum going.";
 
     // Week 1 progress display — match the mockup's per-step list
     $week1Types = $stepTypesByWeek[1] ?? [];
@@ -171,18 +189,6 @@
             <div class="ov-stat-sub">Total Steps: {{ $allRoundsTotalSteps }}</div>
         </div>
 
-        {{-- Total Deletions --}}
-        <div class="ov-stat-card">
-            <div class="ov-stat-head">
-                <div class="ov-icon ov-icon-orange">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                </div>
-                <div class="ov-stat-label">Total Deletions</div>
-            </div>
-            <div class="ov-stat-value">{{ $currentRoundDeletions }}</div>
-            <div class="ov-stat-sub">This Round</div>
-        </div>
-
         {{-- Disputes Filed --}}
         <div class="ov-stat-card">
             <div class="ov-stat-head">
@@ -208,7 +214,7 @@
                 <div class="ov-stat-label">Status</div>
             </div>
             <div class="ov-stat-value" style="text-transform:capitalize;">{{ $endUser->status }}</div>
-            <div class="ov-stat-sub">{{ $isOnTrack ? 'On Track' : ($endUser->incomplete_reason ?? 'Behind schedule') }}</div>
+            <div class="ov-stat-sub">{{ $statusCaption }}</div>
         </div>
     </div>
 
@@ -342,10 +348,10 @@
                     </div>
                     <div>
                         <div class="ov-shield-label" style="text-transform:capitalize;">{{ $endUser->status }}</div>
-                        <div class="ov-shield-sub">{{ $isOnTrack ? 'On Track' : ($endUser->incomplete_reason ?? 'Behind schedule') }}</div>
+                        <div class="ov-shield-sub">{{ $statusCaption }}</div>
                     </div>
                 </div>
-                <div class="ov-shield-msg">{{ $isOnTrack ? 'Everything is on track. Keep going!' : 'A step is overdue — log it to get back on schedule.' }}</div>
+                <div class="ov-shield-msg">{{ $statusMessage }}</div>
 
                 <div class="ov-kv">
                     <div class="ov-kv-row"><span>Current Round</span><strong>{{ $currentRoundLabel }}</strong></div>
@@ -432,7 +438,7 @@
     /* Top stat cards row */
     #tab-overview .ov-stats {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 14px;
         margin-bottom: 20px;
     }
@@ -705,7 +711,7 @@
 
     /* Responsive */
     @media (max-width: 1280px) {
-        #tab-overview .ov-stats { grid-template-columns: repeat(3, 1fr); }
+        #tab-overview .ov-stats { grid-template-columns: repeat(2, 1fr); }
         #tab-overview .ov-docs-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 900px) {

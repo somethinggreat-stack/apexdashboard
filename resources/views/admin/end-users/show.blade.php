@@ -35,8 +35,7 @@
 
 @section('content')
 <div class="card">
-    <div class="card-header">
-        <h2>{{ $endUser->full_name }}</h2>
+    <div class="card-header client-header-actions">
         <div style="display:flex; gap:8px;">
             <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary">← All Clients</a>
             <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
@@ -51,7 +50,17 @@
         <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
         <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
-        <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
+        <div>
+            <label>Status</label>
+            <div>
+                <span class="inline-edit inline-edit-status"
+                      data-id="{{ $endUser->id }}"
+                      data-current="{{ $endUser->status }}">
+                    <span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span>
+                    <span class="inline-pencil" aria-hidden="true">✎</span>
+                </span>
+            </div>
+        </div>
         <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
     </div>
     @push('head')
@@ -88,6 +97,14 @@
         .info-grid.client-header-row .pill {
             font-size: 10.5px;
         }
+        .client-header-row .inline-edit { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .client-header-row .inline-edit .inline-pencil {
+            opacity: 0; transition: opacity .15s; font-size: 11px; color: #94a3b8;
+        }
+        .client-header-row .inline-edit:hover .inline-pencil { opacity: 1; }
+        .client-header-row .inline-edit select { font-size: 12px; padding: 2px 6px; min-width: 120px; }
+        .client-header-row .inline-edit .inline-save  { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #16a34a; color: white; border: 0; border-radius: 4px; }
+        .client-header-row .inline-edit .inline-cancel { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #e5e7eb; color: #374151; border: 0; border-radius: 4px; }
         @media (max-width: 1180px) {
             .info-grid.client-header-row {
                 grid-template-columns: repeat(3, 1fr);
@@ -101,16 +118,6 @@
         }
     </style>
     @endpush
-    <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" class="inline-update">
-        @csrf @method('PUT')
-        <label>Status</label>
-        <select name="status">
-            @foreach (['active','paused','graduated','cancelled'] as $s)
-                <option value="{{ $s }}" @selected($endUser->status === $s)>{{ ucfirst($s) }}</option>
-            @endforeach
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Save</button>
-    </form>
 </div>
 
 <div class="tabs">
@@ -620,6 +627,50 @@
         }
     }
     window.togglePassword = togglePassword;
+
+    /* ===== Inline Status edit on the header row ===== */
+    (function () {
+        var STATUSES = ['active','paused','graduated','cancelled'];
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        var updateUrl = @json(route('admin.end-users.update', $endUser));
+
+        document.querySelectorAll('.client-header-row .inline-edit-status').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                if (el.classList.contains('editing')) return;
+                e.preventDefault(); e.stopPropagation();
+                var current = el.dataset.current;
+                el.classList.add('editing');
+                el.innerHTML =
+                    '<select>' + STATUSES.map(function (s) {
+                        return '<option value="'+s+'"'+(s===current?' selected':'')+'>'+s+'</option>';
+                    }).join('') + '</select>' +
+                    '<button class="inline-save" type="button">Save</button>' +
+                    '<button class="inline-cancel" type="button">×</button>';
+                var sel = el.querySelector('select');
+                sel.focus();
+                sel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+                el.querySelector('.inline-cancel').addEventListener('click', function (ev) {
+                    ev.preventDefault(); ev.stopPropagation();
+                    window.location.reload();
+                });
+                el.querySelector('.inline-save').addEventListener('click', function (ev) {
+                    ev.preventDefault(); ev.stopPropagation();
+                    var fd = new FormData();
+                    fd.append('_method', 'PUT');
+                    fd.append('_token', csrf);
+                    fd.append('status', sel.value);
+                    fetch(updateUrl, {
+                        method: 'POST', body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                    }).then(function (r) {
+                        if (r.ok) window.location.reload();
+                        else alert('Could not save status.');
+                    });
+                });
+            });
+        });
+    })();
 
     /* ===== Multi-select Process Step Type ===== */
     const stepTypesByWeek = @json($stepTypesByWeek);
