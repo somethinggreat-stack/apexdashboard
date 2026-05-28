@@ -141,6 +141,30 @@ class EndUser extends Model
         return $this->incomplete_reason !== null;
     }
 
+    public function getMissingWeekAttribute(): ?int
+    {
+        $days = $this->days_active;
+
+        if ((int) ($this->process_steps_count ?? 0) === 0) {
+            return 1;
+        }
+        if ($days > 7 && (int) ($this->week2_count ?? 0) === 0) {
+            return 2;
+        }
+        if ($days > 14 && (int) ($this->week3_count ?? 0) === 0) {
+            return 3;
+        }
+        if ($days > 21 && (int) ($this->week4_count ?? 0) === 0) {
+            return 4;
+        }
+        return null;
+    }
+
+    public function getCurrentRoundAttribute(): int
+    {
+        return max(1, count($this->rounds ?? []));
+    }
+
     public function getTotalDeletionsAttribute()
     {
         return (int) $this->processSteps->sum(function ($s) {

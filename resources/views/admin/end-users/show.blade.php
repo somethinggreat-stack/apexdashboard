@@ -578,6 +578,45 @@
     const existingCombos = @json($endUser->processSteps->map(fn ($s) => $s->round . '-' . $s->week . '-' . $s->step_type)->values());
     const existingSet = new Set(existingCombos);
 
+    /* Past-step lookup for "copy from last round" prefill.
+       Keyed by week-step_type, returns the most recent round's bureau counts. */
+    const pastStepsByKey = @json(
+        $endUser->processSteps
+            ->sortByDesc('round')
+            ->groupBy(fn ($s) => $s->week . '-' . $s->step_type)
+            ->map(fn ($group) => [
+                'round'                          => $group->first()->round,
+                'experian_accounts_disputed'     => $group->first()->experian_accounts_disputed,
+                'experian_inquiries_disputed'    => $group->first()->experian_inquiries_disputed,
+                'transunion_accounts_disputed'   => $group->first()->transunion_accounts_disputed,
+                'transunion_inquiries_disputed'  => $group->first()->transunion_inquiries_disputed,
+                'equifax_accounts_disputed'      => $group->first()->equifax_accounts_disputed,
+                'equifax_inquiries_disputed'     => $group->first()->equifax_inquiries_disputed,
+                'previous_credit_score'          => $group->first()->previous_credit_score,
+                'credit_score_now'               => $group->first()->credit_score_now,
+            ])
+    );
+
+    function prefillFromLastRound() {
+        if (currentWeek() !== 4 || !selected.has('record_deletions')) return;
+        const key = '4-record_deletions';
+        const prior = pastStepsByKey[key];
+        if (!prior || prior.round >= currentRound()) return;
+        const fields = [
+            'experian_accounts_disputed', 'experian_inquiries_disputed',
+            'transunion_accounts_disputed', 'transunion_inquiries_disputed',
+            'equifax_accounts_disputed', 'equifax_inquiries_disputed',
+            'previous_credit_score', 'credit_score_now',
+        ];
+        fields.forEach(function (f) {
+            var el = document.querySelector('#addStepModal [name="' + f + '"]');
+            if (el && (el.value === '' || el.value == null) && prior[f] != null) {
+                el.value = prior[f];
+                el.classList.add('prefilled');
+            }
+        });
+    }
+
     const roundSel  = document.getElementById('stepRound');
     const weekSel   = document.getElementById('stepWeek');
     const w4s2Fields = document.getElementById('w4s2-fields');
@@ -602,7 +641,9 @@
 
     function refreshTrackingFields() {
         if (!w4s2Fields) return;
-        w4s2Fields.hidden = !(currentWeek() === 4 && selected.has('record_deletions'));
+        var show = (currentWeek() === 4 && selected.has('record_deletions'));
+        w4s2Fields.hidden = !show;
+        if (show) prefillFromLastRound();
     }
 
     var checkMark = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';

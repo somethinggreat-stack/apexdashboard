@@ -74,6 +74,10 @@ class ProcessStepController extends Controller
 
             ProcessStep::create($shared + ['step_type' => $type]);
             $created++;
+
+            if ($type === 'record_deletions' && (int) $data['week'] === 4) {
+                $this->advanceRoundFor((int) $data['end_user_id'], (int) $data['round']);
+            }
         }
 
         $msg = match (true) {
@@ -103,6 +107,31 @@ class ProcessStepController extends Controller
     {
         ProcessStep::forClient(session('selected_client_id'))->findOrFail($id)->delete();
         return back()->with('status', 'Process step deleted.');
+    }
+
+    /**
+     * When Week 4 record_deletions is logged for round N, append the
+     * "(N+1)th Round" label to the end user's rounds array so the new
+     * round appears in their profile and the VA knows to start logging it.
+     */
+    private function advanceRoundFor(int $endUserId, int $completedRound): void
+    {
+        $nextRound = $completedRound + 1;
+        $labelMap  = [
+            1 => '1st Round', 2 => '2nd Round', 3 => '3rd Round',
+            4 => '4th Round', 5 => '5th Round',
+        ];
+        $nextLabel = $labelMap[$nextRound] ?? null;
+        if (!$nextLabel) return;
+
+        $endUser = EndUser::find($endUserId);
+        if (!$endUser) return;
+
+        $existing = $endUser->rounds ?? [];
+        if (in_array($nextLabel, $existing, true)) return;
+
+        $existing[] = $nextLabel;
+        $endUser->update(['rounds' => $existing]);
     }
 
     private function validatedPayload(Request $request, bool $creating): array

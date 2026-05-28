@@ -188,6 +188,7 @@ a:hover { text-decoration: underline; }
 .pill-cancelled, .pill-escalated { background: #fee2e2; color: #991b1b; }
 .pill-graduated, .pill-verified { background: #dbeafe; color: #1e40af; }
 .pill-incomplete { background: #fee2e2; color: #991b1b; margin-left: 6px; }
+input.prefilled { background: #fef9c3; border-color: #facc15; }
 
 /* Info Grid */
 .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 12px; }

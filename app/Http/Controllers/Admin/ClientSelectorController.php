@@ -24,6 +24,11 @@ class ClientSelectorController extends Controller
         $client = Client::forAdmin(Auth::guard('admin')->id())->findOrFail($id);
         $request->session()->put('selected_client_id', $client->id);
 
+        $redirect = $request->input('redirect_to');
+        if ($redirect && str_starts_with($redirect, url('/admin'))) {
+            return redirect($redirect);
+        }
+
         return redirect()->route('admin.dashboard');
     }
 

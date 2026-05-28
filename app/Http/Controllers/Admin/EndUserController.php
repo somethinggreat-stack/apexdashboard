@@ -82,6 +82,17 @@ class EndUserController extends Controller
         return view('admin.end-users.show', compact('endUser'));
     }
 
+    public function statusReport(string $id)
+    {
+        $endUser = $this->scoped()->with([
+            'client',
+            'processSteps.createdBy',
+            'scoreHistory',
+        ])->findOrFail($id);
+
+        return view('admin.end-users.status-report', compact('endUser'));
+    }
+
     public function update(Request $request, string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);

@@ -68,6 +68,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Leads (from public website forms) — accessible without a business owner being selected
         Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
 
+        // Cross-BO views — show clients across every business owner this admin manages
+        Route::get('all-clients', [Admin\AllClientsController::class, 'index'])->name('all-clients');
+        Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
+
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
             ->name('client-selector.index');
@@ -96,6 +100,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
             Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->name('end-users.show');
+            Route::get('end-users/{id}/status-report', [Admin\EndUserController::class, 'statusReport'])->name('end-users.status-report');
             Route::put('end-users/{id}', [Admin\EndUserController::class, 'update'])->name('end-users.update');
             Route::delete('end-users/{id}', [Admin\EndUserController::class, 'destroy'])->name('end-users.destroy');
 
