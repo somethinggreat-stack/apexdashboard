@@ -75,8 +75,7 @@ class ProcessStep extends Model
                 'phone_call_disputes' => 'Step 2: Phone Call Disputes (EX & TU)',
                 'ftc_and_freezes' => 'Step 3: FTC + Freezes (All Small Bureaus)',
                 'cfpb_3b_and_innovis' => 'Step 4: CFPB (All 3B) & Innovis',
-                'letterstream' => 'Step 5: LetterStream (if required)',
-                'experian_upload' => 'Step 6: Experian Upload',
+                'experian_upload' => 'Step 5: Experian Upload',
             ],
             2 => [
                 'tu_ex_call_followups' => 'Step 1: TransUnion & Experian Call Follow-Ups',
@@ -163,9 +162,6 @@ class ProcessStep extends Model
 
             case 'cfpb_3b_and_innovis':
                 return "On {$date}, CFPB complaints were filed against the three major bureaus where the file profile supported it, and a separate Innovis dispute package was submitted for Round {$round}.";
-
-            case 'letterstream':
-                return "On {$date}, backup dispute letters were dispatched through LetterStream as a redundancy layer to protect against physical mail loss.";
 
             case 'experian_upload':
                 return "On {$date}, Round {$round} disputes were uploaded directly to Experian's online portal so the request runs in parallel with the certified mail.";

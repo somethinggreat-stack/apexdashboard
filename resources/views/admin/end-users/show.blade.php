@@ -46,15 +46,61 @@
             </form>
         </div>
     </div>
-    <div class="info-grid">
+    <div class="info-grid client-header-row">
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
-        <div><label>Suffix</label><div>{{ $endUser->suffix && $endUser->suffix !== 'None' ? $endUser->suffix : '—' }}</div></div>
-        <div><label>Email</label><div>{{ $endUser->email }}</div></div>
+        <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
         <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
         <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
         <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
     </div>
+    @push('head')
+    <style>
+        /* Single-row, premium header info strip — scoped only to the client detail page */
+        .info-grid.client-header-row {
+            display: grid !important;
+            grid-template-columns: 1.4fr 1.6fr 1fr .8fr .9fr 1fr;
+            gap: 18px 28px;
+            align-items: start;
+            padding: 6px 2px 2px;
+        }
+        .info-grid.client-header-row > div {
+            min-width: 0;
+        }
+        .info-grid.client-header-row label {
+            display: block;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .info-grid.client-header-row > div > div {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .info-grid.client-header-row .pill {
+            font-size: 10.5px;
+        }
+        @media (max-width: 1180px) {
+            .info-grid.client-header-row {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px 24px;
+            }
+        }
+        @media (max-width: 720px) {
+            .info-grid.client-header-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+    @endpush
     <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" class="inline-update">
         @csrf @method('PUT')
         <label>Status</label>
