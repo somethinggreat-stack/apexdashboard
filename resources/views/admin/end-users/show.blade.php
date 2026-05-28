@@ -33,17 +33,21 @@
     $totalDocs = $endUser->documents->count() + $identityDocs->count();
 @endphp
 
+@section('topbar-content')
+    <div class="page-actions">
+        <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary page-action-btn">← All Clients</a>
+        <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
+              onsubmit="return confirm('Delete client {{ $endUser->full_name }} and ALL their documents, notes, and process steps? This cannot be undone.')">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-danger page-action-btn">Delete Client</button>
+        </form>
+    </div>
+@endsection
+
 @section('content')
 <div class="card">
-    <div class="card-header client-header-actions">
-        <div style="display:flex; gap:8px;">
-            <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary">← All Clients</a>
-            <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
-                  onsubmit="return confirm('Delete client {{ $endUser->full_name }} and ALL their documents, notes, and process steps? This cannot be undone.')">
-                @csrf @method('DELETE')
-                <button type="submit" class="btn btn-danger">Delete Client</button>
-            </form>
-        </div>
+    <div class="card-header client-header-name">
+        <h2>{{ $endUser->full_name }}</h2>
     </div>
     <div class="info-grid client-header-row">
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
@@ -65,6 +69,27 @@
     </div>
     @push('head')
     <style>
+        /* Topbar action buttons — equal width/height */
+        .page-actions { display: flex; gap: 10px; align-items: center; }
+        .page-actions form { margin: 0; padding: 0; }
+        .page-actions .page-action-btn {
+            min-width: 140px;
+            height: 38px;
+            padding: 0 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            line-height: 1;
+        }
+
+        /* Card-header name (now the single source of the client's name) */
+        .client-header-name { display: flex; align-items: center; padding-bottom: 12px; }
+        .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
+
         /* Single-row, premium header info strip — scoped only to the client detail page */
         .info-grid.client-header-row {
             display: grid !important;
