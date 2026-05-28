@@ -117,6 +117,30 @@ class EndUser extends Model
         return (int) Carbon::parse($this->start_date)->diffInDays(now()) + 1;
     }
 
+    public function getIncompleteReasonAttribute(): ?string
+    {
+        $days = $this->days_active;
+
+        if ((int) ($this->process_steps_count ?? 0) === 0) {
+            return 'No steps logged';
+        }
+        if ($days > 7 && (int) ($this->week2_count ?? 0) === 0) {
+            return 'Week 2 not completed';
+        }
+        if ($days > 14 && (int) ($this->week3_count ?? 0) === 0) {
+            return 'Week 3 not completed';
+        }
+        if ($days > 21 && (int) ($this->week4_count ?? 0) === 0) {
+            return 'Week 4 not completed';
+        }
+        return null;
+    }
+
+    public function getIsIncompleteAttribute(): bool
+    {
+        return $this->incomplete_reason !== null;
+    }
+
     public function getTotalDeletionsAttribute()
     {
         return (int) $this->processSteps->sum(function ($s) {

@@ -38,7 +38,12 @@
         <tbody>
             @forelse ($endUsers as $eu)
                 <tr>
-                    <td>{{ $eu->full_name }}</td>
+                    <td>
+                        {{ $eu->full_name }}
+                        @if ($eu->is_incomplete)
+                            <span class="pill pill-incomplete" title="{{ $eu->incomplete_reason }}">Incomplete</span>
+                        @endif
+                    </td>
                     <td>{{ $eu->email }}</td>
                     <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
                     <td>{{ $eu->process_steps_count }}</td>
@@ -51,7 +56,6 @@
             @endforelse
         </tbody>
     </table>
-    <div class="pagination-wrap">{{ $endUsers->links() }}</div>
 </div>
 
 <div id="createEndUserModal" class="modal">

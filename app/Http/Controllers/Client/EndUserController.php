@@ -15,7 +15,13 @@ class EndUserController extends Controller
     {
         $clientId = Auth::guard('client')->id();
 
-        $query = EndUser::forClient($clientId)->withCount('processSteps');
+        $query = EndUser::forClient($clientId)->withCount([
+            'processSteps',
+            'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+            'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+            'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+            'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+        ]);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -30,7 +36,13 @@ class EndUserController extends Controller
             });
         }
 
-        $endUsers = $query->orderBy('first_name')->paginate(25)->withQueryString();
+        $endUsers = $query->orderBy('start_date', 'asc')->orderBy('first_name')->get()
+            ->sort(function ($a, $b) {
+                $byIncomplete = ($b->is_incomplete ? 1 : 0) <=> ($a->is_incomplete ? 1 : 0);
+                if ($byIncomplete !== 0) return $byIncomplete;
+                return $a->start_date <=> $b->start_date;
+            })
+            ->values();
 
         return view('client.end-users.index', compact('endUsers'));
     }

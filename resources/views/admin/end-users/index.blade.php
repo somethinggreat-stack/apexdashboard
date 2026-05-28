@@ -38,7 +38,12 @@
         <tbody>
             @forelse ($endUsers as $eu)
                 <tr class="row-link" data-href="{{ route('admin.end-users.show', $eu) }}">
-                    <td>{{ $eu->full_name }}</td>
+                    <td>
+                        {{ $eu->full_name }}
+                        @if ($eu->is_incomplete)
+                            <span class="pill pill-incomplete" title="{{ $eu->incomplete_reason }}">Incomplete</span>
+                        @endif
+                    </td>
                     <td class="no-link">{{ $eu->email }}</td>
                     <td class="no-link">{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
                     <td class="no-link">{{ $eu->process_steps_count }}</td>
@@ -57,7 +62,6 @@
             @endforelse
         </tbody>
     </table>
-    <div class="pagination-wrap">{{ $endUsers->links() }}</div>
 </div>
 
 <div id="createEndUserModal" class="modal">
