@@ -578,24 +578,28 @@
     const existingCombos = @json($endUser->processSteps->map(fn ($s) => $s->round . '-' . $s->week . '-' . $s->step_type)->values());
     const existingSet = new Set(existingCombos);
 
-    /* Past-step lookup for "copy from last round" prefill.
-       Keyed by week-step_type, returns the most recent round's bureau counts. */
-    const pastStepsByKey = @json(
-        $endUser->processSteps
+    @php
+        $pastStepsByKey = $endUser->processSteps
             ->sortByDesc('round')
             ->groupBy(fn ($s) => $s->week . '-' . $s->step_type)
-            ->map(fn ($group) => [
-                'round'                          => $group->first()->round,
-                'experian_accounts_disputed'     => $group->first()->experian_accounts_disputed,
-                'experian_inquiries_disputed'    => $group->first()->experian_inquiries_disputed,
-                'transunion_accounts_disputed'   => $group->first()->transunion_accounts_disputed,
-                'transunion_inquiries_disputed'  => $group->first()->transunion_inquiries_disputed,
-                'equifax_accounts_disputed'      => $group->first()->equifax_accounts_disputed,
-                'equifax_inquiries_disputed'     => $group->first()->equifax_inquiries_disputed,
-                'previous_credit_score'          => $group->first()->previous_credit_score,
-                'credit_score_now'               => $group->first()->credit_score_now,
-            ])
-    );
+            ->map(function ($group) {
+                $first = $group->first();
+                return [
+                    'round'                         => $first->round,
+                    'experian_accounts_disputed'    => $first->experian_accounts_disputed,
+                    'experian_inquiries_disputed'   => $first->experian_inquiries_disputed,
+                    'transunion_accounts_disputed'  => $first->transunion_accounts_disputed,
+                    'transunion_inquiries_disputed' => $first->transunion_inquiries_disputed,
+                    'equifax_accounts_disputed'     => $first->equifax_accounts_disputed,
+                    'equifax_inquiries_disputed'    => $first->equifax_inquiries_disputed,
+                    'previous_credit_score'         => $first->previous_credit_score,
+                    'credit_score_now'              => $first->credit_score_now,
+                ];
+            });
+    @endphp
+    /* Past-step lookup for "copy from last round" prefill.
+       Keyed by week-step_type, returns the most recent round's bureau counts. */
+    const pastStepsByKey = @json($pastStepsByKey);
 
     function prefillFromLastRound() {
         if (currentWeek() !== 4 || !selected.has('record_deletions')) return;
