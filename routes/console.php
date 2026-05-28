@@ -10,6 +10,3 @@ Artisan::command('inspire', function () {
 
 // Pause clients with 14+ days of no activity — runs every morning at 7am server time.
 Schedule::command('clients:auto-pause')->dailyAt('07:00');
-
-// Weekly BO summary email — every Monday at 8am server time.
-Schedule::command('bo:weekly-summary')->weeklyOn(1, '08:00');

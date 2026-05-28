@@ -6,7 +6,6 @@
 <div class="card">
     <div class="card-header">
         <h2>Today's Queue</h2>
-        <a href="{{ route('admin.all-clients') }}" class="btn btn-secondary">All Clients</a>
     </div>
 
     <p class="muted" style="padding: 0 4px 12px;">

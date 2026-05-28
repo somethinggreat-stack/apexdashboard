@@ -20,7 +20,6 @@
     <div class="card-header">
         <h2>Clients — {{ $selectedClient->business_name }}</h2>
         <div style="display:flex; gap:8px;">
-            <a href="{{ route('admin.all-clients') }}" class="btn btn-secondary">All BOs</a>
             <a href="{{ route('admin.today-queue') }}" class="btn btn-secondary">Today's Queue</a>
             <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
         </div>

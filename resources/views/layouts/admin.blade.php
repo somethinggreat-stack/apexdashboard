@@ -56,7 +56,6 @@
                     Messages @if ($adminUnread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $adminUnread }}</span>@endif
                 </a>
             @endisset
-            <a href="{{ route('admin.all-clients') }}" class="{{ request()->routeIs('admin.all-clients') ? 'active' : '' }}">All Clients (all BOs)</a>
             <a href="{{ route('admin.today-queue') }}" class="{{ request()->routeIs('admin.today-queue') ? 'active' : '' }}">Today's Queue</a>
             <a href="{{ route('admin.client-selector.index') }}" class="{{ request()->routeIs('admin.client-selector.*') ? 'active' : '' }}">Business Owners</a>
             <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">Manage BOs</a>

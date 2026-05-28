@@ -68,8 +68,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Leads (from public website forms) — accessible without a business owner being selected
         Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
 
-        // Cross-BO views — show clients across every business owner this admin manages
-        Route::get('all-clients', [Admin\AllClientsController::class, 'index'])->name('all-clients');
+        // Cross-BO Today's Queue — incomplete clients across every BO this admin manages
         Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
         // Business-owner picker — accessible without a selection
