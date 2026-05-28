@@ -86,7 +86,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
-            Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+            // Dashboard removed — anyone landing here goes straight to the clients list.
+            Route::get('dashboard', fn () => redirect()->route('admin.end-users.index'))->name('dashboard');
             Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');

@@ -29,7 +29,7 @@ class ClientSelectorController extends Controller
             return redirect($redirect);
         }
 
-        return redirect()->route('admin.dashboard');
+        return redirect()->route('admin.end-users.index');
     }
 
     public function clear(Request $request)

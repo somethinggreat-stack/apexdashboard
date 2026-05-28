@@ -49,7 +49,6 @@
 
         <nav class="sidebar-nav">
             @isset($selectedClient)
-                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
                 <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.*') ? 'active' : '' }}">Clients</a>
                 @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
