@@ -19,10 +19,7 @@
 <div class="card">
     <div class="card-header">
         <h2>Clients — {{ $selectedClient->business_name }}</h2>
-        <div style="display:flex; gap:8px;">
-            <a href="{{ route('admin.today-queue') }}" class="btn btn-secondary">Today's Queue</a>
-            <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
-        </div>
+        <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
     </div>
     <form method="GET" class="filter-bar">
         <select name="status">

@@ -5,16 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EndUser;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AllClientsController extends Controller
 {
     public function todayQueue(Request $request)
     {
-        $adminId = Auth::guard('admin')->id();
+        $clientId = session('selected_client_id');
 
-        $endUsers = EndUser::forAdmin($adminId)
-            ->with('client:id,business_name')
+        $endUsers = EndUser::forClient($clientId)
             ->where('status', 'active')
             ->withCount([
                 'processSteps',

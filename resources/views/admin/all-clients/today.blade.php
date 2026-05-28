@@ -5,12 +5,11 @@
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h2>Today's Queue</h2>
+        <h2>Today's Queue — {{ $selectedClient->business_name }}</h2>
     </div>
 
     <p class="muted" style="padding: 0 4px 12px;">
-        Every active client behind on their schedule, grouped by the week they should already have logged.
-        Click a name to jump into that BO's dashboard and the client's detail page.
+        Active clients behind on their schedule, grouped by the week they should already have logged.
     </p>
 
     @forelse ($endUsers as $weekLabel => $group)
@@ -19,7 +18,6 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Business Owner</th>
                     <th>Days Active</th>
                     <th>Reason</th>
                     <th>Actions</th>
@@ -27,20 +25,12 @@
             </thead>
             <tbody>
                 @foreach ($group as $eu)
-                    <tr>
-                        <td>
-                            <a href="#" onclick="event.preventDefault(); document.getElementById('sel-{{ $eu->id }}').submit();">
-                                {{ $eu->full_name }}
-                            </a>
-                            <form id="sel-{{ $eu->id }}" method="POST" action="{{ route('admin.client-selector.select', $eu->client_id) }}" style="display:none;">
-                                @csrf
-                                <input type="hidden" name="redirect_to" value="{{ route('admin.end-users.show', $eu->id) }}">
-                            </form>
-                        </td>
-                        <td>{{ $eu->client?->business_name ?? '—' }}</td>
+                    <tr class="row-link" data-href="{{ route('admin.end-users.show', $eu) }}">
+                        <td><a href="{{ route('admin.end-users.show', $eu) }}" class="name-link">{{ $eu->full_name }}</a></td>
                         <td>{{ $eu->days_active }}</td>
                         <td><span class="pill pill-incomplete">{{ $eu->incomplete_reason }}</span></td>
-                        <td>
+                        <td class="no-link">
+                            <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
                             <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
                         </td>
                     </tr>
@@ -53,4 +43,11 @@
         </div>
     @endforelse
 </div>
+
+@push('head')
+<style>
+    .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
+    .name-link:hover { text-decoration:underline; }
+</style>
+@endpush
 @endsection

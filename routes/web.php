@@ -68,8 +68,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Leads (from public website forms) — accessible without a business owner being selected
         Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
 
-        // Cross-BO Today's Queue — incomplete clients across every BO this admin manages
-        Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
@@ -89,6 +87,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
             Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+            Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
             Route::post('messages', [Admin\MessageController::class, 'store'])->name('messages.store');
