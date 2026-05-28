@@ -147,6 +147,7 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');
+        Route::get('end-users/{id}/status-report', [Client\EndUserController::class, 'statusReport'])->name('end-users.status-report');
 
         Route::get('files/documents/{id}', [Client\FileController::class, 'document'])->name('files.document');
         Route::get('files/identity/{endUser}/{type}', [Client\FileController::class, 'identity'])

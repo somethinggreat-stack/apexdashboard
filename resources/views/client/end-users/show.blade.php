@@ -21,6 +21,9 @@
         'tracking_receipt' => 'Tracking Receipt',
         'other' => 'Other',
     ];
+    $rounds = App\Models\ProcessStep::rounds();
+    $weeks = App\Models\ProcessStep::weeks();
+    $stepTypesByWeek = App\Models\ProcessStep::stepTypesByWeek();
     $documentsByCategory = $endUser->documents->groupBy('category');
     $identityDocs = collect([
         ['type' => 'photo_id',         'label' => 'Government Photo ID', 'url' => $endUser->photo_id_url,         'path' => $endUser->photo_id_path],
@@ -30,32 +33,90 @@
     $totalDocs = $endUser->documents->count() + $identityDocs->count();
 @endphp
 
+@section('topbar-content')
+    <div class="page-actions">
+        <a href="{{ route('client.end-users.index') }}" class="btn btn-secondary page-action-btn">← My Clients</a>
+    </div>
+@endsection
+
 @section('content')
 <div class="card">
-    <div class="card-header">
+    <div class="card-header client-header-name">
         <h2>{{ $endUser->full_name }}</h2>
-        <a href="{{ route('client.end-users.index') }}" class="btn btn-secondary">← My Clients</a>
     </div>
-    <div class="info-grid">
-        <div><label>Suffix</label><div>{{ $endUser->suffix && $endUser->suffix !== 'None' ? $endUser->suffix : '—' }}</div></div>
-        <div><label>Email</label><div>{{ $endUser->email }}</div></div>
+    <div class="info-grid client-header-row">
+        <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
+        <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
         <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
         <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
         <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
-        <div><label>Started</label><div>{{ $endUser->start_date?->format('M d, Y') }}</div></div>
     </div>
+    @push('head')
+    <style>
+        /* Topbar action buttons — equal width/height */
+        .page-actions { display: flex; gap: 10px; align-items: center; }
+        .page-actions form { margin: 0; padding: 0; }
+        .page-actions .page-action-btn {
+            min-width: 140px; height: 38px; padding: 0 18px;
+            font-size: 13px; font-weight: 600; border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            box-sizing: border-box; line-height: 1;
+        }
+
+        /* Card-header name */
+        .client-header-name { display: flex; align-items: center; padding-bottom: 12px; }
+        .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
+
+        /* Single-row header info strip */
+        .info-grid.client-header-row {
+            display: grid !important;
+            grid-template-columns: 1.4fr 1.6fr 1fr .8fr .9fr 1fr;
+            gap: 18px 28px;
+            align-items: start;
+            padding: 6px 2px 2px;
+        }
+        .info-grid.client-header-row > div { min-width: 0; }
+        .info-grid.client-header-row label {
+            display: block;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .info-grid.client-header-row > div > div {
+            font-size: 14px; font-weight: 600; color: #0f172a;
+            line-height: 1.35;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .info-grid.client-header-row .pill { font-size: 10.5px; }
+        @media (max-width: 1180px) {
+            .info-grid.client-header-row {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px 24px;
+            }
+        }
+        @media (max-width: 720px) {
+            .info-grid.client-header-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+    @endpush
 </div>
 
 <div class="tabs">
-    <button class="tab active" data-target="tab-profile">Profile</button>
+    <button class="tab active" data-target="tab-overview">Overview</button>
+    <button class="tab" data-target="tab-profile">Profile</button>
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
     <button class="tab" data-target="tab-notes">Notes ({{ $endUser->notes->count() }})</button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 
-<div id="tab-profile" class="tab-panel active">
+@include('admin.end-users.partials.overview', ['endUser' => $endUser, 'totalDocs' => $totalDocs, 'portal' => 'client'])
+
+<div id="tab-profile" class="tab-panel">
     <div class="card">
         <h3>Profile Information</h3>
 
@@ -217,7 +278,7 @@
     <div class="card">
         <div class="card-header">
             <h3>Status Report</h3>
-            <button class="btn btn-secondary" onclick="window.print()">Print / Save PDF</button>
+            <a href="{{ route('client.end-users.status-report', $endUser) }}" target="_blank" class="btn btn-secondary">Print / Save PDF</a>
         </div>
         @include('partials.status-report', ['endUser' => $endUser])
     </div>

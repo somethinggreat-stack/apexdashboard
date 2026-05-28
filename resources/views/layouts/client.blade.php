@@ -36,7 +36,11 @@
             <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open menu" aria-controls="sidebar">
                 <span></span>
             </button>
-            <h1 class="page-title">@yield('title', 'Dashboard')</h1>
+            @hasSection('topbar-content')
+                @yield('topbar-content')
+            @else
+                <h1 class="page-title">@yield('title', 'Dashboard')</h1>
+            @endif
             <div class="user-chip">{{ Auth::guard('client')->user()?->business_name }}</div>
         </header>
         @if (session('status'))

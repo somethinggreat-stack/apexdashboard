@@ -1,6 +1,12 @@
 @php
     use App\Models\ProcessStep;
 
+    // Portal: 'admin' (VA) or 'client' (BO). Determines route names and
+    // whether write actions are surfaced. Default 'admin' for backward compat.
+    $portal   = $portal ?? 'admin';
+    $canEdit  = $portal === 'admin';
+    $rPrefix  = $portal . '.end-users';
+
     $allSteps          = $endUser->processSteps;
     $stepsByRound      = $allSteps->groupBy('round');
     $currentRoundNum   = max(1, (int) ($stepsByRound->keys()->max() ?? 1));
@@ -234,7 +240,9 @@
                             <div class="ov-block-sub">Track progress across all steps and rounds</div>
                         </div>
                     </div>
-                    <button class="ov-btn-primary" onclick="openModal('addStepModal')">+ Add Process Step</button>
+                    @if ($canEdit)
+                        <button class="ov-btn-primary" onclick="openModal('addStepModal')">+ Add Process Step</button>
+                    @endif
                 </div>
 
                 <div class="ov-round-chip">ROUND {{ $currentRoundNum }}</div>
@@ -316,13 +324,15 @@
                             </div>
                         </div>
                     @endforeach
-                    <div class="ov-doc-card ov-doc-upload" onclick="openUploadModal(null)">
-                        <div class="ov-doc-upload-icon">
-                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    @if ($canEdit)
+                        <div class="ov-doc-card ov-doc-upload" onclick="openUploadModal(null)">
+                            <div class="ov-doc-upload-icon">
+                                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            </div>
+                            <div class="ov-doc-name">Upload Document</div>
+                            <div class="ov-doc-meta">Drag &amp; drop or click to upload</div>
                         </div>
-                        <div class="ov-doc-name">Upload Document</div>
-                        <div class="ov-doc-meta">Drag &amp; drop or click to upload</div>
-                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -339,7 +349,7 @@
                         </div>
                         <div class="ov-block-h">Status Summary</div>
                     </div>
-                    <a class="ov-link-btn" href="{{ route('admin.end-users.status-report', $endUser) }}" target="_blank">View Full Report &rarr;</a>
+                    <a class="ov-link-btn" href="{{ route($rPrefix . '.status-report', $endUser) }}" target="_blank">View Full Report &rarr;</a>
                 </div>
 
                 <div class="ov-shield-row">
@@ -371,7 +381,9 @@
                         </div>
                         <div class="ov-block-h">Recent Notes</div>
                     </div>
-                    <button class="ov-link-btn" type="button" onclick="openModal('addNoteModal')">+ Add Note</button>
+                    @if ($canEdit)
+                        <button class="ov-link-btn" type="button" onclick="openModal('addNoteModal')">+ Add Note</button>
+                    @endif
                 </div>
                 @forelse ($recentNotes as $note)
                     <div class="ov-note">

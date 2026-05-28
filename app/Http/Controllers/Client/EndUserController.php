@@ -63,6 +63,15 @@ class EndUserController extends Controller
         return view('client.end-users.show', compact('endUser'));
     }
 
+    public function statusReport(string $id)
+    {
+        $endUser = EndUser::forClient(Auth::guard('client')->id())
+            ->with(['client', 'processSteps.createdBy', 'scoreHistory'])
+            ->findOrFail($id);
+
+        return view('client.end-users.status-report', compact('endUser'));
+    }
+
     public function store(Request $request)
     {
         $clientId = Auth::guard('client')->id();
