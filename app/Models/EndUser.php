@@ -117,47 +117,36 @@ class EndUser extends Model
         return (int) Carbon::parse($this->start_date)->diffInDays(now()) + 1;
     }
 
-    public function getIncompleteReasonAttribute(): ?string
-    {
-        $days = $this->days_active;
-
-        if ((int) ($this->process_steps_count ?? 0) === 0) {
-            return 'No steps logged';
-        }
-        if ($days > 7 && (int) ($this->week2_count ?? 0) === 0) {
-            return 'Week 2 not completed';
-        }
-        if ($days > 14 && (int) ($this->week3_count ?? 0) === 0) {
-            return 'Week 3 not completed';
-        }
-        if ($days > 21 && (int) ($this->week4_count ?? 0) === 0) {
-            return 'Week 4 not completed';
-        }
-        return null;
-    }
-
-    public function getIsIncompleteAttribute(): bool
-    {
-        return $this->incomplete_reason !== null;
-    }
-
+    /**
+     * Returns the first missing-week number based on days_active,
+     * or null if the client is on track. Rules:
+     *   day  1–7   → must have a Week 1 step
+     *   day  8–14  → must have a Week 2 step
+     *   day 15–21  → must have a Week 3 step
+     *   day 22+    → must have a Week 4 step
+     * (Earlier weeks are also checked, so a client at day 30 with
+     *  no Week 1 step shows "Week 1 not logged".)
+     */
     public function getMissingWeekAttribute(): ?int
     {
         $days = $this->days_active;
 
-        if ((int) ($this->process_steps_count ?? 0) === 0) {
-            return 1;
-        }
-        if ($days > 7 && (int) ($this->week2_count ?? 0) === 0) {
-            return 2;
-        }
-        if ($days > 14 && (int) ($this->week3_count ?? 0) === 0) {
-            return 3;
-        }
-        if ($days > 21 && (int) ($this->week4_count ?? 0) === 0) {
-            return 4;
-        }
+        if ($days >= 1  && (int) ($this->week1_count ?? 0) === 0) return 1;
+        if ($days >= 8  && (int) ($this->week2_count ?? 0) === 0) return 2;
+        if ($days >= 15 && (int) ($this->week3_count ?? 0) === 0) return 3;
+        if ($days >= 22 && (int) ($this->week4_count ?? 0) === 0) return 4;
         return null;
+    }
+
+    public function getIncompleteReasonAttribute(): ?string
+    {
+        $w = $this->missing_week;
+        return $w ? "Week {$w} not logged" : null;
+    }
+
+    public function getIsIncompleteAttribute(): bool
+    {
+        return $this->missing_week !== null;
     }
 
     public function getCurrentRoundAttribute(): int
