@@ -4,12 +4,6 @@
         fn ($byRound) => $byRound->groupBy(fn ($s) => 'Week ' . $s->week)
     );
     $rounds = $endUser->rounds ?? [];
-    $latestScore = $endUser->current_score;
-    $totalDisputes = $steps->sum(fn ($s) =>
-        (int) $s->experian_accounts_disputed
-        + (int) $s->transunion_accounts_disputed
-        + (int) $s->equifax_accounts_disputed
-    );
 @endphp
 
 <div class="status-report">
@@ -34,14 +28,6 @@
             <div>
                 <span class="muted">Status</span>
                 <strong style="text-transform:capitalize;">{{ $endUser->status }}</strong>
-            </div>
-            <div>
-                <span class="muted">Latest Score</span>
-                <strong>{{ $latestScore ?? '—' }}</strong>
-            </div>
-            <div>
-                <span class="muted">Disputes Filed</span>
-                <strong>{{ $totalDisputes }}</strong>
             </div>
         </div>
     </div>
