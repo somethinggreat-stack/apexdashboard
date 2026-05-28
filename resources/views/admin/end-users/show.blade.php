@@ -68,14 +68,17 @@
 </div>
 
 <div class="tabs">
-    <button class="tab active" data-target="tab-profile">Profile</button>
+    <button class="tab active" data-target="tab-overview">Overview</button>
+    <button class="tab" data-target="tab-profile">Profile</button>
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
     <button class="tab" data-target="tab-notes">Notes ({{ $endUser->notes->count() }})</button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 
-<div id="tab-profile" class="tab-panel active">
+@include('admin.end-users.partials.overview', ['endUser' => $endUser, 'totalDocs' => $totalDocs])
+
+<div id="tab-profile" class="tab-panel">
     <div class="card">
         <div class="card-header">
             <h3>Profile Information</h3>
