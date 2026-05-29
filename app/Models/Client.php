@@ -16,9 +16,18 @@ class Client extends Authenticatable
         'admin_id', 'business_name', 'email', 'password',
         'phone', 'monthly_fee', 'status',
         'intake_token', 'intake_logo_path', 'intake_display_name',
+        'compensation_model', 'per_round_fee', 'hourly_rate',
+        'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
     ];
     protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['password' => 'hashed', 'monthly_fee' => 'decimal:2'];
+    protected $casts = [
+        'password'             => 'hashed',
+        'monthly_fee'          => 'decimal:2',
+        'per_round_fee'        => 'decimal:2',
+        'hourly_rate'          => 'decimal:2',
+        'pay_cycle_anchor'     => 'date',
+        'weekly_hours_target'  => 'integer',
+    ];
 
     protected static function booted(): void
     {
@@ -104,5 +113,15 @@ class Client extends Authenticatable
     public function scopeForAdmin($query, $adminId)
     {
         return $query->where('admin_id', $adminId);
+    }
+
+    public function timeEntries()
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
+    public function timePayouts()
+    {
+        return $this->hasMany(TimePayout::class);
     }
 }

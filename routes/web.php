@@ -90,6 +90,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('dashboard', fn () => redirect()->route('admin.end-users.index'))->name('dashboard');
             Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
+            // Payments — model & shape switch based on the BO's compensation_model
+            Route::get('payments', [Admin\PaymentController::class, 'index'])->name('payments.index');
+            Route::put('payments/config', [Admin\PaymentController::class, 'updateConfig'])->name('payments.config');
+            // Per-round payments
+            Route::post('payments', [Admin\PaymentController::class, 'storePayment'])->name('payments.store');
+            Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
+            Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
+            // Hourly time entries
+            Route::post('payments/time', [Admin\PaymentController::class, 'storeTime'])->name('payments.time.store');
+            Route::delete('payments/time/{id}', [Admin\PaymentController::class, 'destroyTime'])->name('payments.time.destroy');
+            // Hourly payouts
+            Route::post('payments/payout', [Admin\PaymentController::class, 'storePayout'])->name('payments.payout.store');
+            Route::delete('payments/payout/{id}', [Admin\PaymentController::class, 'destroyPayout'])->name('payments.payout.destroy');
+
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
             Route::post('messages', [Admin\MessageController::class, 'store'])->name('messages.store');
             Route::post('messages/{id}/pin', [Admin\MessageController::class, 'togglePin'])->name('messages.pin');

@@ -93,6 +93,11 @@ class EndUser extends Model
         return $this->hasMany(Note::class)->orderBy('created_at', 'desc');
     }
 
+    public function payments()
+    {
+        return $this->hasMany(ClientPayment::class)->orderBy('round');
+    }
+
     public function getFullNameAttribute(): string
     {
         $middle = $this->middle_name ? " {$this->middle_name}" : '';
