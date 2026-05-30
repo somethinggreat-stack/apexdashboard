@@ -46,8 +46,17 @@
 
 @push('head')
 <style>
-    .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
-    .name-link:hover { text-decoration:underline; }
+    .name-link {
+        color: var(--accent-700, #142646);
+        text-decoration: none;
+        font-weight: 500;
+        letter-spacing: -0.005em;
+    }
+    .name-link:hover {
+        color: var(--accent-hover, #0d1c36);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
 </style>
 @endpush
 @endsection

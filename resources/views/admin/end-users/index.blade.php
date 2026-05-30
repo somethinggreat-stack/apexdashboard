@@ -342,27 +342,98 @@
 
 @push('head')
 <style>
-    .field-error { display:block; color:#dc2626; font-size:12px; margin-top:4px; }
-    .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
-    .name-link:hover { text-decoration:underline; }
-
-    .inline-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
-    .inline-edit .inline-pencil {
-        opacity:0; transition:opacity .15s; font-size:11px; color:#64748b;
+    .field-error {
+        display: block;
+        color: var(--danger-700, #b91c1c);
+        font-size: var(--text-xs, 12px);
+        margin-top: var(--space-1, 4px);
+        font-weight: 500;
     }
-    .inline-edit:hover .inline-pencil { opacity:1; }
-    .inline-edit.editing { display:inline-flex; gap:4px; }
-    .inline-edit select { font-size:12px; padding:2px 6px; min-width:120px; }
-    .inline-edit .inline-save  { font-size:11px; padding:2px 8px; cursor:pointer; background:#16a34a; color:white; border:0; border-radius:4px; }
-    .inline-edit .inline-cancel { font-size:11px; padding:2px 8px; cursor:pointer; background:#e5e7eb; color:#374151; border:0; border-radius:4px; }
+    .name-link {
+        color: var(--accent-700, #142646);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .name-link:hover { color: var(--accent-800, #0d1c36); text-decoration: underline; }
+
+    .inline-edit {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+    }
+    .inline-edit .inline-pencil {
+        opacity: 0;
+        transition: opacity .15s ease;
+        font-size: 11px;
+        color: var(--gray-500, #6b7280);
+    }
+    .inline-edit:hover .inline-pencil { opacity: 1; }
+    .inline-edit.editing {
+        display: inline-flex;
+        gap: var(--space-1, 4px);
+    }
+    .inline-edit select {
+        font-size: var(--text-xs, 12px);
+        padding: 4px 8px;
+        min-width: 120px;
+        border: 1px solid var(--border, #e5e7eb);
+        border-radius: var(--radius-sm, 6px);
+        background: #fff;
+        font-family: inherit;
+    }
+    .inline-edit .inline-save,
+    .inline-edit .inline-cancel {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm, 6px);
+        line-height: 1;
+        font-family: inherit;
+    }
+    .inline-edit .inline-save {
+        background: var(--accent-700, #142646);
+        color: #fff;
+    }
+    .inline-edit .inline-save:hover { background: var(--accent-800, #0d1c36); }
+    .inline-edit .inline-cancel {
+        background: #fff;
+        color: var(--gray-700, #374151);
+        border-color: var(--border, #e5e7eb);
+    }
+    .inline-edit .inline-cancel:hover { background: var(--gray-50, #f9fafb); }
 
     .pill-incomplete.inline-action {
-        cursor:pointer; border:none;
-        background:#fee2e2; color:#991b1b;
-        margin-left:6px; padding:2px 10px; border-radius:999px;
-        font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.3px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--danger-100, #fee2e2);
+        background: var(--danger-50, #fef2f2);
+        color: var(--danger-700, #b91c1c);
+        margin-left: var(--space-2, 8px);
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0;
+        text-transform: none;
+        font-family: inherit;
+        line-height: 1.4;
     }
-    .pill-incomplete.inline-action:hover { background:#fecaca; }
+    .pill-incomplete.inline-action::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--danger-700, #b91c1c);
+    }
+    .pill-incomplete.inline-action:hover {
+        background: var(--danger-100, #fee2e2);
+        border-color: var(--danger-200, #fecaca);
+    }
 </style>
 @endpush
 
