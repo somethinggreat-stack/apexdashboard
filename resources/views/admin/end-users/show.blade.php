@@ -69,92 +69,71 @@
     </div>
     @push('head')
     <style>
-        /* Page-specific layout only — all chrome (buttons, pills, cards, inputs)
-           is styled by the central admin.css design system. */
-
-        /* Topbar action buttons — equal width to balance the two-button cluster */
-        .page-actions { display: flex; gap: var(--space-2); align-items: center; }
+        /* Topbar action buttons — equal width/height */
+        .page-actions { display: flex; gap: 10px; align-items: center; }
         .page-actions form { margin: 0; padding: 0; }
         .page-actions .page-action-btn {
             min-width: 140px;
-            justify-content: center;
-        }
-
-        /* Card-header name (single source of the client's name on this page) */
-        .client-header-name { padding-bottom: var(--space-3); }
-        .client-header-name h2 {
-            margin: 0;
-            font-size: var(--text-xl);
+            height: 38px;
+            padding: 0 18px;
+            font-size: 13px;
             font-weight: 600;
-            color: var(--gray-900);
-            letter-spacing: -0.02em;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            line-height: 1;
         }
 
-        /* Single-row header info strip — page-specific column layout */
+        /* Card-header name (now the single source of the client's name) */
+        .client-header-name { display: flex; align-items: center; padding-bottom: 12px; }
+        .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
+
+        /* Single-row, premium header info strip — scoped only to the client detail page */
         .info-grid.client-header-row {
             display: grid !important;
             grid-template-columns: 1.4fr 1.6fr 1fr .8fr .9fr 1fr;
-            gap: var(--space-4) var(--space-7);
+            gap: 18px 28px;
             align-items: start;
-            padding: var(--space-2) 0 0;
+            padding: 6px 2px 2px;
         }
-        .info-grid.client-header-row > div { min-width: 0; }
+        .info-grid.client-header-row > div {
+            min-width: 0;
+        }
+        .info-grid.client-header-row label {
+            display: block;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
         .info-grid.client-header-row > div > div {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.35;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
-        /* Inline status edit affordance */
-        .client-header-row .inline-edit {
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-2);
+        .info-grid.client-header-row .pill {
+            font-size: 10.5px;
         }
+        .client-header-row .inline-edit { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .client-header-row .inline-edit .inline-pencil {
-            opacity: 0;
-            transition: opacity .15s ease;
-            font-size: 11px;
-            color: var(--gray-400);
+            opacity: 0; transition: opacity .15s; font-size: 11px; color: #94a3b8;
         }
         .client-header-row .inline-edit:hover .inline-pencil { opacity: 1; }
-        .client-header-row .inline-edit select {
-            font-size: var(--text-xs);
-            padding: 2px 6px;
-            min-width: 120px;
-        }
-        .client-header-row .inline-edit .inline-save,
-        .client-header-row .inline-edit .inline-cancel {
-            font-size: 11px;
-            font-weight: 600;
-            padding: 3px 9px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            border-radius: var(--radius-sm);
-            line-height: 1;
-        }
-        .client-header-row .inline-edit .inline-save {
-            background: var(--success-50);
-            color: var(--success-700);
-            border-color: var(--success-100);
-        }
-        .client-header-row .inline-edit .inline-save:hover {
-            background: var(--success-100);
-        }
-        .client-header-row .inline-edit .inline-cancel {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            border-color: var(--gray-200);
-        }
-        .client-header-row .inline-edit .inline-cancel:hover {
-            background: var(--gray-200);
-        }
-
+        .client-header-row .inline-edit select { font-size: 12px; padding: 2px 6px; min-width: 120px; }
+        .client-header-row .inline-edit .inline-save  { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #16a34a; color: white; border: 0; border-radius: 4px; }
+        .client-header-row .inline-edit .inline-cancel { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #e5e7eb; color: #374151; border: 0; border-radius: 4px; }
         @media (max-width: 1180px) {
             .info-grid.client-header-row {
                 grid-template-columns: repeat(3, 1fr);
-                gap: var(--space-3) var(--space-6);
+                gap: 14px 24px;
             }
         }
         @media (max-width: 720px) {
