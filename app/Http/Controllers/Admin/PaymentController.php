@@ -231,7 +231,15 @@ class PaymentController extends Controller
 
         $rate = (float) ($client->per_round_fee ?? 0);
 
-        $rows = $endUsers->map(function ($eu) {
+        $roundLabelToNum = [
+            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3,
+            '4th Round' => 4, '5th Round' => 5,
+        ];
+
+        $unpaidItems   = [];
+        $unpaidByRound = [1=>0, 2=>0, 3=>0, 4=>0, 5=>0];
+
+        $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, $rate) {
             $paidByRound = $eu->payments->keyBy('round');
             $cells = [];
             for ($r = 1; $r <= 5; $r++) {
@@ -240,23 +248,51 @@ class PaymentController extends Controller
                     'payment' => $paidByRound->get($r),
                 ];
             }
-            $totalPaid = (float) $eu->payments->sum('amount');
+
+            // Active rounds = rounds this client is actually in
+            $activeRounds = collect($eu->rounds ?? [])
+                ->map(fn ($label) => $roundLabelToNum[$label] ?? null)
+                ->filter()
+                ->values()
+                ->all();
+            // If no rounds set, treat them as being in Round 1 by default
+            if (empty($activeRounds)) {
+                $activeRounds = [1];
+            }
+
+            foreach ($activeRounds as $rn) {
+                if (!$paidByRound->has($rn)) {
+                    $unpaidItems[] = [
+                        'name'   => $eu->full_name,
+                        'email'  => $eu->email,
+                        'round'  => $rn,
+                        'amount' => $rate,
+                    ];
+                    $unpaidByRound[$rn]++;
+                }
+            }
+
             return [
                 'end_user'   => $eu,
                 'cells'      => $cells,
-                'total_paid' => $totalPaid,
+                'total_paid' => (float) $eu->payments->sum('amount'),
             ];
         });
 
         $allPayments = ClientPayment::forClient($client->id)->get();
-        $earnedTotal      = (float) $allPayments->sum('amount');
-        $earnedThisMonth  = (float) $allPayments->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount');
+        $earnedTotal     = (float) $allPayments->sum('amount');
+        $earnedThisMonth = (float) $allPayments->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount');
+
+        $totalUnpaid = count($unpaidItems) * $rate;
 
         return [
             'rows'            => $rows,
             'rate'            => $rate,
             'earnedTotal'     => $earnedTotal,
             'earnedThisMonth' => $earnedThisMonth,
+            'totalUnpaid'     => $totalUnpaid,
+            'unpaidItems'     => $unpaidItems,
+            'unpaidByRound'   => $unpaidByRound,
         ];
     }
 

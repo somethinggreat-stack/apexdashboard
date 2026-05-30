@@ -1,3 +1,24 @@
+@php
+    // Build the invoice-ready text once, reuse in the modal textarea.
+    $invoiceText = "INVOICE LIST — " . $client->business_name . "\n";
+    $invoiceText .= "Date: " . now()->format('Y-m-d') . "\n\n";
+    $invoiceText .= "UNPAID CLIENTS\n\n";
+    $byRound = collect($data['unpaidItems'])->groupBy('round')->sortKeys();
+    $itemNum = 0;
+    foreach ($byRound as $rNum => $items) {
+        $roundLabel = ['1st','2nd','3rd','4th','5th'][$rNum - 1] ?? "{$rNum}th";
+        $invoiceText .= "{$roundLabel} Round Credit Repair (\${$data['rate']} per client)\n";
+        foreach ($items as $it) {
+            $itemNum++;
+            $invoiceText .= sprintf("%d. %s\n", $itemNum, $it['name']);
+        }
+        $invoiceText .= sprintf("Subtotal %s Round: %d × \$%s = \$%s\n\n",
+            $roundLabel, count($items), number_format($data['rate'], 2),
+            number_format(count($items) * $data['rate'], 2));
+    }
+    $invoiceText .= "TOTAL UNPAID: \$" . number_format($data['totalUnpaid'], 2);
+@endphp
+
 <div class="pay-stats">
     <div class="pay-stat-card">
         <div class="pay-stat-label">Rate per Round</div>
@@ -7,17 +28,27 @@
     <div class="pay-stat-card pay-stat-green">
         <div class="pay-stat-label">Paid This Month</div>
         <div class="pay-stat-value">${{ number_format($data['earnedThisMonth'], 2) }}</div>
-        <div class="pay-stat-sub">From this BO</div>
+        <div class="pay-stat-sub">All-time: ${{ number_format($data['earnedTotal'], 2) }}</div>
+    </div>
+    <div class="pay-stat-card pay-stat-orange">
+        <div class="pay-stat-label">Total Unpaid</div>
+        <div class="pay-stat-value">${{ number_format($data['totalUnpaid'], 2) }}</div>
+        <div class="pay-stat-sub">
+            @php $parts = []; @endphp
+            @foreach ($data['unpaidByRound'] as $rn => $cnt)
+                @if ($cnt > 0) @php $parts[] = "R{$rn}: {$cnt}"; @endphp @endif
+            @endforeach
+            {{ $parts ? implode(' · ', $parts) : 'All paid up' }}
+        </div>
     </div>
     <div class="pay-stat-card">
-        <div class="pay-stat-label">Total Paid (All-time)</div>
-        <div class="pay-stat-value">${{ number_format($data['earnedTotal'], 2) }}</div>
-        <div class="pay-stat-sub">From this BO</div>
-    </div>
-    <div class="pay-stat-card">
-        <div class="pay-stat-label">Clients</div>
-        <div class="pay-stat-value">{{ $data['rows']->count() }}</div>
-        <div class="pay-stat-sub">In this BO</div>
+        <div class="pay-stat-label">Invoice</div>
+        <div class="pay-stat-value" style="font-size:18px; padding-top:4px;">
+            <button type="button" class="pay-btn-primary" onclick="openModal('invoiceListModal')" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}>
+                Generate Invoice List
+            </button>
+        </div>
+        <div class="pay-stat-sub">{{ count($data['unpaidItems']) }} unpaid item(s)</div>
     </div>
 </div>
 
@@ -103,6 +134,27 @@
     Tip: Click any <strong>$</strong> chip to mark that round paid instantly. Click a green chip to edit or undo.
     Select multiple clients (checkboxes) to mark a batch paid for the same round.
 </p>
+
+{{-- Invoice list modal — copy-paste into ChatGPT / invoice tool --}}
+<div id="invoiceListModal" class="modal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h3>Invoice List — {{ $client->business_name }}</h3>
+            <button class="modal-close" onclick="closeModal('invoiceListModal')">&times;</button>
+        </div>
+        <p class="muted" style="margin:0 0 10px; font-size:13px;">
+            {{ count($data['unpaidItems']) }} unpaid item(s) totaling
+            <strong>${{ number_format($data['totalUnpaid'], 2) }}</strong>.
+            Copy the block below and paste into ChatGPT (or your invoice tool).
+        </p>
+        <textarea id="invoiceListText" readonly
+                  style="width:100%; min-height:320px; padding:14px; font-family:Menlo,Consolas,monospace; font-size:12.5px; line-height:1.55; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; color:#0f172a; resize:vertical;">{{ $invoiceText }}</textarea>
+        <div class="form-actions" style="margin-top:14px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('invoiceListModal')">Close</button>
+            <button type="button" class="btn btn-primary" id="copyInvoiceBtn">Copy to Clipboard</button>
+        </div>
+    </div>
+</div>
 
 {{-- Edit/Undo modal (only for already-paid records) --}}
 <div id="payEditModal" class="modal">
@@ -243,6 +295,31 @@
     });
 
     updateCount();
+})();
+
+// Copy invoice list to clipboard
+(function () {
+    var btn = document.getElementById('copyInvoiceBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var ta = document.getElementById('invoiceListText');
+        ta.select();
+        ta.setSelectionRange(0, 99999);
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(ta.value).then(function () {
+                    btn.textContent = 'Copied ✓';
+                    setTimeout(function () { btn.textContent = 'Copy to Clipboard'; }, 1600);
+                });
+            } else {
+                document.execCommand('copy');
+                btn.textContent = 'Copied ✓';
+                setTimeout(function () { btn.textContent = 'Copy to Clipboard'; }, 1600);
+            }
+        } catch (e) {
+            alert('Could not copy — select the text manually and copy with Ctrl/Cmd+C.');
+        }
+    });
 })();
 
 window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
