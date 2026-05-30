@@ -2,100 +2,109 @@
     <div class="pay-stat-card">
         <div class="pay-stat-label">Rate per Round</div>
         <div class="pay-stat-value">${{ number_format($data['rate'], 2) }}</div>
-        <div class="pay-stat-sub">Set in payment arrangement above</div>
+        <div class="pay-stat-sub">Per client per round</div>
     </div>
     <div class="pay-stat-card pay-stat-green">
-        <div class="pay-stat-label">Earned This Month</div>
+        <div class="pay-stat-label">Paid This Month</div>
         <div class="pay-stat-value">${{ number_format($data['earnedThisMonth'], 2) }}</div>
-        <div class="pay-stat-sub">From payments paid_at in current month</div>
+        <div class="pay-stat-sub">From this BO</div>
     </div>
     <div class="pay-stat-card">
-        <div class="pay-stat-label">Total Earned (Lifetime)</div>
+        <div class="pay-stat-label">Total Paid (All-time)</div>
         <div class="pay-stat-value">${{ number_format($data['earnedTotal'], 2) }}</div>
-        <div class="pay-stat-sub">From this BO, all-time</div>
+        <div class="pay-stat-sub">From this BO</div>
     </div>
-    <div class="pay-stat-card pay-stat-orange">
-        <div class="pay-stat-label">Outstanding</div>
-        <div class="pay-stat-value">${{ number_format($data['outstanding'], 2) }}</div>
-        <div class="pay-stat-sub">{{ $data['dueCount'] }} round(s) due to invoice</div>
+    <div class="pay-stat-card">
+        <div class="pay-stat-label">Clients</div>
+        <div class="pay-stat-value">{{ $data['rows']->count() }}</div>
+        <div class="pay-stat-sub">In this BO</div>
     </div>
 </div>
 
-<div class="pay-matrix">
-    <table>
-        <thead>
-            <tr>
-                <th>Client</th>
-                <th class="pay-cell">R1</th>
-                <th class="pay-cell">R2</th>
-                <th class="pay-cell">R3</th>
-                <th class="pay-cell">R4</th>
-                <th class="pay-cell">R5</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($data['rows'] as $row)
-                @php $eu = $row['end_user']; @endphp
-                <tr>
-                    <td class="pay-client">
-                        <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
-                    </td>
-                    @foreach ($row['cells'] as $r => $cell)
-                        <td class="pay-cell">
-                            @if ($cell['state'] === 'paid')
-                                <span class="pay-cell-paid"
-                                    onclick="openPayEdit({{ $cell['payment']->id }}, {{ json_encode((float) $cell['payment']->amount) }}, '{{ optional($cell['payment']->paid_at)->toDateString() }}', '{{ addslashes($cell['payment']->method ?? '') }}', '{{ addslashes($cell['payment']->notes ?? '') }}')">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                    {{ optional($cell['payment']->paid_at)->format('M j') }}
-                                </span>
-                            @elseif ($cell['state'] === 'due')
-                                <div class="pay-cell-due">
-                                    <button type="button"
-                                        onclick="openMarkPaid({{ $eu->id }}, {{ $r }}, '{{ addslashes($eu->full_name) }}', {{ json_encode($data['rate']) }})">
-                                        Mark Paid
-                                    </button>
-                                </div>
-                            @else
-                                <span class="pay-cell-idle">—</span>
-                            @endif
-                        </td>
-                    @endforeach
-                </tr>
-            @empty
-                <tr><td colspan="6" class="pay-empty">No clients for this BO yet.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
+{{-- ===== BULK ACTION TOOLBAR ===== --}}
+<form method="POST" action="{{ route('admin.payments.bulk') }}" id="bulk-pay-form">
+    @csrf
+    <input type="hidden" name="round" id="bulk-round" value="1">
 
-{{-- Mark-Paid modal --}}
-<div id="markPaidModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Mark Round <span id="mp-round">N</span> paid — <span id="mp-name">client</span></h3>
-            <button class="modal-close" onclick="closeModal('markPaidModal')">&times;</button>
+    <div class="bulk-bar">
+        <label class="bulk-checkbox">
+            <input type="checkbox" id="bulk-select-all">
+            <span>Select All</span>
+        </label>
+        <span class="bulk-count" id="bulk-count">0 selected</span>
+        <div class="bulk-action">
+            <span>Mark selected as paid for</span>
+            <select id="bulk-round-picker">
+                @for ($r = 1; $r <= 5; $r++)
+                    <option value="{{ $r }}">Round {{ $r }}</option>
+                @endfor
+            </select>
+            <button type="submit" id="bulk-apply" disabled>Apply (${{ number_format($data['rate'], 2) }} each)</button>
         </div>
-        <form method="POST" action="{{ route('admin.payments.store') }}">
-            @csrf
-            <input type="hidden" name="end_user_id" id="mp-eu">
-            <input type="hidden" name="round" id="mp-rd">
-            <div class="form-row">
-                <div class="form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" name="amount" id="mp-amount" required></div>
-                <div class="form-group"><label>Date Paid</label><input type="date" name="paid_at" id="mp-date" value="{{ now()->toDateString() }}" required></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>Method (optional)</label><input type="text" name="method" placeholder="Zelle / Bank / Cash"></div>
-                <div class="form-group"><label>Notes (optional)</label><input type="text" name="notes"></div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('markPaidModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Payment</button>
-            </div>
-        </form>
     </div>
-</div>
 
-{{-- Edit/Undo payment modal --}}
+    {{-- ===== MAIN TABLE ===== --}}
+    <div class="pay-matrix">
+        <table>
+            <thead>
+                <tr>
+                    <th class="sel-col">&nbsp;</th>
+                    <th>Client</th>
+                    <th class="round-col">Round 1</th>
+                    <th class="round-col">Round 2</th>
+                    <th class="round-col">Round 3</th>
+                    <th class="round-col">Round 4</th>
+                    <th class="round-col">Round 5</th>
+                    <th class="total-col">Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($data['rows'] as $row)
+                    @php $eu = $row['end_user']; @endphp
+                    <tr>
+                        <td class="sel-col">
+                            <input type="checkbox" name="end_user_ids[]" value="{{ $eu->id }}" class="row-check">
+                        </td>
+                        <td class="pay-client">
+                            <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                        </td>
+                        @foreach ($row['cells'] as $r => $cell)
+                            <td class="round-col">
+                                @if ($cell['state'] === 'paid')
+                                    <button type="button" class="chip chip-paid"
+                                            title="Paid {{ optional($cell['payment']->paid_at)->format('M j, Y') }} · ${{ number_format($cell['payment']->amount, 2) }}"
+                                            onclick="openPayEdit({{ $cell['payment']->id }}, {{ json_encode((float) $cell['payment']->amount) }}, '{{ optional($cell['payment']->paid_at)->toDateString() }}', '{{ addslashes($cell['payment']->method ?? '') }}', '{{ addslashes($cell['payment']->notes ?? '') }}')">
+                                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        {{ optional($cell['payment']->paid_at)->format('M j') }}
+                                    </button>
+                                @else
+                                    <form method="POST" action="{{ route('admin.payments.store') }}" class="inline-pay-form">
+                                        @csrf
+                                        <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
+                                        <input type="hidden" name="round" value="{{ $r }}">
+                                        <button type="submit" class="chip chip-unpaid" title="Click to mark Round {{ $r }} paid (${{ number_format($data['rate'], 2) }})">
+                                            ${{ (int) $data['rate'] }}
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
+                        @endforeach
+                        <td class="total-col">${{ number_format($row['total_paid'], 2) }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="8" class="pay-empty">No clients for this BO yet.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<p class="muted" style="margin: 14px 4px 0; font-size: 12px;">
+    Tip: Click any <strong>$</strong> chip to mark that round paid instantly. Click a green chip to edit or undo.
+    Select multiple clients (checkboxes) to mark a batch paid for the same round.
+</p>
+
+{{-- Edit/Undo modal (only for already-paid records) --}}
 <div id="payEditModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -109,8 +118,8 @@
                 <div class="form-group"><label>Date Paid</label><input type="date" name="paid_at" id="pe-date" required></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>Method</label><input type="text" name="method" id="pe-method"></div>
-                <div class="form-group"><label>Notes</label><input type="text" name="notes" id="pe-notes"></div>
+                <div class="form-group"><label>Method (optional)</label><input type="text" name="method" id="pe-method" placeholder="Zelle / Bank / Cash"></div>
+                <div class="form-group"><label>Notes (optional)</label><input type="text" name="notes" id="pe-notes"></div>
             </div>
             <div class="form-actions" style="display:flex; justify-content:space-between; gap:8px;">
                 <button type="button" class="btn btn-danger" id="pe-delete">Undo (Mark Unpaid)</button>
@@ -126,16 +135,115 @@
     </div>
 </div>
 
+@push('head')
+<style>
+    /* Bulk action bar */
+    .bulk-bar {
+        display: flex; align-items: center; gap: 16px;
+        background: linear-gradient(135deg, #f8fafc, #fff);
+        border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 10px 16px; margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    .bulk-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
+    .bulk-count { font-size: 12px; color: #94a3b8; font-weight: 500; }
+    .bulk-action { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+    .bulk-action > span { font-size: 12.5px; color: #475569; }
+    .bulk-action select {
+        font-size: 13px; padding: 6px 10px; border: 1px solid #cbd5e1;
+        border-radius: 6px; background: #fff; font-weight: 500;
+    }
+    .bulk-action button {
+        font-size: 13px; font-weight: 600; padding: 7px 14px;
+        background: #2563eb; color: #fff; border: 0; border-radius: 6px; cursor: pointer;
+    }
+    .bulk-action button:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .bulk-action button:not(:disabled):hover { background: #1d4ed8; }
+
+    /* Round chips — the actionable cells */
+    .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 6px 12px; border-radius: 8px;
+        font-size: 12.5px; font-weight: 700;
+        border: 0; cursor: pointer;
+        min-width: 62px; justify-content: center;
+        transition: transform .1s, box-shadow .1s, background .1s;
+    }
+    .chip:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(15,23,42,.08); }
+
+    .chip-paid {
+        background: #d1fae5; color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+    .chip-paid:hover { background: #a7f3d0; }
+    .chip-paid svg { color: #059669; }
+
+    .chip-unpaid {
+        background: #fff; color: #2563eb;
+        border: 1.5px dashed #cbd5e1;
+    }
+    .chip-unpaid:hover { background: #eff6ff; border-color: #2563eb; border-style: solid; }
+
+    .inline-pay-form { display: inline; margin: 0; padding: 0; }
+
+    /* Tighter cells */
+    .pay-matrix .sel-col { width: 32px; text-align: center; }
+    .pay-matrix .round-col { width: 92px; text-align: center; }
+    .pay-matrix .total-col { width: 80px; text-align: right; font-weight: 600; color: #0f172a; }
+    .pay-matrix tbody tr:hover { background: #f8fafc; }
+    .row-check, #bulk-select-all { cursor: pointer; }
+
+    @media (max-width: 900px) {
+        .bulk-bar { gap: 10px; }
+        .bulk-action { margin-left: 0; }
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
-window.openMarkPaid = function (euId, round, name, rate) {
-    document.getElementById('mp-eu').value = euId;
-    document.getElementById('mp-rd').value = round;
-    document.getElementById('mp-round').textContent = round;
-    document.getElementById('mp-name').textContent = name;
-    document.getElementById('mp-amount').value = (rate || 0).toFixed(2);
-    openModal('markPaidModal');
-};
+(function () {
+    var form = document.getElementById('bulk-pay-form');
+    var selectAll = document.getElementById('bulk-select-all');
+    var checks = form.querySelectorAll('.row-check');
+    var count = document.getElementById('bulk-count');
+    var apply = document.getElementById('bulk-apply');
+    var roundPicker = document.getElementById('bulk-round-picker');
+    var roundHidden = document.getElementById('bulk-round');
+
+    function updateCount() {
+        var n = 0;
+        checks.forEach(function (c) { if (c.checked) n++; });
+        count.textContent = n + ' selected';
+        apply.disabled = (n === 0);
+    }
+
+    selectAll.addEventListener('change', function () {
+        checks.forEach(function (c) { c.checked = selectAll.checked; });
+        updateCount();
+    });
+    checks.forEach(function (c) {
+        c.addEventListener('change', function () {
+            if (!c.checked) selectAll.checked = false;
+            updateCount();
+        });
+    });
+    roundPicker.addEventListener('change', function () {
+        roundHidden.value = roundPicker.value;
+    });
+
+    // Confirm bulk action
+    form.addEventListener('submit', function (e) {
+        if (apply.disabled) { e.preventDefault(); return; }
+        var n = form.querySelectorAll('.row-check:checked').length;
+        var round = roundPicker.value;
+        if (!confirm('Mark ' + n + ' client(s) paid for Round ' + round + '?')) {
+            e.preventDefault();
+        }
+    });
+
+    updateCount();
+})();
 
 window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
     var base = "{{ url('admin/payments') }}/" + paymentId;

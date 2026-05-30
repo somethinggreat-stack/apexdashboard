@@ -80,12 +80,15 @@ class PaymentController extends Controller
         $data = $request->validate([
             'end_user_id' => ['required', $endUserRule],
             'round'       => 'required|integer|between:1,5',
-            'amount'      => 'required|numeric|min:0',
-            'paid_at'     => 'required|date',
+            'amount'      => 'nullable|numeric|min:0',
+            'paid_at'     => 'nullable|date',
             'method'      => 'nullable|string|max:50',
             'notes'       => 'nullable|string|max:1000',
         ]);
 
+        // Sensible defaults — VA can mark paid in 1 click without filling a form
+        $data['amount']  = $data['amount']  ?? (float) ($client->per_round_fee ?? 0);
+        $data['paid_at'] = $data['paid_at'] ?? now()->toDateString();
         $data['created_by_admin_id'] = Auth::guard('admin')->id();
 
         ClientPayment::updateOrCreate(
@@ -93,7 +96,37 @@ class PaymentController extends Controller
             $data
         );
 
-        return back()->with('status', 'Payment recorded.');
+        return back()->with('status', 'Marked paid.');
+    }
+
+    public function bulkStorePayment(Request $request)
+    {
+        $client = $this->scopedBO();
+
+        $data = $request->validate([
+            'end_user_ids'   => 'required|array|min:1',
+            'end_user_ids.*' => ['integer', Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $client->id))],
+            'round'          => 'required|integer|between:1,5',
+        ]);
+
+        $rate = (float) ($client->per_round_fee ?? 0);
+        $today = now()->toDateString();
+        $adminId = Auth::guard('admin')->id();
+
+        $count = 0;
+        foreach ($data['end_user_ids'] as $euId) {
+            ClientPayment::updateOrCreate(
+                ['end_user_id' => $euId, 'round' => $data['round']],
+                [
+                    'amount'              => $rate,
+                    'paid_at'             => $today,
+                    'created_by_admin_id' => $adminId,
+                ]
+            );
+            $count++;
+        }
+
+        return back()->with('status', "Marked {$count} client(s) paid for Round {$data['round']}.");
     }
 
     public function updatePayment(Request $request, string $id)
@@ -192,31 +225,26 @@ class PaymentController extends Controller
     private function buildPerRoundData(Client $client): array
     {
         $endUsers = EndUser::forClient($client->id)
-            ->with(['processSteps:id,end_user_id,round', 'payments'])
+            ->with('payments')
             ->orderBy('first_name')
             ->get();
 
         $rate = (float) ($client->per_round_fee ?? 0);
 
-        $rows = $endUsers->map(function ($eu) use ($rate) {
-            $startedRounds = $eu->processSteps->pluck('round')->unique()->values()->all();
-            $paidByRound   = $eu->payments->keyBy('round');
-
+        $rows = $endUsers->map(function ($eu) {
+            $paidByRound = $eu->payments->keyBy('round');
             $cells = [];
             for ($r = 1; $r <= 5; $r++) {
-                $paid = $paidByRound->get($r);
-                if ($paid) {
-                    $cells[$r] = ['state' => 'paid', 'payment' => $paid];
-                } elseif (in_array($r, $startedRounds, true)) {
-                    $cells[$r] = ['state' => 'due', 'payment' => null];
-                } else {
-                    $cells[$r] = ['state' => 'idle', 'payment' => null];
-                }
+                $cells[$r] = [
+                    'state'   => $paidByRound->has($r) ? 'paid' : 'unpaid',
+                    'payment' => $paidByRound->get($r),
+                ];
             }
-
+            $totalPaid = (float) $eu->payments->sum('amount');
             return [
-                'end_user' => $eu,
-                'cells'    => $cells,
+                'end_user'   => $eu,
+                'cells'      => $cells,
+                'total_paid' => $totalPaid,
             ];
         });
 
@@ -224,16 +252,11 @@ class PaymentController extends Controller
         $earnedTotal      = (float) $allPayments->sum('amount');
         $earnedThisMonth  = (float) $allPayments->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount');
 
-        $dueCount = $rows->sum(fn ($r) => collect($r['cells'])->where('state', 'due')->count());
-        $outstanding = $dueCount * $rate;
-
         return [
             'rows'            => $rows,
             'rate'            => $rate,
             'earnedTotal'     => $earnedTotal,
             'earnedThisMonth' => $earnedThisMonth,
-            'outstanding'     => $outstanding,
-            'dueCount'        => $dueCount,
         ];
     }
 
