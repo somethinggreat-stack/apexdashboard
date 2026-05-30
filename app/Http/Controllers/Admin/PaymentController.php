@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ClientPayment;
 use App\Models\EndUser;
+use App\Models\Invoice;
 use App\Models\TimeEntry;
 use App\Models\TimePayout;
 use Carbon\Carbon;
@@ -97,6 +98,56 @@ class PaymentController extends Controller
         );
 
         return back()->with('status', 'Marked paid.');
+    }
+
+    /**
+     * Create a saved Invoice record from the BO's current unpaid items,
+     * then redirect to the printable invoice page (which auto-prints).
+     */
+    public function generateInvoice()
+    {
+        $client = $this->scopedBO();
+
+        if (($client->compensation_model ?? 'per_round') !== 'per_round') {
+            return back()->with('status', 'Invoice generation is available only for per-round BOs.');
+        }
+
+        $data = $this->buildPerRoundData($client);
+
+        if (empty($data['unpaidItems'])) {
+            return back()->with('status', 'No unpaid items to invoice — everything is already paid.');
+        }
+
+        $invoice = Invoice::create([
+            'client_id'           => $client->id,
+            'invoice_number'      => $this->nextInvoiceNumber($client, now()),
+            'invoice_date'        => now()->toDateString(),
+            'items'               => $data['unpaidItems'],
+            'total'               => $data['totalUnpaid'],
+            'created_by_admin_id' => Auth::guard('admin')->id(),
+        ]);
+
+        return redirect()->route('admin.payments.invoice.show', $invoice);
+    }
+
+    public function showInvoice(string $id)
+    {
+        $invoice = Invoice::with('client')->findOrFail($id);
+
+        // Belongs to one of this admin's BOs?
+        if ($invoice->client->admin_id !== Auth::guard('admin')->id()) {
+            abort(403);
+        }
+
+        return view('admin.payments.invoice', compact('invoice'));
+    }
+
+    private function nextInvoiceNumber(Client $client, Carbon $when): string
+    {
+        // Format: AGS-MMDDYYYY-NNN  where NNN is the global daily sequence
+        $date = $when->format('mdY');
+        $todayCount = Invoice::whereDate('invoice_date', $when->toDateString())->count();
+        return sprintf('AGS-%s-%03d', $date, $todayCount + 1);
     }
 
     public function bulkStorePayment(Request $request)

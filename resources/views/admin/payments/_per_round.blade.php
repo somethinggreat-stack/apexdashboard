@@ -43,14 +43,41 @@
     </div>
     <div class="pay-stat-card">
         <div class="pay-stat-label">Invoice</div>
-        <div class="pay-stat-value" style="font-size:18px; padding-top:4px;">
-            <button type="button" class="pay-btn-primary" onclick="openModal('invoiceListModal')" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}>
-                Generate Invoice List
+        <div class="pay-stat-value" style="font-size:14px; padding-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
+            <form method="POST" action="{{ route('admin.payments.invoice.generate') }}" target="_blank" style="margin:0;">
+                @csrf
+                <button type="submit" class="inv-gen-btn" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}
+                        title="Creates an invoice for all currently-unpaid items and opens the printable PDF page">
+                    Generate Invoice PDF
+                </button>
+            </form>
+            <button type="button" class="inv-copy-btn" onclick="openModal('invoiceListModal')" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}
+                    title="Copy a plain-text invoice list (for ChatGPT)">
+                Copy List
             </button>
         </div>
         <div class="pay-stat-sub">{{ count($data['unpaidItems']) }} unpaid item(s)</div>
     </div>
 </div>
+
+@push('head')
+<style>
+    .inv-gen-btn {
+        background: #0b2e5b; color: #fff; border: 0;
+        font-size: 12px; font-weight: 700; letter-spacing: .3px;
+        padding: 7px 12px; border-radius: 6px; cursor: pointer;
+    }
+    .inv-gen-btn:hover:not(:disabled) { background: #082246; }
+    .inv-gen-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .inv-copy-btn {
+        background: #fff; color: #475569; border: 1px solid #cbd5e1;
+        font-size: 12px; font-weight: 600;
+        padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    }
+    .inv-copy-btn:hover:not(:disabled) { background: #f1f5f9; }
+    .inv-copy-btn:disabled { color: #cbd5e1; cursor: not-allowed; }
+</style>
+@endpush
 
 {{-- ===== BULK ACTION TOOLBAR ===== --}}
 <form method="POST" action="{{ route('admin.payments.bulk') }}" id="bulk-pay-form">

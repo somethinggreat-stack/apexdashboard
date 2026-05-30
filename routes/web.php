@@ -96,6 +96,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Per-round payments
             Route::post('payments', [Admin\PaymentController::class, 'storePayment'])->name('payments.store');
             Route::post('payments/bulk', [Admin\PaymentController::class, 'bulkStorePayment'])->name('payments.bulk');
+            Route::post('payments/invoice', [Admin\PaymentController::class, 'generateInvoice'])->name('payments.invoice.generate');
+            Route::get('payments/invoice/{id}', [Admin\PaymentController::class, 'showInvoice'])->name('payments.invoice.show');
             Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
             Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
             // Hourly time entries
