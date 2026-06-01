@@ -36,10 +36,10 @@
             <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Round</th>
                 <th>Round Started</th>
                 <th>Days</th>
                 <th>Status</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -61,19 +61,18 @@
                         <span class="inline-edit inline-edit-round"
                               data-id="{{ $eu->id }}"
                               data-current="{{ json_encode($eu->rounds ?? []) }}">
-                            {{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}
+                            <span class="round-timeline">
+                                @forelse ($eu->round_timeline as $label => $date)
+                                    <span class="round-date">
+                                        <strong>{{ \Illuminate\Support\Str::before($label, ' Round') }}</strong>
+                                        {{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}
+                                    </span>
+                                @empty
+                                    —
+                                @endforelse
+                            </span>
                             <span class="inline-pencil" aria-hidden="true">✎</span>
                         </span>
-                    </td>
-                    <td class="no-link">
-                        @forelse ($eu->round_timeline as $label => $date)
-                            <div class="round-date">
-                                <strong>{{ \Illuminate\Support\Str::before($label, ' Round') }}</strong>
-                                {{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}
-                            </div>
-                        @empty
-                            —
-                        @endforelse
                     </td>
                     <td class="no-link">{{ $eu->days_active }}</td>
                     <td class="no-link">
@@ -83,6 +82,16 @@
                             <span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span>
                             <span class="inline-pencil" aria-hidden="true">✎</span>
                         </span>
+                    </td>
+                    <td class="no-link">
+                        <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
+                        <button type="button" class="btn btn-sm"
+                                onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Note</button>
+                        <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
+                        <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
                     </td>
                 </tr>
             @empty
@@ -341,6 +350,7 @@
 @push('head')
 <style>
     .field-error { display:block; color:#dc2626; font-size:12px; margin-top:4px; }
+    .round-timeline { display:inline-flex; flex-direction:column; gap:1px; }
     .round-date { font-size:12px; line-height:1.5; white-space:nowrap; }
     .round-date strong { display:inline-block; min-width:34px; color:#475569; }
     .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
