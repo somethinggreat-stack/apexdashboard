@@ -23,6 +23,7 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Round</th>
+                <th>Round Started</th>
                 <th>Steps</th>
                 <th>Days</th>
                 <th>Status</th>
@@ -40,6 +41,16 @@
                     </td>
                     <td class="no-link">{{ $eu->email }}</td>
                     <td class="no-link">{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
+                    <td class="no-link">
+                        @forelse ($eu->round_timeline as $label => $date)
+                            <div class="round-date">
+                                <strong>{{ \Illuminate\Support\Str::before($label, ' Round') }}</strong>
+                                {{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}
+                            </div>
+                        @empty
+                            —
+                        @endforelse
+                    </td>
                     <td class="no-link">{{ $eu->process_steps_count }}</td>
                     <td class="no-link">{{ $eu->days_active }}</td>
                     <td class="no-link"><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
@@ -49,7 +60,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="empty">No clients yet.</td></tr>
+                <tr><td colspan="8" class="empty">No clients yet.</td></tr>
             @endforelse
         </tbody>
     </table>

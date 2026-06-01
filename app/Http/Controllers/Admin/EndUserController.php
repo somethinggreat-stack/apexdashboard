@@ -117,7 +117,20 @@ class EndUserController extends Controller
         // (hidden `rounds_present` flag). This lets the inline status-only form leave
         // existing rounds untouched, while allowing the edit modal to clear them.
         if ($request->has('rounds_present')) {
-            $data['rounds'] = $request->input('rounds', []) ?: null;
+            $newRounds = $request->input('rounds', []) ?: [];
+            $data['rounds'] = $newRounds ?: null;
+
+            // Auto-stamp the start date for any round that is now selected but
+            // doesn't yet have a recorded date — captured server-side the moment
+            // the round is started, no manual date entry. Existing dates are kept
+            // (even if a round is later deselected) so history is never lost.
+            $dates = $endUser->round_dates ?? [];
+            foreach ($newRounds as $label) {
+                if ($label !== '1st Round' && empty($dates[$label])) {
+                    $dates[$label] = now()->toDateString();
+                }
+            }
+            $data['round_dates'] = $dates ?: null;
         } else {
             unset($data['rounds']);
         }

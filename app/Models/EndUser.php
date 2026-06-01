@@ -43,13 +43,14 @@ class EndUser extends Model
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
-        'current_score', 'goal_score', 'status', 'rounds', 'start_date',
+        'current_score', 'goal_score', 'status', 'rounds', 'round_dates', 'start_date',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at',
     ];
     protected $casts = [
         'start_date' => 'date',
         'date_of_birth' => 'date',
         'rounds' => 'array',
+        'round_dates' => 'array',
         'intake_submitted_at' => 'datetime',
         'ssn' => 'encrypted',
         'credit_monitoring_password' => 'encrypted',
@@ -157,6 +158,42 @@ class EndUser extends Model
     public function getCurrentRoundAttribute(): int
     {
         return max(1, count($this->rounds ?? []));
+    }
+
+    /**
+     * The date a given round label was first started, or null if not recorded.
+     * Round dates are stamped automatically when a round is added (see
+     * EndUserController::update). The 1st round's date is the client start_date.
+     */
+    public function roundStartedAt(string $label): ?string
+    {
+        if ($label === '1st Round') {
+            return $this->start_date ? Carbon::parse($this->start_date)->toDateString() : null;
+        }
+        return $this->round_dates[$label] ?? null;
+    }
+
+    public function getSecondRoundStartedAtAttribute(): ?string
+    {
+        return $this->roundStartedAt('2nd Round');
+    }
+
+    /**
+     * Ordered map of each started round label => its start date (or null),
+     * for every round the client is currently on. Used to render the
+     * "Round Started" column. 1st Round resolves to the client start_date;
+     * 2nd–5th rounds resolve to their auto-stamped round_dates entry.
+     */
+    public function getRoundTimelineAttribute(): array
+    {
+        $selected = $this->rounds ?? [];
+        $out = [];
+        foreach (self::ROUND_OPTIONS as $label) {
+            if (in_array($label, $selected, true)) {
+                $out[$label] = $this->roundStartedAt($label);
+            }
+        }
+        return $out;
     }
 
     public function getTotalDeletionsAttribute()
