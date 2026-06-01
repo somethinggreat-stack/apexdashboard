@@ -108,8 +108,8 @@ class PaymentController extends Controller
     {
         $client = $this->scopedBO();
 
-        if (($client->compensation_model ?? 'per_round') !== 'per_round') {
-            return back()->with('status', 'Invoice generation is available only for per-round BOs.');
+        if (($client->compensation_model ?? 'per_round') === 'hourly') {
+            return $this->generateHourlyInvoice($client);
         }
 
         $data = $this->buildPerRoundData($client);
@@ -124,6 +124,50 @@ class PaymentController extends Controller
             'invoice_date'        => now()->toDateString(),
             'items'               => $data['unpaidItems'],
             'total'               => $data['totalUnpaid'],
+            'created_by_admin_id' => Auth::guard('admin')->id(),
+        ]);
+
+        return redirect()->route('admin.payments.invoice.show', $invoice);
+    }
+
+    /**
+     * Build an hourly invoice from the current pay period's logged time
+     * entries — one line per day (date, hours, rate, amount).
+     */
+    private function generateHourlyInvoice(Client $client)
+    {
+        $data  = $this->buildHourlyData($client);
+        $rate  = (float) $data['rate'];
+        $start = $data['currentStart'];
+        $end   = $data['currentEnd'];
+
+        $entries = TimeEntry::where('client_id', $client->id)
+            ->whereBetween('work_date', [$start->toDateString(), $end->toDateString()])
+            ->orderBy('work_date')
+            ->get();
+
+        if ($entries->isEmpty()) {
+            return back()->with('status', 'No hours logged in the current period to invoice.');
+        }
+
+        $items = $entries->map(fn ($e) => [
+            'type'        => 'hourly',
+            'date'        => $e->work_date->toDateString(),
+            'label'       => $e->work_date->format('D · M j, Y'),
+            'description' => $e->description ?: 'Hourly work',
+            'hours'       => (float) $e->hours,
+            'rate'        => $rate,
+            'amount'      => round((float) $e->hours * $rate, 2),
+        ])->values()->all();
+
+        $total = round(array_sum(array_column($items, 'amount')), 2);
+
+        $invoice = Invoice::create([
+            'client_id'           => $client->id,
+            'invoice_number'      => $this->nextInvoiceNumber($client, now()),
+            'invoice_date'        => now()->toDateString(),
+            'items'               => $items,
+            'total'               => $total,
             'created_by_admin_id' => Auth::guard('admin')->id(),
         ]);
 
@@ -362,9 +406,11 @@ class PaymentController extends Controller
 
         $entriesByDay = $entries->groupBy(fn ($e) => $e->work_date?->toDateString());
 
-        $hoursThisPeriod = (float) $entries
-            ->where('work_date', '>=', $currentStart->toDateString())
-            ->where('work_date', '<=', $currentEnd->toDateString())
+        // Sum the period's hours straight from the DB. Filtering the in-memory
+        // $entries collection mis-counted boundary days (work_date is a Carbon
+        // object being compared to a date string) and is capped at 60 rows.
+        $hoursThisPeriod = (float) TimeEntry::where('client_id', $client->id)
+            ->whereBetween('work_date', [$currentStart->toDateString(), $currentEnd->toDateString()])
             ->sum('hours');
 
         // Build the last 6 pay periods

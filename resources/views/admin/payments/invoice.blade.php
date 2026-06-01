@@ -148,56 +148,111 @@
 
     {{-- ===== TABLE ===== --}}
     @php
-        $itemsByRound = collect($invoice->items)->groupBy('round')->sortKeys();
-        $rowNum = 0;
-        $unitPrice = collect($invoice->items)->first()['amount'] ?? 0;
+        $allItems = collect($invoice->items);
+        $isHourly = $allItems->first() && ($allItems->first()['type'] ?? null) === 'hourly';
     @endphp
-    <table class="inv-table">
-        <thead>
-            <tr>
-                <th colspan="2">DESCRIPTION</th>
-                <th class="center">QTY</th>
-                <th class="right">UNIT PRICE</th>
-                <th class="right">AMOUNT (USD)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($itemsByRound as $rNum => $items)
-                @php
-                    $rLabel = ['1st','2nd','3rd','4th','5th'][$rNum - 1] ?? "{$rNum}th";
-                @endphp
+
+    @if ($isHourly)
+        @php
+            $rowNum    = 0;
+            $totalHrs  = $allItems->sum('hours');
+            $rate      = $allItems->first()['rate'] ?? 0;
+            $firstDay  = \Carbon\Carbon::parse($allItems->min('date'))->format('M j, Y');
+            $lastDay   = \Carbon\Carbon::parse($allItems->max('date'))->format('M j, Y');
+        @endphp
+        <table class="inv-table">
+            <thead>
                 <tr>
-                    <td class="inv-desc-head" colspan="5">{{ $rLabel }} Round Credit Repair — for the following clients:</td>
+                    <th colspan="2">DESCRIPTION</th>
+                    <th class="center">HOURS</th>
+                    <th class="right">RATE</th>
+                    <th class="right">AMOUNT (USD)</th>
                 </tr>
-                @foreach ($items as $it)
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="inv-desc-head" colspan="5">Hourly Services — {{ $firstDay }} to {{ $lastDay }} @ ${{ number_format($rate, 2) }}/hr</td>
+                </tr>
+                @foreach ($allItems as $it)
                     @php $rowNum++; @endphp
                     <tr>
                         <td class="inv-line-num">{{ $rowNum }}.</td>
-                        <td>{{ $it['name'] }}</td>
-                        <td class="center">1</td>
-                        <td class="right">${{ number_format($it['amount'], 2) }}</td>
+                        <td>{{ $it['label'] }}@if (!empty($it['description']) && $it['description'] !== 'Hourly work') <span style="color:#64748b;">— {{ $it['description'] }}</span>@endif</td>
+                        <td class="center">{{ number_format($it['hours'], 2) }}</td>
+                        <td class="right">${{ number_format($it['rate'], 2) }}</td>
                         <td class="right">${{ number_format($it['amount'], 2) }}</td>
                     </tr>
                 @endforeach
-            @endforeach
-        </tbody>
-    </table>
+            </tbody>
+        </table>
 
-    {{-- ===== TOTALS ===== --}}
-    <table class="inv-totals">
-        <tr class="subtotal">
-            <td class="label">Subtotal ({{ count($invoice->items) }} {{ count($invoice->items) === 1 ? 'Client' : 'Clients' }})</td>
-            <td class="amount">${{ number_format($invoice->total, 2) }}</td>
-        </tr>
-        <tr>
-            <td class="label">Tax (0%)</td>
-            <td class="amount">$0.00</td>
-        </tr>
-        <tr class="total">
-            <td class="label">TOTAL AMOUNT DUE</td>
-            <td class="amount">${{ number_format($invoice->total, 2) }}</td>
-        </tr>
-    </table>
+        {{-- ===== TOTALS ===== --}}
+        <table class="inv-totals">
+            <tr class="subtotal">
+                <td class="label">Subtotal ({{ rtrim(rtrim(number_format($totalHrs, 2), '0'), '.') }} hrs × ${{ number_format($rate, 2) }})</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tax (0%)</td>
+                <td class="amount">$0.00</td>
+            </tr>
+            <tr class="total">
+                <td class="label">TOTAL AMOUNT DUE</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+        </table>
+    @else
+        @php
+            $itemsByRound = $allItems->groupBy('round')->sortKeys();
+            $rowNum = 0;
+        @endphp
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th colspan="2">DESCRIPTION</th>
+                    <th class="center">QTY</th>
+                    <th class="right">UNIT PRICE</th>
+                    <th class="right">AMOUNT (USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($itemsByRound as $rNum => $items)
+                    @php
+                        $rLabel = ['1st','2nd','3rd','4th','5th'][$rNum - 1] ?? "{$rNum}th";
+                    @endphp
+                    <tr>
+                        <td class="inv-desc-head" colspan="5">{{ $rLabel }} Round Credit Repair — for the following clients:</td>
+                    </tr>
+                    @foreach ($items as $it)
+                        @php $rowNum++; @endphp
+                        <tr>
+                            <td class="inv-line-num">{{ $rowNum }}.</td>
+                            <td>{{ $it['name'] }}</td>
+                            <td class="center">1</td>
+                            <td class="right">${{ number_format($it['amount'], 2) }}</td>
+                            <td class="right">${{ number_format($it['amount'], 2) }}</td>
+                        </tr>
+                    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- ===== TOTALS ===== --}}
+        <table class="inv-totals">
+            <tr class="subtotal">
+                <td class="label">Subtotal ({{ count($invoice->items) }} {{ count($invoice->items) === 1 ? 'Client' : 'Clients' }})</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tax (0%)</td>
+                <td class="amount">$0.00</td>
+            </tr>
+            <tr class="total">
+                <td class="label">TOTAL AMOUNT DUE</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+        </table>
+    @endif
 
     {{-- ===== FOOTER ===== --}}
     <div class="inv-footer">

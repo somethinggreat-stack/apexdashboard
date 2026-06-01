@@ -25,7 +25,16 @@
 <div class="pay-block">
     <div class="pay-block-head">
         <div class="pay-block-title">Time Card</div>
-        <button class="pay-btn-primary" type="button" onclick="openModal('logTimeModal')">+ Log Hours</button>
+        <div style="display:flex; gap:8px;">
+            <form method="POST" action="{{ route('admin.payments.invoice.generate') }}" target="_blank" style="margin:0;">
+                @csrf
+                <button type="submit" class="pay-btn-primary" {{ $data['hoursThisPeriod'] <= 0 ? 'disabled' : '' }}
+                        title="Creates an invoice for this period's logged hours (one line per day) and opens the printable PDF page">
+                    Generate Invoice PDF
+                </button>
+            </form>
+            <button class="pay-btn-primary" type="button" onclick="openModal('logTimeModal')">+ Log Hours</button>
+        </div>
     </div>
 
     <div class="pay-period-current">
