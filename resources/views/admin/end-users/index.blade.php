@@ -35,7 +35,7 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Email</th>
+                <th>Round</th>
                 <th>Round Started</th>
                 <th>Days</th>
                 <th>Status</th>
@@ -56,23 +56,23 @@
                             </button>
                         @endif
                     </td>
-                    <td class="no-link">{{ $eu->email }}</td>
                     <td class="no-link">
                         <span class="inline-edit inline-edit-round"
                               data-id="{{ $eu->id }}"
                               data-current="{{ json_encode($eu->rounds ?? []) }}">
-                            <span class="round-timeline">
-                                @forelse ($eu->round_timeline as $label => $date)
-                                    <span class="round-date">
-                                        <strong>{{ \Illuminate\Support\Str::before($label, ' Round') }}</strong>
-                                        {{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}
-                                    </span>
-                                @empty
-                                    —
-                                @endforelse
-                            </span>
+                            {{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}
                             <span class="inline-pencil" aria-hidden="true">✎</span>
                         </span>
+                    </td>
+                    <td class="no-link">
+                        @forelse ($eu->round_timeline as $label => $date)
+                            <div class="round-date">
+                                <strong>{{ \Illuminate\Support\Str::before($label, ' Round') }}</strong>
+                                {{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}
+                            </div>
+                        @empty
+                            —
+                        @endforelse
                     </td>
                     <td class="no-link">{{ $eu->days_active }}</td>
                     <td class="no-link">
