@@ -12,9 +12,61 @@
     @foreach ($stats as $s)
         <div class="stat-card">
             <div class="stat-label">{{ $s['label'] }}</div>
-            <div class="stat-value" @if ($s['tone'] === 'green') style="color:#059669;" @endif>{{ $s['value'] }}</div>
+            <div class="stat-value"
+                @if ($s['tone'] === 'green') style="color:#059669;"
+                @elseif ($s['tone'] === 'orange') style="color:#ea580c;" @endif>{{ $s['value'] }}</div>
         </div>
     @endforeach
+</div>
+
+{{-- Outstanding / Unpaid --}}
+<div class="card">
+    <div class="card-header">
+        <h2>Outstanding</h2>
+        @php $oTotal = $model === 'hourly' ? $outstanding : $outstanding['total']; @endphp
+        <span class="badge" style="background:{{ $oTotal > 0 ? '#ffedd5' : '#dcfce7' }}; color:{{ $oTotal > 0 ? '#9a3412' : '#166534' }};">
+            ${{ number_format($oTotal, 2) }} unpaid
+        </span>
+    </div>
+
+    @if ($model === 'hourly')
+        @if ($outstanding > 0)
+            <p class="muted" style="font-size:13px;">
+                You have <strong>${{ number_format($outstanding, 2) }}</strong> in logged hours that has not yet been paid out.
+                See the period breakdown in Payment History below.
+            </p>
+        @else
+            <p class="muted" style="font-size:13px;">You're all paid up — nothing outstanding.</p>
+        @endif
+    @else
+        @if ($outstanding['count'] > 0)
+            <p class="muted" style="font-size:13px; margin-bottom:12px;">
+                {{ $outstanding['count'] }} unpaid round(s) across your clients, totaling
+                <strong>${{ number_format($outstanding['total'], 2) }}</strong>
+                at ${{ number_format((float) ($client->per_round_fee ?? 0), 2) }} per round.
+            </p>
+            <table class="data-table">
+                <thead><tr><th>Client</th><th>Round</th><th>Amount</th></tr></thead>
+                <tbody>
+                    @foreach ($outstanding['items'] as $it)
+                        <tr>
+                            <td>{{ $it['name'] }}</td>
+                            <td>R{{ $it['round'] }}</td>
+                            <td>${{ number_format($it['amount'], 2) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" style="text-align:right; font-weight:600;">Total Outstanding</td>
+                        <td style="font-weight:700; color:#ea580c;">${{ number_format($outstanding['total'], 2) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        @else
+            <p class="muted" style="font-size:13px;">You're all paid up — nothing outstanding. 🎉</p>
+        @endif
+    @endif
 </div>
 
 {{-- Invoices --}}
