@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ClientPayment;
 use App\Models\EndUser;
 use App\Models\Invoice;
+use App\Models\PeriodHours;
 use App\Models\TimeEntry;
 use App\Models\TimePayout;
 use Carbon\Carbon;
@@ -131,8 +132,8 @@ class PaymentController extends Controller
     }
 
     /**
-     * Build an hourly invoice from the current pay period's logged time
-     * entries — one line per day (date, hours, rate, amount).
+     * Build an hourly invoice for the current pay period — a single line for
+     * the period's total hours (hours × rate).
      */
     private function generateHourlyInvoice(Client $client)
     {
@@ -140,27 +141,23 @@ class PaymentController extends Controller
         $rate  = (float) $data['rate'];
         $start = $data['currentStart'];
         $end   = $data['currentEnd'];
+        $hours = (float) $data['hoursThisPeriod'];
 
-        $entries = TimeEntry::where('client_id', $client->id)
-            ->whereBetween('work_date', [$start->toDateString(), $end->toDateString()])
-            ->orderBy('work_date')
-            ->get();
-
-        if ($entries->isEmpty()) {
-            return back()->with('status', 'No hours logged in the current period to invoice.');
+        if ($hours <= 0) {
+            return back()->with('status', 'No hours in the current period to invoice.');
         }
 
-        $items = $entries->map(fn ($e) => [
+        $items = [[
             'type'        => 'hourly',
-            'date'        => $e->work_date->toDateString(),
-            'label'       => $e->work_date->format('D · M j, Y'),
-            'description' => $e->description ?: 'Hourly work',
-            'hours'       => (float) $e->hours,
+            'date'        => $start->toDateString(),
+            'label'       => $start->format('M j, Y') . ' – ' . $end->format('M j, Y'),
+            'description' => 'Hourly work',
+            'hours'       => $hours,
             'rate'        => $rate,
-            'amount'      => round((float) $e->hours * $rate, 2),
-        ])->values()->all();
+            'amount'      => round($hours * $rate, 2),
+        ]];
 
-        $total = round(array_sum(array_column($items, 'amount')), 2);
+        $total = round($hours * $rate, 2);
 
         $invoice = Invoice::create([
             'client_id'           => $client->id,
@@ -246,7 +243,27 @@ class PaymentController extends Controller
         return back()->with('status', 'Payment removed.');
     }
 
-    /* =============== HOURLY — TIME ENTRIES =============== */
+    /* =============== HOURLY — MANUAL HOURS PER PERIOD =============== */
+
+    public function storePeriodHours(Request $request)
+    {
+        $client = $this->scopedBO();
+
+        $data = $request->validate([
+            'period_start' => 'required|date',
+            'period_end'   => 'required|date|after_or_equal:period_start',
+            'hours'        => 'required|numeric|min:0|max:1000',
+        ]);
+
+        PeriodHours::updateOrCreate(
+            ['client_id' => $client->id, 'period_start' => $data['period_start']],
+            ['period_end' => $data['period_end'], 'hours' => $data['hours']]
+        );
+
+        return back()->with('status', 'Hours updated.');
+    }
+
+    /* =============== HOURLY — TIME ENTRIES (legacy per-day) =============== */
 
     public function storeTime(Request $request)
     {
@@ -399,28 +416,14 @@ class PaymentController extends Controller
 
         [$currentStart, $currentEnd] = $this->computePeriod($anchor, $cycle, now());
 
-        $entries = TimeEntry::where('client_id', $client->id)
-            ->orderByDesc('work_date')
-            ->limit(60)
-            ->get();
+        $hoursThisPeriod = $this->periodHours($client, $currentStart, $currentEnd);
 
-        $entriesByDay = $entries->groupBy(fn ($e) => $e->work_date?->toDateString());
-
-        // Sum the period's hours straight from the DB. Filtering the in-memory
-        // $entries collection mis-counted boundary days (work_date is a Carbon
-        // object being compared to a date string) and is capped at 60 rows.
-        $hoursThisPeriod = (float) TimeEntry::where('client_id', $client->id)
-            ->whereBetween('work_date', [$currentStart->toDateString(), $currentEnd->toDateString()])
-            ->sum('hours');
-
-        // Build the last 6 pay periods
+        // Build the last 6 pay periods, anchored to the cycle start date.
         $periods = [];
         $cursorEnd = $currentEnd->copy();
         $cursorStart = $currentStart->copy();
         for ($i = 0; $i < 6; $i++) {
-            $hoursIn = (float) TimeEntry::where('client_id', $client->id)
-                ->whereBetween('work_date', [$cursorStart->toDateString(), $cursorEnd->toDateString()])
-                ->sum('hours');
+            $hoursIn = $this->periodHours($client, $cursorStart, $cursorEnd);
             $payout = TimePayout::where('client_id', $client->id)
                 ->where('period_start', $cursorStart->toDateString())
                 ->where('period_end', $cursorEnd->toDateString())
@@ -447,8 +450,6 @@ class PaymentController extends Controller
             'currentEnd'       => $currentEnd,
             'hoursThisPeriod'  => $hoursThisPeriod,
             'expectedNow'      => round($hoursThisPeriod * $rate, 2),
-            'entriesByDay'     => $entriesByDay,
-            'recentEntries'    => $entries,
             'periods'          => $periods,
             'earnedTotal'      => $earnedTotal,
             'earnedThisMonth'  => $earnedThisMonth,
@@ -456,14 +457,40 @@ class PaymentController extends Controller
         ];
     }
 
+    /**
+     * Hours for a single period: the manually-entered total if one exists,
+     * otherwise a fallback sum of any legacy per-day time entries in range
+     * (so previously-logged hours are not lost after the switch).
+     */
+    private function periodHours(Client $client, Carbon $start, Carbon $end): float
+    {
+        $row = PeriodHours::where('client_id', $client->id)
+            ->where('period_start', $start->toDateString())
+            ->first();
+        if ($row) {
+            return (float) $row->hours;
+        }
+        return (float) TimeEntry::where('client_id', $client->id)
+            ->whereBetween('work_date', [$start->toDateString(), $end->toDateString()])
+            ->sum('hours');
+    }
+
     private function computePeriod(Carbon $anchor, string $cycle, Carbon $today): array
     {
-        if ($cycle === 'monthly') {
-            return [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()];
-        }
-        // biweekly
         $anchor = $anchor->copy()->startOfDay();
         $today  = $today->copy()->startOfDay();
+
+        if ($cycle === 'monthly') {
+            // Anchored monthly windows: [anchor, anchor+1mo-1d], [anchor+1mo, …]
+            $start = $anchor->copy();
+            while ($start->copy()->addMonthNoOverflow()->lessThanOrEqualTo($today)) {
+                $start->addMonthNoOverflow();
+            }
+            $end = $start->copy()->addMonthNoOverflow()->subDay();
+            return [$start, $end];
+        }
+
+        // biweekly — 14-day windows from the anchor
         $diff   = (int) $anchor->diffInDays($today, false);
         $offset = intdiv(max(0, $diff), 14);
         $start  = $anchor->copy()->addDays($offset * 14);
@@ -474,8 +501,8 @@ class PaymentController extends Controller
     private function previousPeriod(Carbon $start, Carbon $end, string $cycle): array
     {
         if ($cycle === 'monthly') {
-            $prevEnd = $start->copy()->subDay()->endOfMonth();
-            $prevStart = $prevEnd->copy()->startOfMonth();
+            $prevStart = $start->copy()->subMonthNoOverflow();
+            $prevEnd   = $start->copy()->subDay();
             return [$prevStart, $prevEnd];
         }
         $prevEnd   = $start->copy()->subDay();

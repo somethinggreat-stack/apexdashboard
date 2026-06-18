@@ -100,7 +100,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('payments/invoice/{id}', [Admin\PaymentController::class, 'showInvoice'])->name('payments.invoice.show');
             Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
             Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
-            // Hourly time entries
+            // Hourly — manual hours per period
+            Route::post('payments/period-hours', [Admin\PaymentController::class, 'storePeriodHours'])->name('payments.period.hours');
+            // Hourly time entries (legacy per-day logging)
             Route::post('payments/time', [Admin\PaymentController::class, 'storeTime'])->name('payments.time.store');
             Route::delete('payments/time/{id}', [Admin\PaymentController::class, 'destroyTime'])->name('payments.time.destroy');
             // Hourly payouts
