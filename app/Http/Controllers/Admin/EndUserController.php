@@ -181,8 +181,8 @@ class EndUserController extends Controller
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
             'rounds'                      => 'nullable|array|max:5',
             'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),
-            'photo_id'                    => "$reqOrNullable|file|mimes:pdf,jpg,jpeg,png|max:10240",
-            'proof_of_address'            => "$reqOrNullable|file|mimes:pdf,jpg,jpeg,png|max:10240",
+            'photo_id'                    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'proof_of_address'            => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'ssn_picture'                 => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ];
 

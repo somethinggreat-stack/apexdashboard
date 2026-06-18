@@ -20,6 +20,9 @@ class EndUser extends Model
         '5th Round',
     ];
 
+    /** A round runs 30 days; the "days left" countdown is measured against this. */
+    public const ROUND_LENGTH_DAYS = 30;
+
     protected static function booted(): void
     {
         static::deleting(function (EndUser $user) {
@@ -194,6 +197,50 @@ class EndUser extends Model
             }
         }
         return $out;
+    }
+
+    /**
+     * The start date of the round the client is currently on (the highest
+     * round they're in). Falls back to the client start_date for round 1.
+     */
+    public function getCurrentRoundStartDateAttribute(): ?string
+    {
+        $selected = $this->rounds ?? [];
+        $highest = null;
+        foreach (self::ROUND_OPTIONS as $label) {
+            if (in_array($label, $selected, true)) {
+                $highest = $label;
+            }
+        }
+        if ($highest === null) {
+            return $this->start_date ? Carbon::parse($this->start_date)->toDateString() : null;
+        }
+        return $this->roundStartedAt($highest);
+    }
+
+    /** The date the current 30-day round is due to end. */
+    public function getRoundEndDateAttribute(): ?string
+    {
+        $start = $this->current_round_start_date;
+        if (!$start) {
+            return null;
+        }
+        return Carbon::parse($start)->startOfDay()->addDays(self::ROUND_LENGTH_DAYS)->toDateString();
+    }
+
+    /**
+     * Days remaining in the current round. Counts down from ROUND_LENGTH_DAYS
+     * on the round's start date and goes negative once the round is overdue
+     * (e.g. -1, -2 …). Resets when a new round is started.
+     */
+    public function getDaysLeftInRoundAttribute(): ?int
+    {
+        $start = $this->current_round_start_date;
+        if (!$start) {
+            return null;
+        }
+        $roundEnd = Carbon::parse($start)->startOfDay()->addDays(self::ROUND_LENGTH_DAYS);
+        return (int) now()->startOfDay()->diffInDays($roundEnd, false);
     }
 
     public function getTotalDeletionsAttribute()

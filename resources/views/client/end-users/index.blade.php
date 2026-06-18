@@ -25,7 +25,7 @@
                 <th>Round</th>
                 <th>Round Started</th>
                 <th>Steps</th>
-                <th>Days</th>
+                <th>Days Left</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -52,7 +52,13 @@
                         @endforelse
                     </td>
                     <td class="no-link">{{ $eu->process_steps_count }}</td>
-                    <td class="no-link">{{ $eu->days_active }}</td>
+                    <td class="no-link">
+                        @php $dl = $eu->days_left_in_round; @endphp
+                        <span style="font-weight:600; {{ $dl !== null && $dl < 0 ? 'color:#dc2626;font-weight:700;' : ($dl !== null && $dl <= 3 ? 'color:#ea580c;' : '') }}"
+                              title="{{ $eu->round_end_date ? 'Current round ends '.\Carbon\Carbon::parse($eu->round_end_date)->format('M j, Y') : '' }}">
+                            {{ $dl === null ? '—' : $dl }}
+                        </span>
+                    </td>
                     <td class="no-link"><span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span></td>
                     <td class="no-link">
                         <a href="{{ route('client.end-users.show', $eu) }}" class="btn btn-sm">Open</a>

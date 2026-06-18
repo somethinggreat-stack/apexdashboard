@@ -37,7 +37,7 @@
                 <th>Name</th>
                 <th>Round</th>
                 <th>Round Started</th>
-                <th>Days</th>
+                <th>Days Left</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -74,7 +74,13 @@
                             —
                         @endforelse
                     </td>
-                    <td class="no-link">{{ $eu->days_active }}</td>
+                    <td class="no-link">
+                        @php $dl = $eu->days_left_in_round; @endphp
+                        <span class="days-left {{ $dl !== null && $dl < 0 ? 'days-left-over' : ($dl !== null && $dl <= 3 ? 'days-left-soon' : '') }}"
+                              title="{{ $eu->round_end_date ? 'Current round ends '.\Carbon\Carbon::parse($eu->round_end_date)->format('M j, Y') : '' }}">
+                            {{ $dl === null ? '—' : $dl }}
+                        </span>
+                    </td>
                     <td class="no-link">
                         <span class="inline-edit inline-edit-status"
                               data-id="{{ $eu->id }}"
@@ -261,13 +267,13 @@
                 <h4>Identity Documents</h4>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Government-Issued Photo ID *</label>
-                        <input type="file" name="photo_id" required accept=".pdf,.jpg,.jpeg,.png">
+                        <label>Government-Issued Photo ID <span class="muted">(optional)</span></label>
+                        <input type="file" name="photo_id" accept=".pdf,.jpg,.jpeg,.png">
                         @error('photo_id')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
-                        <label>Proof of Address *</label>
-                        <input type="file" name="proof_of_address" required accept=".pdf,.jpg,.jpeg,.png">
+                        <label>Proof of Address <span class="muted">(optional)</span></label>
+                        <input type="file" name="proof_of_address" accept=".pdf,.jpg,.jpeg,.png">
                         @error('proof_of_address')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                 </div>
@@ -350,6 +356,9 @@
 @push('head')
 <style>
     .field-error { display:block; color:#dc2626; font-size:12px; margin-top:4px; }
+    .days-left { font-weight:600; }
+    .days-left-soon { color:#ea580c; }
+    .days-left-over { color:#dc2626; font-weight:700; }
     .round-timeline { display:inline-flex; flex-direction:column; gap:1px; }
     .round-date { font-size:12px; line-height:1.5; white-space:nowrap; }
     .round-date strong { display:inline-block; min-width:34px; color:#475569; }
