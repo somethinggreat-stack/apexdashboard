@@ -40,9 +40,7 @@ class IntakeController extends Controller
             'credit_monitoring_username'        => 'required|string|max:255',
             'credit_monitoring_password'        => 'required|string|max:255',
             'credit_monitoring_security_answer' => 'required|string|max:255',
-            'photo_id'                          => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'proof_of_address'                  => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'ssn_picture'                       => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'collage'                           => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
         // Create the EndUser first (without file paths). Encryption casts on
@@ -111,9 +109,7 @@ class IntakeController extends Controller
         $out = [];
 
         foreach ([
-            'photo_id'         => 'photo_id_path',
-            'proof_of_address' => 'proof_of_address_path',
-            'ssn_picture'      => 'ssn_picture_path',
+            'collage' => 'collage_path',
         ] as $field => $column) {
             if (!$request->hasFile($field)) continue;
 

@@ -213,21 +213,11 @@ body {
             </div>
 
             <div class="intake-section">
-                <h3>Identity Documents</h3>
+                <h3>Identity Document</h3>
                 <div class="field">
-                    <label>Government-Issued Photo ID <span class="req">*</span></label>
-                    <input type="file" name="photo_id" accept=".pdf,.jpg,.jpeg,.png" required>
-                    <div class="hint">PDF, JPG, or PNG up to 10 MB.</div>
-                </div>
-                <div class="field">
-                    <label>Proof of Address <span class="req">*</span></label>
-                    <input type="file" name="proof_of_address" accept=".pdf,.jpg,.jpeg,.png" required>
-                    <div class="hint">Utility bill, lease, or bank statement.</div>
-                </div>
-                <div class="field">
-                    <label>SSN Picture (optional)</label>
-                    <input type="file" name="ssn_picture" accept=".pdf,.jpg,.jpeg,.png">
-                    <div class="hint">Optional. Only if your provider requested it.</div>
+                    <label>Collage <span class="req">*</span></label>
+                    <input type="file" name="collage" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <div class="hint">A single file (image or PDF) containing your Photo ID, Proof of Address and SSN. PDF, JPG, or PNG up to 10 MB.</div>
                 </div>
             </div>
 

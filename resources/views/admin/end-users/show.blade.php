@@ -26,7 +26,8 @@
     $stepTypesByWeek = App\Models\ProcessStep::stepTypesByWeek();
     $documentsByCategory = $endUser->documents->groupBy('category');
     $identityDocs = collect([
-        ['type' => 'photo_id',         'label' => 'Government Photo ID', 'url' => $endUser->photo_id_url,         'path' => $endUser->photo_id_path],
+        ['type' => 'collage',          'label' => 'Collage',             'url' => $endUser->collage_url,          'path' => $endUser->collage_path],
+        ['type' => 'photo_id',         'label' => 'Government Photo ID',  'url' => $endUser->photo_id_url,         'path' => $endUser->photo_id_path],
         ['type' => 'proof_of_address', 'label' => 'Proof of Address',    'url' => $endUser->proof_of_address_url, 'path' => $endUser->proof_of_address_path],
         ['type' => 'ssn_picture',      'label' => 'SSN Picture',         'url' => $endUser->ssn_picture_url,      'path' => $endUser->ssn_picture_path],
     ])->filter(fn ($d) => !empty($d['path']));
@@ -174,38 +175,35 @@
             <div><label>SSN</label><div>{{ $endUser->ssn ?? '—' }}</div></div>
         </div>
 
-        <h4 class="profile-section-head">Identity Documents</h4>
+        <h4 class="profile-section-head">Current Address</h4>
+        <div class="info-grid">
+            <div><label>Current Address</label><div>{{ $endUser->current_address ?? '—' }}</div></div>
+            <div><label>City</label><div>{{ $endUser->city ?? '—' }}</div></div>
+            <div><label>State</label><div>{{ $endUser->state ?? '—' }}</div></div>
+            <div><label>Zipcode</label><div>{{ $endUser->zipcode ?? '—' }}</div></div>
+        </div>
+
+        <h4 class="profile-section-head">Identity Document</h4>
         <div class="info-grid">
             <div>
-                <label>Government Photo ID</label>
+                <label>Collage</label>
                 <div>
-                    @if ($endUser->photo_id_url)
-                        <a href="{{ $endUser->photo_id_url }}" target="_blank" class="btn btn-sm">View File</a>
+                    @if ($endUser->collage_url)
+                        <a href="{{ $endUser->collage_url }}" target="_blank" class="btn btn-sm">View File</a>
                     @else
                         <span class="muted">Not uploaded</span>
                     @endif
                 </div>
             </div>
-            <div>
-                <label>Proof of Address</label>
-                <div>
-                    @if ($endUser->proof_of_address_url)
-                        <a href="{{ $endUser->proof_of_address_url }}" target="_blank" class="btn btn-sm">View File</a>
-                    @else
-                        <span class="muted">Not uploaded</span>
-                    @endif
-                </div>
-            </div>
-            <div>
-                <label>SSN Picture</label>
-                <div>
-                    @if ($endUser->ssn_picture_url)
-                        <a href="{{ $endUser->ssn_picture_url }}" target="_blank" class="btn btn-sm">View File</a>
-                    @else
-                        <span class="muted">Not uploaded</span>
-                    @endif
-                </div>
-            </div>
+            @if ($endUser->photo_id_url)
+                <div><label>Government Photo ID <span class="muted">(legacy)</span></label><div><a href="{{ $endUser->photo_id_url }}" target="_blank" class="btn btn-sm">View File</a></div></div>
+            @endif
+            @if ($endUser->proof_of_address_url)
+                <div><label>Proof of Address <span class="muted">(legacy)</span></label><div><a href="{{ $endUser->proof_of_address_url }}" target="_blank" class="btn btn-sm">View File</a></div></div>
+            @endif
+            @if ($endUser->ssn_picture_url)
+                <div><label>SSN Picture <span class="muted">(legacy)</span></label><div><a href="{{ $endUser->ssn_picture_url }}" target="_blank" class="btn btn-sm">View File</a></div></div>
+            @endif
         </div>
 
         <h4 class="profile-section-head">Credit Monitoring</h4>
@@ -548,30 +546,27 @@
             </div>
 
             <div class="form-section">
-                <h4>Identity Documents</h4>
+                <h4>Current Address</h4>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Government-Issued Photo ID</label>
-                        @if ($endUser->photo_id_url)
-                            <div class="muted small"><a href="{{ $endUser->photo_id_url }}" target="_blank">Current file</a> — uploading replaces it</div>
-                        @endif
-                        <input type="file" name="photo_id" accept=".pdf,.jpg,.jpeg,.png">
-                    </div>
-                    <div class="form-group">
-                        <label>Proof of Address</label>
-                        @if ($endUser->proof_of_address_url)
-                            <div class="muted small"><a href="{{ $endUser->proof_of_address_url }}" target="_blank">Current file</a> — uploading replaces it</div>
-                        @endif
-                        <input type="file" name="proof_of_address" accept=".pdf,.jpg,.jpeg,.png">
-                    </div>
+                    <div class="form-group"><label>Current Address</label><input type="text" name="current_address" value="{{ old('current_address', $endUser->current_address) }}" maxlength="255" placeholder="Street address"></div>
+                    <div class="form-group"><label>City</label><input type="text" name="city" value="{{ old('city', $endUser->city) }}" maxlength="120"></div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group"><label>State</label><input type="text" name="state" value="{{ old('state', $endUser->state) }}" maxlength="120"></div>
+                    <div class="form-group"><label>Zipcode</label><input type="text" name="zipcode" value="{{ old('zipcode', $endUser->zipcode) }}" maxlength="20"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>Identity Document</h4>
+                <div class="form-row">
                     <div class="form-group">
-                        <label>SSN Picture</label>
-                        @if ($endUser->ssn_picture_url)
-                            <div class="muted small"><a href="{{ $endUser->ssn_picture_url }}" target="_blank">Current file</a> — uploading replaces it</div>
+                        <label>Collage</label>
+                        @if ($endUser->collage_url)
+                            <div class="muted small"><a href="{{ $endUser->collage_url }}" target="_blank">Current file</a> — uploading replaces it</div>
                         @endif
-                        <input type="file" name="ssn_picture" accept=".pdf,.jpg,.jpeg,.png">
+                        <input type="file" name="collage" accept=".pdf,.jpg,.jpeg,.png">
+                        <div class="muted small">A single file (image or PDF) containing Photo ID, Proof of Address and SSN.</div>
                     </div>
                     <div class="form-group"></div>
                 </div>

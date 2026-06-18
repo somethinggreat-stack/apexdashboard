@@ -105,6 +105,10 @@ class EndUserController extends Controller
             'email'                       => 'required|email|max:255',
             'phone'                       => 'required|string|max:30',
             'date_of_birth'               => 'required|date|before:today',
+            'current_address'             => 'required|string|max:255',
+            'city'                        => 'required|string|max:120',
+            'state'                       => 'required|string|max:120',
+            'zipcode'                     => 'required|string|max:20',
             'ssn'                         => 'required|string|max:32',
             'credit_monitoring_name'      => 'required|string|max:100',
             'credit_monitoring_username'  => 'required|string|max:255',
@@ -113,13 +117,11 @@ class EndUserController extends Controller
             'cfpb_email'                  => 'nullable|email|max:255',
             'cfpb_password'               => 'nullable|string|max:255',
             'start_date'                  => 'required|date',
-            'photo_id'                    => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'proof_of_address'            => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'ssn_picture'                 => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'collage'                     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ];
 
         $data = $request->validate($rules);
-        unset($data['photo_id'], $data['proof_of_address'], $data['ssn_picture']);
+        unset($data['collage']);
         return $data;
     }
 
@@ -128,9 +130,7 @@ class EndUserController extends Controller
         $out = [];
 
         foreach ([
-            'photo_id'         => 'photo_id_path',
-            'proof_of_address' => 'proof_of_address_path',
-            'ssn_picture'      => 'ssn_picture_path',
+            'collage' => 'collage_path',
         ] as $field => $column) {
             if ($request->hasFile($field)) {
                 if ($endUser->{$column} && Storage::disk('private')->exists($endUser->{$column})) {

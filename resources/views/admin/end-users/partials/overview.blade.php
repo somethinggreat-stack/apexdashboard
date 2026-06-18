@@ -134,6 +134,15 @@
 
     // Top 3 docs to show, with file-extension icon
     $topDocs = collect();
+    if ($endUser->collage_path) {
+        $topDocs->push([
+            'name'  => 'Collage',
+            'ext'   => strtoupper(pathinfo($endUser->collage_path, PATHINFO_EXTENSION) ?: 'FILE'),
+            'date'  => $endUser->start_date?->format('M d, Y') ?? '—',
+            'desc'  => 'Identity collage',
+            'url'   => $endUser->collage_url,
+        ]);
+    }
     if ($endUser->photo_id_path) {
         $topDocs->push([
             'name'  => 'Government Photo ID',

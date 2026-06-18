@@ -31,7 +31,7 @@ class EndUser extends Model
             // would delete the rows but skip Eloquent events, leaving orphan files.
             $user->documents()->each(fn ($doc) => $doc->delete());
 
-            foreach (['photo_id_path', 'proof_of_address_path', 'ssn_picture_path'] as $col) {
+            foreach (['photo_id_path', 'proof_of_address_path', 'ssn_picture_path', 'collage_path'] as $col) {
                 if ($user->{$col} && Storage::disk('private')->exists($user->{$col})) {
                     Storage::disk('private')->delete($user->{$col});
                 }
@@ -42,7 +42,8 @@ class EndUser extends Model
     protected $fillable = [
         'client_id',
         'first_name', 'middle_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
-        'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path',
+        'current_address', 'city', 'state', 'zipcode',
+        'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path', 'collage_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
@@ -276,12 +277,18 @@ class EndUser extends Model
         return $this->identityUrl('ssn_picture');
     }
 
+    public function getCollageUrlAttribute(): ?string
+    {
+        return $this->identityUrl('collage');
+    }
+
     private function identityUrl(string $type): ?string
     {
         $column = match ($type) {
             'photo_id' => 'photo_id_path',
             'proof_of_address' => 'proof_of_address_path',
             'ssn_picture' => 'ssn_picture_path',
+            'collage' => 'collage_path',
             default => null,
         };
         if (!$column || !$this->{$column} || !$this->id) {

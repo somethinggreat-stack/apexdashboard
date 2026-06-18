@@ -137,7 +137,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::get('files/documents/{id}', [Admin\FileController::class, 'document'])->name('files.document');
             Route::get('files/identity/{endUser}/{type}', [Admin\FileController::class, 'identity'])
-                ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture'])
+                ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture', 'collage'])
                 ->name('files.identity');
         });
     });
@@ -170,7 +170,7 @@ Route::prefix('business-owner')->name('client.')->group(function () {
 
         Route::get('files/documents/{id}', [Client\FileController::class, 'document'])->name('files.document');
         Route::get('files/identity/{endUser}/{type}', [Client\FileController::class, 'identity'])
-            ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture'])
+            ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture', 'collage'])
             ->name('files.identity');
     });
 });

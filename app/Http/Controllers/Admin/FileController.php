@@ -27,6 +27,7 @@ class FileController extends Controller
             'photo_id' => 'photo_id_path',
             'proof_of_address' => 'proof_of_address_path',
             'ssn_picture' => 'ssn_picture_path',
+            'collage' => 'collage_path',
             default => abort(404),
         };
 

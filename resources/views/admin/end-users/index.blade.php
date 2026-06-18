@@ -189,7 +189,7 @@
                     @endforeach
                 </ul>
                 <div style="margin-top:8px; font-size:12px;">
-                    Your text fields were preserved. <strong>Files (Photo ID / Proof of Address / SSN Picture) need to be re-attached.</strong>
+                    Your text fields were preserved. <strong>The Collage file needs to be re-attached.</strong>
                 </div>
             </div>
         @endif
@@ -252,7 +252,8 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Date of Birth *</label>
-                        <input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" max="{{ $maxDob }}" required>
+                        <input type="text" name="date_of_birth" value="{{ old('date_of_birth') }}" required
+                               placeholder="MM/DD/YYYY" inputmode="numeric" autocomplete="off">
                         @error('date_of_birth')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
@@ -264,24 +265,41 @@
             </div>
 
             <div class="form-section">
-                <h4>Identity Documents</h4>
+                <h4>Current Address</h4>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Government-Issued Photo ID <span class="muted">(optional)</span></label>
-                        <input type="file" name="photo_id" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('photo_id')<small class="field-error">{{ $message }}</small>@enderror
+                        <label>Current Address *</label>
+                        <input type="text" name="current_address" value="{{ old('current_address') }}" required maxlength="255" placeholder="Street address">
+                        @error('current_address')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
-                        <label>Proof of Address <span class="muted">(optional)</span></label>
-                        <input type="file" name="proof_of_address" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('proof_of_address')<small class="field-error">{{ $message }}</small>@enderror
+                        <label>City *</label>
+                        <input type="text" name="city" value="{{ old('city') }}" required maxlength="120">
+                        @error('city')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>SSN Picture <span class="muted">(optional)</span></label>
-                        <input type="file" name="ssn_picture" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('ssn_picture')<small class="field-error">{{ $message }}</small>@enderror
+                        <label>State *</label>
+                        <input type="text" name="state" value="{{ old('state') }}" required maxlength="120">
+                        @error('state')<small class="field-error">{{ $message }}</small>@enderror
+                    </div>
+                    <div class="form-group">
+                        <label>Zipcode *</label>
+                        <input type="text" name="zipcode" value="{{ old('zipcode') }}" required maxlength="20">
+                        @error('zipcode')<small class="field-error">{{ $message }}</small>@enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>Identity Document</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Collage <span class="muted">(optional)</span></label>
+                        <input type="file" name="collage" accept=".pdf,.jpg,.jpeg,.png">
+                        <div class="muted small">A single file (image or PDF) containing the Photo ID, Proof of Address and SSN.</div>
+                        @error('collage')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group"></div>
                 </div>

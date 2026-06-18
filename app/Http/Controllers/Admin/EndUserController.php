@@ -170,6 +170,10 @@ class EndUserController extends Controller
             'email'                       => "$req|email|max:255",
             'phone'                       => "$reqOrNullable|string|max:30",
             'date_of_birth'               => "$reqOrNullable|date|before:today",
+            'current_address'             => "$req|string|max:255",
+            'city'                        => "$req|string|max:120",
+            'state'                       => "$req|string|max:120",
+            'zipcode'                     => "$req|string|max:20",
             'ssn'                         => "$reqOrNullable|string|max:32",
             'credit_monitoring_name'      => "$reqOrNullable|string|max:100",
             'credit_monitoring_username'  => "$reqOrNullable|string|max:255",
@@ -181,13 +185,11 @@ class EndUserController extends Controller
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
             'rounds'                      => 'nullable|array|max:5',
             'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),
-            'photo_id'                    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'proof_of_address'            => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'ssn_picture'                 => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'collage'                     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ];
 
         $data = $request->validate($rules);
-        unset($data['photo_id'], $data['proof_of_address'], $data['ssn_picture']);
+        unset($data['collage']);
         return $data;
     }
 
@@ -196,9 +198,7 @@ class EndUserController extends Controller
         $out = [];
 
         foreach ([
-            'photo_id' => 'photo_id_path',
-            'proof_of_address' => 'proof_of_address_path',
-            'ssn_picture' => 'ssn_picture_path',
+            'collage' => 'collage_path',
         ] as $field => $column) {
             if ($request->hasFile($field)) {
                 if ($endUser->{$column} && Storage::disk('private')->exists($endUser->{$column})) {
