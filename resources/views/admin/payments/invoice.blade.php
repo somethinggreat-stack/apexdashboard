@@ -106,8 +106,13 @@
 </head>
 <body>
 
+@php
+    $backUrl = Auth::guard('client')->check()
+        ? route('client.billing.index')
+        : route('admin.payments.index');
+@endphp
 <div class="toolbar">
-    <a href="{{ route('admin.payments.index') }}" class="secondary">← Back to Payments</a>
+    <a href="{{ $backUrl }}" class="secondary">← Back to Billing</a>
     <button type="button" class="primary" onclick="window.print()">Print / Save as PDF</button>
 </div>
 

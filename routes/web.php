@@ -163,6 +163,9 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::get('messages', [Client\MessageController::class, 'index'])->name('messages.index');
         Route::post('messages', [Client\MessageController::class, 'store'])->name('messages.store');
 
+        Route::get('billing', [Client\BillingController::class, 'index'])->name('billing.index');
+        Route::get('billing/invoice/{id}', [Client\BillingController::class, 'showInvoice'])->name('billing.invoice.show');
+
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');

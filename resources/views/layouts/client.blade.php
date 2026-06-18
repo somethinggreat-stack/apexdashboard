@@ -25,6 +25,7 @@
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
                 Messages @if ($unread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $unread }}</span>@endif
             </a>
+            <a href="{{ route('client.billing.index') }}" class="{{ request()->routeIs('client.billing.*') ? 'active' : '' }}">Billing</a>
         </nav>
         <form method="POST" action="{{ route('client.logout') }}" class="sidebar-logout">
             @csrf
