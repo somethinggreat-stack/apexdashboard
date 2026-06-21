@@ -89,8 +89,6 @@ class BillingController extends Controller
      */
     private function buildPerRoundOutstanding($client): array
     {
-        $rate = (float) ($client->per_round_fee ?? 0);
-
         $roundLabelToNum = [
             '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3,
             '4th Round' => 4, '5th Round' => 5,
@@ -100,11 +98,15 @@ class BillingController extends Controller
             ->with('payments')
             ->orderBy('first_name')
             ->get();
+        // effectiveRoundFee() reads $eu->client; preload it on every row.
+        $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
 
-        $items         = [];
-        $byRound       = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+        $items   = [];
+        $byRound = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+        $total   = 0.0;
 
         foreach ($endUsers as $eu) {
+            $euRate = $eu->effectiveRoundFee();
             $paidByRound = $eu->payments->keyBy('round');
 
             $activeRounds = collect($eu->rounds ?? [])
@@ -121,9 +123,10 @@ class BillingController extends Controller
                     $items[] = [
                         'name'   => $eu->full_name,
                         'round'  => $rn,
-                        'amount' => $rate,
+                        'amount' => $euRate,
                     ];
                     $byRound[$rn]++;
+                    $total += $euRate;
                 }
             }
         }
@@ -131,7 +134,7 @@ class BillingController extends Controller
         return [
             'items'   => $items,
             'count'   => count($items),
-            'total'   => count($items) * $rate,
+            'total'   => $total,
             'byRound' => $byRound,
         ];
     }

@@ -48,11 +48,13 @@ class EndUser extends Model
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
         'current_score', 'goal_score', 'status', 'rounds', 'round_dates', 'start_date',
+        'per_round_fee',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at',
     ];
     protected $casts = [
         'start_date' => 'date',
         'date_of_birth' => 'date',
+        'per_round_fee' => 'decimal:2',
         'rounds' => 'array',
         'round_dates' => 'array',
         'intake_submitted_at' => 'datetime',
@@ -101,6 +103,23 @@ class EndUser extends Model
     public function payments()
     {
         return $this->hasMany(ClientPayment::class)->orderBy('round');
+    }
+
+    /**
+     * The per-round fee that applies to this client: their own override if set,
+     * otherwise the business owner's default per_round_fee.
+     */
+    public function effectiveRoundFee(): float
+    {
+        if ($this->per_round_fee !== null) {
+            return (float) $this->per_round_fee;
+        }
+        return (float) ($this->client->per_round_fee ?? 0);
+    }
+
+    public function hasCustomRoundFee(): bool
+    {
+        return $this->per_round_fee !== null;
     }
 
     public function getFullNameAttribute(): string

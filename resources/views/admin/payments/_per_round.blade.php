@@ -7,14 +7,15 @@
     $itemNum = 0;
     foreach ($byRound as $rNum => $items) {
         $roundLabel = ['1st','2nd','3rd','4th','5th'][$rNum - 1] ?? "{$rNum}th";
-        $invoiceText .= "{$roundLabel} Round Credit Repair (\${$data['rate']} per client)\n";
+        $invoiceText .= "{$roundLabel} Round Credit Repair\n";
+        $subtotal = 0;
         foreach ($items as $it) {
             $itemNum++;
-            $invoiceText .= sprintf("%d. %s\n", $itemNum, $it['name']);
+            $subtotal += $it['amount'];
+            $invoiceText .= sprintf("%d. %s — \$%s\n", $itemNum, $it['name'], number_format($it['amount'], 2));
         }
-        $invoiceText .= sprintf("Subtotal %s Round: %d × \$%s = \$%s\n\n",
-            $roundLabel, count($items), number_format($data['rate'], 2),
-            number_format(count($items) * $data['rate'], 2));
+        $invoiceText .= sprintf("Subtotal %s Round: %d client(s) = \$%s\n\n",
+            $roundLabel, count($items), number_format($subtotal, 2));
     }
     $invoiceText .= "TOTAL UNPAID: \$" . number_format($data['totalUnpaid'], 2);
 @endphp
@@ -97,7 +98,7 @@
                     <option value="{{ $r }}">Round {{ $r }}</option>
                 @endfor
             </select>
-            <button type="submit" id="bulk-apply" disabled>Apply (${{ number_format($data['rate'], 2) }} each)</button>
+            <button type="submit" id="bulk-apply" disabled>Apply (each client's rate)</button>
         </div>
     </div>
 
@@ -123,8 +124,15 @@
                         <td class="sel-col">
                             <input type="checkbox" name="end_user_ids[]" value="{{ $eu->id }}" class="row-check">
                         </td>
+                        @php $euRate = $row['rate']; $euRateLabel = rtrim(rtrim(number_format($euRate, 2), '0'), '.'); @endphp
                         <td class="pay-client">
                             <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                            <button type="button" class="rate-pill {{ $row['custom_fee'] ? 'rate-pill-custom' : '' }}"
+                                    title="{{ $row['custom_fee'] ? 'Custom rate — click to change' : 'Default rate — click to set a custom rate' }}"
+                                    onclick="openRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ json_encode($row['custom_fee'] ? (float) $euRate : null) }}, {{ json_encode((float) $data['rate']) }})">
+                                ${{ $euRateLabel }}/rd
+                                @if ($row['custom_fee'])<span class="rate-tag">custom</span>@endif
+                            </button>
                         </td>
                         @foreach ($row['cells'] as $r => $cell)
                             <td class="round-col">
@@ -140,8 +148,8 @@
                                         @csrf
                                         <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
                                         <input type="hidden" name="round" value="{{ $r }}">
-                                        <button type="submit" class="chip chip-unpaid" title="Click to mark Round {{ $r }} paid (${{ number_format($data['rate'], 2) }})">
-                                            ${{ (int) $data['rate'] }}
+                                        <button type="submit" class="chip chip-unpaid" title="Click to mark Round {{ $r }} paid (${{ number_format($euRate, 2) }})">
+                                            ${{ $euRateLabel }}
                                         </button>
                                     </form>
                                 @endif
@@ -214,6 +222,34 @@
     </div>
 </div>
 
+{{-- Custom per-client rate modal --}}
+<div id="rateEditModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Per-Round Rate — <span id="rate-client-name"></span></h3>
+            <button class="modal-close" onclick="closeModal('rateEditModal')">&times;</button>
+        </div>
+        <form method="POST" id="rateEditForm">
+            @csrf @method('PUT')
+            <p class="muted" style="font-size:13px; margin:0 0 12px;">
+                Set a custom per-round fee for this client. Leave blank to use the
+                business owner's default rate (<strong id="rate-default-label"></strong>).
+            </p>
+            <div class="form-group">
+                <label>Custom Fee per Round ($)</label>
+                <input type="number" step="0.01" min="0" max="100000" name="per_round_fee" id="rate-input" placeholder="Default">
+            </div>
+            <div class="form-actions" style="display:flex; justify-content:space-between; gap:8px; margin-top:14px;">
+                <button type="button" class="btn btn-danger" id="rate-reset">Use Default</button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('rateEditModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Rate</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('head')
 <style>
     /* Bulk action bar */
@@ -264,6 +300,19 @@
     .chip-unpaid:hover { background: #eff6ff; border-color: #2563eb; border-style: solid; }
 
     .inline-pay-form { display: inline; margin: 0; padding: 0; }
+
+    /* Per-client rate pill (next to client name) */
+    .rate-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+        font-size: 11px; font-weight: 700; cursor: pointer;
+        background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+        vertical-align: middle;
+    }
+    .rate-pill:hover { background: #e2e8f0; }
+    .rate-pill-custom { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+    .rate-pill-custom:hover { background: #ddd6fe; }
+    .rate-tag { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; opacity: .8; }
 
     /* Tighter cells */
     .pay-matrix .sel-col { width: 32px; text-align: center; }
@@ -348,6 +397,19 @@
         }
     });
 })();
+
+window.openRateEdit = function (endUserId, name, customRate, defaultRate) {
+    var form = document.getElementById('rateEditForm');
+    form.action = "{{ url('admin/payments/client-rate') }}/" + endUserId;
+    document.getElementById('rate-client-name').textContent = name;
+    document.getElementById('rate-default-label').textContent = '$' + (defaultRate || 0).toFixed(2);
+    document.getElementById('rate-input').value = (customRate === null || customRate === undefined) ? '' : customRate;
+    document.getElementById('rate-reset').onclick = function () {
+        document.getElementById('rate-input').value = '';
+        form.submit();
+    };
+    openModal('rateEditModal');
+};
 
 window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
     var base = "{{ url('admin/payments') }}/" + paymentId;

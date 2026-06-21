@@ -88,8 +88,13 @@ class PaymentController extends Controller
             'notes'       => 'nullable|string|max:1000',
         ]);
 
-        // Sensible defaults — VA can mark paid in 1 click without filling a form
-        $data['amount']  = $data['amount']  ?? (float) ($client->per_round_fee ?? 0);
+        // Sensible defaults — VA can mark paid in 1 click without filling a form.
+        // Default amount uses the client's effective rate (their custom per-round
+        // fee if set, otherwise the BO default).
+        if ($data['amount'] === null) {
+            $endUser = EndUser::with('client')->find($data['end_user_id']);
+            $data['amount'] = $endUser ? $endUser->effectiveRoundFee() : (float) ($client->per_round_fee ?? 0);
+        }
         $data['paid_at'] = $data['paid_at'] ?? now()->toDateString();
         $data['created_by_admin_id'] = Auth::guard('admin')->id();
 
@@ -201,12 +206,20 @@ class PaymentController extends Controller
             'round'          => 'required|integer|between:1,5',
         ]);
 
-        $rate = (float) ($client->per_round_fee ?? 0);
         $today = now()->toDateString();
         $adminId = Auth::guard('admin')->id();
 
+        $endUsers = EndUser::with('client')
+            ->whereIn('id', $data['end_user_ids'])
+            ->get()
+            ->keyBy('id');
+
         $count = 0;
         foreach ($data['end_user_ids'] as $euId) {
+            $rate = isset($endUsers[$euId])
+                ? $endUsers[$euId]->effectiveRoundFee()
+                : (float) ($client->per_round_fee ?? 0);
+
             ClientPayment::updateOrCreate(
                 ['end_user_id' => $euId, 'round' => $data['round']],
                 [
@@ -219,6 +232,31 @@ class PaymentController extends Controller
         }
 
         return back()->with('status', "Marked {$count} client(s) paid for Round {$data['round']}.");
+    }
+
+    /**
+     * Set (or clear) a single client's custom per-round fee. A blank/empty
+     * value resets the client back to the BO's default per_round_fee.
+     */
+    public function updateEndUserFee(Request $request, string $id)
+    {
+        $client = $this->scopedBO();
+
+        $endUser = EndUser::forClient($client->id)->findOrFail($id);
+
+        $data = $request->validate([
+            'per_round_fee' => 'nullable|numeric|min:0|max:100000',
+        ]);
+
+        $endUser->update([
+            'per_round_fee' => ($data['per_round_fee'] === null || $data['per_round_fee'] === '')
+                ? null
+                : $data['per_round_fee'],
+        ]);
+
+        return back()->with('status', $endUser->per_round_fee === null
+            ? "{$endUser->full_name} reset to the default rate."
+            : "{$endUser->full_name} set to \${$endUser->per_round_fee} per round.");
     }
 
     public function updatePayment(Request $request, string $id)
@@ -340,6 +378,8 @@ class PaymentController extends Controller
             ->with('payments')
             ->orderBy('first_name')
             ->get();
+        // effectiveRoundFee() reads $eu->client; preload it on every row.
+        $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
 
         $rate = (float) ($client->per_round_fee ?? 0);
 
@@ -350,8 +390,10 @@ class PaymentController extends Controller
 
         $unpaidItems   = [];
         $unpaidByRound = [1=>0, 2=>0, 3=>0, 4=>0, 5=>0];
+        $totalUnpaid   = 0.0;
 
-        $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, $rate) {
+        $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, &$totalUnpaid) {
+            $euRate = $eu->effectiveRoundFee();
             $paidByRound = $eu->payments->keyBy('round');
             $cells = [];
             for ($r = 1; $r <= 5; $r++) {
@@ -378,15 +420,18 @@ class PaymentController extends Controller
                         'name'   => $eu->full_name,
                         'email'  => $eu->email,
                         'round'  => $rn,
-                        'amount' => $rate,
+                        'amount' => $euRate,
                     ];
                     $unpaidByRound[$rn]++;
+                    $totalUnpaid += $euRate;
                 }
             }
 
             return [
                 'end_user'   => $eu,
                 'cells'      => $cells,
+                'rate'       => $euRate,
+                'custom_fee' => $eu->hasCustomRoundFee(),
                 'total_paid' => (float) $eu->payments->sum('amount'),
             ];
         });
@@ -394,8 +439,6 @@ class PaymentController extends Controller
         $allPayments = ClientPayment::forClient($client->id)->get();
         $earnedTotal     = (float) $allPayments->sum('amount');
         $earnedThisMonth = (float) $allPayments->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount');
-
-        $totalUnpaid = count($unpaidItems) * $rate;
 
         return [
             'rows'            => $rows,
