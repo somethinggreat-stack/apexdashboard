@@ -91,7 +91,7 @@ class PaymentController extends Controller
         // Sensible defaults — VA can mark paid in 1 click without filling a form.
         // Default amount uses the client's effective rate (their custom per-round
         // fee if set, otherwise the BO default).
-        if ($data['amount'] === null) {
+        if (($data['amount'] ?? null) === null) {
             $endUser = EndUser::with('client')->find($data['end_user_id']);
             $data['amount'] = $endUser ? $endUser->effectiveRoundFee() : (float) ($client->per_round_fee ?? 0);
         }
@@ -248,10 +248,9 @@ class PaymentController extends Controller
             'per_round_fee' => 'nullable|numeric|min:0|max:100000',
         ]);
 
+        $fee = $data['per_round_fee'] ?? null;
         $endUser->update([
-            'per_round_fee' => ($data['per_round_fee'] === null || $data['per_round_fee'] === '')
-                ? null
-                : $data['per_round_fee'],
+            'per_round_fee' => ($fee === null || $fee === '') ? null : $fee,
         ]);
 
         return back()->with('status', $endUser->per_round_fee === null
