@@ -68,48 +68,22 @@ class LeadController extends Controller
     public function dashboard(Request $request)
     {
         $type = $request->query('type', 'all');
-        $allowedTypes = ['all', Lead::TYPE_POPUP, Lead::TYPE_CONTACT];
-        if (! in_array($type, $allowedTypes, true)) {
+        if (! in_array($type, ['all', Lead::TYPE_POPUP, Lead::TYPE_CONTACT], true)) {
             $type = 'all';
         }
 
-        $query = Lead::query()->orderByDesc('id');
+        $query = Lead::query()->latest('id');
         if ($type !== 'all') {
             $query->where('type', $type);
         }
         $leads = $query->limit(500)->get();
 
-        $now     = now();
-        $today   = $now->copy()->startOfDay();
-        $weekAgo = $now->copy()->subDays(7);
-
-        $stats = [
-            'total'       => Lead::count(),
-            'popup'       => Lead::where('type', Lead::TYPE_POPUP)->count(),
-            'contact'     => Lead::where('type', Lead::TYPE_CONTACT)->count(),
-            'today'       => Lead::where('created_at', '>=', $today)->count(),
-            'last_7_days' => Lead::where('created_at', '>=', $weekAgo)->count(),
-            'urgent'      => Lead::where('urgency', 'asap')->count(),
+        $counts = [
+            'all'     => Lead::count(),
+            'popup'   => Lead::where('type', Lead::TYPE_POPUP)->count(),
+            'contact' => Lead::where('type', Lead::TYPE_CONTACT)->count(),
         ];
 
-        $goalCounts = Lead::selectRaw('goal, COUNT(*) as c')
-            ->whereNotNull('goal')
-            ->groupBy('goal')
-            ->orderByDesc('c')
-            ->pluck('c', 'goal');
-
-        $scoreCounts = Lead::selectRaw('score, COUNT(*) as c')
-            ->whereNotNull('score')
-            ->groupBy('score')
-            ->orderByDesc('c')
-            ->pluck('c', 'score');
-
-        return view('admin.leads.index', [
-            'leads'        => $leads,
-            'stats'        => $stats,
-            'goalCounts'   => $goalCounts,
-            'scoreCounts'  => $scoreCounts,
-            'activeType'   => $type,
-        ]);
+        return view('admin.leads.index', compact('leads', 'counts', 'type'));
     }
 }
