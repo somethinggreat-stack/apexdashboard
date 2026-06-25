@@ -57,6 +57,11 @@
                                 onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->whatsapp), @js($prospect->outreach_whatsapp), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
                             Edit
                         </button>
+                        <form method="POST" action="{{ route('admin.prospects.mark-lost', $prospect) }}" style="display:inline"
+                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Prospects?')">
+                            @csrf
+                            <button class="btn btn-sm btn-lost">Move to Lost</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}" style="display:inline"
                               onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from prospects?')">
                             @csrf @method('DELETE')
@@ -187,6 +192,8 @@
     .prospect-pill-lost          { background: #fee2e2; color: #991b1b; }
     .wa-link { color: #16a34a; font-weight: 600; white-space: nowrap; }
     .wa-link:hover { text-decoration: underline; }
+    .btn-lost { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .btn-lost:hover { background:#fde68a; }
 </style>
 @endpush
 

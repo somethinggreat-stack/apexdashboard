@@ -12,11 +12,42 @@ class ProspectController extends Controller
 {
     public function index()
     {
+        // Active pipeline — everyone except the lost bucket.
         $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+            ->where('status', '!=', 'lost')
             ->orderByDesc('updated_at')
             ->get();
 
         return view('admin.prospects.index', compact('prospects'));
+    }
+
+    /** Lost prospects — moved out of the active pipeline (e.g. went silent). */
+    public function lost()
+    {
+        $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+            ->where('status', 'lost')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('admin.prospects.lost', compact('prospects'));
+    }
+
+    /** One-click move into the Lost bucket. */
+    public function markLost(string $id)
+    {
+        $prospect = $this->scoped()->findOrFail($id);
+        $prospect->update(['status' => 'lost']);
+
+        return redirect()->route('admin.prospects.index')->with('status', "{$prospect->name} moved to Lost Prospects.");
+    }
+
+    /** Bring a lost prospect back into the active pipeline. */
+    public function reactivate(string $id)
+    {
+        $prospect = $this->scoped()->findOrFail($id);
+        $prospect->update(['status' => 'contacted']);
+
+        return redirect()->route('admin.prospects.lost')->with('status', "{$prospect->name} moved back to Prospects in Contact.");
     }
 
     public function store(Request $request)

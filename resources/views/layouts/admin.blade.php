@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin') - Credit Repair</title>
+    <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     @stack('head')
 </head>
@@ -13,7 +13,7 @@
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <strong>Credit Repair</strong>
+            <strong>Apex Growth Solutions</strong>
             <span class="badge-portal">VA Admin</span>
         </div>
 
@@ -60,7 +60,8 @@
                 <a href="{{ route('admin.client-selector.index') }}" class="{{ request()->routeIs('admin.client-selector.*') ? 'active' : '' }}">Business Owners</a>
                 <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">Manage BOs</a>
                 <a href="{{ route('admin.prospect-leads.index') }}" class="{{ request()->routeIs('admin.prospect-leads.*') ? 'active' : '' }}">Prospect Leads</a>
-                <a href="{{ route('admin.prospects.index') }}" class="{{ request()->routeIs('admin.prospects.*') ? 'active' : '' }}">Prospects in Contact</a>
+                <a href="{{ route('admin.prospects.index') }}" class="{{ request()->routeIs('admin.prospects.index') ? 'active' : '' }}">Prospects in Contact</a>
+                <a href="{{ route('admin.prospects.lost') }}" class="{{ request()->routeIs('admin.prospects.lost') ? 'active' : '' }}">Lost Prospects</a>
                 <a href="{{ route('admin.leads.index') }}" class="{{ request()->routeIs('admin.leads.*') ? 'active' : '' }}">Website Forms Leads</a>
             @endisset
         </nav>
