@@ -86,4 +86,11 @@ class LeadController extends Controller
 
         return view('admin.leads.index', compact('leads', 'counts', 'type'));
     }
+
+    public function destroy(string $id)
+    {
+        Lead::findOrFail($id)->delete();
+
+        return back()->with('status', 'Lead removed.');
+    }
 }

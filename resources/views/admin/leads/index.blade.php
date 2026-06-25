@@ -37,6 +37,7 @@
                 <th>Details</th>
                 <th>Page</th>
                 <th>When</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -78,9 +79,16 @@
                         {{ optional($lead->created_at)->diffForHumans() }}<br>
                         <span style="font-size:11px;">{{ optional($lead->created_at)->format('M j, Y g:ia') }}</span>
                     </td>
+                    <td>
+                        <form method="POST" action="{{ route('admin.leads.destroy', $lead) }}" style="display:inline"
+                              onsubmit="return confirm('Delete this lead from {{ addslashes($lead->fullName() ?: $lead->email) }}? This cannot be undone.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="empty">No leads captured yet.</td></tr>
+                <tr><td colspan="7" class="empty">No leads captured yet.</td></tr>
             @endforelse
         </tbody>
     </table>

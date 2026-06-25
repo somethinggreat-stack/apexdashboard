@@ -67,6 +67,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Leads (from public website forms) — accessible without a business owner being selected
         Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
+        Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
 
         // Prospects — manual sales pipeline of prospective business owners
         Route::resource('prospects', Admin\ProspectController::class)
