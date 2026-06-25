@@ -60,8 +60,8 @@
                 <a href="{{ route('admin.client-selector.index') }}" class="{{ request()->routeIs('admin.client-selector.*') ? 'active' : '' }}">Business Owners</a>
                 <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">Manage BOs</a>
                 <a href="{{ route('admin.prospects.index') }}" class="{{ request()->routeIs('admin.prospects.*') ? 'active' : '' }}">Prospects</a>
-                <a href="{{ route('admin.leads.index') }}" class="{{ request()->routeIs('admin.leads.*') ? 'active' : '' }}">Website Leads</a>
-                <a href="{{ route('home') }}" target="_blank">View Public Site &rarr;</a>
+                <a href="{{ route('admin.prospect-leads.index') }}" class="{{ request()->routeIs('admin.prospect-leads.*') ? 'active' : '' }}">Prospect Leads</a>
+                <a href="{{ route('admin.leads.index') }}" class="{{ request()->routeIs('admin.leads.*') ? 'active' : '' }}">Website Form Leads</a>
             @endisset
         </nav>
         <form method="POST" action="{{ route('admin.logout') }}" class="sidebar-logout">

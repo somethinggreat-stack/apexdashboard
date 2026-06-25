@@ -73,6 +73,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('prospects', Admin\ProspectController::class)
             ->only(['index', 'store', 'update', 'destroy']);
 
+        // Prospect leads — simple list of leads (name, verified WhatsApp, socials)
+        Route::resource('prospect-leads', Admin\ProspectLeadController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
 
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
