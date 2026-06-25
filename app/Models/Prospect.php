@@ -23,9 +23,21 @@ class Prospect extends Model
         'admin_id',
         'name',
         'phone',
+        'whatsapp',
+        'referred_by',
         'status',
         'notes',
     ];
+
+    /** Digits-only WhatsApp number for building a wa.me click-to-chat link. */
+    public function getWhatsappDigitsAttribute(): ?string
+    {
+        if (!$this->whatsapp) {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $this->whatsapp);
+        return $digits !== '' ? $digits : null;
+    }
 
     public function scopeForAdmin($query, $adminId)
     {

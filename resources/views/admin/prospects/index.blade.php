@@ -19,6 +19,7 @@
             <tr>
                 <th>Name</th>
                 <th>Phone</th>
+                <th>WhatsApp</th>
                 <th>Status</th>
                 <th>Discussion / Notes</th>
                 <th>Last Updated</th>
@@ -28,10 +29,22 @@
         <tbody>
             @forelse ($prospects as $prospect)
                 <tr>
-                    <td><strong>{{ $prospect->name }}</strong></td>
+                    <td>
+                        <strong>{{ $prospect->name }}</strong>
+                        @if ($prospect->referred_by)
+                            <div class="muted" style="font-size:12px; margin-top:2px;">Referred by {{ $prospect->referred_by }}</div>
+                        @endif
+                    </td>
                     <td>
                         @if ($prospect->phone)
                             <a href="tel:{{ $prospect->phone }}">{{ $prospect->phone }}</a>
+                        @else
+                            <span class="muted">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if ($prospect->whatsapp_digits)
+                            <a href="https://wa.me/{{ $prospect->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->whatsapp }}</a>
                         @else
                             <span class="muted">—</span>
                         @endif
@@ -41,7 +54,7 @@
                     <td class="no-link muted">{{ $prospect->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <button type="button" class="btn btn-sm"
-                                onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->phone), @js($prospect->status), @js($prospect->notes))">
+                                onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->phone), @js($prospect->whatsapp), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
                             Edit
                         </button>
                         <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}" style="display:inline"
@@ -52,7 +65,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="empty">No prospects yet — add the first one to start tracking.</td></tr>
+                <tr><td colspan="7" class="empty">No prospects yet — add the first one to start tracking.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -75,6 +88,16 @@
                 <div class="form-group">
                     <label>Phone</label>
                     <input type="text" name="phone" value="{{ old('phone') }}" placeholder="(555) 123-4567">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>WhatsApp Number</label>
+                    <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+1 469 905 8587">
+                </div>
+                <div class="form-group">
+                    <label>Referred By <span class="muted">(optional)</span></label>
+                    <input type="text" name="referred_by" value="{{ old('referred_by') }}" placeholder="Who referred them?">
                 </div>
             </div>
             <div class="form-group">
@@ -116,6 +139,16 @@
                     <input type="text" name="phone" id="ep-phone" placeholder="(555) 123-4567">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>WhatsApp Number</label>
+                    <input type="text" name="whatsapp" id="ep-whatsapp" placeholder="+1 469 905 8587">
+                </div>
+                <div class="form-group">
+                    <label>Referred By <span class="muted">(optional)</span></label>
+                    <input type="text" name="referred_by" id="ep-referred_by" placeholder="Who referred them?">
+                </div>
+            </div>
             <div class="form-group">
                 <label>Status</label>
                 <select name="status" id="ep-status">
@@ -152,15 +185,19 @@
     .prospect-pill-follow_up     { background: #fae8ff; color: #86198f; }
     .prospect-pill-won           { background: #d1fae5; color: #065f46; }
     .prospect-pill-lost          { background: #fee2e2; color: #991b1b; }
+    .wa-link { color: #16a34a; font-weight: 600; white-space: nowrap; }
+    .wa-link:hover { text-decoration: underline; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-window.openProspectEdit = function (id, name, phone, status, notes) {
+window.openProspectEdit = function (id, name, phone, whatsapp, referredBy, status, notes) {
     document.getElementById('editProspectForm').action = "{{ url('admin/prospects') }}/" + id;
     document.getElementById('ep-name').value = name || '';
     document.getElementById('ep-phone').value = phone || '';
+    document.getElementById('ep-whatsapp').value = whatsapp || '';
+    document.getElementById('ep-referred_by').value = referredBy || '';
     document.getElementById('ep-status').value = status || 'new';
     document.getElementById('ep-notes').value = notes || '';
     openModal('editProspectModal');
