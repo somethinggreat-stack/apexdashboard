@@ -22,20 +22,31 @@ class Prospect extends Model
     protected $fillable = [
         'admin_id',
         'name',
-        'phone',
         'whatsapp',
+        'outreach_whatsapp',
         'referred_by',
         'status',
         'notes',
     ];
 
-    /** Digits-only WhatsApp number for building a wa.me click-to-chat link. */
+    /** Digits-only client WhatsApp number for a wa.me click-to-chat link. */
     public function getWhatsappDigitsAttribute(): ?string
     {
-        if (!$this->whatsapp) {
+        return $this->digitsOf($this->whatsapp);
+    }
+
+    /** Digits-only outreach WhatsApp number for a wa.me click-to-chat link. */
+    public function getOutreachWhatsappDigitsAttribute(): ?string
+    {
+        return $this->digitsOf($this->outreach_whatsapp);
+    }
+
+    private function digitsOf(?string $value): ?string
+    {
+        if (!$value) {
             return null;
         }
-        $digits = preg_replace('/\D/', '', $this->whatsapp);
+        $digits = preg_replace('/\D/', '', $value);
         return $digits !== '' ? $digits : null;
     }
 

@@ -48,12 +48,12 @@ class ProspectController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'name'        => 'required|string|max:255',
-            'phone'       => 'nullable|string|max:40',
-            'whatsapp'    => 'nullable|string|max:40',
-            'referred_by' => 'nullable|string|max:255',
-            'status'      => ['required', Rule::in(array_keys(Prospect::STATUSES))],
-            'notes'       => 'nullable|string|max:5000',
+            'name'              => 'required|string|max:255',
+            'whatsapp'          => 'nullable|string|max:40',
+            'outreach_whatsapp' => 'nullable|string|max:40',
+            'referred_by'       => 'nullable|string|max:255',
+            'status'            => ['required', Rule::in(array_keys(Prospect::STATUSES))],
+            'notes'             => 'nullable|string|max:5000',
         ]);
     }
 

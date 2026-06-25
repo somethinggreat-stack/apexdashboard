@@ -18,8 +18,8 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Phone</th>
-                <th>WhatsApp</th>
+                <th>Client WhatsApp</th>
+                <th>Reached Out Via</th>
                 <th>Status</th>
                 <th>Discussion / Notes</th>
                 <th>Last Updated</th>
@@ -36,15 +36,15 @@
                         @endif
                     </td>
                     <td>
-                        @if ($prospect->phone)
-                            <a href="tel:{{ $prospect->phone }}">{{ $prospect->phone }}</a>
+                        @if ($prospect->whatsapp_digits)
+                            <a href="https://wa.me/{{ $prospect->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->whatsapp }}</a>
                         @else
                             <span class="muted">—</span>
                         @endif
                     </td>
                     <td>
-                        @if ($prospect->whatsapp_digits)
-                            <a href="https://wa.me/{{ $prospect->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->whatsapp }}</a>
+                        @if ($prospect->outreach_whatsapp_digits)
+                            <a href="https://wa.me/{{ $prospect->outreach_whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->outreach_whatsapp }}</a>
                         @else
                             <span class="muted">—</span>
                         @endif
@@ -54,7 +54,7 @@
                     <td class="no-link muted">{{ $prospect->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <button type="button" class="btn btn-sm"
-                                onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->phone), @js($prospect->whatsapp), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
+                                onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->whatsapp), @js($prospect->outreach_whatsapp), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
                             Edit
                         </button>
                         <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}" style="display:inline"
@@ -86,14 +86,14 @@
                     <input type="text" name="name" value="{{ old('name') }}" required>
                 </div>
                 <div class="form-group">
-                    <label>Phone</label>
-                    <input type="text" name="phone" value="{{ old('phone') }}" placeholder="(555) 123-4567">
+                    <label>WhatsApp Number of Client</label>
+                    <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+1 469 905 8587">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>WhatsApp Number</label>
-                    <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+1 469 905 8587">
+                    <label>WhatsApp Number Used to Reach Out</label>
+                    <input type="text" name="outreach_whatsapp" value="{{ old('outreach_whatsapp') }}" placeholder="+1 469 905 8587">
                 </div>
                 <div class="form-group">
                     <label>Referred By <span class="muted">(optional)</span></label>
@@ -135,14 +135,14 @@
                     <input type="text" name="name" id="ep-name" required>
                 </div>
                 <div class="form-group">
-                    <label>Phone</label>
-                    <input type="text" name="phone" id="ep-phone" placeholder="(555) 123-4567">
+                    <label>WhatsApp Number of Client</label>
+                    <input type="text" name="whatsapp" id="ep-whatsapp" placeholder="+1 469 905 8587">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>WhatsApp Number</label>
-                    <input type="text" name="whatsapp" id="ep-whatsapp" placeholder="+1 469 905 8587">
+                    <label>WhatsApp Number Used to Reach Out</label>
+                    <input type="text" name="outreach_whatsapp" id="ep-outreach_whatsapp" placeholder="+1 469 905 8587">
                 </div>
                 <div class="form-group">
                     <label>Referred By <span class="muted">(optional)</span></label>
@@ -192,11 +192,11 @@
 
 @push('scripts')
 <script>
-window.openProspectEdit = function (id, name, phone, whatsapp, referredBy, status, notes) {
+window.openProspectEdit = function (id, name, whatsapp, outreachWhatsapp, referredBy, status, notes) {
     document.getElementById('editProspectForm').action = "{{ url('admin/prospects') }}/" + id;
     document.getElementById('ep-name').value = name || '';
-    document.getElementById('ep-phone').value = phone || '';
     document.getElementById('ep-whatsapp').value = whatsapp || '';
+    document.getElementById('ep-outreach_whatsapp').value = outreachWhatsapp || '';
     document.getElementById('ep-referred_by').value = referredBy || '';
     document.getElementById('ep-status').value = status || 'new';
     document.getElementById('ep-notes').value = notes || '';
