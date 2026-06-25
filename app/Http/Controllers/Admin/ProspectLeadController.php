@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Prospect;
 use App\Models\ProspectLead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ProspectLeadController extends Controller
 {
@@ -42,6 +44,43 @@ class ProspectLeadController extends Controller
         $this->scoped()->findOrFail($id)->delete();
 
         return redirect()->route('admin.prospect-leads.index')->with('status', 'Prospect lead removed.');
+    }
+
+    /**
+     * Promote a lead into the active "Prospects in Contact" pipeline. Carries
+     * the name + client WhatsApp over, captures the outreach number, stage and
+     * notes, folds any Instagram/website into the discussion, then removes the
+     * lead (it's a move, not a copy).
+     */
+    public function move(Request $request, string $id)
+    {
+        $lead = $this->scoped()->findOrFail($id);
+
+        $data = $request->validate([
+            'outreach_whatsapp' => 'nullable|string|max:40',
+            'status'            => ['required', Rule::in(array_keys(Prospect::STATUSES))],
+            'notes'             => 'nullable|string|max:5000',
+        ]);
+
+        // Keep the social links by appending them to the discussion notes.
+        $extra = [];
+        if ($lead->instagram) $extra[] = 'Instagram: ' . $lead->instagram;
+        if ($lead->website)   $extra[] = 'Website: ' . $lead->website;
+        $notes = trim(($data['notes'] ?? '') . ($extra ? "\n\n" . implode("\n", $extra) : ''));
+
+        Prospect::create([
+            'admin_id'          => Auth::guard('admin')->id(),
+            'name'              => $lead->name,
+            'whatsapp'          => $lead->whatsapp,
+            'outreach_whatsapp' => $data['outreach_whatsapp'] ?? null,
+            'status'            => $data['status'],
+            'notes'             => $notes !== '' ? $notes : null,
+        ]);
+
+        $name = $lead->name;
+        $lead->delete();
+
+        return redirect()->route('admin.prospects.index')->with('status', "{$name} moved to Prospects in Contact.");
     }
 
     private function validated(Request $request): array

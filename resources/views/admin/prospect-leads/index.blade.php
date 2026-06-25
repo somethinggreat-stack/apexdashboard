@@ -52,6 +52,10 @@
                     </td>
                     <td class="no-link muted">{{ $lead->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
+                        <button type="button" class="btn btn-sm btn-primary"
+                                onclick="openLeadMove({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp))">
+                            Move &rarr;
+                        </button>
                         <button type="button" class="btn btn-sm"
                                 onclick="openLeadEdit({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp), @js($lead->instagram), @js($lead->website))">
                             Edit
@@ -140,6 +144,43 @@
     </div>
 </div>
 
+{{-- Move lead -> Prospects in Contact --}}
+<div id="moveLeadModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Move to Prospects in Contact</h3>
+            <button class="modal-close" onclick="closeModal('moveLeadModal')">&times;</button>
+        </div>
+        <form method="POST" id="moveLeadForm">
+            @csrf
+            <p class="muted" style="font-size:13px; margin:0 0 14px;">
+                Moving <strong id="ml-name"></strong> (<span id="ml-whatsapp"></span>) into your active pipeline.
+                Their Instagram &amp; website links are saved into the discussion notes.
+            </p>
+            <div class="form-group">
+                <label>Reached Out Via <span class="muted">(WhatsApp number you used)</span></label>
+                <input type="text" name="outreach_whatsapp" id="ml-outreach" placeholder="+1 469 905 8587">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status" id="ml-status">
+                    @foreach (\App\Models\Prospect::STATUSES as $key => $label)
+                        <option value="{{ $key }}" @selected($key === 'contacted')>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Discussion / Notes</label>
+                <textarea name="notes" id="ml-notes" rows="4" placeholder="What was discussed, next steps…"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('moveLeadModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Move to Prospects</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('head')
 <style>
     .wa-link { color:#16a34a; font-weight:600; white-space:nowrap; }
@@ -149,6 +190,16 @@
 
 @push('scripts')
 <script>
+window.openLeadMove = function (id, name, whatsapp) {
+    document.getElementById('moveLeadForm').action = "{{ url('admin/prospect-leads') }}/" + id + "/move";
+    document.getElementById('ml-name').textContent = name || '';
+    document.getElementById('ml-whatsapp').textContent = whatsapp || 'no WhatsApp on file';
+    document.getElementById('ml-outreach').value = '';
+    document.getElementById('ml-status').value = 'contacted';
+    document.getElementById('ml-notes').value = '';
+    openModal('moveLeadModal');
+};
+
 window.openLeadEdit = function (id, name, whatsapp, instagram, website) {
     document.getElementById('editLeadForm').action = "{{ url('admin/prospect-leads') }}/" + id;
     document.getElementById('el-name').value = name || '';

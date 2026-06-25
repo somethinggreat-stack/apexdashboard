@@ -76,6 +76,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Prospect leads — simple list of leads (name, verified WhatsApp, socials)
         Route::resource('prospect-leads', Admin\ProspectLeadController::class)
             ->only(['index', 'store', 'update', 'destroy']);
+        Route::post('prospect-leads/{prospect_lead}/move', [Admin\ProspectLeadController::class, 'move'])
+            ->name('prospect-leads.move');
 
 
         // Business-owner picker — accessible without a selection
