@@ -68,6 +68,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Leads (from public website forms) — accessible without a business owner being selected
         Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
 
+        // Prospects — manual sales pipeline of prospective business owners
+        Route::resource('prospects', Admin\ProspectController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
 
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
