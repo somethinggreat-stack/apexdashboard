@@ -48,13 +48,14 @@ class EndUser extends Model
         'credit_monitoring_security_answer',
         'cfpb_email', 'cfpb_password',
         'current_score', 'goal_score', 'status', 'rounds', 'round_dates', 'start_date',
-        'per_round_fee',
+        'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at',
     ];
     protected $casts = [
         'start_date' => 'date',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
+        'per_round_fees' => 'array',
         'rounds' => 'array',
         'round_dates' => 'array',
         'intake_submitted_at' => 'datetime',
@@ -106,19 +107,44 @@ class EndUser extends Model
     }
 
     /**
-     * The per-round fee that applies to this client: their own override if set,
-     * otherwise the business owner's default per_round_fee.
+     * The fee that applies to this client for a given round. Resolution order:
+     *   1. a per-round override for that specific round (per_round_fees[$round])
+     *   2. the client's flat per-round override (per_round_fee)
+     *   3. the business owner's default per_round_fee
+     * Call with no $round to get the flat/default rate (ignores per-round
+     * overrides) — used for the "all rounds" rate pill.
      */
-    public function effectiveRoundFee(): float
+    public function effectiveRoundFee(?int $round = null): float
     {
+        if ($round !== null) {
+            $override = $this->roundFeeOverride($round);
+            if ($override !== null) {
+                return $override;
+            }
+        }
         if ($this->per_round_fee !== null) {
             return (float) $this->per_round_fee;
         }
         return (float) ($this->client->per_round_fee ?? 0);
     }
 
-    public function hasCustomRoundFee(): bool
+    /** Raw per-round override amount for a single round, or null if none set. */
+    public function roundFeeOverride(int $round): ?float
     {
+        $overrides = $this->per_round_fees ?? [];
+        $value = $overrides[(string) $round] ?? null;
+        return $value === null ? null : (float) $value;
+    }
+
+    /**
+     * Whether a custom rate applies. With $round, checks that specific round's
+     * override; without, checks the flat per-client override.
+     */
+    public function hasCustomRoundFee(?int $round = null): bool
+    {
+        if ($round !== null) {
+            return $this->roundFeeOverride($round) !== null;
+        }
         return $this->per_round_fee !== null;
     }
 

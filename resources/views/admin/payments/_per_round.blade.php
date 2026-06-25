@@ -135,6 +135,7 @@
                             </button>
                         </td>
                         @foreach ($row['cells'] as $r => $cell)
+                            @php $cellRate = $cell['rate']; $cellRateLabel = rtrim(rtrim(number_format($cellRate, 2), '0'), '.'); @endphp
                             <td class="round-col">
                                 @if ($cell['state'] === 'paid')
                                     <button type="button" class="chip chip-paid"
@@ -144,14 +145,21 @@
                                         {{ optional($cell['payment']->paid_at)->format('M j') }}
                                     </button>
                                 @else
-                                    <form method="POST" action="{{ route('admin.payments.store') }}" class="inline-pay-form">
-                                        @csrf
-                                        <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
-                                        <input type="hidden" name="round" value="{{ $r }}">
-                                        <button type="submit" class="chip chip-unpaid" title="Click to mark Round {{ $r }} paid (${{ number_format($euRate, 2) }})">
-                                            ${{ $euRateLabel }}
+                                    <div class="chip-cell">
+                                        <form method="POST" action="{{ route('admin.payments.store') }}" class="inline-pay-form">
+                                            @csrf
+                                            <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
+                                            <input type="hidden" name="round" value="{{ $r }}">
+                                            <button type="submit" class="chip chip-unpaid {{ $cell['custom'] ? 'chip-custom' : '' }}"
+                                                    title="Click to mark Round {{ $r }} paid (${{ number_format($cellRate, 2) }}){{ $cell['custom'] ? ' — custom rate for this round' : '' }}">
+                                                ${{ $cellRateLabel }}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="chip-edit" title="Edit Round {{ $r }} rate for {{ $eu->full_name }}"
+                                                onclick="openRoundRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $r }}, {{ json_encode($cell['custom'] ? (float) $cellRate : null) }}, {{ json_encode((float) $data['rate']) }})">
+                                            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                         </button>
-                                    </form>
+                                    </div>
                                 @endif
                             </td>
                         @endforeach
@@ -166,8 +174,9 @@
 </form>
 
 <p class="muted" style="margin: 14px 4px 0; font-size: 12px;">
-    Tip: Click any <strong>$</strong> chip to mark that round paid instantly. Click a green chip to edit or undo.
-    Select multiple clients (checkboxes) to mark a batch paid for the same round.
+    Tip: Click any <strong>$</strong> chip to mark that round paid instantly, or the little
+    <strong>✎</strong> next to it to set a custom amount for just that round (e.g. $12 on Round 1, $20 after).
+    Click a green chip to edit or undo. Select multiple clients (checkboxes) to mark a batch paid for the same round.
 </p>
 
 {{-- Invoice list modal — copy-paste into ChatGPT / invoice tool --}}
@@ -250,6 +259,39 @@
     </div>
 </div>
 
+{{-- Per-round custom rate modal (one round only) --}}
+<div id="roundRateEditModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Round <span id="rr-round-label"></span> Rate — <span id="rr-client-name"></span></h3>
+            <button class="modal-close" onclick="closeModal('roundRateEditModal')">&times;</button>
+        </div>
+        <form method="POST" id="roundRateForm">
+            @csrf @method('PUT')
+            <input type="hidden" name="round" id="rr-round-input">
+            <p class="muted" style="font-size:13px; margin:0 0 12px;">
+                Set the fee for <strong>this round only</strong>. Leave blank to use the
+                default rate (<strong id="rr-default-label"></strong>).
+            </p>
+            <div class="form-group">
+                <label>Fee for this Round ($)</label>
+                <input type="number" step="0.01" min="0" max="100000" name="per_round_fee" id="rr-input" placeholder="Default">
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:#475569; cursor:pointer;">
+                <input type="checkbox" name="apply_all" id="rr-apply-all" value="1">
+                Apply this amount to <strong>all rounds</strong> for this client
+            </label>
+            <div class="form-actions" style="display:flex; justify-content:space-between; gap:8px; margin-top:14px;">
+                <button type="button" class="btn btn-danger" id="rr-reset">Use Default</button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('roundRateEditModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Rate</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('head')
 <style>
     /* Bulk action bar */
@@ -299,7 +341,29 @@
     }
     .chip-unpaid:hover { background: #eff6ff; border-color: #2563eb; border-style: solid; }
 
+    /* Unpaid chip carrying a custom per-round rate (purple, like the rate pill) */
+    .chip-unpaid.chip-custom {
+        background: #f5f3ff; color: #5b21b6;
+        border: 1.5px solid #ddd6fe;
+    }
+    .chip-unpaid.chip-custom:hover { background: #ede9fe; border-color: #8b5cf6; }
+
     .inline-pay-form { display: inline; margin: 0; padding: 0; }
+
+    /* Unpaid cell: the pay chip + a small inline edit-rate button */
+    .chip-cell { display: inline-flex; align-items: center; gap: 2px; }
+    .chip-cell .chip { min-width: 54px; padding: 6px 8px; }
+    .chip-edit {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 26px; padding: 0;
+        background: transparent; color: #cbd5e1; border: 0; border-radius: 6px;
+        cursor: pointer; opacity: 0; transition: opacity .12s, color .12s, background .12s;
+    }
+    .chip-cell:hover .chip-edit { opacity: 1; }
+    .chip-edit:hover { color: #6d28d9; background: #f5f3ff; }
+    /* Always show the pencil when a custom rate is set, as an affordance */
+    .chip-cell:has(.chip-custom) .chip-edit { opacity: .65; color: #a78bfa; }
+    .chip-cell:has(.chip-custom) .chip-edit:hover { opacity: 1; color: #6d28d9; }
 
     /* Per-client rate pill (next to client name) */
     .rate-pill {
@@ -409,6 +473,23 @@ window.openRateEdit = function (endUserId, name, customRate, defaultRate) {
         form.submit();
     };
     openModal('rateEditModal');
+};
+
+window.openRoundRateEdit = function (endUserId, name, round, customRate, defaultRate) {
+    var form = document.getElementById('roundRateForm');
+    form.action = "{{ url('admin/payments/round-rate') }}/" + endUserId;
+    document.getElementById('rr-round-input').value = round;
+    document.getElementById('rr-round-label').textContent = round;
+    document.getElementById('rr-client-name').textContent = name;
+    document.getElementById('rr-default-label').textContent = '$' + (defaultRate || 0).toFixed(2);
+    document.getElementById('rr-input').value = (customRate === null || customRate === undefined) ? '' : customRate;
+    document.getElementById('rr-apply-all').checked = false;
+    document.getElementById('rr-reset').onclick = function () {
+        document.getElementById('rr-input').value = '';
+        document.getElementById('rr-apply-all').checked = false;
+        form.submit();
+    };
+    openModal('roundRateEditModal');
 };
 
 window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {

@@ -93,7 +93,7 @@ class PaymentController extends Controller
         // fee if set, otherwise the BO default).
         if (($data['amount'] ?? null) === null) {
             $endUser = EndUser::with('client')->find($data['end_user_id']);
-            $data['amount'] = $endUser ? $endUser->effectiveRoundFee() : (float) ($client->per_round_fee ?? 0);
+            $data['amount'] = $endUser ? $endUser->effectiveRoundFee((int) $data['round']) : (float) ($client->per_round_fee ?? 0);
         }
         $data['paid_at'] = $data['paid_at'] ?? now()->toDateString();
         $data['created_by_admin_id'] = Auth::guard('admin')->id();
@@ -217,7 +217,7 @@ class PaymentController extends Controller
         $count = 0;
         foreach ($data['end_user_ids'] as $euId) {
             $rate = isset($endUsers[$euId])
-                ? $endUsers[$euId]->effectiveRoundFee()
+                ? $endUsers[$euId]->effectiveRoundFee((int) $data['round'])
                 : (float) ($client->per_round_fee ?? 0);
 
             ClientPayment::updateOrCreate(
@@ -256,6 +256,56 @@ class PaymentController extends Controller
         return back()->with('status', $endUser->per_round_fee === null
             ? "{$endUser->full_name} reset to the default rate."
             : "{$endUser->full_name} set to \${$endUser->per_round_fee} per round.");
+    }
+
+    /**
+     * Set (or clear) a custom fee for a single round of one client, e.g. $12
+     * for Round 1 only while the other rounds keep the default. With
+     * apply_all=1 the amount is written as the client's flat per-round rate
+     * (all rounds) and any per-round overrides are cleared. A blank amount
+     * clears just that round's override (it falls back to the default).
+     */
+    public function updateRoundFee(Request $request, string $id)
+    {
+        $client = $this->scopedBO();
+
+        $endUser = EndUser::forClient($client->id)->findOrFail($id);
+
+        $data = $request->validate([
+            'round'         => 'required|integer|between:1,5',
+            'per_round_fee' => 'nullable|numeric|min:0|max:100000',
+            'apply_all'     => 'nullable|boolean',
+        ]);
+
+        $raw = $data['per_round_fee'] ?? null;
+        $fee = ($raw === null || $raw === '') ? null : (float) $raw;
+        $round = (int) $data['round'];
+
+        // "Apply to all rounds" — store as the flat client rate and drop any
+        // per-round overrides so there is a single source of truth.
+        if (!empty($data['apply_all'])) {
+            $endUser->update([
+                'per_round_fee'  => $fee,
+                'per_round_fees' => null,
+            ]);
+
+            return back()->with('status', $fee === null
+                ? "{$endUser->full_name} reset to the default rate for all rounds."
+                : "{$endUser->full_name} set to \${$fee} per round (all rounds).");
+        }
+
+        $overrides = $endUser->per_round_fees ?? [];
+        if ($fee === null) {
+            unset($overrides[(string) $round]);
+        } else {
+            $overrides[(string) $round] = $fee;
+        }
+        // Persist null when empty so the column stays clean.
+        $endUser->update(['per_round_fees' => $overrides === [] ? null : $overrides]);
+
+        return back()->with('status', $fee === null
+            ? "{$endUser->full_name} Round {$round} reset to the default rate."
+            : "{$endUser->full_name} Round {$round} set to \${$fee}.");
     }
 
     public function updatePayment(Request $request, string $id)
@@ -399,6 +449,8 @@ class PaymentController extends Controller
                 $cells[$r] = [
                     'state'   => $paidByRound->has($r) ? 'paid' : 'unpaid',
                     'payment' => $paidByRound->get($r),
+                    'rate'    => $eu->effectiveRoundFee($r),
+                    'custom'  => $eu->hasCustomRoundFee($r),
                 ];
             }
 
@@ -415,14 +467,15 @@ class PaymentController extends Controller
 
             foreach ($activeRounds as $rn) {
                 if (!$paidByRound->has($rn)) {
+                    $rnRate = $eu->effectiveRoundFee($rn);
                     $unpaidItems[] = [
                         'name'   => $eu->full_name,
                         'email'  => $eu->email,
                         'round'  => $rn,
-                        'amount' => $euRate,
+                        'amount' => $rnRate,
                     ];
                     $unpaidByRound[$rn]++;
-                    $totalUnpaid += $euRate;
+                    $totalUnpaid += $rnRate;
                 }
             }
 
