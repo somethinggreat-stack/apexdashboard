@@ -23,16 +23,15 @@
         </thead>
         <tbody>
             @forelse ($clients as $client)
-                <tr class="row-link" data-href="{{ route('admin.clients.show', $client) }}">
+                <tr>
                     <td>{{ $client->business_name }}</td>
-                    <td class="no-link">{{ $client->email }}</td>
-                    <td class="no-link">{{ $client->phone ?? '—' }}</td>
-                    <td class="no-link">{{ $client->end_users_count }}</td>
-                    <td class="no-link">${{ number_format($client->monthly_fee, 2) }}</td>
-                    <td class="no-link">${{ number_format($client->monthly_revenue, 2) }}</td>
-                    <td class="no-link"><span class="pill pill-{{ $client->status }}">{{ $client->status }}</span></td>
-                    <td class="no-link">
-                        <a href="{{ route('admin.clients.show', $client) }}" class="btn btn-sm">Open</a>
+                    <td>{{ $client->email }}</td>
+                    <td>{{ $client->phone ?? '—' }}</td>
+                    <td>{{ $client->end_users_count }}</td>
+                    <td>${{ number_format($client->monthly_fee, 2) }}</td>
+                    <td>${{ number_format($client->monthly_revenue, 2) }}</td>
+                    <td><span class="pill pill-{{ $client->status }}">{{ $client->status }}</span></td>
+                    <td>
                         <a href="{{ route('admin.clients.edit', $client) }}" class="btn btn-sm">Edit</a>
                         <form method="POST" action="{{ route('admin.clients.destroy', $client) }}" style="display:inline" onsubmit="return confirm('Delete {{ $client->business_name }} and ALL of their clients? This cannot be undone.')">
                             @csrf @method('DELETE')

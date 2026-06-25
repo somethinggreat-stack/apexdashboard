@@ -92,11 +92,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('client-selector.clear');
 
         // Business-owner CRUD — accessible without a selection so VAs can manage BOs
-        Route::resource('clients', Admin\ClientController::class);
-        Route::post('clients/{client}/regenerate-intake-token', [Admin\ClientController::class, 'regenerateIntakeToken'])
-            ->name('clients.regenerate-intake-token');
-        Route::delete('clients/{client}/intake-logo', [Admin\ClientController::class, 'removeIntakeLogo'])
-            ->name('clients.intake-logo.remove');
+        Route::resource('clients', Admin\ClientController::class)->except(['show']);
 
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
