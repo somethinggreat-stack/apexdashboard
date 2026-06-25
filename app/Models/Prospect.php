@@ -25,13 +25,8 @@ class Prospect extends Model
         'whatsapp',
         'outreach_whatsapp',
         'referred_by',
-        'value',
         'status',
         'notes',
-    ];
-
-    protected $casts = [
-        'value' => 'decimal:2',
     ];
 
     /** Digits-only client WhatsApp number for a wa.me click-to-chat link. */
