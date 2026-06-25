@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Client;
-use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ServiceAreasController;
 use App\Http\Controllers\SitemapController;
@@ -35,18 +34,6 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap')
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/leads',          [LeadController::class, 'storePopup'])->name('leads.store');
     Route::post('/contact-submit', [LeadController::class, 'storeContact'])->name('contact.submit');
-});
-
-/*
-|--------------------------------------------------------------------------
-| Public Intake Form (per-BO secret-token URLs)
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware('throttle:20,1')->group(function () {
-    Route::get('/intake/{token}',          [IntakeController::class, 'show'])->name('intake.show')->where('token', '[A-Za-z0-9]+');
-    Route::middleware('throttle:5,1')->post('/intake/{token}', [IntakeController::class, 'store'])->name('intake.store')->where('token', '[A-Za-z0-9]+');
-    Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9]+');
 });
 
 /*
