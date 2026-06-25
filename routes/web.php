@@ -72,6 +72,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Prospects — manual sales pipeline of prospective business owners
         Route::resource('prospects', Admin\ProspectController::class)
             ->only(['index', 'store', 'update', 'destroy']);
+        Route::put('prospects/{prospect}/status', [Admin\ProspectController::class, 'updateStatus'])
+            ->name('prospects.status');
 
 
         // Business-owner picker — accessible without a selection
