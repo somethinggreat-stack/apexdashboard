@@ -746,6 +746,30 @@ section { padding: 140px 48px; position: relative; z-index: 2; }
   max-width: 560px;
 }
 
+/* Desktop: stack the section header centered — heading on top, sub-text
+   centered directly below it (instead of the heading-left / intro-right
+   split). Mobile keeps its own stacked layout further down. */
+@media (min-width: 1025px) {
+  .section-head {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    gap: 28px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .section-head .section-intro {
+    max-width: 640px;
+  }
+  /* Center the numbered eyebrow that sits right above a centered header */
+  .section-label:has(+ .section-head) {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 /* ============================================
    STATS STRIP (counting numbers)
    ============================================ */
