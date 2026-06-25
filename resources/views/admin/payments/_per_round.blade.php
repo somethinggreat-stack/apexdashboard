@@ -351,19 +351,18 @@
     .inline-pay-form { display: inline; margin: 0; padding: 0; }
 
     /* Unpaid cell: the pay chip + a small inline edit-rate button */
-    .chip-cell { display: inline-flex; align-items: center; gap: 2px; }
-    .chip-cell .chip { min-width: 54px; padding: 6px 8px; }
+    .chip-cell { display: inline-flex; align-items: center; gap: 1px; }
+    .chip-cell .chip { min-width: 50px; padding: 6px 8px; }
     .chip-edit {
         display: inline-flex; align-items: center; justify-content: center;
-        width: 22px; height: 26px; padding: 0;
-        background: transparent; color: #cbd5e1; border: 0; border-radius: 6px;
-        cursor: pointer; opacity: 0; transition: opacity .12s, color .12s, background .12s;
+        width: 24px; height: 28px; padding: 0;
+        background: transparent; color: #94a3b8; border: 0; border-radius: 6px;
+        cursor: pointer; opacity: .85; transition: color .12s, background .12s, opacity .12s;
     }
-    .chip-cell:hover .chip-edit { opacity: 1; }
-    .chip-edit:hover { color: #6d28d9; background: #f5f3ff; }
-    /* Always show the pencil when a custom rate is set, as an affordance */
-    .chip-cell:has(.chip-custom) .chip-edit { opacity: .65; color: #a78bfa; }
-    .chip-cell:has(.chip-custom) .chip-edit:hover { opacity: 1; color: #6d28d9; }
+    .chip-edit:hover { color: #6d28d9; background: #f5f3ff; opacity: 1; }
+    /* Stronger affordance when a custom rate is already set on this round */
+    .chip-cell:has(.chip-custom) .chip-edit { color: #8b5cf6; opacity: 1; }
+    .chip-cell:has(.chip-custom) .chip-edit:hover { color: #6d28d9; }
 
     /* Per-client rate pill (next to client name) */
     .rate-pill {
