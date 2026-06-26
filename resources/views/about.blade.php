@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Apex Growth Systems — backend credit repair fulfillment partner. We handle dispute workload, bureau follow-up calls, CFPB / FTC documentation, and weekly client reporting for credit repair businesses." />
-<title>About | Apex Growth Systems — Credit Repair Fulfillment Partner</title>
+<meta name="description" content="Apex Growth Solutions — backend credit repair fulfillment partner. We handle dispute workload, bureau follow-up calls, CFPB / FTC documentation, and weekly client reporting for credit repair businesses." />
+<title>About | Apex Growth Solutions — Credit Repair Fulfillment Partner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -726,7 +726,7 @@ footer {
   <div class="hero-inner reveal">
     <p class="eyebrow">01 &middot; OUR STORY</p>
     <h1>Built to handle the workload your credit repair business can't.</h1>
-    <p>Apex Growth Systems exists for one reason &mdash; credit repair businesses are growing faster than they can execute. Disputes pile up. Bureau calls go unmade. CFPB filings get delayed. Client updates slip past schedule. We are the backend operations team that picks up the dispute workload, runs the follow-up calls, files the complaint documentation, and sends weekly client status reports so the business owner can stay focused on sales, retention, and growth.</p>
+    <p>Apex Growth Solutions exists for one reason &mdash; credit repair businesses are growing faster than they can execute. Disputes pile up. Bureau calls go unmade. CFPB filings get delayed. Client updates slip past schedule. We are the backend operations team that picks up the dispute workload, runs the follow-up calls, files the complaint documentation, and sends weekly client status reports so the business owner can stay focused on sales, retention, and growth.</p>
   </div>
 </section>
 
@@ -837,8 +837,8 @@ footer {
   <div class="founder-inner reveal">
     <p class="eyebrow">02 &middot; WHY WE BUILT THIS</p>
     <h2 class="founder-name">Built To Run The Workload Owners Hate Doing</h2>
-    <p class="founder-role">The Apex Growth Systems Team</p>
-    <p class="founder-bio">Apex Growth Systems was built after watching credit repair business owners win sales and then drown in fulfillment. The disputes, the bureau calls, the CFPB filings, the client updates &mdash; every piece of post-sale execution that doesn't generate revenue but determines whether clients stay or refund. Our team operates the entire backend so the business owner can sell, scale, and protect their reputation. We are not a law firm and we do not provide legal advice. We provide administrative dispute preparation, complaint documentation support, response monitoring, and weekly client reporting on behalf of credit repair businesses. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
+    <p class="founder-role">The Apex Growth Solutions Team</p>
+    <p class="founder-bio">Apex Growth Solutions was built after watching credit repair business owners win sales and then drown in fulfillment. The disputes, the bureau calls, the CFPB filings, the client updates &mdash; every piece of post-sale execution that doesn't generate revenue but determines whether clients stay or refund. Our team operates the entire backend so the business owner can sell, scale, and protect their reputation. We are not a law firm and we do not provide legal advice. We provide administrative dispute preparation, complaint documentation support, response monitoring, and weekly client reporting on behalf of credit repair businesses. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
   </div>
 </section>
 

@@ -129,7 +129,7 @@
           <span>&middot;</span>
           <span>Weekly Reporting</span>
         </div>
-        <p style="font-size:10px;line-height:1.5;color:rgba(15,32,67,0.55);margin-top:12px;">Apex Growth Systems provides administrative credit repair fulfillment support for credit repair businesses. We are not a law firm and do not provide legal advice. Results vary. We do not guarantee score increases or removal of accurate/verifiable information.</p>
+        <p style="font-size:10px;line-height:1.5;color:rgba(15,32,67,0.55);margin-top:12px;">Apex Growth Solutions provides administrative credit repair fulfillment support for credit repair businesses. We are not a law firm and do not provide legal advice. Results vary. We do not guarantee score increases or removal of accurate/verifiable information.</p>
       </div>
     </div>
 

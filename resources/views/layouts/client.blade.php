@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Portal') - Credit Repair</title>
+    <title>@yield('title', 'Portal') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/client.css') }}">
     @stack('head')
 </head>
@@ -13,7 +13,7 @@
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <strong>Credit Repair</strong>
+            <strong>Apex Growth Solutions</strong>
             <span class="badge-portal">Client Portal</span>
         </div>
         @php

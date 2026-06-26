@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Apex Growth Systems — backend credit repair fulfillment partner. Dispute prep, bureau follow-up calls, CFPB / FTC documentation, Innovis disputes, and weekly client reporting for credit repair businesses." />
-<title>Apex Growth Systems | Credit Repair Fulfillment Partner For Credit Repair Businesses</title>
+<meta name="description" content="Apex Growth Solutions — backend credit repair fulfillment partner. Dispute prep, bureau follow-up calls, CFPB / FTC documentation, Innovis disputes, and weekly client reporting for credit repair businesses." />
+<title>Apex Growth Solutions | Credit Repair Fulfillment Partner For Credit Repair Businesses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" imagesrcset="/Images/heroimage.webp 1x" fetchpriority="high">
@@ -2340,7 +2340,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         <span class="word" style="animation-delay: 1.1s"><em>Run The&nbsp;Fulfillment.</em></span>
       </h1>
       <p class="hero-sub">
-        Apex Growth Systems is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — so your credit repair business can scale without drowning in manual work.
+        Apex Growth Solutions is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — so your credit repair business can scale without drowning in manual work.
       </p>
       <div class="hero-cta">
         <a href="/trial" class="btn btn-gold"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
@@ -2366,7 +2366,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
       <div class="hero-image" data-parallax="0.05">
         <picture>
           <source srcset="/Images/heroimage.webp" type="image/webp">
-          <img src="/Images/heroimage.png" alt="Apex Growth Systems backend credit repair workflow"
+          <img src="/Images/heroimage.png" alt="Apex Growth Solutions backend credit repair workflow"
                width="1200" height="900"
                loading="eager" decoding="async" fetchpriority="high">
         </picture>
@@ -2396,7 +2396,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
     <div class="section-label">01 · The Problem</div>
     <div class="section-head">
       <h2 class="section-title">Your credit repair business is growing,<br>but dispute workload is <em>eating your time.</em></h2>
-      <p class="section-intro">Sales close. Clients sign up. And then the real work begins — letters to prep, bureaus to call, complaints to document, 30-day windows to track, and weekly client updates to send. Owners burn out before the business can scale. Apex Growth Systems is the backend operations layer that handles the execution so you can stay focused on growth.</p>
+      <p class="section-intro">Sales close. Clients sign up. And then the real work begins — letters to prep, bureaus to call, complaints to document, 30-day windows to track, and weekly client updates to send. Owners burn out before the business can scale. Apex Growth Solutions is the backend operations layer that handles the execution so you can stay focused on growth.</p>
     </div>
 
     <div class="targets-grid">
@@ -2623,10 +2623,10 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
       <div class="founder-story-body">
         <p>We watched it happen over and over. A credit repair business closes a strong sales month. Sign-ups roll in. And then the real work begins — Round 1 letters to draft, bureaus to call, CFPB filings to prepare, 30-day windows to track, and weekly client updates to send. Owners stop selling and start drafting letters at midnight.</p>
         <p>So we built the backend. <strong>Letters. Calls. Filings. Tracking. Reporting.</strong> Run by an operations team during US business hours — Pakistan night shift aligns with US daytime — at a fraction of what a full domestic dispute team costs. White-label friendly so every letter and every weekly client status report ships under your credit repair business name.</p>
-        <p>Apex Growth Systems exists so credit repair business owners can scale on volume and quality, not on burnout. We do not provide legal advice. We do not guarantee deletions. We do run the workflow — disciplined, documented, and tracked end-to-end.</p>
+        <p>Apex Growth Solutions exists so credit repair business owners can scale on volume and quality, not on burnout. We do not provide legal advice. We do not guarantee deletions. We do run the workflow — disciplined, documented, and tracked end-to-end.</p>
       </div>
       <div class="sig">Built for credit repair businesses ready to scale.</div>
-      <div class="sig-title">The Team at Apex Growth Systems</div>
+      <div class="sig-title">The Team at Apex Growth Solutions</div>
     </div>
   </div>
 </section>
@@ -2762,7 +2762,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
       </div>
     </div>
 
-    <p style="text-align:center;max-width:680px;margin:32px auto 0;font-size:13px;line-height:1.7;color:var(--ash);">Apex Growth Systems provides administrative credit repair fulfillment support, dispute preparation, documentation support, and operational services for credit repair businesses. We are not a law firm and do not provide legal advice. Results vary. We do not guarantee score increases, funding approvals, or removal of accurate / verifiable information.</p>
+    <p style="text-align:center;max-width:680px;margin:32px auto 0;font-size:13px;line-height:1.7;color:var(--ash);">Apex Growth Solutions provides administrative credit repair fulfillment support, dispute preparation, documentation support, and operational services for credit repair businesses. We are not a law firm and do not provide legal advice. Results vary. We do not guarantee score increases, funding approvals, or removal of accurate / verifiable information.</p>
   </div>
 </section>
 
@@ -2782,7 +2782,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
           <span class="faq-icon">+</span>
         </button>
         <div class="faq-a">
-          <p>No. Apex Growth Systems is a backend fulfillment partner for credit repair businesses. Your business owns the client relationship, billing, contracts, and brand. We execute the dispute workflow on your client files behind the scenes — letters, bureau calls, complaint documentation, response monitoring, and weekly client status reports.</p>
+          <p>No. Apex Growth Solutions is a backend fulfillment partner for credit repair businesses. Your business owns the client relationship, billing, contracts, and brand. We execute the dispute workflow on your client files behind the scenes — letters, bureau calls, complaint documentation, response monitoring, and weekly client status reports.</p>
         </div>
       </div>
       <div class="faq-item">
@@ -2923,7 +2923,7 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
     <p>What we don't promise: guaranteed deletions, score increases, or removal of accurate / verifiable information. Results vary by client profile, documentation quality, creditor response, and bureau investigation. We run the workflow with discipline. The outcomes belong to the law and the file.</p>
     <div class="sig-line">
       <div class="name">The Apex Fulfillment Commitment</div>
-      <div class="role">The Apex Growth Systems Team</div>
+      <div class="role">The Apex Growth Solutions Team</div>
     </div>
   </div>
 </section>

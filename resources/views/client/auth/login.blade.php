@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Login - Credit Repair</title>
+    <title>Client Login - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/client.css') }}">
 </head>
 <body class="auth-body">

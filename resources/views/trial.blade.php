@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="Try Apex on 5 test clients first. We run the full credit repair fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation, response monitoring, and Week 4 reporting — and you only pay once results are in. No upfront commitment." />
-<title>Try 5 Test Clients — Pay After Results | Apex Growth Systems</title>
+<title>Try 5 Test Clients — Pay After Results | Apex Growth Solutions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" fetchpriority="high">
@@ -873,7 +873,7 @@ footer {
   <div class="hero-image-wrap reveal">
     <picture>
         <source srcset="/Images/heroimage.webp" type="image/webp">
-        <img src="/Images/heroimage.png" alt="Apex Growth Systems fulfillment workflow on a credit repair client file"
+        <img src="/Images/heroimage.png" alt="Apex Growth Solutions fulfillment workflow on a credit repair client file"
              class="hero-image"
              width="1200" height="900"
              loading="eager" decoding="async" fetchpriority="high">
@@ -1022,7 +1022,7 @@ footer {
     <p class="eyebrow">WHY WE WORK THIS WAY</p>
     <h2 class="founder-name">Full Trust On Your Side. Full Skin In The Game On Ours.</h2>
     <p class="founder-role">The Apex Fulfillment Commitment</p>
-    <p class="founder-bio">Most fulfillment partners ask you to wire money, sign a contract, and hope. We won't. If you're being asked to scale your entire client base to a backend team you've never worked with, the only way to honestly de-risk that is for us to do the work first &mdash; in full, on live files, with a paper trail you can audit &mdash; and let the results decide whether we deserve to be paid. We absorb the cost of those 5 files. You absorb zero risk. If the workflow proves out, you pay for the trial and we scope the full handoff. If it doesn't, you walk away with nothing lost and 5 dispute files that were professionally worked at our expense. Apex Growth Systems is not a law firm and does not provide legal advice. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
+    <p class="founder-bio">Most fulfillment partners ask you to wire money, sign a contract, and hope. We won't. If you're being asked to scale your entire client base to a backend team you've never worked with, the only way to honestly de-risk that is for us to do the work first &mdash; in full, on live files, with a paper trail you can audit &mdash; and let the results decide whether we deserve to be paid. We absorb the cost of those 5 files. You absorb zero risk. If the workflow proves out, you pay for the trial and we scope the full handoff. If it doesn't, you walk away with nothing lost and 5 dispute files that were professionally worked at our expense. Apex Growth Solutions is not a law firm and does not provide legal advice. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
   </div>
 </section>
 

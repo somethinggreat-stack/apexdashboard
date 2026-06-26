@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
-    <title>Admin Login - Credit Repair</title>
+    <title>Admin Login - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
 </head>
 <body class="auth-body">
 <div class="auth-card">
     <div class="auth-header">
         <h1>VA Admin Login</h1>
-        <p>Credit Repair Management System</p>
+        <p>Apex Growth Solutions</p>
     </div>
     @if ($errors->any())
         <div class="alert alert-error">

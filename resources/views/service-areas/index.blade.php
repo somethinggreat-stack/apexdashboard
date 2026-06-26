@@ -1,10 +1,10 @@
 @php
     $allStates = collect($states)->sortBy('name')->values();
     $byRegion = $allStates->groupBy('region');
-    $seoTitle = "Backend Credit Repair Support in All 50 U.S. States | Apex Growth Systems";
-    $seoDescription = "Apex Growth Systems is the backend credit repair fulfillment partner for credit repair companies, dispute specialists, and credit consultants in every U.S. state. Certified letters, bureau follow-up calls, CFPB documentation, white-label weekly reporting.";
+    $seoTitle = "Backend Credit Repair Support in All 50 U.S. States | Apex Growth Solutions";
+    $seoDescription = "Apex Growth Solutions is the backend credit repair fulfillment partner for credit repair companies, dispute specialists, and credit consultants in every U.S. state. Certified letters, bureau follow-up calls, CFPB documentation, white-label weekly reporting.";
     $hubFaqs = [
-        ['q' => 'Does Apex Growth Systems support credit repair companies in every U.S. state?', 'a' => "Yes. Service is delivered remotely from a US-hours-aligned operations team, so coverage is uniform across all 50 states. Choose your state below for state-specific market context, regulatory notes, and FAQs."],
+        ['q' => 'Does Apex Growth Solutions support credit repair companies in every U.S. state?', 'a' => "Yes. Service is delivered remotely from a US-hours-aligned operations team, so coverage is uniform across all 50 states. Choose your state below for state-specific market context, regulatory notes, and FAQs."],
         ['q' => 'What does \"backend credit repair support\" actually mean?', 'a' => "We act as the silent fulfillment partner behind the operator's brand. Day 1 certified dispute letters to all four bureaus, Day 7-8 bureau follow-up calls, CFPB and FTC complaint documentation where appropriate, response monitoring through 30-day windows, and a Week 4 client status report delivered in the operator's brand."],
         ['q' => 'What tools and CRMs do you work with?', 'a' => "DisputeFox, Credit Repair Cloud, Client Dispute Manager, GoHighLevel (including custom GHL credit repair builds), and similar credit repair CRMs. We plug into the operator's existing stack."],
         ['q' => 'Do you cover credit repair regulation differences across states?', 'a' => "Each state landing page summarizes that state's credit-services registration, bonding, and contract requirements. We are not a law firm and do not provide legal advice — the operator is responsible for state-specific registration, contracts, and CROA compliance."],
@@ -45,7 +45,7 @@
 {
   "@context": "https://schema.org",
   "@type": "ItemList",
-  "name": "Apex Growth Systems Service Areas — All 50 U.S. States",
+  "name": "Apex Growth Solutions Service Areas — All 50 U.S. States",
   "itemListElement": [
     @foreach ($allStates as $i => $s)
     {
@@ -189,7 +189,7 @@ section { padding: 96px 24px; }
     <div class="hero-inner">
         <div class="hero-eyebrow">Service Areas · All 50 U.S. States</div>
         <h1>Backend credit repair support for credit repair companies in <em>every U.S. state.</em></h1>
-        <p class="lede">Apex Growth Systems is the silent fulfillment partner behind credit repair companies, dispute specialists, credit consultants, and financial-services agencies nationwide. We handle the dispute workload — certified letters, bureau follow-up calls, CFPB and FTC documentation, response monitoring, and Week 4 brand-ready client status reports — so operators can scale without staffing up a dispute team.</p>
+        <p class="lede">Apex Growth Solutions is the silent fulfillment partner behind credit repair companies, dispute specialists, credit consultants, and financial-services agencies nationwide. We handle the dispute workload — certified letters, bureau follow-up calls, CFPB and FTC documentation, response monitoring, and Week 4 brand-ready client status reports — so operators can scale without staffing up a dispute team.</p>
         <div class="hero-ctas">
             <a href="/trial" class="btn btn-primary"><span>Try 5 Test Clients</span> <span>&rarr;</span></a>
             <a href="/contact" class="btn-ghost"><span>Book A Fulfillment Call</span></a>
@@ -247,7 +247,7 @@ section { padding: 96px 24px; }
             <a href="/#services" class="service-link"><strong>Backend Fulfillment Stack</strong><span>Certified letters, bureau calls, CFPB documentation, weekly reporting.</span></a>
             <a href="/#process" class="service-link"><strong>The 4-Week Process</strong><span>Day 1 letters, Day 7-8 calls, Week 4 brand-ready status report.</span></a>
             <a href="/results" class="service-link"><strong>Business Results</strong><span>How operators scale fulfillment without staffing up a dispute team.</span></a>
-            <a href="/about" class="service-link"><strong>About Apex Growth Systems</strong><span>Who we are, how we operate, and why operators trust us.</span></a>
+            <a href="/about" class="service-link"><strong>About Apex Growth Solutions</strong><span>Who we are, how we operate, and why operators trust us.</span></a>
             <a href="/contact" class="service-link"><strong>Book A Fulfillment Call</strong><span>15-minute call to scope your CRM, files, and white-label setup.</span></a>
         </div>
     </div>
@@ -271,7 +271,7 @@ section { padding: 96px 24px; }
 <section class="cta-final">
     <div class="cta-final-inner">
         <h2>Wherever you operate, <em>we run the fulfillment behind it.</em></h2>
-        <p>From Florida to California, New York to Texas, and every state in between — Apex Growth Systems is the backend dispute team behind credit repair companies, dispute specialists, and financial-services consultants across the United States.</p>
+        <p>From Florida to California, New York to Texas, and every state in between — Apex Growth Solutions is the backend dispute team behind credit repair companies, dispute specialists, and financial-services consultants across the United States.</p>
         <a href="/trial" class="btn-gold"><span>Try 5 Test Clients</span> <span>&rarr;</span></a>
     </div>
 </section>

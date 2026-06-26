@@ -369,7 +369,7 @@
         <div class="apex-loader-card">
             <div class="apex-loader-content">
                 <img src="/Images/logo.png" alt="" class="apex-loader-logo">
-                <div class="apex-loader-text">Apex Growth Systems</div>
+                <div class="apex-loader-text">Apex Growth Solutions</div>
                 <div class="apex-loader-tagline">Backend Credit Repair Fulfillment</div>
             </div>
         </div>

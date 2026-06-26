@@ -163,7 +163,7 @@
     <a href="/" class="logo">
       <picture>
         <source srcset="/Images/logo.webp" type="image/webp">
-        <img src="/Images/logo.png" alt="Apex Growth Systems" class="logo-img" width="240" height="80" decoding="async">
+        <img src="/Images/logo.png" alt="Apex Growth Solutions" class="logo-img" width="240" height="80" decoding="async">
       </picture>
     </a>
     <ul class="nav-links" id="navLinks">

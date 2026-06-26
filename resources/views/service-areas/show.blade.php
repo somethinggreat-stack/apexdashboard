@@ -6,12 +6,12 @@
     $region = $state['region'];
     $url = url("/service-areas/{$slug}");
 
-    $seoTitle = "Backend Credit Repair Support in {$stateName} | Apex Growth Systems";
+    $seoTitle = "Backend Credit Repair Support in {$stateName} | Apex Growth Solutions";
     $seoDescription = "Backend credit repair fulfillment partner for {$stateName} credit repair companies, dispute specialists, and credit consultants. Certified letters, bureau follow-up calls, CFPB documentation, weekly white-label reporting.";
 
     // FAQ schema items combine state-specific + a few evergreen entries
     $faqItems = collect($state['state_faqs'])->concat([
-        ['q' => "How does Apex Growth Systems support a {$stateName} credit repair company?", 'a' => "We act as the backend fulfillment partner behind your brand in {$stateName}. Day 1 certified dispute letters to all four bureaus, Day 7-8 bureau follow-up calls, CFPB and FTC complaint documentation where appropriate, response monitoring through 30-day windows, and a Week 4 client status report delivered in your brand."],
+        ['q' => "How does Apex Growth Solutions support a {$stateName} credit repair company?", 'a' => "We act as the backend fulfillment partner behind your brand in {$stateName}. Day 1 certified dispute letters to all four bureaus, Day 7-8 bureau follow-up calls, CFPB and FTC complaint documentation where appropriate, response monitoring through 30-day windows, and a Week 4 client status report delivered in your brand."],
         ['q' => "Can a new {$stateName} credit repair business start with a small trial?", 'a' => "Yes. We run five test files end-to-end and you only pay once the Week 4 results are in. This is built so {$stateName} operators can validate fulfillment quality on live files before scaling the full client base."],
         ['q' => "Do you work with DisputeFox, Credit Repair Cloud, and GoHighLevel for {$stateName} operators?", 'a' => "Yes. We plug into the operator's existing CRM — DisputeFox, Credit Repair Cloud, Client Dispute Manager, GoHighLevel, or a custom GHL credit repair build — and run the dispute workflow without forcing a tool change."],
     ])->all();
@@ -51,7 +51,7 @@
 {
   "@context": "https://schema.org",
   "@type": "ProfessionalService",
-  "name": "Apex Growth Systems — Backend Credit Repair Support for {{ $stateName }}",
+  "name": "Apex Growth Solutions — Backend Credit Repair Support for {{ $stateName }}",
   "url": "{{ $url }}",
   "areaServed": {
     "@type": "State",
@@ -70,7 +70,7 @@
   ],
   "provider": {
     "@type": "Organization",
-    "name": "Apex Growth Systems",
+    "name": "Apex Growth Solutions",
     "url": "{{ url('/') }}"
   }
 }
@@ -242,7 +242,7 @@ section { padding: 96px 24px; }
     <div class="hero-inner">
         <div class="hero-eyebrow">Backend Credit Repair Support · {{ $stateName }}</div>
         <h1>The silent backend behind <em>{{ $stateName }}</em> credit repair companies, dispute specialists, and credit consultants.</h1>
-        <p class="hero-lede">Apex Growth Systems runs the dispute workload, bureau follow-up calls, CFPB and FTC documentation, response monitoring, and weekly white-label client reporting that {{ $stateName }} credit repair operators ship to their clients under their own brand.</p>
+        <p class="hero-lede">Apex Growth Solutions runs the dispute workload, bureau follow-up calls, CFPB and FTC documentation, response monitoring, and weekly white-label client reporting that {{ $stateName }} credit repair operators ship to their clients under their own brand.</p>
         <div class="hero-ctas">
             <a href="/trial" class="btn btn-primary"><span>Try 5 Test Clients</span> <span class="arrow">&rarr;</span></a>
             <a href="/contact" class="btn-ghost"><span>Book A Fulfillment Call</span></a>
@@ -355,7 +355,7 @@ section { padding: 96px 24px; }
     <div class="container">
         <div class="section-label">07 · NEARBY STATES</div>
         <h2 class="section-title">Backend credit repair coverage across the {{ $region }} and the rest of the U.S.</h2>
-        <p class="section-intro">Apex Growth Systems supports credit repair companies in every state. Some of the markets nearest {{ $stateName }}:</p>
+        <p class="section-intro">Apex Growth Solutions supports credit repair companies in every state. Some of the markets nearest {{ $stateName }}:</p>
         <div class="related-grid">
             @foreach ($related as $r)
                 <a href="{{ route('service-areas.show', $r['slug']) }}" class="related-card">
