@@ -37,6 +37,7 @@
                 <th>Name</th>
                 <th>Round</th>
                 <th>Round Started</th>
+                <th>Next Round Date</th>
                 <th>Days Left</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -75,6 +76,9 @@
                         @endforelse
                     </td>
                     <td class="no-link">
+                        {{ $eu->next_round_date ? \Carbon\Carbon::parse($eu->next_round_date)->format('M j, Y') : '—' }}
+                    </td>
+                    <td class="no-link">
                         @php $dl = $eu->days_left_in_round; @endphp
                         <span class="days-left {{ $dl !== null && $dl < 0 ? 'days-left-over' : ($dl !== null && $dl <= 3 ? 'days-left-soon' : '') }}"
                               title="{{ $eu->round_end_date ? 'Current round ends '.\Carbon\Carbon::parse($eu->round_end_date)->format('M j, Y') : '' }}">
@@ -101,7 +105,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="empty">No clients found.</td></tr>
+                <tr><td colspan="7" class="empty">No clients found.</td></tr>
             @endforelse
         </tbody>
     </table>

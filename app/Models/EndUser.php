@@ -264,6 +264,21 @@ class EndUser extends Model
         return $this->roundStartedAt($highest);
     }
 
+    /**
+     * The date the next round is due to start — one calendar month after the
+     * current round's start date (e.g. 1st round Jun 23 → Jul 23; once the
+     * 2nd round starts Jul 23 → Aug 23). No-overflow so end-of-month dates
+     * clamp to the last day of the shorter month.
+     */
+    public function getNextRoundDateAttribute(): ?string
+    {
+        $start = $this->current_round_start_date;
+        if (!$start) {
+            return null;
+        }
+        return Carbon::parse($start)->addMonthNoOverflow()->toDateString();
+    }
+
     /** The date the current 30-day round is due to end. */
     public function getRoundEndDateAttribute(): ?string
     {
