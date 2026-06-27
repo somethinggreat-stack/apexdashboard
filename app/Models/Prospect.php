@@ -19,11 +19,20 @@ class Prospect extends Model
         'lost'          => 'Not Interested',
     ];
 
+    /** Pipeline channels: key => human label. */
+    public const CHANNELS = [
+        'whatsapp'  => 'WhatsApp',
+        'phone'     => 'Phone',
+        'instagram' => 'Instagram',
+    ];
+
     protected $fillable = [
         'admin_id',
+        'channel',
         'name',
         'whatsapp',
         'outreach_whatsapp',
+        'instagram',
         'referred_by',
         'status',
         'notes',

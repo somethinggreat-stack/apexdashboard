@@ -9,8 +9,16 @@ class ProspectLead extends Model
 {
     use HasFactory;
 
+    /** Lead channels: key => human label. */
+    public const CHANNELS = [
+        'whatsapp'  => 'WhatsApp',
+        'phone'     => 'Phone',
+        'instagram' => 'Instagram',
+    ];
+
     protected $fillable = [
         'admin_id',
+        'channel',
         'name',
         'whatsapp',
         'instagram',
@@ -21,6 +29,15 @@ class ProspectLead extends Model
     protected $casts = [
         'hot_lead' => 'boolean',
     ];
+
+    /** Normalized Instagram key for duplicate matching (lowercase, no query/slash). */
+    public function getInstagramKeyAttribute(): ?string
+    {
+        $ig = strtolower(trim((string) $this->instagram));
+        $ig = preg_replace('/\?.*$/', '', $ig);   // strip ?hl=en etc.
+        $ig = rtrim($ig, '/');
+        return $ig !== '' ? $ig : null;
+    }
 
     public function scopeForAdmin($query, $adminId)
     {

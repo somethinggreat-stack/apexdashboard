@@ -11,84 +11,96 @@ use Illuminate\Validation\Rule;
 
 class ProspectLeadController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $leads = ProspectLead::forAdmin(Auth::guard('admin')->id())
+        $channel = $this->channel($request);
+        $adminId = Auth::guard('admin')->id();
+
+        $leads = ProspectLead::forAdmin($adminId)
+            ->where('channel', $channel)
             ->orderByDesc('updated_at')
             ->get();
 
-        // WhatsApp numbers (digits only, so formatting doesn't matter) that
-        // appear on more than one lead — used to flag duplicates. Built as a
-        // plain string array; collection keys would cast numeric strings to
-        // ints and break the strict comparison in the view.
+        // Duplicate matching:
+        //  - instagram channel: by normalized Instagram link, among IG leads
+        //  - whatsapp/phone:    by digits, ACROSS both whatsapp + phone leads
+        if ($channel === 'instagram') {
+            $pool  = $leads;
+            $keyOf = fn ($l) => $l->instagram_key;
+        } else {
+            $pool  = ProspectLead::forAdmin($adminId)->whereIn('channel', ['whatsapp', 'phone'])->get();
+            $keyOf = fn ($l) => $l->whatsapp_digits;
+        }
+
         $counts = [];
-        foreach ($leads as $l) {
-            $d = $l->whatsapp_digits;
-            if ($d) {
-                $counts[$d] = ($counts[$d] ?? 0) + 1;
+        foreach ($pool as $l) {
+            $k = $keyOf($l);
+            if ($k) {
+                $counts[$k] = ($counts[$k] ?? 0) + 1;
             }
         }
-        $dupNumbers = [];
-        foreach ($counts as $digits => $count) {
-            if ($count > 1) {
-                $dupNumbers[] = (string) $digits;
+        $dupKeys = [];
+        foreach ($counts as $k => $c) {
+            if ($c > 1) {
+                $dupKeys[] = (string) $k;
             }
         }
 
-        return view('admin.prospect-leads.index', compact('leads', 'dupNumbers'));
+        // Keys already on file (for the live add-form duplicate check).
+        $existingKeys = array_values(array_unique(array_keys($counts)));
+        $existingKeys = array_map('strval', $existingKeys);
+
+        return view('admin.prospect-leads.index', compact('leads', 'channel', 'dupKeys', 'existingKeys'));
     }
 
     public function store(Request $request)
     {
-        $data = $this->validated($request);
+        $channel = $this->channel($request);
+        $data = $this->validated($request, $channel);
         $data['admin_id'] = Auth::guard('admin')->id();
+        $data['channel']  = $channel;
 
-        $digits = preg_replace('/\D/', '', (string) ($data['whatsapp'] ?? ''));
-        if ($digits !== '' && $this->numberExists($digits)) {
-            return back()->withInput()->withErrors([
-                'whatsapp' => 'That WhatsApp number is already in Prospect Leads — duplicate not added.',
-            ]);
+        if ($msg = $this->duplicateMessage($channel, $data)) {
+            return back()->withInput()->withErrors(['dupe' => $msg]);
         }
 
         ProspectLead::create($data);
 
-        return redirect()->route('admin.prospect-leads.index')->with('status', 'Prospect lead added.');
+        return redirect()->route('admin.prospect-leads.index', ['channel' => $channel])
+            ->with('status', ProspectLead::CHANNELS[$channel] . ' lead added.');
     }
 
     public function update(Request $request, string $id)
     {
         $lead = $this->scoped()->findOrFail($id);
+        $channel = $lead->channel ?: 'whatsapp';
+        $data = $this->validated($request, $channel);
 
-        $data = $this->validated($request);
-
-        $digits = preg_replace('/\D/', '', (string) ($data['whatsapp'] ?? ''));
-        if ($digits !== '' && $this->numberExists($digits, $lead->id)) {
-            return back()->withInput()->withErrors([
-                'whatsapp' => 'That WhatsApp number is already on another lead — duplicate not allowed.',
-            ]);
+        if ($msg = $this->duplicateMessage($channel, $data, $lead->id)) {
+            return back()->withInput()->withErrors(['dupe' => $msg]);
         }
 
         $lead->update($data);
 
-        return redirect()->route('admin.prospect-leads.index')->with('status', 'Prospect lead updated.');
+        return redirect()->route('admin.prospect-leads.index', ['channel' => $channel])
+            ->with('status', 'Lead updated.');
     }
 
     public function destroy(string $id)
     {
-        $this->scoped()->findOrFail($id)->delete();
+        $lead = $this->scoped()->findOrFail($id);
+        $channel = $lead->channel ?: 'whatsapp';
+        $lead->delete();
 
-        return redirect()->route('admin.prospect-leads.index')->with('status', 'Prospect lead removed.');
+        return redirect()->route('admin.prospect-leads.index', ['channel' => $channel])
+            ->with('status', 'Lead removed.');
     }
 
-    /**
-     * Promote a lead into the active "Prospects in Contact" pipeline. Carries
-     * the name + client WhatsApp over, captures the outreach number, stage and
-     * notes, folds any Instagram/website into the discussion, then removes the
-     * lead (it's a move, not a copy).
-     */
+    /** Promote a lead into the matching in-contact pipeline (same channel). */
     public function move(Request $request, string $id)
     {
         $lead = $this->scoped()->findOrFail($id);
+        $channel = $lead->channel ?: 'whatsapp';
 
         $data = $request->validate([
             'outreach_whatsapp' => 'nullable|string|max:40',
@@ -96,17 +108,20 @@ class ProspectLeadController extends Controller
             'notes'             => 'nullable|string|max:5000',
         ]);
 
-        // Keep the social links by appending them to the discussion notes.
+        // For number channels, keep the Instagram link in the notes too.
         $extra = [];
-        if ($lead->instagram) $extra[] = 'Instagram: ' . $lead->instagram;
-        if ($lead->website)   $extra[] = 'Website: ' . $lead->website;
+        if ($channel !== 'instagram' && $lead->instagram) {
+            $extra[] = 'Instagram: ' . $lead->instagram;
+        }
         $notes = trim(($data['notes'] ?? '') . ($extra ? "\n\n" . implode("\n", $extra) : ''));
 
         Prospect::create([
             'admin_id'          => Auth::guard('admin')->id(),
+            'channel'           => $channel,
             'name'              => $lead->name,
-            'whatsapp'          => $lead->whatsapp,
-            'outreach_whatsapp' => $data['outreach_whatsapp'] ?? null,
+            'whatsapp'          => $channel === 'instagram' ? null : $lead->whatsapp,
+            'outreach_whatsapp' => $channel === 'instagram' ? null : ($data['outreach_whatsapp'] ?? null),
+            'instagram'         => $lead->instagram,
             'status'            => $data['status'],
             'notes'             => $notes !== '' ? $notes : null,
         ]);
@@ -114,10 +129,10 @@ class ProspectLeadController extends Controller
         $name = $lead->name;
         $lead->delete();
 
-        return redirect()->route('admin.prospects.index')->with('status', "{$name} moved to Prospects in Contact.");
+        return redirect()->route('admin.prospects.index', ['channel' => $channel])
+            ->with('status', "{$name} moved to " . Prospect::CHANNELS[$channel] . ' in Contact.');
     }
 
-    /** Toggle the Hot Lead flag for a lead. */
     public function toggleHot(string $id)
     {
         $lead = $this->scoped()->findOrFail($id);
@@ -128,8 +143,23 @@ class ProspectLeadController extends Controller
             : "{$lead->name} unmarked as Hot Lead.");
     }
 
-    private function validated(Request $request): array
+    /* ---------------- helpers ---------------- */
+
+    private function channel(Request $request): string
     {
+        $c = (string) $request->input('channel', $request->query('channel', 'whatsapp'));
+        return array_key_exists($c, ProspectLead::CHANNELS) ? $c : 'whatsapp';
+    }
+
+    private function validated(Request $request, string $channel): array
+    {
+        if ($channel === 'instagram') {
+            return $request->validate([
+                'name'      => 'required|string|max:255',
+                'instagram' => 'required|string|max:255',
+            ]);
+        }
+
         return $request->validate([
             'name'      => 'required|string|max:255',
             'whatsapp'  => 'nullable|string|max:40',
@@ -137,13 +167,40 @@ class ProspectLeadController extends Controller
         ]);
     }
 
-    /** Whether another lead already has this digits-only WhatsApp number. */
-    private function numberExists(string $digits, ?int $exceptId = null): bool
+    /** Returns a duplicate error message, or null if this lead is unique. */
+    private function duplicateMessage(string $channel, array $data, ?int $exceptId = null): ?string
     {
-        return $this->scoped()
+        $adminId = Auth::guard('admin')->id();
+
+        if ($channel === 'instagram') {
+            $key = $this->igKey($data['instagram'] ?? null);
+            if (!$key) {
+                return null;
+            }
+            $exists = ProspectLead::forAdmin($adminId)->where('channel', 'instagram')
+                ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+                ->get()->contains(fn ($l) => $l->instagram_key === $key);
+
+            return $exists ? 'That Instagram link is already in Instagram Leads — duplicate not added.' : null;
+        }
+
+        $digits = preg_replace('/\D/', '', (string) ($data['whatsapp'] ?? ''));
+        if ($digits === '') {
+            return null;
+        }
+        $exists = ProspectLead::forAdmin($adminId)->whereIn('channel', ['whatsapp', 'phone'])
             ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
-            ->get()
-            ->contains(fn ($l) => $l->whatsapp_digits === $digits);
+            ->get()->contains(fn ($l) => $l->whatsapp_digits === $digits);
+
+        return $exists ? 'That number is already in WhatsApp or Phone Leads — duplicate not added.' : null;
+    }
+
+    private function igKey(?string $ig): ?string
+    {
+        $ig = strtolower(trim((string) $ig));
+        $ig = preg_replace('/\?.*$/', '', $ig);
+        $ig = rtrim($ig, '/');
+        return $ig !== '' ? $ig : null;
     }
 
     private function scoped()

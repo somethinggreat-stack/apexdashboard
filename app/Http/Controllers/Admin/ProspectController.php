@@ -10,18 +10,21 @@ use Illuminate\Validation\Rule;
 
 class ProspectController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Active pipeline — everyone except the lost bucket.
+        $channel = $this->channel($request);
+
+        // Active pipeline for this channel — everyone except the lost bucket.
         $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+            ->where('channel', $channel)
             ->where('status', '!=', 'lost')
             ->orderByDesc('updated_at')
             ->get();
 
-        return view('admin.prospects.index', compact('prospects'));
+        return view('admin.prospects.index', compact('prospects', 'channel'));
     }
 
-    /** Lost prospects — moved out of the active pipeline (e.g. went silent). */
+    /** Lost prospects across all channels. */
     public function lost()
     {
         $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
@@ -38,7 +41,8 @@ class ProspectController extends Controller
         $prospect = $this->scoped()->findOrFail($id);
         $prospect->update(['status' => 'lost']);
 
-        return redirect()->route('admin.prospects.index')->with('status', "{$prospect->name} moved to Lost Prospects.");
+        return redirect()->route('admin.prospects.index', ['channel' => $prospect->channel])
+            ->with('status', "{$prospect->name} moved to Lost Prospects.");
     }
 
     /** Bring a lost prospect back into the active pipeline. */
@@ -47,17 +51,21 @@ class ProspectController extends Controller
         $prospect = $this->scoped()->findOrFail($id);
         $prospect->update(['status' => 'contacted']);
 
-        return redirect()->route('admin.prospects.lost')->with('status', "{$prospect->name} moved back to Prospects in Contact.");
+        return redirect()->route('admin.prospects.lost')
+            ->with('status', "{$prospect->name} moved back to " . Prospect::CHANNELS[$prospect->channel ?? 'whatsapp'] . ' in Contact.');
     }
 
     public function store(Request $request)
     {
+        $channel = $this->channel($request);
         $data = $this->validated($request);
         $data['admin_id'] = Auth::guard('admin')->id();
+        $data['channel']  = $channel;
 
         Prospect::create($data);
 
-        return redirect()->route('admin.prospects.index')->with('status', 'Prospect added.');
+        return redirect()->route('admin.prospects.index', ['channel' => $channel])
+            ->with('status', 'Prospect added.');
     }
 
     public function update(Request $request, string $id)
@@ -66,14 +74,24 @@ class ProspectController extends Controller
 
         $prospect->update($this->validated($request));
 
-        return redirect()->route('admin.prospects.index')->with('status', 'Prospect updated.');
+        return redirect()->route('admin.prospects.index', ['channel' => $prospect->channel])
+            ->with('status', 'Prospect updated.');
     }
 
     public function destroy(string $id)
     {
-        $this->scoped()->findOrFail($id)->delete();
+        $prospect = $this->scoped()->findOrFail($id);
+        $channel = $prospect->channel ?: 'whatsapp';
+        $prospect->delete();
 
-        return redirect()->route('admin.prospects.index')->with('status', 'Prospect removed.');
+        return redirect()->route('admin.prospects.index', ['channel' => $channel])
+            ->with('status', 'Prospect removed.');
+    }
+
+    private function channel(Request $request): string
+    {
+        $c = (string) $request->input('channel', $request->query('channel', 'whatsapp'));
+        return array_key_exists($c, Prospect::CHANNELS) ? $c : 'whatsapp';
     }
 
     private function validated(Request $request): array
@@ -82,6 +100,7 @@ class ProspectController extends Controller
             'name'              => 'required|string|max:255',
             'whatsapp'          => 'nullable|string|max:40',
             'outreach_whatsapp' => 'nullable|string|max:40',
+            'instagram'         => 'nullable|string|max:255',
             'referred_by'       => 'nullable|string|max:255',
             'status'            => ['required', Rule::in(array_keys(Prospect::STATUSES))],
             'notes'             => 'nullable|string|max:5000',
