@@ -109,7 +109,7 @@
             </div>
             <div class="form-group">
                 <label>WhatsApp Number (Verified)</label>
-                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+1 469 905 8587">
+                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+14699058587">
             </div>
             <div class="form-group">
                 <label>Instagram Link <span class="muted">(optional)</span></label>
@@ -138,7 +138,7 @@
             </div>
             <div class="form-group">
                 <label>WhatsApp Number (Verified)</label>
-                <input type="text" name="whatsapp" id="el-whatsapp" placeholder="+1 469 905 8587">
+                <input type="text" name="whatsapp" id="el-whatsapp" placeholder="+14699058587">
             </div>
             <div class="form-group">
                 <label>Instagram Link <span class="muted">(optional)</span></label>

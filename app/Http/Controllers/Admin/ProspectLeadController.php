@@ -82,7 +82,7 @@ class ProspectLeadController extends Controller
             'admin_id'          => Auth::guard('admin')->id(),
             'name'              => $lead->name,
             'whatsapp'          => $lead->whatsapp,
-            'outreach_whatsapp' => $data['outreach_whatsapp'] ?? null,
+            'outreach_whatsapp' => self::normalizeWhatsapp($data['outreach_whatsapp'] ?? null),
             'status'            => $data['status'],
             'notes'             => $notes !== '' ? $notes : null,
         ]);
@@ -95,11 +95,27 @@ class ProspectLeadController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name'      => 'required|string|max:255',
             'whatsapp'  => 'nullable|string|max:40',
             'instagram' => 'nullable|string|max:255',
         ]);
+
+        // Normalize the WhatsApp number to "+<digits>" — no spaces, dashes or
+        // parentheses ever get stored.
+        $data['whatsapp'] = self::normalizeWhatsapp($data['whatsapp'] ?? null);
+
+        return $data;
+    }
+
+    /** Strip everything but digits and re-add a single leading "+". */
+    public static function normalizeWhatsapp(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $value);
+        return $digits !== '' ? '+' . $digits : null;
     }
 
     private function scoped()
