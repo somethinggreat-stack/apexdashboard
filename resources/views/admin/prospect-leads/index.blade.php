@@ -3,6 +3,9 @@
 @section('title', 'Prospect Leads')
 
 @section('content')
+@php
+    $flaggedCount = $leads->filter(fn ($l) => $l->whatsapp_digits && in_array($l->whatsapp_digits, $dupNumbers, true))->count();
+@endphp
 <div class="card">
     <div class="card-header">
         <div>
@@ -27,6 +30,10 @@
             <div class="lead-stat-num">{{ $leads->where('created_at', '>=', now()->startOfDay())->count() }}</div>
             <div class="lead-stat-label">Added Today</div>
         </div>
+        <div class="lead-stat {{ $flaggedCount > 0 ? 'lead-stat-warn' : '' }}">
+            <div class="lead-stat-num">{{ $flaggedCount }}</div>
+            <div class="lead-stat-label">Duplicate Numbers</div>
+        </div>
     </div>
 
     <table class="data-table">
@@ -41,8 +48,14 @@
         </thead>
         <tbody>
             @forelse ($leads as $lead)
-                <tr>
-                    <td><strong>{{ $lead->name }}</strong></td>
+                @php $isDup = $lead->whatsapp_digits && in_array($lead->whatsapp_digits, $dupNumbers, true); @endphp
+                <tr class="{{ $isDup ? 'lead-row-dup' : '' }}">
+                    <td>
+                        <strong>{{ $lead->name }}</strong>
+                        @if ($isDup)
+                            <span class="dup-flag" title="This WhatsApp number is on more than one lead">⚠ Duplicate</span>
+                        @endif
+                    </td>
                     <td>
                         @if ($lead->whatsapp_digits)
                             <a href="https://wa.me/{{ $lead->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $lead->whatsapp }}</a>
@@ -191,6 +204,13 @@
     }
     .lead-stat-num { font-size:24px; font-weight:800; color:#0f172a; line-height:1.1; }
     .lead-stat-label { font-size:12px; color:#64748b; font-weight:600; margin-top:2px; }
+    .lead-stat-warn { background:#fef2f2; border-color:#fecaca; }
+    .lead-stat-warn .lead-stat-num { color:#b91c1c; }
+    .dup-flag {
+        display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px;
+        background:#fee2e2; color:#991b1b; font-size:11px; font-weight:700; white-space:nowrap;
+    }
+    .lead-row-dup { background:#fff7f7; }
 </style>
 @endpush
 

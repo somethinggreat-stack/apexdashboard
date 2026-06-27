@@ -17,7 +17,17 @@ class ProspectLeadController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
-        return view('admin.prospect-leads.index', compact('leads'));
+        // WhatsApp numbers (digits only, so formatting doesn't matter) that
+        // appear on more than one lead — used to flag duplicates.
+        $dupNumbers = $leads
+            ->map->whatsapp_digits
+            ->filter()
+            ->countBy()
+            ->filter(fn ($count) => $count > 1)
+            ->keys()
+            ->all();
+
+        return view('admin.prospect-leads.index', compact('leads', 'dupNumbers'));
     }
 
     public function store(Request $request)
