@@ -14,17 +14,17 @@ class ProspectController extends Controller
     {
         $channel = $this->channel($request);
 
-        // Active pipeline for this channel — everyone except the lost bucket.
+        // Active pipeline for this channel — everyone except Lost / Interested.
         $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
             ->where('channel', $channel)
-            ->where('status', '!=', 'lost')
+            ->whereNotIn('status', ['lost', 'interested'])
             ->orderByDesc('updated_at')
             ->get();
 
         return view('admin.prospects.index', compact('prospects', 'channel'));
     }
 
-    /** Lost prospects across all channels. */
+    /** Lost leads across all channels. */
     public function lost()
     {
         $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
@@ -32,7 +32,30 @@ class ProspectController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
-        return view('admin.prospects.lost', compact('prospects'));
+        return view('admin.prospects.bucket', [
+            'prospects' => $prospects,
+            'bucket'    => 'lost',
+            'title'     => 'Lost Leads',
+            'blurb'     => "Leads who went cold across all channels. Reactivate one to bring it back into its pipeline.",
+            'emptyMsg'  => "No lost leads — nice, everyone's still in play.",
+        ]);
+    }
+
+    /** Interested leads across all channels. */
+    public function interested()
+    {
+        $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+            ->where('status', 'interested')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('admin.prospects.bucket', [
+            'prospects' => $prospects,
+            'bucket'    => 'interested',
+            'title'     => 'Interested Leads',
+            'blurb'     => "Leads who showed interest across all channels. Reactivate one to move it back into its pipeline.",
+            'emptyMsg'  => "No interested leads yet.",
+        ]);
     }
 
     /** One-click move into the Lost bucket. */
@@ -42,17 +65,27 @@ class ProspectController extends Controller
         $prospect->update(['status' => 'lost']);
 
         return redirect()->route('admin.prospects.index', ['channel' => $prospect->channel])
-            ->with('status', "{$prospect->name} moved to Lost Prospects.");
+            ->with('status', "{$prospect->name} moved to Lost Leads.");
     }
 
-    /** Bring a lost prospect back into the active pipeline. */
+    /** One-click move into the Interested bucket. */
+    public function markInterested(string $id)
+    {
+        $prospect = $this->scoped()->findOrFail($id);
+        $prospect->update(['status' => 'interested']);
+
+        return redirect()->route('admin.prospects.index', ['channel' => $prospect->channel])
+            ->with('status', "{$prospect->name} moved to Interested Leads.");
+    }
+
+    /** Bring a lost/interested lead back into the active pipeline. */
     public function reactivate(string $id)
     {
         $prospect = $this->scoped()->findOrFail($id);
         $prospect->update(['status' => 'contacted']);
 
-        return redirect()->route('admin.prospects.lost')
-            ->with('status', "{$prospect->name} moved back to " . Prospect::CHANNELS[$prospect->channel ?? 'whatsapp'] . ' in Contact.');
+        return redirect()->back()
+            ->with('status', "{$prospect->name} moved back to " . Prospect::CHANNELS[$prospect->channel ?? 'whatsapp'] . ' Leads in Contact.');
     }
 
     public function store(Request $request)

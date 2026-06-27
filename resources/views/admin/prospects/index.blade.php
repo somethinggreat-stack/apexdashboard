@@ -14,12 +14,12 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2>Prospect {{ $channelLabel }} in Contact <span class="lead-count-badge">{{ $prospects->count() }}</span></h2>
+            <h2>{{ $channelLabel }} Leads in Contact <span class="lead-count-badge">{{ $prospects->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                {{ $channelLabel }} prospects you're actively talking to — track where each conversation stands.
+                {{ $channelLabel }} leads you're actively talking to — track where each conversation stands.
             </p>
         </div>
-        <button class="btn btn-primary" onclick="openModal('createProspectModal')">+ Add Prospect</button>
+        <button class="btn btn-primary" onclick="openModal('createProspectModal')">+ Add Lead</button>
     </div>
 
     <table class="data-table">
@@ -87,20 +87,25 @@
                                 onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->whatsapp), @js($prospect->outreach_whatsapp), @js($prospect->instagram), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
                             Edit
                         </button>
+                        <form method="POST" action="{{ route('admin.prospects.mark-interested', $prospect) }}" style="display:inline"
+                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Interested Leads?')">
+                            @csrf
+                            <button class="btn btn-sm btn-interested">Move to Interested</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.prospects.mark-lost', $prospect) }}" style="display:inline"
-                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Prospects?')">
+                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Leads?')">
                             @csrf
                             <button class="btn btn-sm btn-lost">Move to Lost</button>
                         </form>
                         <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}" style="display:inline"
-                              onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from prospects?')">
+                              onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from leads?')">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">Delete</button>
                         </form>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="{{ $cols }}" class="empty">No {{ $channelLabel }} prospects in contact yet.</td></tr>
+                <tr><td colspan="{{ $cols }}" class="empty">No {{ $channelLabel }} leads in contact yet.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -110,7 +115,7 @@
 <div id="createProspectModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Add {{ $channelLabel }} Prospect</h3>
+            <h3>Add {{ $channelLabel }} Lead</h3>
             <button class="modal-close" onclick="closeModal('createProspectModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.prospects.store') }}">
@@ -169,7 +174,7 @@
 <div id="editProspectModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Edit {{ $channelLabel }} Prospect</h3>
+            <h3>Edit {{ $channelLabel }} Lead</h3>
             <button class="modal-close" onclick="closeModal('editProspectModal')">&times;</button>
         </div>
         <form method="POST" id="editProspectForm">
@@ -232,12 +237,15 @@
     .prospect-pill-contacted     { background:#ede9fe; color:#5b21b6; }
     .prospect-pill-in_discussion { background:#fef3c7; color:#92400e; }
     .prospect-pill-follow_up     { background:#fae8ff; color:#86198f; }
+    .prospect-pill-interested    { background:#ccfbf1; color:#0f766e; }
     .prospect-pill-won           { background:#d1fae5; color:#065f46; }
     .prospect-pill-lost          { background:#fee2e2; color:#991b1b; }
     .wa-link { color:#16a34a; font-weight:600; white-space:nowrap; }
     .wa-link:hover { text-decoration:underline; }
     .btn-lost { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
     .btn-lost:hover { background:#fde68a; }
+    .btn-interested { background:#ccfbf1; color:#0f766e; border:1px solid #99f6e4; }
+    .btn-interested:hover { background:#99f6e4; }
 </style>
 @endpush
 

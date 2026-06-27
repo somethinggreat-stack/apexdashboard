@@ -58,9 +58,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Prospects — manual sales pipeline of prospective business owners
         Route::get('prospects/lost', [Admin\ProspectController::class, 'lost'])->name('prospects.lost');
+        Route::get('prospects/interested', [Admin\ProspectController::class, 'interested'])->name('prospects.interested');
         Route::resource('prospects', Admin\ProspectController::class)
             ->only(['index', 'store', 'update', 'destroy']);
         Route::post('prospects/{prospect}/lost', [Admin\ProspectController::class, 'markLost'])->name('prospects.mark-lost');
+        Route::post('prospects/{prospect}/interested', [Admin\ProspectController::class, 'markInterested'])->name('prospects.mark-interested');
         Route::post('prospects/{prospect}/reactivate', [Admin\ProspectController::class, 'reactivate'])->name('prospects.reactivate');
 
         // Prospect leads — simple list of leads (name, verified WhatsApp, socials)

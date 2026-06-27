@@ -1,15 +1,13 @@
 @extends('layouts.admin')
 
-@section('title', 'Lost Prospects')
+@section('title', $title)
 
 @section('content')
 <div class="card">
     <div class="card-header">
         <div>
-            <h2>Lost Prospects <span class="lead-count-badge">{{ $prospects->count() }}</span></h2>
-            <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                Prospects who went cold across all channels. Reactivate one to bring it back into its pipeline.
-            </p>
+            <h2>{{ $title }} <span class="lead-count-badge">{{ $prospects->count() }}</span></h2>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">{{ $blurb }}</p>
         </div>
     </div>
 
@@ -68,7 +66,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="empty">No lost prospects — nice, everyone's still in play.</td></tr>
+                <tr><td colspan="6" class="empty">{{ $emptyMsg }}</td></tr>
             @endforelse
         </tbody>
     </table>

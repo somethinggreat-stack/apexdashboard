@@ -15,6 +15,7 @@ class Prospect extends Model
         'contacted'     => 'Contacted',
         'in_discussion' => 'In Discussion',
         'follow_up'     => 'Follow-Up',
+        'interested'    => 'Interested',
         'won'           => 'Signed',
         'lost'          => 'Not Interested',
     ];
