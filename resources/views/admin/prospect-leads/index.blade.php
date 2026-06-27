@@ -6,12 +6,27 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2>Prospect Leads</h2>
+            <h2>Prospect Leads <span class="lead-count-badge">{{ $leads->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 Quick list of leads — name, a verified WhatsApp number, and optional socials.
             </p>
         </div>
         <button class="btn btn-primary" onclick="openModal('createLeadModal')">+ Add Lead</button>
+    </div>
+
+    <div class="lead-stats">
+        <div class="lead-stat">
+            <div class="lead-stat-num">{{ $leads->count() }}</div>
+            <div class="lead-stat-label">Total Leads</div>
+        </div>
+        <div class="lead-stat">
+            <div class="lead-stat-num">{{ $leads->where('created_at', '>=', now()->startOfMonth())->count() }}</div>
+            <div class="lead-stat-label">Added This Month</div>
+        </div>
+        <div class="lead-stat">
+            <div class="lead-stat-num">{{ $leads->where('created_at', '>=', now()->startOfDay())->count() }}</div>
+            <div class="lead-stat-label">Added Today</div>
+        </div>
     </div>
 
     <table class="data-table">
@@ -165,6 +180,17 @@
 <style>
     .wa-link { color:#16a34a; font-weight:600; white-space:nowrap; }
     .wa-link:hover { text-decoration:underline; }
+    .lead-count-badge {
+        display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px;
+        background:#dbeafe; color:#1e40af; font-size:13px; font-weight:700; vertical-align:middle;
+    }
+    .lead-stats { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0 4px; }
+    .lead-stat {
+        flex:1; min-width:140px; background:#f8fafc; border:1px solid #e2e8f0;
+        border-radius:10px; padding:12px 16px;
+    }
+    .lead-stat-num { font-size:24px; font-weight:800; color:#0f172a; line-height:1.1; }
+    .lead-stat-label { font-size:12px; color:#64748b; font-weight:600; margin-top:2px; }
 </style>
 @endpush
 
