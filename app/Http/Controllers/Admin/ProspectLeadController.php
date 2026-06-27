@@ -89,7 +89,6 @@ class ProspectLeadController extends Controller
             'name'      => 'required|string|max:255',
             'whatsapp'  => 'nullable|string|max:40',
             'instagram' => 'nullable|string|max:255',
-            'website'   => 'nullable|string|max:255',
         ]);
     }
 

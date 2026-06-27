@@ -20,7 +20,6 @@
                 <th>Name</th>
                 <th>WhatsApp (Verified)</th>
                 <th>Instagram</th>
-                <th>Website</th>
                 <th>Last Updated</th>
                 <th>Actions</th>
             </tr>
@@ -43,13 +42,6 @@
                             <span class="muted">—</span>
                         @endif
                     </td>
-                    <td>
-                        @if ($lead->website)
-                            <a href="{{ $lead->linkHref($lead->website) }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($lead->website, 36) }}</a>
-                        @else
-                            <span class="muted">—</span>
-                        @endif
-                    </td>
                     <td class="no-link muted">{{ $lead->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <button type="button" class="btn btn-sm btn-primary"
@@ -57,7 +49,7 @@
                             Move &rarr;
                         </button>
                         <button type="button" class="btn btn-sm"
-                                onclick="openLeadEdit({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp), @js($lead->instagram), @js($lead->website))">
+                                onclick="openLeadEdit({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp), @js($lead->instagram))">
                             Edit
                         </button>
                         <form method="POST" action="{{ route('admin.prospect-leads.destroy', $lead) }}" style="display:inline"
@@ -68,7 +60,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="empty">No prospect leads yet — add the first one.</td></tr>
+                <tr><td colspan="5" class="empty">No prospect leads yet — add the first one.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -91,15 +83,9 @@
                 <label>WhatsApp Number (Verified)</label>
                 <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+1 469 905 8587">
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Instagram Link <span class="muted">(optional)</span></label>
-                    <input type="text" name="instagram" value="{{ old('instagram') }}" placeholder="instagram.com/handle">
-                </div>
-                <div class="form-group">
-                    <label>Website Link <span class="muted">(optional)</span></label>
-                    <input type="text" name="website" value="{{ old('website') }}" placeholder="example.com">
-                </div>
+            <div class="form-group">
+                <label>Instagram Link <span class="muted">(optional)</span></label>
+                <input type="text" name="instagram" value="{{ old('instagram') }}" placeholder="instagram.com/handle">
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createLeadModal')">Cancel</button>
@@ -126,15 +112,9 @@
                 <label>WhatsApp Number (Verified)</label>
                 <input type="text" name="whatsapp" id="el-whatsapp" placeholder="+1 469 905 8587">
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Instagram Link <span class="muted">(optional)</span></label>
-                    <input type="text" name="instagram" id="el-instagram" placeholder="instagram.com/handle">
-                </div>
-                <div class="form-group">
-                    <label>Website Link <span class="muted">(optional)</span></label>
-                    <input type="text" name="website" id="el-website" placeholder="example.com">
-                </div>
+            <div class="form-group">
+                <label>Instagram Link <span class="muted">(optional)</span></label>
+                <input type="text" name="instagram" id="el-instagram" placeholder="instagram.com/handle">
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editLeadModal')">Cancel</button>
@@ -155,7 +135,7 @@
             @csrf
             <p class="muted" style="font-size:13px; margin:0 0 14px;">
                 Moving <strong id="ml-name"></strong> (<span id="ml-whatsapp"></span>) into your active pipeline.
-                Their Instagram &amp; website links are saved into the discussion comments.
+                Their Instagram link is saved into the discussion comments.
             </p>
             <div class="form-group">
                 <label>Reached Out Via <span class="muted">(WhatsApp number you used)</span></label>
@@ -200,12 +180,11 @@ window.openLeadMove = function (id, name, whatsapp) {
     openModal('moveLeadModal');
 };
 
-window.openLeadEdit = function (id, name, whatsapp, instagram, website) {
+window.openLeadEdit = function (id, name, whatsapp, instagram) {
     document.getElementById('editLeadForm').action = "{{ url('admin/prospect-leads') }}/" + id;
     document.getElementById('el-name').value = name || '';
     document.getElementById('el-whatsapp').value = whatsapp || '';
     document.getElementById('el-instagram').value = instagram || '';
-    document.getElementById('el-website').value = website || '';
     openModal('editLeadModal');
 };
 
