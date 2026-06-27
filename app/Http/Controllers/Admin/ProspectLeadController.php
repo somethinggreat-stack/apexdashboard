@@ -93,6 +93,17 @@ class ProspectLeadController extends Controller
         return redirect()->route('admin.prospects.index')->with('status', "{$name} moved to Prospects in Contact.");
     }
 
+    /** Toggle the Hot Lead flag for a lead. */
+    public function toggleHot(string $id)
+    {
+        $lead = $this->scoped()->findOrFail($id);
+        $lead->update(['hot_lead' => ! $lead->hot_lead]);
+
+        return back()->with('status', $lead->hot_lead
+            ? "{$lead->name} marked as Hot Lead."
+            : "{$lead->name} unmarked as Hot Lead.");
+    }
+
     private function validated(Request $request): array
     {
         return $request->validate([

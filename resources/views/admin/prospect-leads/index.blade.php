@@ -42,6 +42,7 @@
                 <th>Name</th>
                 <th>WhatsApp (Verified)</th>
                 <th>Instagram</th>
+                <th>Hot Lead</th>
                 <th>Last Updated</th>
                 <th>Actions</th>
             </tr>
@@ -70,6 +71,15 @@
                             <span class="muted">—</span>
                         @endif
                     </td>
+                    <td class="no-link">
+                        <form method="POST" action="{{ route('admin.prospect-leads.toggle-hot', $lead) }}" style="display:inline">
+                            @csrf
+                            <button type="submit" class="hot-flag {{ $lead->hot_lead ? 'hot-on' : 'hot-off' }}"
+                                    title="Click to toggle Hot Lead">
+                                {{ $lead->hot_lead ? '🔥 Hot Lead' : 'Mark Hot' }}
+                            </button>
+                        </form>
+                    </td>
                     <td class="no-link muted">{{ $lead->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <button type="button" class="btn btn-sm btn-primary"
@@ -88,7 +98,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="empty">No prospect leads yet — add the first one.</td></tr>
+                <tr><td colspan="6" class="empty">No prospect leads yet — add the first one.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -211,6 +221,11 @@
         background:#fee2e2; color:#991b1b; font-size:11px; font-weight:700; white-space:nowrap;
     }
     .lead-row-dup { background:#fff7f7; }
+    .hot-flag { border:0; cursor:pointer; border-radius:999px; font-size:11px; font-weight:700; padding:3px 10px; white-space:nowrap; }
+    .hot-on  { background:#fee2e2; color:#b91c1c; }
+    .hot-on:hover  { background:#fecaca; }
+    .hot-off { background:#f1f5f9; color:#64748b; }
+    .hot-off:hover { background:#e2e8f0; }
 </style>
 @endpush
 

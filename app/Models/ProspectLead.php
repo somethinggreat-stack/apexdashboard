@@ -15,6 +15,11 @@ class ProspectLead extends Model
         'whatsapp',
         'instagram',
         'website',
+        'hot_lead',
+    ];
+
+    protected $casts = [
+        'hot_lead' => 'boolean',
     ];
 
     public function scopeForAdmin($query, $adminId)

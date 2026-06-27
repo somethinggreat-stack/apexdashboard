@@ -68,6 +68,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->only(['index', 'store', 'update', 'destroy']);
         Route::post('prospect-leads/{prospect_lead}/move', [Admin\ProspectLeadController::class, 'move'])
             ->name('prospect-leads.move');
+        Route::post('prospect-leads/{prospect_lead}/toggle-hot', [Admin\ProspectLeadController::class, 'toggleHot'])
+            ->name('prospect-leads.toggle-hot');
 
 
         // Business-owner picker — accessible without a selection
