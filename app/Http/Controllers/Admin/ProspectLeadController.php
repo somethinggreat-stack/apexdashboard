@@ -82,7 +82,7 @@ class ProspectLeadController extends Controller
             'admin_id'          => Auth::guard('admin')->id(),
             'name'              => $lead->name,
             'whatsapp'          => $lead->whatsapp,
-            'outreach_whatsapp' => self::normalizeWhatsapp($data['outreach_whatsapp'] ?? null),
+            'outreach_whatsapp' => $data['outreach_whatsapp'] ?? null,
             'status'            => $data['status'],
             'notes'             => $notes !== '' ? $notes : null,
         ]);
@@ -95,30 +95,11 @@ class ProspectLeadController extends Controller
 
     private function validated(Request $request): array
     {
-        // Normalize first ("+<digits>"), then enforce: a + followed by exactly
-        // 11 digits — no shorter, no longer.
-        $request->merge([
-            'whatsapp' => self::normalizeWhatsapp($request->input('whatsapp')),
-        ]);
-
         return $request->validate([
             'name'      => 'required|string|max:255',
-            'whatsapp'  => ['required', 'regex:/^\+\d{11}$/'],
+            'whatsapp'  => 'nullable|string|max:40',
             'instagram' => 'nullable|string|max:255',
-        ], [
-            'whatsapp.required' => 'A WhatsApp number is required.',
-            'whatsapp.regex'    => 'WhatsApp number must be a + followed by exactly 11 digits (e.g. +18165881049).',
         ]);
-    }
-
-    /** Strip everything but digits and re-add a single leading "+". */
-    public static function normalizeWhatsapp(?string $value): ?string
-    {
-        if (!$value) {
-            return null;
-        }
-        $digits = preg_replace('/\D/', '', $value);
-        return $digits !== '' ? '+' . $digits : null;
     }
 
     private function scoped()

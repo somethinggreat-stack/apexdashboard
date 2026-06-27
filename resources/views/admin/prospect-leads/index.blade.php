@@ -109,9 +109,7 @@
             </div>
             <div class="form-group">
                 <label>WhatsApp Number (Verified)</label>
-                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="+18165881049"
-                       class="wa-input" inputmode="numeric" maxlength="12" pattern="\+\d{11}" required
-                       title="A + followed by exactly 11 digits, e.g. +18165881049">
+                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="WhatsApp number">
             </div>
             <div class="form-group">
                 <label>Instagram Link <span class="muted">(optional)</span></label>
@@ -140,9 +138,7 @@
             </div>
             <div class="form-group">
                 <label>WhatsApp Number (Verified)</label>
-                <input type="text" name="whatsapp" id="el-whatsapp" placeholder="+18165881049"
-                       class="wa-input" inputmode="numeric" maxlength="12" pattern="\+\d{11}" required
-                       title="A + followed by exactly 11 digits, e.g. +18165881049">
+                <input type="text" name="whatsapp" id="el-whatsapp" placeholder="WhatsApp number">
             </div>
             <div class="form-group">
                 <label>Instagram Link <span class="muted">(optional)</span></label>
@@ -237,14 +233,6 @@ window.openLeadEdit = function (id, name, whatsapp, instagram) {
     document.getElementById('el-instagram').value = instagram || '';
     openModal('editLeadModal');
 };
-
-// Force WhatsApp inputs to "+<up to 11 digits>" as the user types.
-document.querySelectorAll('.wa-input').forEach(function (inp) {
-    inp.addEventListener('input', function () {
-        var digits = inp.value.replace(/\D/g, '').slice(0, 11);
-        inp.value = digits ? '+' + digits : '';
-    });
-});
 
 // Re-open the add modal if a submission bounced back with validation errors.
 @if ($errors->any())
