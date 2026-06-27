@@ -104,6 +104,9 @@
     </table>
 </div>
 
+{{-- Digits-only WhatsApp numbers already on file, for the live duplicate check --}}
+<script id="existingNumbers" type="application/json">@json($leads->map->whatsapp_digits->filter()->values()->all())</script>
+
 {{-- Add lead --}}
 <div id="createLeadModal" class="modal">
     <div class="modal-content">
@@ -119,7 +122,8 @@
             </div>
             <div class="form-group">
                 <label>WhatsApp Number (Verified)</label>
-                <input type="text" name="whatsapp" value="{{ old('whatsapp') }}" placeholder="WhatsApp number">
+                <input type="text" name="whatsapp" id="add-whatsapp" value="{{ old('whatsapp') }}" placeholder="WhatsApp number">
+                <div id="add-dup-warning" class="dup-warning" style="display:none;">⚠ This WhatsApp number already exists — duplicate not allowed.</div>
             </div>
             <div class="form-group">
                 <label>Instagram Link <span class="muted">(optional)</span></label>
@@ -127,7 +131,7 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createLeadModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add Lead</button>
+                <button type="submit" class="btn btn-primary" id="add-submit">Add Lead</button>
             </div>
         </form>
     </div>
@@ -226,6 +230,8 @@
     .hot-on:hover  { background:#fecaca; }
     .hot-off { background:#f1f5f9; color:#64748b; }
     .hot-off:hover { background:#e2e8f0; }
+    .dup-warning { color:#b91c1c; font-size:12px; margin-top:5px; font-weight:600; }
+    .input-dup { border-color:#ef4444 !important; background:#fff5f5; }
 </style>
 @endpush
 
@@ -248,6 +254,25 @@ window.openLeadEdit = function (id, name, whatsapp, instagram) {
     document.getElementById('el-instagram').value = instagram || '';
     openModal('editLeadModal');
 };
+
+// Live duplicate check on the Add form — block submit the moment a number
+// that already exists is typed.
+(function () {
+    var existing = [];
+    try { existing = JSON.parse(document.getElementById('existingNumbers').textContent) || []; } catch (e) {}
+    var input = document.getElementById('add-whatsapp');
+    var warn = document.getElementById('add-dup-warning');
+    var submit = document.getElementById('add-submit');
+    if (!input) return;
+    function check() {
+        var digits = input.value.replace(/\D/g, '');
+        var dup = digits !== '' && existing.indexOf(digits) !== -1;
+        warn.style.display = dup ? '' : 'none';
+        input.classList.toggle('input-dup', dup);
+        if (submit) submit.disabled = dup;
+    }
+    input.addEventListener('input', check);
+})();
 
 // Re-open the add modal if a submission bounced back with validation errors.
 @if ($errors->any())

@@ -18,14 +18,22 @@ class ProspectLeadController extends Controller
             ->get();
 
         // WhatsApp numbers (digits only, so formatting doesn't matter) that
-        // appear on more than one lead — used to flag duplicates.
-        $dupNumbers = $leads
-            ->map->whatsapp_digits
-            ->filter()
-            ->countBy()
-            ->filter(fn ($count) => $count > 1)
-            ->keys()
-            ->all();
+        // appear on more than one lead — used to flag duplicates. Built as a
+        // plain string array; collection keys would cast numeric strings to
+        // ints and break the strict comparison in the view.
+        $counts = [];
+        foreach ($leads as $l) {
+            $d = $l->whatsapp_digits;
+            if ($d) {
+                $counts[$d] = ($counts[$d] ?? 0) + 1;
+            }
+        }
+        $dupNumbers = [];
+        foreach ($counts as $digits => $count) {
+            if ($count > 1) {
+                $dupNumbers[] = (string) $digits;
+            }
+        }
 
         return view('admin.prospect-leads.index', compact('leads', 'dupNumbers'));
     }
@@ -34,6 +42,13 @@ class ProspectLeadController extends Controller
     {
         $data = $this->validated($request);
         $data['admin_id'] = Auth::guard('admin')->id();
+
+        $digits = preg_replace('/\D/', '', (string) ($data['whatsapp'] ?? ''));
+        if ($digits !== '' && $this->numberExists($digits)) {
+            return back()->withInput()->withErrors([
+                'whatsapp' => 'That WhatsApp number is already in Prospect Leads — duplicate not added.',
+            ]);
+        }
 
         ProspectLead::create($data);
 
@@ -44,7 +59,16 @@ class ProspectLeadController extends Controller
     {
         $lead = $this->scoped()->findOrFail($id);
 
-        $lead->update($this->validated($request));
+        $data = $this->validated($request);
+
+        $digits = preg_replace('/\D/', '', (string) ($data['whatsapp'] ?? ''));
+        if ($digits !== '' && $this->numberExists($digits, $lead->id)) {
+            return back()->withInput()->withErrors([
+                'whatsapp' => 'That WhatsApp number is already on another lead — duplicate not allowed.',
+            ]);
+        }
+
+        $lead->update($data);
 
         return redirect()->route('admin.prospect-leads.index')->with('status', 'Prospect lead updated.');
     }
@@ -111,6 +135,15 @@ class ProspectLeadController extends Controller
             'whatsapp'  => 'nullable|string|max:40',
             'instagram' => 'nullable|string|max:255',
         ]);
+    }
+
+    /** Whether another lead already has this digits-only WhatsApp number. */
+    private function numberExists(string $digits, ?int $exceptId = null): bool
+    {
+        return $this->scoped()
+            ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+            ->get()
+            ->contains(fn ($l) => $l->whatsapp_digits === $digits);
     }
 
     private function scoped()
