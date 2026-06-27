@@ -21,7 +21,7 @@
                 <th>Client WhatsApp</th>
                 <th>Reached Out Via</th>
                 <th>Status</th>
-                <th>Discussion / Notes</th>
+                <th>Discussion / Comments</th>
                 <th>Last Updated</th>
                 <th>Actions</th>
             </tr>
@@ -114,7 +114,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Discussion / Notes</label>
+                <label>Discussion / Comments</label>
                 <textarea name="notes" rows="4" placeholder="What was discussed, objections, next steps…">{{ old('notes') }}</textarea>
             </div>
             <div class="form-actions">
@@ -163,7 +163,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Discussion / Notes</label>
+                <label>Discussion / Comments</label>
                 <textarea name="notes" id="ep-notes" rows="5" placeholder="What was discussed, objections, next steps…"></textarea>
             </div>
             <div class="form-actions">

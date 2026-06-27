@@ -252,7 +252,7 @@
                     @endif
                     @if ($msg->pinned_at) <span class="badge pinned" title="Pinned">📌 Pinned</span> @endif
                     @if ($msg->starred_at) <span class="badge starred" title="Starred">★ Starred</span> @endif
-                    @if ($msg->note) <span class="badge noted" title="Has note" data-open-note="{{ $msg->id }}">📝 Note added</span> @endif
+                    @if ($msg->note) <span class="badge noted" title="Has comment" data-open-note="{{ $msg->id }}">📝 Comment added</span> @endif
                 </div>
             </div>
         @empty
@@ -289,8 +289,8 @@
 {{-- Note modal --}}
 <div class="note-modal-overlay" id="noteModal" role="dialog" aria-modal="true">
     <div class="note-modal-card">
-        <h3>Note on message</h3>
-        <span class="muted">Notes are stored against the specific message and visible the next time you open it.</span>
+        <h3>Comment on message</h3>
+        <span class="muted">Comments are stored against the specific message and visible the next time you open it.</span>
         <div class="quoted" id="noteModalQuote"></div>
         <textarea id="noteModalText" placeholder="Write a note about this message&hellip;"></textarea>
         <div class="note-modal-actions">
@@ -357,7 +357,7 @@
         const hasNote = msgEl.querySelector('.badge.noted');
         menu.querySelector('[data-label="pin"]').textContent = pinned ? 'Unpin' : 'Pin';
         menu.querySelector('[data-label="star"]').textContent = starred ? 'Unstar' : 'Star';
-        menu.querySelector('[data-label="note"]').textContent = hasNote ? 'Edit note' : 'Add text to note';
+        menu.querySelector('[data-label="note"]').textContent = hasNote ? 'Edit comment' : 'Add text to comment';
 
         // Position menu near the trigger
         const rect = triggerBtn.getBoundingClientRect();
@@ -541,7 +541,7 @@
             body: formData,
         }).then(r => r.ok ? r.json() : Promise.reject(r))
           .then(() => {
-              showToast(noteText ? 'Note saved' : 'Note cleared');
+              showToast(noteText ? 'Comment saved' : 'Comment cleared');
               closeNoteModal();
               setTimeout(() => location.reload(), 400);
           })

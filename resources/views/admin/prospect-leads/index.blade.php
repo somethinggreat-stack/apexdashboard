@@ -155,7 +155,7 @@
             @csrf
             <p class="muted" style="font-size:13px; margin:0 0 14px;">
                 Moving <strong id="ml-name"></strong> (<span id="ml-whatsapp"></span>) into your active pipeline.
-                Their Instagram &amp; website links are saved into the discussion notes.
+                Their Instagram &amp; website links are saved into the discussion comments.
             </p>
             <div class="form-group">
                 <label>Reached Out Via <span class="muted">(WhatsApp number you used)</span></label>
@@ -170,7 +170,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Discussion / Notes</label>
+                <label>Discussion / Comments</label>
                 <textarea name="notes" id="ml-notes" rows="4" placeholder="What was discussed, next steps…"></textarea>
             </div>
             <div class="form-actions">

@@ -111,7 +111,7 @@
     <button class="tab" data-target="tab-profile">Profile</button>
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
-    <button class="tab" data-target="tab-notes">Notes ({{ $endUser->notes->count() }})</button>
+    <button class="tab" data-target="tab-notes">Comments ({{ $endUser->notes->count() }})</button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 
@@ -257,7 +257,7 @@
 
 <div id="tab-notes" class="tab-panel">
     <div class="card">
-        <h3>Notes</h3>
+        <h3>Comments</h3>
         @forelse ($endUser->notes as $note)
             <div class="note-item">
                 <div class="note-meta">
@@ -267,7 +267,7 @@
                 <div class="note-body">{{ $note->note_text }}</div>
             </div>
         @empty
-            <div class="empty">No notes yet.</div>
+            <div class="empty">No comments yet.</div>
         @endforelse
     </div>
 </div>

@@ -24,12 +24,12 @@ class NoteController extends Controller
         $data['created_by_admin_id'] = Auth::guard('admin')->id();
         Note::create($data);
 
-        return back()->with('status', 'Note added.');
+        return back()->with('status', 'Comment added.');
     }
 
     public function destroy(string $id)
     {
         Note::forClient(session('selected_client_id'))->findOrFail($id)->delete();
-        return back()->with('status', 'Note deleted.');
+        return back()->with('status', 'Comment deleted.');
     }
 }

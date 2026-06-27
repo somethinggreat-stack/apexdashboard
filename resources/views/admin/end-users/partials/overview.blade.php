@@ -124,7 +124,7 @@
         $activity->push([
             'kind'  => 'note',
             'date'  => $note->created_at,
-            'title' => 'Note added',
+            'title' => 'Comment added',
             'sub'   => \Illuminate\Support\Str::limit($note->note_text, 50),
         ]);
     }
@@ -388,10 +388,10 @@
                         <div class="ov-block-icon ov-icon-amber-soft">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         </div>
-                        <div class="ov-block-h">Recent Notes</div>
+                        <div class="ov-block-h">Recent Comments</div>
                     </div>
                     @if ($canEdit)
-                        <button class="ov-link-btn" type="button" onclick="openModal('addNoteModal')">+ Add Note</button>
+                        <button class="ov-link-btn" type="button" onclick="openModal('addNoteModal')">+ Add Comment</button>
                     @endif
                 </div>
                 @forelse ($recentNotes as $note)
@@ -403,10 +403,10 @@
                         </div>
                     </div>
                 @empty
-                    <div class="ov-empty">No notes yet.</div>
+                    <div class="ov-empty">No comments yet.</div>
                 @endforelse
                 @if ($endUser->notes->count() > $recentNotes->count())
-                    <button class="ov-link-btn" type="button" onclick="document.querySelector('[data-target=tab-notes]').click()">View All Notes &rarr;</button>
+                    <button class="ov-link-btn" type="button" onclick="document.querySelector('[data-target=tab-notes]').click()">View All Comments &rarr;</button>
                 @endif
             </div>
 

@@ -113,7 +113,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group"><label>Method (optional)</label><input type="text" name="method" placeholder="Bank / Zelle / Wire"></div>
-                <div class="form-group"><label>Notes (optional)</label><input type="text" name="notes"></div>
+                <div class="form-group"><label>Comments (optional)</label><input type="text" name="notes"></div>
             </div>
             <div class="muted small" id="rp-period-label" style="margin: 4px 0 8px;"></div>
             <div class="form-actions">

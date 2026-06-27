@@ -215,7 +215,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group"><label>Method (optional)</label><input type="text" name="method" id="pe-method" placeholder="Zelle / Bank / Cash"></div>
-                <div class="form-group"><label>Notes (optional)</label><input type="text" name="notes" id="pe-notes"></div>
+                <div class="form-group"><label>Comments (optional)</label><input type="text" name="notes" id="pe-notes"></div>
             </div>
             <div class="form-actions" style="display:flex; justify-content:space-between; gap:8px;">
                 <button type="button" class="btn btn-danger" id="pe-delete">Undo (Mark Unpaid)</button>

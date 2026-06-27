@@ -96,7 +96,7 @@
                     <td class="no-link">
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
                         <button type="button" class="btn btn-sm"
-                                onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Note</button>
+                                onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Comment</button>
                         <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
                         <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
                             @csrf @method('DELETE')
@@ -159,19 +159,19 @@
 <div id="quickNoteModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Note on <span id="quickNoteName">client</span></h3>
+            <h3>Comment on <span id="quickNoteName">client</span></h3>
             <button class="modal-close" onclick="closeModal('quickNoteModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.notes.store') }}">
             @csrf
             <input type="hidden" name="end_user_id" id="quickNoteEndUserId">
             <div class="form-group">
-                <label>Note</label>
+                <label>Comment</label>
                 <textarea name="note_text" rows="4" required placeholder="Quick note about this client&hellip;"></textarea>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('quickNoteModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Note</button>
+                <button type="submit" class="btn btn-primary">Save Comment</button>
             </div>
         </form>
     </div>

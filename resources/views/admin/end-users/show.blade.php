@@ -151,7 +151,7 @@
     <button class="tab" data-target="tab-profile">Profile</button>
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
-    <button class="tab" data-target="tab-notes">Notes ({{ $endUser->notes->count() }})</button>
+    <button class="tab" data-target="tab-notes">Comments ({{ $endUser->notes->count() }})</button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 
@@ -352,8 +352,8 @@
 <div id="tab-notes" class="tab-panel">
     <div class="card">
         <div class="card-header">
-            <h3>Notes</h3>
-            <button class="btn btn-primary" onclick="openModal('addNoteModal')">+ Add Note</button>
+            <h3>Comments</h3>
+            <button class="btn btn-primary" onclick="openModal('addNoteModal')">+ Add Comment</button>
         </div>
         @forelse ($endUser->notes as $note)
             <div class="note-item">
@@ -362,13 +362,13 @@
                     <span class="muted">· {{ $note->created_at?->format('M d, Y H:i') }}</span>
                 </div>
                 <div class="note-body">{{ $note->note_text }}</div>
-                <form method="POST" action="{{ route('admin.notes.destroy', $note->id) }}" onsubmit="return confirm('Delete this note?')">
+                <form method="POST" action="{{ route('admin.notes.destroy', $note->id) }}" onsubmit="return confirm('Delete this comment?')">
                     @csrf @method('DELETE')
                     <button class="btn btn-sm btn-danger">Delete</button>
                 </form>
             </div>
         @empty
-            <div class="empty">No notes yet.</div>
+            <div class="empty">No comments yet.</div>
         @endforelse
     </div>
 </div>
@@ -494,13 +494,13 @@
 <div id="addNoteModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Add Note</h3>
+            <h3>Add Comment</h3>
             <button class="modal-close" onclick="closeModal('addNoteModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.notes.store') }}">
             @csrf
             <input type="hidden" name="end_user_id" value="{{ $endUser->id }}">
-            <div class="form-group"><label>Note</label><textarea name="note_text" rows="4" required></textarea></div>
+            <div class="form-group"><label>Comment</label><textarea name="note_text" rows="4" required></textarea></div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addNoteModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>

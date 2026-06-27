@@ -19,7 +19,7 @@
                 <th>Name</th>
                 <th>Client WhatsApp</th>
                 <th>Reached Out Via</th>
-                <th>Discussion / Notes</th>
+                <th>Discussion / Comments</th>
                 <th>Last Updated</th>
                 <th>Actions</th>
             </tr>
