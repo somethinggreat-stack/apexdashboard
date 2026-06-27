@@ -99,19 +99,21 @@
                     </td>
                     <td class="no-link muted">{{ $lead->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
-                        <button type="button" class="btn btn-sm btn-primary"
-                                onclick="openLeadMove({{ $lead->id }}, @js($lead->name))">
-                            Move &rarr;
-                        </button>
-                        <button type="button" class="btn btn-sm"
-                                onclick="openLeadEdit({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp), @js($lead->instagram))">
-                            Edit
-                        </button>
-                        <form method="POST" action="{{ route('admin.prospect-leads.destroy', $lead) }}" style="display:inline"
-                              onsubmit="return confirm('Remove {{ addslashes($lead->name) }} from leads?')">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-danger">Delete</button>
-                        </form>
+                        <div class="row-actions">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    onclick="openLeadMove({{ $lead->id }}, @js($lead->name))">
+                                Move &rarr;
+                            </button>
+                            <button type="button" class="btn btn-sm"
+                                    onclick="openLeadEdit({{ $lead->id }}, @js($lead->name), @js($lead->whatsapp), @js($lead->instagram))">
+                                Edit
+                            </button>
+                            <form method="POST" action="{{ route('admin.prospect-leads.destroy', $lead) }}"
+                                  onsubmit="return confirm('Remove {{ addslashes($lead->name) }} from leads?')">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             @empty
@@ -252,6 +254,9 @@
     .hot-off:hover { background:#e2e8f0; }
     .dup-warning { color:#b91c1c; font-size:12px; margin-top:5px; font-weight:600; }
     .input-dup { border-color:#ef4444 !important; background:#fff5f5; }
+    .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .row-actions form { display:inline; margin:0; }
+    .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
 </style>
 @endpush
 

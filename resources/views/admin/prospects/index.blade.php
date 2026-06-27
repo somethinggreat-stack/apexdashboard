@@ -83,25 +83,27 @@
                     <td class="prospect-notes">{{ $prospect->notes ?: '—' }}</td>
                     <td class="no-link muted">{{ $prospect->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
-                        <button type="button" class="btn btn-sm"
-                                onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->whatsapp), @js($prospect->outreach_whatsapp), @js($prospect->instagram), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
-                            Edit
-                        </button>
-                        <form method="POST" action="{{ route('admin.prospects.mark-interested', $prospect) }}" style="display:inline"
-                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Interested Leads?')">
-                            @csrf
-                            <button class="btn btn-sm btn-interested">Move to Interested</button>
-                        </form>
-                        <form method="POST" action="{{ route('admin.prospects.mark-lost', $prospect) }}" style="display:inline"
-                              onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Leads?')">
-                            @csrf
-                            <button class="btn btn-sm btn-lost">Move to Lost</button>
-                        </form>
-                        <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}" style="display:inline"
-                              onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from leads?')">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-danger">Delete</button>
-                        </form>
+                        <div class="row-actions">
+                            <button type="button" class="btn btn-sm"
+                                    onclick="openProspectEdit({{ $prospect->id }}, @js($prospect->name), @js($prospect->whatsapp), @js($prospect->outreach_whatsapp), @js($prospect->instagram), @js($prospect->referred_by), @js($prospect->status), @js($prospect->notes))">
+                                Edit
+                            </button>
+                            <form method="POST" action="{{ route('admin.prospects.mark-interested', $prospect) }}"
+                                  onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Interested Leads?')">
+                                @csrf
+                                <button class="btn btn-sm btn-interested" title="Move to Interested Leads">Interested</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.prospects.mark-lost', $prospect) }}"
+                                  onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Leads?')">
+                                @csrf
+                                <button class="btn btn-sm btn-lost" title="Move to Lost Leads">Lost</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}"
+                                  onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from leads?')">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             @empty
@@ -246,6 +248,9 @@
     .btn-lost:hover { background:#fde68a; }
     .btn-interested { background:#ccfbf1; color:#0f766e; border:1px solid #99f6e4; }
     .btn-interested:hover { background:#99f6e4; }
+    .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .row-actions form { display:inline; margin:0; }
+    .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
 </style>
 @endpush
 
