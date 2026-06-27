@@ -95,17 +95,20 @@ class ProspectLeadController extends Controller
 
     private function validated(Request $request): array
     {
-        $data = $request->validate([
-            'name'      => 'required|string|max:255',
-            'whatsapp'  => 'nullable|string|max:40',
-            'instagram' => 'nullable|string|max:255',
+        // Normalize first ("+<digits>"), then enforce: a + followed by exactly
+        // 11 digits — no shorter, no longer.
+        $request->merge([
+            'whatsapp' => self::normalizeWhatsapp($request->input('whatsapp')),
         ]);
 
-        // Normalize the WhatsApp number to "+<digits>" — no spaces, dashes or
-        // parentheses ever get stored.
-        $data['whatsapp'] = self::normalizeWhatsapp($data['whatsapp'] ?? null);
-
-        return $data;
+        return $request->validate([
+            'name'      => 'required|string|max:255',
+            'whatsapp'  => ['required', 'regex:/^\+\d{11}$/'],
+            'instagram' => 'nullable|string|max:255',
+        ], [
+            'whatsapp.required' => 'A WhatsApp number is required.',
+            'whatsapp.regex'    => 'WhatsApp number must be a + followed by exactly 11 digits (e.g. +18165881049).',
+        ]);
     }
 
     /** Strip everything but digits and re-add a single leading "+". */
