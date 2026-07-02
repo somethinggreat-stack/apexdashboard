@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\Message;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ class EndUserController extends Controller
         $clientId = session('selected_client_id');
 
         $query = EndUser::forClient($clientId)
+            // Intake submissions awaiting review live in "New Clients", not here.
+            ->where(fn ($q) => $q->whereNull('intake_status')->orWhere('intake_status', '!=', 'pending_review'))
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -151,6 +154,45 @@ class EndUserController extends Controller
         $endUser->delete();
 
         return redirect()->route('admin.end-users.index')->with('status', "Client {$name} deleted.");
+    }
+
+    /* ---------------- New Clients (intake submissions) ---------------- */
+
+    public function newClients()
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($client->intake_enabled, 404);
+
+        if (empty($client->intake_token)) {
+            $client->update(['intake_token' => Client::generateIntakeToken()]);
+        }
+
+        $endUsers = EndUser::forClient($client->id)
+            ->where('intake_status', 'pending_review')
+            ->orderByDesc('intake_submitted_at')
+            ->get();
+
+        return view('admin.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
+    }
+
+    public function approveIntake(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['intake_status' => 'approved']);
+
+        return redirect()->route('admin.new-clients')
+            ->with('status', "{$endUser->full_name} approved — now in Clients.");
+    }
+
+    public function regenerateIntake()
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($client->intake_enabled, 404);
+
+        $client->update(['intake_token' => Client::generateIntakeToken()]);
+
+        return redirect()->route('admin.new-clients')
+            ->with('status', 'Intake link regenerated — the old link no longer works.');
     }
 
     private function scoped()

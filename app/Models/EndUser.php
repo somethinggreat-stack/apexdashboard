@@ -42,7 +42,7 @@ class EndUser extends Model
     protected $fillable = [
         'client_id',
         'first_name', 'middle_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
-        'current_address', 'city', 'state', 'zipcode',
+        'current_address', 'address_line2', 'city', 'state', 'zipcode',
         'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path', 'collage_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer',

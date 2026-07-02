@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Client;
+use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ServiceAreasController;
 use App\Http\Controllers\SitemapController;
@@ -34,6 +35,18 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap')
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/leads',          [LeadController::class, 'storePopup'])->name('leads.store');
     Route::post('/contact-submit', [LeadController::class, 'storeContact'])->name('contact.submit');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public Client Intake (per-BO secret-token URLs)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/intake/{token}', [IntakeController::class, 'show'])->name('intake.show')->where('token', '[A-Za-z0-9]+');
+    Route::middleware('throttle:5,1')->post('/intake/{token}', [IntakeController::class, 'store'])->name('intake.store')->where('token', '[A-Za-z0-9]+');
+    Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9]+');
 });
 
 /*
@@ -117,6 +130,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('messages/{id}/pin', [Admin\MessageController::class, 'togglePin'])->name('messages.pin');
             Route::post('messages/{id}/star', [Admin\MessageController::class, 'toggleStar'])->name('messages.star');
             Route::post('messages/{id}/note', [Admin\MessageController::class, 'saveNote'])->name('messages.note');
+
+            // New Clients — intake-form submissions pending review for this BO
+            Route::get('new-clients', [Admin\EndUserController::class, 'newClients'])->name('new-clients');
+            Route::post('new-clients/{id}/approve', [Admin\EndUserController::class, 'approveIntake'])->name('new-clients.approve');
+            Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->name('new-clients.regenerate');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');

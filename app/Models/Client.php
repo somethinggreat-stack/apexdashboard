@@ -15,13 +15,14 @@ class Client extends Authenticatable
     protected $fillable = [
         'admin_id', 'business_name', 'email', 'password',
         'phone', 'monthly_fee', 'status',
-        'intake_token', 'intake_logo_path', 'intake_display_name',
+        'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
         'compensation_model', 'per_round_fee', 'hourly_rate',
         'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
         'password'             => 'hashed',
+        'intake_enabled'       => 'boolean',
         'monthly_fee'          => 'decimal:2',
         'per_round_fee'        => 'decimal:2',
         'hourly_rate'          => 'decimal:2',

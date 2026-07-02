@@ -50,6 +50,12 @@
         <nav class="sidebar-nav">
             @isset($selectedClient)
                 <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.*') ? 'active' : '' }}">Clients</a>
+                @if ($selectedClient->intake_enabled)
+                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'pending_review')->count(); @endphp
+                    <a href="{{ route('admin.new-clients') }}" class="{{ request()->routeIs('admin.new-clients*') ? 'active' : '' }}">
+                        New Clients @if ($pendingIntake > 0)<span class="badge-portal" style="background:#dc2626;">{{ $pendingIntake }}</span>@endif
+                    </a>
+                @endif
                 @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
                     Messages @if ($adminUnread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $adminUnread }}</span>@endif
