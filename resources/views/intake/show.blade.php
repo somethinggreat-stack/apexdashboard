@@ -23,6 +23,8 @@
         input:focus, select:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
         .hint { font-size:12px; color:#64748b; margin-top:4px; }
         .impact { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:8px 10px; border-radius:8px; font-size:12.5px; margin-top:6px; }
+        .enroll-btn { display:inline-block; margin-top:8px; padding:10px 16px; background:#16a34a; color:#fff; text-decoration:none; border-radius:8px; font-size:14px; font-weight:700; }
+        .enroll-btn:hover { background:#15803d; }
         .errors { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; }
         .errors ul { margin:6px 0 0; padding-left:18px; }
         .submit { width:100%; margin-top:22px; padding:14px; background:#2563eb; color:#fff; border:0; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
@@ -98,7 +100,19 @@
             <div class="fg"><label>Proof of Address</label><input type="file" name="proof_of_address" accept=".pdf,.jpg,.jpeg,.png,.webp" required><div class="hint">Utility bill, bank statement, or lease — up to 10 MB.</div></div>
 
             <div class="sec-title">Credit Monitoring</div>
-            <div class="fg"><label>Credit Monitoring Provider</label><input type="text" name="credit_monitoring_name" value="{{ old('credit_monitoring_name') }}" placeholder="e.g. IdentityIQ, MyScoreIQ, SmartCredit" required></div>
+            @if ($client->intake_monitoring_provider)
+                <input type="hidden" name="credit_monitoring_name" value="{{ $client->intake_monitoring_provider }}">
+                <div class="fg">
+                    <label>Credit Monitoring Provider</label>
+                    <input type="text" value="{{ $client->intake_monitoring_provider }}" readonly style="background:#f1f5f9;">
+                    @if ($client->intake_monitoring_enroll_url)
+                        <a href="{{ $client->intake_monitoring_enroll_url }}" target="_blank" rel="noopener" class="enroll-btn">Get Credit Monitoring →</a>
+                    @endif
+                    <div class="hint">Sign up with {{ $client->intake_monitoring_provider }} using the button above, then enter your login email &amp; password below.</div>
+                </div>
+            @else
+                <div class="fg"><label>Credit Monitoring Provider</label><input type="text" name="credit_monitoring_name" value="{{ old('credit_monitoring_name') }}" placeholder="e.g. IdentityIQ, MyScoreIQ, SmartCredit" required></div>
+            @endif
             <div class="row">
                 <div class="fg"><label>Credit Monitoring Email</label><input type="text" name="credit_monitoring_username" value="{{ old('credit_monitoring_username') }}" required></div>
                 <div class="fg"><label>Credit Monitoring Password</label><input type="text" name="credit_monitoring_password" required></div>

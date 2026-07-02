@@ -20,6 +20,10 @@ class IntakeController extends Controller
     {
         $client = Client::where('intake_token', $token)->where('intake_enabled', true)->firstOrFail();
 
+        // When the BO has a fixed monitoring provider, it's set server-side and
+        // the form doesn't ask for it.
+        $fixedProvider = $client->intake_monitoring_provider;
+
         $data = $request->validate([
             'first_name'                 => 'required|string|max:100',
             'middle_name'                => 'nullable|string|max:100',
@@ -34,13 +38,17 @@ class IntakeController extends Controller
             'state'                      => 'required|string|max:120',
             'zipcode'                    => 'required|string|max:20',
             'phone'                      => 'required|string|max:30',
-            'credit_monitoring_name'     => 'required|string|max:100',
+            'credit_monitoring_name'     => ($fixedProvider ? 'nullable' : 'required') . '|string|max:100',
             'credit_monitoring_username' => 'required|string|max:255',
             'credit_monitoring_password' => 'required|string|max:255',
             'drivers_license'            => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'ssn_card'                   => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'proof_of_address'           => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
+
+        if ($fixedProvider) {
+            $data['credit_monitoring_name'] = $fixedProvider;
+        }
 
         $endUser = EndUser::create([
             'client_id'                  => $client->id,
