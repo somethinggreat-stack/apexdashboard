@@ -6,6 +6,17 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+    <style>
+        /* Logout — proper button, clean red hover */
+        .sidebar-logout { padding:14px 16px !important; }
+        .sidebar-logout .btn-link {
+            display:block; width:100%; text-align:center; text-decoration:none;
+            padding:11px 14px; border-radius:11px; font-weight:700; font-size:14px; cursor:pointer;
+            color:#fecaca !important; background: rgba(239,68,68,.12) !important; border:1px solid rgba(239,68,68,.4) !important;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+        .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
+    </style>
     @stack('head')
 </head>
 <body class="admin-body">
