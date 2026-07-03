@@ -15,13 +15,16 @@ class EndUserController extends Controller
     {
         $clientId = Auth::guard('client')->id();
 
-        $query = EndUser::forClient($clientId)->withCount([
-            'processSteps',
-            'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
-            'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
-            'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
-            'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
-        ]);
+        $query = EndUser::forClient($clientId)
+            // Intake submissions awaiting review live in "New Clients".
+            ->where(fn ($q) => $q->whereNull('intake_status')->orWhere('intake_status', '!=', 'pending_review'))
+            ->withCount([
+                'processSteps',
+                'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+                'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+                'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+                'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+            ]);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -94,6 +97,28 @@ class EndUserController extends Controller
 
         return redirect()->route('client.end-users.show', $endUser)
             ->with('status', 'Client added.');
+    }
+
+    public function newClients()
+    {
+        $client = Auth::guard('client')->user();
+        abort_unless($client->intake_enabled, 404);
+
+        $endUsers = EndUser::forClient($client->id)
+            ->where('intake_status', 'pending_review')
+            ->orderByDesc('intake_submitted_at')
+            ->get();
+
+        return view('client.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
+    }
+
+    public function approveIntake(string $id)
+    {
+        $endUser = EndUser::forClient(Auth::guard('client')->id())->findOrFail($id);
+        $endUser->update(['intake_status' => 'approved']);
+
+        return redirect()->route('client.new-clients')
+            ->with('status', "{$endUser->full_name} approved — now in Clients.");
     }
 
     private function validatedPayload(Request $request): array

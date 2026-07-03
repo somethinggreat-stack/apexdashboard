@@ -21,6 +21,13 @@
         @endphp
         <nav class="sidebar-nav">
             <a href="{{ route('client.dashboard') }}" class="{{ request()->routeIs('client.dashboard') ? 'active' : '' }}">Dashboard</a>
+            @php $bo = Auth::guard('client')->user(); @endphp
+            @if ($bo?->intake_enabled)
+                @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->where('intake_status', 'pending_review')->count(); @endphp
+                <a href="{{ route('client.new-clients') }}" class="{{ request()->routeIs('client.new-clients*') ? 'active' : '' }}">
+                    New Clients @if ($pendingIntake > 0)<span class="badge-portal" style="background:#dc2626;">{{ $pendingIntake }}</span>@endif
+                </a>
+            @endif
             <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">My Clients</a>
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
                 Messages @if ($unread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $unread }}</span>@endif
