@@ -49,6 +49,9 @@ Route::middleware('throttle:20,1')->group(function () {
     Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9]+');
 });
 
+// Server-to-server intake API (key-authenticated; CSRF-exempt via bootstrap/app.php)
+Route::post('/api/intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('api.intake');
+
 /*
 |--------------------------------------------------------------------------
 | VA Admin (admin guard)

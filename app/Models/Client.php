@@ -17,6 +17,7 @@ class Client extends Authenticatable
         'phone', 'monthly_fee', 'status',
         'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
         'intake_monitoring_provider', 'intake_monitoring_enroll_url',
+        'intake_api_key', 'intake_external_url',
         'compensation_model', 'per_round_fee', 'hourly_rate',
         'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
     ];

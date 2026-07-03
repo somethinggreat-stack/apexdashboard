@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'client.selected' => \App\Http\Middleware\EnsureClientSelected::class,
         ]);
 
+        // Server-to-server intake API (key-authenticated) — not a browser form.
+        $middleware->validateCsrfTokens(except: ['api/intake']);
+
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('business-owner') || $request->is('business-owner/*')) {
                 return route('client.login');

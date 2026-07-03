@@ -3,30 +3,58 @@
 @section('title', 'New Clients')
 
 @section('content')
-<div class="card" style="margin-bottom:18px;">
-    <div class="card-header">
-        <div>
-            <h2>Secure Intake Link</h2>
-            <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                Share this private link with {{ $client->business_name }}. When a client fills it out, they appear below in
-                <strong>New Clients</strong> with everything they submitted — review, then Approve to move them into Clients.
-            </p>
+@if ($client->intake_external_url)
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+            <div>
+                <h2>External Intake (API)</h2>
+                <p class="muted" style="margin:4px 0 0; font-size:13px;">
+                    {{ $client->business_name }} collects clients on their own form
+                    (<a href="{{ $client->intake_external_url }}" target="_blank" rel="noopener">{{ $client->intake_external_url }}</a>),
+                    which posts to our API. Submissions appear below in <strong>New Clients</strong>.
+                </p>
+            </div>
+        </div>
+        <div class="api-field">
+            <label>API Endpoint</label>
+            <div class="api-row">
+                <input type="text" value="{{ url('/api/intake') }}" readonly onclick="this.select();">
+            </div>
+        </div>
+        <div class="api-field">
+            <label>API Key <span class="muted">(send as header <code>X-Intake-Key</code> — keep secret)</span></label>
+            <div class="api-row">
+                <input type="text" id="apiKey" value="{{ $client->intake_api_key }}" readonly onclick="this.select();">
+                <button type="button" class="btn btn-primary" id="copyKey">Copy</button>
+            </div>
         </div>
     </div>
+@else
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+            <div>
+                <h2>Secure Intake Link</h2>
+                <p class="muted" style="margin:4px 0 0; font-size:13px;">
+                    Share this private link with {{ $client->business_name }}. When a client fills it out, they appear below in
+                    <strong>New Clients</strong> with everything they submitted — review, then Approve to move them into Clients.
+                </p>
+            </div>
+        </div>
 
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="intakeLink" value="{{ $client->intakeUrl() }}" readonly
-               style="flex:1; min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:#f8fafc; color:#0f172a;"
-               onclick="this.select();">
-        <button type="button" class="btn btn-primary" id="copyIntake">Copy</button>
-        <a href="{{ $client->intakeUrl() }}" target="_blank" class="btn btn-secondary">Open</a>
-        <form method="POST" action="{{ route('admin.new-clients.regenerate') }}" style="display:inline"
-              onsubmit="return confirm('Regenerate the link? The current link stops working immediately.')">
-            @csrf
-            <button type="submit" class="btn btn-danger">Regenerate</button>
-        </form>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="intakeLink" value="{{ $client->intakeUrl() }}" readonly
+                   style="flex:1; min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:#f8fafc; color:#0f172a;"
+                   onclick="this.select();">
+            <button type="button" class="btn btn-primary" id="copyIntake">Copy</button>
+            <a href="{{ $client->intakeUrl() }}" target="_blank" class="btn btn-secondary">Open</a>
+            <form method="POST" action="{{ route('admin.new-clients.regenerate') }}" style="display:inline"
+                  onsubmit="return confirm('Regenerate the link? The current link stops working immediately.')">
+                @csrf
+                <button type="submit" class="btn btn-danger">Regenerate</button>
+            </form>
+        </div>
     </div>
-</div>
+@endif
 
 <div class="card">
     <div class="card-header">
@@ -81,22 +109,32 @@
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
     .btn-approve { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
     .btn-approve:hover { background:#a7f3d0; }
+    .api-field { margin-top:12px; }
+    .api-field label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px; }
+    .api-field code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:11.5px; }
+    .api-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .api-row input { flex:1; min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:#f8fafc; color:#0f172a; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-document.getElementById('copyIntake')?.addEventListener('click', function () {
-    var f = document.getElementById('intakeLink');
-    f.select(); f.setSelectionRange(0, 99999);
-    var btn = this;
-    try {
-        navigator.clipboard.writeText(f.value).then(function () {
-            btn.textContent = 'Copied ✓';
-            setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
-        });
-    } catch (e) { document.execCommand('copy'); }
-});
+function wireCopy(btnId, inputId) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var f = document.getElementById(inputId);
+        f.select(); f.setSelectionRange(0, 99999);
+        try {
+            navigator.clipboard.writeText(f.value).then(function () {
+                btn.textContent = 'Copied ✓';
+                setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+            });
+        } catch (e) { document.execCommand('copy'); }
+    });
+}
+wireCopy('copyIntake', 'intakeLink');
+wireCopy('copyKey', 'apiKey');
 </script>
 @endpush
 @endsection
