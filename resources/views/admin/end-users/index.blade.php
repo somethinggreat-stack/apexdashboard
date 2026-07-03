@@ -98,6 +98,11 @@
                         <button type="button" class="btn btn-sm"
                                 onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Comment</button>
                         <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
+                        <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline" class="send-back-form">
+                            @csrf
+                            <input type="hidden" name="note" value="">
+                            <button type="button" class="btn btn-sm btn-sendback" onclick="sendBack(this, '{{ addslashes($eu->full_name) }}')">To New Clients</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">Delete</button>
@@ -378,6 +383,8 @@
 @push('head')
 <style>
     .field-error { display:block; color:#dc2626; font-size:12px; margin-top:4px; }
+    .btn-sendback { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .btn-sendback:hover { background:#fde68a; }
     .days-left { font-weight:600; }
     .days-left-soon { color:#ea580c; }
     .days-left-over { color:#dc2626; font-weight:700; }
@@ -513,6 +520,14 @@
     };
 
     /* --------- quick-note modal --------- */
+    window.sendBack = function (btn, name) {
+        var note = prompt('Send ' + name + ' back to New Clients.\n\nReason / error to show on their line (optional):', '');
+        if (note === null) return; // cancelled
+        var form = btn.closest('form');
+        form.querySelector('input[name="note"]').value = note;
+        form.submit();
+    };
+
     window.openQuickNote = function (euId, name) {
         document.getElementById('quickNoteEndUserId').value = euId;
         document.getElementById('quickNoteName').textContent = name;

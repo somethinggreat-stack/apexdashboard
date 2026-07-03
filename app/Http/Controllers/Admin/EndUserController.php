@@ -178,10 +178,25 @@ class EndUserController extends Controller
     public function approveIntake(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['intake_status' => 'approved']);
+        $endUser->update(['intake_status' => 'approved', 'intake_review_note' => null]);
 
         return redirect()->route('admin.new-clients')
             ->with('status', "{$endUser->full_name} approved — now in Clients.");
+    }
+
+    /** Bounce an approved client back to New Clients with a reason to fix. */
+    public function sendToNewClients(Request $request, string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $note = trim((string) $request->input('note', ''));
+
+        $endUser->update([
+            'intake_status'      => 'pending_review',
+            'intake_review_note' => $note !== '' ? $note : null,
+        ]);
+
+        return redirect()->route('admin.new-clients')
+            ->with('status', "{$endUser->full_name} sent back to New Clients.");
     }
 
     public function regenerateIntake()

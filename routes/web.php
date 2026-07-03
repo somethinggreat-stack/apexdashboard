@@ -138,6 +138,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('new-clients', [Admin\EndUserController::class, 'newClients'])->name('new-clients');
             Route::post('new-clients/{id}/approve', [Admin\EndUserController::class, 'approveIntake'])->name('new-clients.approve');
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->name('new-clients.regenerate');
+            Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'sendToNewClients'])->name('end-users.to-new-clients');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
@@ -190,11 +191,11 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::get('billing', [Client\BillingController::class, 'index'])->name('billing.index');
         Route::get('billing/invoice/{id}', [Client\BillingController::class, 'showInvoice'])->name('billing.invoice.show');
 
-        // New Clients — intake submissions pending review (intake-enabled BOs)
+        // New Clients — intake submissions pending VA review (BOs can view only)
         Route::get('new-clients', [Client\EndUserController::class, 'newClients'])->name('new-clients');
-        Route::post('new-clients/{id}/approve', [Client\EndUserController::class, 'approveIntake'])->name('new-clients.approve');
 
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');
+        Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');
         Route::get('end-users/{id}/status-report', [Client\EndUserController::class, 'statusReport'])->name('end-users.status-report');

@@ -49,7 +49,7 @@ class EndUser extends Model
         'cfpb_email', 'cfpb_password',
         'current_score', 'goal_score', 'status', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
-        'intake_status', 'intake_submitted_ip', 'intake_submitted_at',
+        'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note',
     ];
     protected $casts = [
         'start_date' => 'date',

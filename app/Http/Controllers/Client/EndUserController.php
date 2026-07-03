@@ -79,24 +79,73 @@ class EndUserController extends Controller
     {
         $clientId = Auth::guard('client')->id();
 
-        $data = $this->validatedPayload($request);
-        $data['client_id']  = $clientId;
-        $data['status']     = 'active';
+        $data = $request->validate([
+            'first_name'                        => 'required|string|max:100',
+            'last_name'                         => 'required|string|max:100',
+            'suffix'                            => 'required|in:None,Jr.,Sr.,I,II,III,IV,V',
+            'email'                             => 'required|email|max:255',
+            'phone'                             => 'required|string|max:30',
+            'date_of_birth'                     => 'required|date|before:today',
+            'ssn'                               => 'required|string|max:32',
+            'current_address'                   => 'required|string|max:255',
+            'city'                              => 'required|string|max:120',
+            'state'                             => 'required|string|max:120',
+            'zipcode'                           => 'required|string|max:20',
+            'credit_monitoring_name'            => 'required|string|max:100',
+            'credit_monitoring_username'        => 'required|string|max:255',
+            'credit_monitoring_password'        => 'required|string|max:255',
+            'credit_monitoring_security_answer' => 'nullable|string|max:255',
+            'start_date'                        => 'required|date',
+            'drivers_license'                   => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'ssn_card'                          => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'proof_of_address'                  => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ]);
 
-        $endUser = EndUser::create($data);
+        // Business-owner submissions always land in New Clients for VA review.
+        $endUser = EndUser::create([
+            'client_id'                         => $clientId,
+            'first_name'                        => $data['first_name'],
+            'last_name'                         => $data['last_name'],
+            'suffix'                            => $data['suffix'],
+            'email'                             => $data['email'],
+            'phone'                             => $data['phone'],
+            'date_of_birth'                     => $data['date_of_birth'],
+            'ssn'                               => $data['ssn'],
+            'current_address'                   => $data['current_address'],
+            'city'                              => $data['city'],
+            'state'                             => $data['state'],
+            'zipcode'                           => $data['zipcode'],
+            'credit_monitoring_name'            => $data['credit_monitoring_name'],
+            'credit_monitoring_username'        => $data['credit_monitoring_username'],
+            'credit_monitoring_password'        => $data['credit_monitoring_password'],
+            'credit_monitoring_security_answer' => $data['credit_monitoring_security_answer'] ?? null,
+            'status'                            => 'active',
+            'start_date'                        => $data['start_date'],
+            'rounds'                            => ['1st Round'],
+            'intake_status'                     => 'pending_review',
+            'intake_submitted_ip'               => $request->ip(),
+            'intake_submitted_at'               => now(),
+        ]);
 
-        $files = $this->handleFileUploads($request, $endUser);
-        if ($files) {
-            $endUser->update($files);
+        $paths = [];
+        foreach (['drivers_license' => 'photo_id_path', 'ssn_card' => 'ssn_picture_path', 'proof_of_address' => 'proof_of_address_path'] as $field => $column) {
+            if ($request->hasFile($field)) {
+                $file = $request->file($field);
+                $filename = time() . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
+                $paths[$column] = $file->storeAs("uploads/{$endUser->id}/identity", $filename, 'private');
+            }
+        }
+        if ($paths) {
+            $endUser->update($paths);
         }
 
         Message::postSystem(
             $clientId,
-            "New client {$endUser->full_name} has been added. Start working on it."
+            "New client {$endUser->full_name} was submitted by the business owner — pending review in New Clients."
         );
 
-        return redirect()->route('client.end-users.show', $endUser)
-            ->with('status', 'Client added.');
+        return redirect()->route('client.new-clients')
+            ->with('status', 'Client submitted — it will appear in Clients once the team reviews it.');
     }
 
     public function newClients()
@@ -112,62 +161,9 @@ class EndUserController extends Controller
         return view('client.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
     }
 
-    public function approveIntake(string $id)
+    public function create()
     {
-        $endUser = EndUser::forClient(Auth::guard('client')->id())->findOrFail($id);
-        $endUser->update(['intake_status' => 'approved']);
-
-        return redirect()->route('client.new-clients')
-            ->with('status', "{$endUser->full_name} approved — now in Clients.");
+        return view('client.end-users.create');
     }
 
-    private function validatedPayload(Request $request): array
-    {
-        $rules = [
-            'first_name'                  => 'required|string|max:100',
-            'last_name'                   => 'required|string|max:100',
-            'suffix'                      => 'required|in:None,Jr.,Sr.,I,II,III,IV,V',
-            'email'                       => 'required|email|max:255',
-            'phone'                       => 'required|string|max:30',
-            'date_of_birth'               => 'required|date|before:today',
-            'current_address'             => 'required|string|max:255',
-            'city'                        => 'required|string|max:120',
-            'state'                       => 'required|string|max:120',
-            'zipcode'                     => 'required|string|max:20',
-            'ssn'                         => 'required|string|max:32',
-            'credit_monitoring_name'      => 'required|string|max:100',
-            'credit_monitoring_username'  => 'required|string|max:255',
-            'credit_monitoring_password'  => 'required|string|max:255',
-            'credit_monitoring_security_answer' => 'required|string|max:255',
-            'cfpb_email'                  => 'nullable|email|max:255',
-            'cfpb_password'               => 'nullable|string|max:255',
-            'start_date'                  => 'required|date',
-            'collage'                     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-        ];
-
-        $data = $request->validate($rules);
-        unset($data['collage']);
-        return $data;
-    }
-
-    private function handleFileUploads(Request $request, EndUser $endUser): array
-    {
-        $out = [];
-
-        foreach ([
-            'collage' => 'collage_path',
-        ] as $field => $column) {
-            if ($request->hasFile($field)) {
-                if ($endUser->{$column} && Storage::disk('private')->exists($endUser->{$column})) {
-                    Storage::disk('private')->delete($endUser->{$column});
-                }
-                $file = $request->file($field);
-                $filename = time() . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
-                $path = $file->storeAs("uploads/{$endUser->id}/identity", $filename, 'private');
-                $out[$column] = $path;
-            }
-        }
-
-        return $out;
-    }
 }

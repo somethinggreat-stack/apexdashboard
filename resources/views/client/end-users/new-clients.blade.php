@@ -6,15 +6,16 @@
 <div class="card" style="margin-bottom:18px;">
     <div class="card-header">
         <h2 style="margin:0;">New Clients</h2>
+        <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
     </div>
     <p class="muted" style="margin:8px 0 0; font-size:13px;">
         @if ($client->intake_external_url)
             New clients arrive from your onboarding form
-            (<a href="{{ $client->intake_external_url }}" target="_blank" rel="noopener">{{ $client->intake_external_url }}</a>).
+            (<a href="{{ $client->intake_external_url }}" target="_blank" rel="noopener">{{ $client->intake_external_url }}</a>)
         @else
-            New clients who complete your secure intake form appear here.
+            New clients who complete your secure intake form appear here
         @endif
-        Review each submission, then <strong>Approve</strong> to move them into My Clients.
+        — or add one yourself. Our team reviews each one before it moves into <strong>My Clients</strong>.
     </p>
 </div>
 
@@ -26,29 +27,27 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Submitted</th>
-                <th>Actions</th>
+                <th>Status</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             @forelse ($endUsers as $eu)
                 <tr>
-                    <td><strong>{{ $eu->full_name }}</strong></td>
+                    <td>
+                        <strong>{{ $eu->full_name }}</strong>
+                        @if ($eu->intake_review_note)
+                            <div class="review-note">⚠ Sent back: {{ $eu->intake_review_note }}</div>
+                        @endif
+                    </td>
                     <td>{{ $eu->email }}</td>
                     <td>{{ $eu->phone ?: '—' }}</td>
                     <td class="muted">{{ $eu->intake_submitted_at?->format('M j, Y g:ia') ?: '—' }}</td>
-                    <td>
-                        <div class="nc-actions">
-                            <a href="{{ route('client.end-users.show', $eu) }}" class="btn btn-sm">Review</a>
-                            <form method="POST" action="{{ route('client.new-clients.approve', $eu->id) }}"
-                                  onsubmit="return confirm('Approve {{ addslashes($eu->full_name) }} and move to My Clients?')">
-                                @csrf
-                                <button class="btn btn-sm btn-primary">Approve</button>
-                            </form>
-                        </div>
-                    </td>
+                    <td><span class="pill-pending">Pending review</span></td>
+                    <td class="no-link"><a href="{{ route('client.end-users.show', $eu) }}" class="btn btn-sm">Review</a></td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="empty">No new intake submissions yet.</td></tr>
+                <tr><td colspan="6" class="empty">No new clients yet — add one to get started.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -56,9 +55,8 @@
 
 @push('head')
 <style>
-    .nc-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-    .nc-actions form { display:inline; margin:0; }
-    .nc-actions .btn { white-space:nowrap; }
+    .pill-pending { display:inline-block; padding:2px 10px; border-radius:999px; background:#fef3c7; color:#92400e; font-size:11px; font-weight:700; }
+    .review-note { margin-top:4px; font-size:12px; color:#b91c1c; font-weight:600; }
 </style>
 @endpush
 @endsection

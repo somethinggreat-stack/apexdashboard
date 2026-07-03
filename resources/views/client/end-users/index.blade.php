@@ -6,6 +6,7 @@
 <div class="card">
     <div class="card-header">
         <h2>My Credit Repair Clients</h2>
+        <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
     </div>
     <form method="GET" class="filter-bar">
         <select name="status">

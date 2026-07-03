@@ -38,6 +38,10 @@ class Client extends Authenticatable
             if (empty($client->intake_token)) {
                 $client->intake_token = self::generateIntakeToken();
             }
+            // New business owners get the intake link + New Clients by default.
+            if ($client->intake_enabled === null) {
+                $client->intake_enabled = true;
+            }
         });
 
         static::deleting(function (Client $client) {

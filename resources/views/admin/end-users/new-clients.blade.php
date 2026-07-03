@@ -74,7 +74,12 @@
         <tbody>
             @forelse ($endUsers as $eu)
                 <tr>
-                    <td><strong>{{ $eu->full_name }}</strong></td>
+                    <td>
+                        <strong>{{ $eu->full_name }}</strong>
+                        @if ($eu->intake_review_note)
+                            <div class="review-note">⚠ Sent back: {{ $eu->intake_review_note }}</div>
+                        @endif
+                    </td>
                     <td>{{ $eu->email }}</td>
                     <td>{{ $eu->phone ?: '—' }}</td>
                     <td class="muted">{{ $eu->intake_submitted_at?->format('M j, Y g:ia') ?: '—' }}</td>
@@ -109,6 +114,7 @@
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
     .btn-approve { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
     .btn-approve:hover { background:#a7f3d0; }
+    .review-note { margin-top:4px; font-size:12px; color:#b91c1c; font-weight:600; max-width:320px; }
     .api-field { margin-top:12px; }
     .api-field label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px; }
     .api-field code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:11.5px; }
