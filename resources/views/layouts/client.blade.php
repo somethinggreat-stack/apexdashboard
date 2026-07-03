@@ -6,6 +6,67 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Portal') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/client.css') }}">
+    <style>
+        :root { --agp-accent:#2563eb; --agp-accent2:#38bdf8; }
+        .client-body { background:#eef2f7; }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #0b1f3a 0%, #103063 55%, #0b1f3a 100%) !important;
+            border-right: 1px solid rgba(255,255,255,.06) !important;
+        }
+        .sidebar-brand strong { color:#fff !important; letter-spacing:.2px; }
+        .sidebar-brand .badge-portal {
+            background: linear-gradient(135deg, var(--agp-accent), var(--agp-accent2)) !important;
+            color:#fff !important; border:0 !important;
+        }
+        .sidebar-nav a {
+            color:#c7d2e2 !important; border-radius:11px; margin:3px 10px; padding:11px 14px;
+            font-weight:600; position:relative; transition: background .15s, color .15s, box-shadow .15s;
+        }
+        .sidebar-nav a:hover { background: rgba(255,255,255,.08) !important; color:#fff !important; }
+        .sidebar-nav a.active {
+            background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(56,189,248,.8)) !important;
+            color:#fff !important; box-shadow:0 8px 20px rgba(37,99,235,.35);
+        }
+        .sidebar-nav a.active::before {
+            content:''; position:absolute; left:-10px; top:9px; bottom:9px; width:4px; border-radius:4px; background:#38bdf8;
+        }
+
+        /* Logout — proper button, clean red hover */
+        .sidebar-logout { padding:14px 16px !important; }
+        .sidebar-logout .btn-link {
+            display:block; width:100%; text-align:center; text-decoration:none;
+            padding:11px 14px; border-radius:11px; font-weight:700; font-size:14px; cursor:pointer;
+            color:#fecaca !important; background: rgba(239,68,68,.12) !important; border:1px solid rgba(239,68,68,.4) !important;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+        .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
+
+        /* Topbar */
+        .topbar { background:#fff !important; border-bottom:1px solid #e6ebf2 !important; }
+        .page-title { color:#0f172a !important; }
+        .user-chip {
+            background: linear-gradient(135deg, var(--agp-accent), var(--agp-accent2)) !important;
+            color:#fff !important; border:0 !important; font-weight:700;
+        }
+
+        /* Stat cards */
+        .stats-grid { gap:16px; }
+        .stat-card {
+            background:#fff; border:1px solid #e6ebf2; border-radius:16px; padding:20px 22px;
+            box-shadow:0 6px 18px rgba(15,23,42,.05); position:relative; overflow:hidden;
+            transition: transform .12s, box-shadow .12s;
+        }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px;
+            background:linear-gradient(90deg, var(--agp-accent), var(--agp-accent2)); }
+        .stat-card:hover { transform:translateY(-2px); box-shadow:0 12px 26px rgba(15,23,42,.10); }
+        .stat-label { color:#64748b !important; font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+        .stat-value { color:#0f172a !important; font-size:30px; font-weight:800; margin-top:6px; }
+
+        /* Cards */
+        .card { background:#fff; border:1px solid #e6ebf2 !important; border-radius:16px !important; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    </style>
     @stack('head')
 </head>
 <body class="client-body">
