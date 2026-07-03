@@ -16,22 +16,24 @@
                 radial-gradient(800px circle at 85% 85%, rgba(56,189,248,.20), transparent 45%),
                 linear-gradient(135deg, #0b1220 0%, #0f2140 55%, #0b1220 100%);
         }
-        .shell { width: 100%; max-width: 430px; }
-        .brand { text-align: center; margin-bottom: 22px; color: #fff; }
-        .brand .logo { max-height: 84px; max-width: 240px; width: auto; margin: 0 auto 12px; display: block; }
-        .brand span { font-size: 12px; color: #93c5fd; letter-spacing: .12em; text-transform: uppercase; }
+        .shell { width: 100%; max-width: 460px; }
         .card {
-            background: #fff; border-radius: 18px; padding: 46px 32px 42px; min-height: 560px;
-            display: flex; flex-direction: column; justify-content: center;
-            box-shadow: 0 24px 60px rgba(0,0,0,.35);
+            background: #fff; border-radius: 18px; padding: 44px 38px 40px; min-height: 640px;
+            display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,.35);
         }
-        .card h2 { font-size: 21px; margin-bottom: 4px; }
-        .card .sub { color: #64748b; font-size: 13.5px; margin-bottom: 20px; }
+        .card-brand { text-align: center; margin-bottom: 26px; }
+        .card-brand .logo { max-height: 86px; max-width: 260px; width: auto; display: block; margin: 0 auto 10px; }
+        .card-brand .portal-tag {
+            color: #111827; font-size: 12px; font-weight: 800;
+            letter-spacing: .16em; text-transform: uppercase;
+        }
+        .card h2 { font-size: 22px; margin-bottom: 4px; }
+        .card .sub { color: #64748b; font-size: 13.5px; margin-bottom: 22px; }
         .alert {
             background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
             border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px;
         }
-        .field { margin-bottom: 15px; }
+        .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
         .field input[type=email], .field input[type=password] {
             width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px;
@@ -41,17 +43,17 @@
             outline: none; border-color: #2563eb; background: #fff;
             box-shadow: 0 0 0 3px rgba(37,99,235,.15);
         }
-        .row { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 20px; }
+        .row { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 22px; }
         .remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; cursor: pointer; }
         .remember input { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; }
         .btn {
-            width: 100%; padding: 13px; border: 0; border-radius: 10px; cursor: pointer;
+            width: 100%; padding: 14px; border: 0; border-radius: 10px; cursor: pointer;
             font-size: 15px; font-weight: 700; color: #fff;
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             box-shadow: 0 10px 22px rgba(37,99,235,.35); transition: transform .1s, box-shadow .15s;
         }
         .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(37,99,235,.45); }
-        .secure { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 16px; }
+        .secure { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 18px; }
         .foot { text-align: center; margin-top: 18px; }
         .foot a { color: #cbd5e1; font-size: 13px; text-decoration: none; }
         .foot a:hover { color: #fff; }
@@ -59,12 +61,12 @@
 </head>
 <body>
     <div class="shell">
-        <div class="brand">
-            <img src="{{ asset('Images/logo.png') }}" alt="Apex Growth Solutions" class="logo">
-            <span>Business Owner Portal</span>
-        </div>
-
         <div class="card">
+            <div class="card-brand">
+                <img src="{{ asset('Images/logo.png') }}" alt="Apex Growth Solutions" class="logo">
+                <div class="portal-tag">Business Owner Portal</div>
+            </div>
+
             <h2>Welcome back</h2>
             <div class="sub">Sign in to manage and review your credit repair clients.</div>
 
