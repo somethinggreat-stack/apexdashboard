@@ -8,7 +8,12 @@
     <link rel="stylesheet" href="{{ asset('css/client.css') }}">
     <style>
         :root { --agp-accent:#2563eb; --agp-accent2:#38bdf8; }
-        .client-body { background:#eef2f7; }
+        .client-body {
+            background:
+                radial-gradient(1100px circle at 100% -5%, #e2ecff 0%, transparent 42%),
+                radial-gradient(950px circle at -5% 108%, #e6fbf4 0%, transparent 44%),
+                #eef2f7 !important;
+        }
 
         /* Sidebar */
         .sidebar {
@@ -66,6 +71,25 @@
 
         /* Cards */
         .card { background:#fff; border:1px solid #e6ebf2 !important; border-radius:16px !important; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+
+        /* Engaging accents — colours only */
+        .welcome {
+            background: linear-gradient(120deg, #1d4ed8, #0ea5e9 60%, #06b6d4);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .stat-card:nth-child(1)::before { background: linear-gradient(90deg, #2563eb, #38bdf8); }
+        .stat-card:nth-child(2)::before { background: linear-gradient(90deg, #059669, #34d399); }
+        .stat-card:nth-child(3)::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .stat-card:nth-child(4)::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+        .stat-card:nth-child(1) .stat-value { color:#1d4ed8 !important; }
+        .stat-card:nth-child(2) .stat-value { color:#047857 !important; }
+        .stat-card:nth-child(3) .stat-value { color:#b45309 !important; }
+        .stat-card:nth-child(4) .stat-value { color:#6d28d9 !important; }
+
+        .data-table thead th { background:#f1f5f9 !important; color:#475569 !important; letter-spacing:.03em; }
+        .pill-active { background:#d1fae5 !important; color:#065f46 !important; }
+        .btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border:0 !important; }
+        .btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af) !important; }
     </style>
     @stack('head')
 </head>

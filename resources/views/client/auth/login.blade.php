@@ -18,16 +18,11 @@
         }
         .shell { width: 100%; max-width: 430px; }
         .brand { text-align: center; margin-bottom: 22px; color: #fff; }
-        .brand .mark {
-            width: 54px; height: 54px; border-radius: 15px; margin: 0 auto 12px;
-            display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #2563eb, #38bdf8);
-            font-size: 24px; font-weight: 800; color: #fff; box-shadow: 0 10px 24px rgba(37,99,235,.4);
-        }
-        .brand h1 { font-size: 19px; letter-spacing: .2px; }
+        .brand .logo { max-height: 84px; max-width: 240px; width: auto; margin: 0 auto 12px; display: block; }
         .brand span { font-size: 12px; color: #93c5fd; letter-spacing: .12em; text-transform: uppercase; }
         .card {
-            background: #fff; border-radius: 18px; padding: 30px 28px 26px;
+            background: #fff; border-radius: 18px; padding: 46px 32px 42px; min-height: 560px;
+            display: flex; flex-direction: column; justify-content: center;
             box-shadow: 0 24px 60px rgba(0,0,0,.35);
         }
         .card h2 { font-size: 21px; margin-bottom: 4px; }
@@ -65,8 +60,7 @@
 <body>
     <div class="shell">
         <div class="brand">
-            <div class="mark">A</div>
-            <h1>Apex Growth Solutions</h1>
+            <img src="{{ asset('Images/logo.png') }}" alt="Apex Growth Solutions" class="logo">
             <span>Business Owner Portal</span>
         </div>
 
