@@ -8,19 +8,19 @@
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     <style>
         /* Logout — proper button, clean red hover */
-        .sidebar-logout { padding:14px 16px !important; }
+        .sidebar-logout { padding:10px 16px !important; }
         .sidebar-logout .btn-link {
             display:block; width:100%; text-align:center; text-decoration:none;
-            padding:11px 14px; border-radius:11px; font-weight:700; font-size:14px; cursor:pointer;
+            padding:9px 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;
             color:#fecaca !important; background: rgba(239,68,68,.12) !important; border:1px solid rgba(239,68,68,.4) !important;
             transition: background .15s, color .15s, border-color .15s;
         }
         .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
 
         /* Brand logo */
-        .sidebar-brand { text-align:center; padding-top:6px; }
+        .sidebar-brand { text-align:center; padding-top:4px; padding-bottom:12px !important; }
         .sidebar-brand .brand-logo {
-            max-width:190px; max-height:66px; width:auto; display:block; margin:0 auto 12px;
+            max-width:150px; max-height:50px; width:auto; display:block; margin:0 auto 8px;
             animation: brandIn .9s cubic-bezier(.2,.8,.2,1) both, brandGlow 4s ease-in-out 1s infinite;
             will-change: transform, filter;
         }
@@ -43,9 +43,17 @@
 
         /* Sidebar section labels */
         .sidebar-nav .nav-label {
-            display:block; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
-            color:#8296b0; padding:15px 18px 6px; margin-top:8px; border-top:1px solid rgba(255,255,255,.09);
+            display:block; font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+            color:#8296b0; padding:11px 20px 4px; margin-top:3px; border-top:1px solid rgba(255,255,255,.09);
         }
+
+        /* Compact sidebar so every item fits on one screen (no inner scroll) */
+        .sidebar { padding-top:14px; padding-bottom:8px; }
+        .sidebar-working { margin:10px 14px 4px !important; padding:11px 12px !important; }
+        .sw-label { margin-bottom:3px !important; }
+        .sw-name { font-size:13.5px !important; margin-bottom:9px !important; }
+        .sidebar-nav { padding:6px 0 !important; }
+        .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
     </style>
     @stack('head')
 </head>
