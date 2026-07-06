@@ -190,10 +190,30 @@ class EndUserController extends Controller
     public function approveIntake(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['intake_status' => 'approved', 'intake_review_note' => null]);
+
+        $data = ['intake_status' => 'approved', 'intake_review_note' => null];
+
+        // Start the round clock (Days Left) at approval — i.e. when the client
+        // enters the Clients list. Only on a fresh approval from New Clients;
+        // recovering from Errors keeps the existing clock.
+        if ($endUser->intake_status === 'pending_review') {
+            $data['start_date'] = now()->toDateString();
+        }
+
+        $endUser->update($data);
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} approved — now in Clients.");
+    }
+
+    /** Move a client back into the New Clients (pending review) list — one click, no prompt. */
+    public function moveToNewClients(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['intake_status' => 'pending_review', 'intake_review_note' => null]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} moved to New Clients.");
     }
 
     /** Move a client into the Errors bucket with a VA-entered error note. */

@@ -95,9 +95,10 @@
                     </td>
                     <td class="no-link">
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
-                        <button type="button" class="btn btn-sm"
-                                onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Comment</button>
-                        <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
+                        <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline">
+                            @csrf
+                            <button class="btn btn-sm btn-tonew">Move to New Clients</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" style="display:inline" class="send-back-form">
                             @csrf
                             <input type="hidden" name="note" value="">
@@ -385,6 +386,8 @@
     .field-error { display:block; color:#dc2626; font-size:12px; margin-top:4px; }
     .btn-sendback { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
     .btn-sendback:hover { background:#fde68a; }
+    .btn-tonew { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
+    .btn-tonew:hover { background:#bae6fd; }
     .days-left { font-weight:600; }
     .days-left-soon { color:#ea580c; }
     .days-left-over { color:#dc2626; font-weight:700; }

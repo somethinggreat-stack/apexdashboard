@@ -166,6 +166,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->name('new-clients.regenerate');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
+            Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
