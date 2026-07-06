@@ -59,16 +59,15 @@
                     <td class="no-link">
                         <div class="row-actions">
                             <button type="button" class="btn btn-sm"
-                                onclick='openExtra(@json([
-                                    "id" => $p->id,
-                                    "client_name" => $p->client_name,
-                                    "link" => $p->link,
-                                    "whatsapp" => $p->whatsapp,
-                                    "amount" => $p->amount,
-                                    "paid" => $p->paid,
-                                    "status" => $p->status,
-                                    "notes" => $p->notes,
-                                ]))'>Edit</button>
+                                data-id="{{ $p->id }}"
+                                data-client_name="{{ $p->client_name }}"
+                                data-link="{{ $p->link }}"
+                                data-whatsapp="{{ $p->whatsapp }}"
+                                data-amount="{{ $p->amount }}"
+                                data-paid="{{ $p->paid }}"
+                                data-status="{{ $p->status }}"
+                                data-notes="{{ $p->notes }}"
+                                onclick="openExtra(this)">Edit</button>
                             <form method="POST" action="{{ route('admin.extra.destroy', $p->id) }}"
                                   onsubmit="return confirm('Remove {{ addslashes($p->client_name) }}?')">
                                 @csrf @method('DELETE')
@@ -146,7 +145,8 @@
 
     function val(id, v) { var el = document.getElementById(id); if (el) el.value = (v === null || v === undefined) ? '' : v; }
 
-    window.openExtra = function (data) {
+    window.openExtra = function (btn) {
+        var data = (btn && btn.dataset) ? btn.dataset : null;
         if (data && data.id) {
             document.getElementById('extraTitle').textContent = 'Edit';
             form.action = updateTpl.replace('__ID__', data.id);
