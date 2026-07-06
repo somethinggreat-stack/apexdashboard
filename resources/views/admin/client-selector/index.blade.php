@@ -116,9 +116,9 @@
 @push('head')
 <style>
     /* Business-owner picker cards — subtle lift + accent */
-    .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:14px !important; }
-    .picker-card:hover { transform:translateY(-3px); box-shadow:0 16px 32px rgba(15,23,42,.12) !important; border-color:#bfdbfe !important; }
-    .picker-card-name { font-weight:800; }
+    .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:10px !important; box-shadow:0 1px 2px rgba(15,23,42,.05) !important; }
+    .picker-card:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.10) !important; border-color:#bfdbfe !important; }
+    .picker-card-name { font-weight:700; }
 
     .att-card { margin-top:18px; }
     .att-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
@@ -171,14 +171,16 @@
             radial-gradient(900px circle at 0% 120%, #e9faf2 0%, transparent 42%);
     }
 
-    /* Business-owner cards */
+    /* Business-owner cards — compact, professional clickable chips */
+    .picker-grid { grid-template-columns:repeat(auto-fill, minmax(206px,1fr)) !important; gap:12px !important; }
     .picker-card {
         display:flex !important; flex-direction:column; align-items:flex-start !important; text-align:left !important;
-        gap:10px; padding:18px !important; background:#fff !important;
+        gap:6px; padding:12px 14px !important; background:#fff !important;
     }
-    .pc-top { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
-    .picker-card-name { font-weight:800 !important; font-size:16.5px; color:#0f172a; line-height:1.2; }
-    .picker-card-meta { color:#64748b; font-size:12.5px; font-weight:600; }
+    .pc-top { display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; }
+    .picker-card-name { font-weight:700 !important; font-size:13.5px; color:#0f172a; line-height:1.25; }
+    .picker-card-meta { color:#64748b; font-size:11.5px; font-weight:600; }
+    .picker-card .pill { font-size:9px; padding:2px 7px; letter-spacing:.02em; }
 </style>
 @endpush
 @endsection

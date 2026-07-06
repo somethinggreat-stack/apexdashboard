@@ -55,11 +55,17 @@
         .sidebar-nav { padding:6px 0 !important; }
         .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
 
-        /* Shrink the main content a touch — scoped to inner content only (NOT the fixed
-           sidebar/main box), so scrolling and alignment stay intact. */
+        /* Tighter, crisper density — real px sizes (NO zoom, so text stays sharp, no blur). */
         @media (min-width: 992px) {
-            .main > .topbar,
-            .main > .content { zoom: 0.9; }
+            .main { padding:18px 26px; }
+            .card { padding:16px; margin-bottom:16px; border-radius:10px; }
+            .card-header { margin-bottom:14px; }
+            .card-header h2 { font-size:17px; }
+            .card-header h3 { font-size:16px; }
+            .page-title { font-size:20px; }
+            .data-table th, .data-table td { padding:8px 12px; }
+            .data-table th { font-size:12px; }
+            .stat-value { font-size:24px; }
         }
     </style>
     @stack('head')
