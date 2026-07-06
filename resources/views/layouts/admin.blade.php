@@ -16,6 +16,30 @@
             transition: background .15s, color .15s, border-color .15s;
         }
         .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
+
+        /* Brand logo */
+        .sidebar-brand { text-align:center; padding-top:6px; }
+        .sidebar-brand .brand-logo {
+            max-width:190px; max-height:66px; width:auto; display:block; margin:0 auto 12px;
+            animation: brandIn .9s cubic-bezier(.2,.8,.2,1) both, brandGlow 4s ease-in-out 1s infinite;
+            will-change: transform, filter;
+        }
+        .sidebar-brand .brand-logo:hover { animation-play-state: paused; transform: scale(1.05); transition: transform .25s ease; filter: drop-shadow(0 8px 22px rgba(56,189,248,.6)); }
+        .sidebar-brand .badge-portal {
+            background: linear-gradient(135deg,#2563eb,#38bdf8) !important; color:#fff !important; border:0 !important;
+            letter-spacing:.05em;
+        }
+        @keyframes brandIn {
+            0%   { opacity:0; transform: translateY(-10px) scale(.94); filter: drop-shadow(0 0 0 rgba(56,189,248,0)); }
+            100% { opacity:1; transform: none; }
+        }
+        @keyframes brandGlow {
+            0%,100% { filter: drop-shadow(0 4px 12px rgba(56,189,248,.22)); }
+            50%     { filter: drop-shadow(0 8px 22px rgba(56,189,248,.55)); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar-brand .brand-logo { animation: none; }
+        }
     </style>
     @stack('head')
 </head>
@@ -24,7 +48,7 @@
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <strong>Apex Growth Solutions</strong>
+            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" class="brand-logo" onerror="this.style.display='none'">
             <span class="badge-portal">VA Admin</span>
         </div>
 
