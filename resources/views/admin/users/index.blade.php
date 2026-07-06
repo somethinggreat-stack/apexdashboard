@@ -58,7 +58,10 @@
 
 <div class="card">
     <div class="card-header">
-        <h2 style="margin:0;">Activity Log</h2>
+        <div>
+            <h2 style="margin:0;">Activity Log</h2>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">Showing activity from the last 30 minutes.</p>
+        </div>
     </div>
     <table class="data-table">
         <thead>

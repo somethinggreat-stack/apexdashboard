@@ -81,9 +81,6 @@
             $isSuper   = $me?->isSuper();
             $roleLeads = $me?->isLeads();
         @endphp
-        <div class="sidebar-brand">
-            <span class="badge-portal">{{ $roleLeads ? 'Leads Agent' : 'VA Admin' }}</span>
-        </div>
 
         @unless ($roleLeads)
         @isset($selectedClient)

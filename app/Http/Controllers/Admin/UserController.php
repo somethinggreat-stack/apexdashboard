@@ -20,8 +20,10 @@ class UserController extends Controller
             ->orderBy('full_name')
             ->get();
 
+        // Only the last 30 minutes of activity is shown here.
         $logs = ActivityLog::with('admin')
             ->whereIn('admin_id', $users->pluck('id'))
+            ->where('created_at', '>=', now()->subMinutes(30))
             ->latest()
             ->limit(300)
             ->get();
