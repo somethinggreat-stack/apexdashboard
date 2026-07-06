@@ -40,6 +40,15 @@
         @media (prefers-reduced-motion: reduce) {
             .sidebar-brand .brand-logo { animation: none; }
         }
+
+        /* Scale the whole admin UI down a touch — felt too zoomed at 100% */
+        @media (min-width: 992px) { body.admin-body { zoom: 0.85; } }
+
+        /* Sidebar section labels */
+        .sidebar-nav .nav-label {
+            display:block; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+            color:#8296b0; padding:15px 18px 6px; margin-top:8px; border-top:1px solid rgba(255,255,255,.09);
+        }
     </style>
     @stack('head')
 </head>
@@ -114,18 +123,24 @@
                 @if ($isSuper)
                     <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">Add/Remove Business Owners</a>
 
+                    <span class="nav-label">New Leads</span>
                     <a href="{{ route('admin.prospect-leads.index', ['channel' => 'whatsapp']) }}" class="{{ $isLeads && $curCh === 'whatsapp' ? 'active' : '' }}">WhatsApp Leads</a>
                     <a href="{{ route('admin.prospect-leads.index', ['channel' => 'phone']) }}" class="{{ $isLeads && $curCh === 'phone' ? 'active' : '' }}">Phone Leads</a>
                     <a href="{{ route('admin.prospect-leads.index', ['channel' => 'instagram']) }}" class="{{ $isLeads && $curCh === 'instagram' ? 'active' : '' }}">Instagram Leads</a>
 
+                    <span class="nav-label">In Contact</span>
                     <a href="{{ route('admin.prospects.index', ['channel' => 'whatsapp']) }}" class="{{ $isContact && $curCh === 'whatsapp' ? 'active' : '' }}">WhatsApp Leads in Contact</a>
                     <a href="{{ route('admin.prospects.index', ['channel' => 'phone']) }}" class="{{ $isContact && $curCh === 'phone' ? 'active' : '' }}">Phone Leads in Contact</a>
                     <a href="{{ route('admin.prospects.index', ['channel' => 'instagram']) }}" class="{{ $isContact && $curCh === 'instagram' ? 'active' : '' }}">Instagram Leads in Contact</a>
 
+                    <span class="nav-label">Pipeline</span>
                     <a href="{{ route('admin.prospects.interested') }}" class="{{ request()->routeIs('admin.prospects.interested') ? 'active' : '' }}">Interested Leads</a>
                     <a href="{{ route('admin.prospects.lost') }}" class="{{ request()->routeIs('admin.prospects.lost') ? 'active' : '' }}">Lost Leads</a>
+
+                    <span class="nav-label">Website</span>
                     <a href="{{ route('admin.leads.index') }}" class="{{ request()->routeIs('admin.leads.*') ? 'active' : '' }}">Website Forms Leads</a>
 
+                    <span class="nav-label">Admin</span>
                     <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">Users &amp; Activity</a>
                 @endif
             @endisset
