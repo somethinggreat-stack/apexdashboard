@@ -54,6 +54,13 @@
         .sw-name { font-size:13.5px !important; margin-bottom:9px !important; }
         .sidebar-nav { padding:6px 0 !important; }
         .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
+
+        /* Shrink the main content a touch — scoped to inner content only (NOT the fixed
+           sidebar/main box), so scrolling and alignment stay intact. */
+        @media (min-width: 992px) {
+            .main > .topbar,
+            .main > .content { zoom: 0.9; }
+        }
     </style>
     @stack('head')
 </head>
