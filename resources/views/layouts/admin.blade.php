@@ -18,9 +18,10 @@
         .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
 
         /* Brand logo */
-        .sidebar-brand { text-align:center; padding-top:4px; padding-bottom:12px !important; }
+        .sidebar-brand { text-align:center; padding-top:2px; padding-bottom:8px !important; }
+        .sidebar-brand .badge-portal { font-size:9.5px !important; padding:2px 9px !important; margin-top:2px !important; }
         .sidebar-brand .brand-logo {
-            max-width:150px; max-height:50px; width:auto; display:block; margin:0 auto 8px;
+            max-width:120px; max-height:40px; width:auto; display:block; margin:0 auto 6px;
             animation: brandIn .9s cubic-bezier(.2,.8,.2,1) both, brandGlow 4s ease-in-out 1s infinite;
             will-change: transform, filter;
         }
@@ -48,10 +49,11 @@
         }
 
         /* Compact sidebar so every item fits on one screen (no inner scroll) */
-        .sidebar { padding-top:14px; padding-bottom:8px; }
-        .sidebar-working { margin:10px 14px 4px !important; padding:11px 12px !important; }
-        .sw-label { margin-bottom:3px !important; }
-        .sw-name { font-size:13.5px !important; margin-bottom:9px !important; }
+        .sidebar { padding-top:12px; padding-bottom:8px; }
+        .sidebar-working { margin:6px 12px 4px !important; padding:9px 11px !important; }
+        .sw-label { margin-bottom:3px !important; font-size:9px !important; }
+        .sw-name { font-size:13px !important; margin-bottom:8px !important; }
+        .sidebar-working .sw-switch { padding:9px 12px !important; font-size:12.5px !important; }
         .sidebar-nav { padding:6px 0 !important; }
         .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
 
