@@ -41,9 +41,6 @@
             .sidebar-brand .brand-logo { animation: none; }
         }
 
-        /* Scale the whole admin UI down a touch — felt too zoomed at 100% */
-        @media (min-width: 992px) { body.admin-body { zoom: 0.85; } }
-
         /* Sidebar section labels */
         .sidebar-nav .nav-label {
             display:block; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
