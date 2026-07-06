@@ -8,7 +8,7 @@
         <h2>Business Owner Clients</h2>
         <button class="btn btn-primary" onclick="openModal('createClientModal')">+ Add Business Client</button>
     </div>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Business Name</th>
@@ -43,7 +43,7 @@
                 <tr><td colspan="8" class="empty">No business clients yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 <div id="createClientModal" class="modal">

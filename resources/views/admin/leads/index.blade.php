@@ -28,7 +28,7 @@
         </a>
     </div>
 
-    <table class="data-table" id="leadsTable">
+    <div class="table-scroll"><table class="data-table" id="leadsTable">
         <thead>
             <tr>
                 <th>Name</th>
@@ -91,7 +91,7 @@
                 <tr><td colspan="7" class="empty">No leads captured yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 @push('head')

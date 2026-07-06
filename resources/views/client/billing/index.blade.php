@@ -45,7 +45,7 @@
                 <strong>${{ number_format($outstanding['total'], 2) }}</strong>
                 at ${{ number_format((float) ($client->per_round_fee ?? 0), 2) }} per round.
             </p>
-            <table class="data-table">
+            <div class="table-scroll"><table class="data-table">
                 <thead><tr><th>Client</th><th>Round</th><th>Amount</th></tr></thead>
                 <tbody>
                     @foreach ($outstanding['items'] as $it)
@@ -62,7 +62,7 @@
                         <td style="font-weight:700; color:#ea580c;">${{ number_format($outstanding['total'], 2) }}</td>
                     </tr>
                 </tfoot>
-            </table>
+            </table></div>
         @else
             <p class="muted" style="font-size:13px;">You're all paid up — nothing outstanding. 🎉</p>
         @endif
@@ -74,7 +74,7 @@
     <div class="card-header">
         <h2>Invoices</h2>
     </div>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead><tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>&nbsp;</th></tr></thead>
         <tbody>
             @forelse ($invoices as $inv)
@@ -88,7 +88,7 @@
                 <tr><td colspan="4" class="empty">No invoices yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 {{-- Payment history --}}
@@ -97,7 +97,7 @@
         <h2>Payment History</h2>
     </div>
     @if ($model === 'hourly')
-        <table class="data-table">
+        <div class="table-scroll"><table class="data-table">
             <thead><tr><th>Period</th><th>Hours</th><th>Amount Paid</th><th>Date Paid</th><th>Method</th></tr></thead>
             <tbody>
                 @forelse ($payouts as $p)
@@ -112,9 +112,9 @@
                     <tr><td colspan="5" class="empty">No payments recorded yet.</td></tr>
                 @endforelse
             </tbody>
-        </table>
+        </table></div>
     @else
-        <table class="data-table">
+        <div class="table-scroll"><table class="data-table">
             <thead><tr><th>Client</th><th>Round</th><th>Amount</th><th>Date Paid</th><th>Method</th></tr></thead>
             <tbody>
                 @forelse ($payments as $pay)
@@ -129,7 +129,7 @@
                     <tr><td colspan="5" class="empty">No payments recorded yet.</td></tr>
                 @endforelse
             </tbody>
-        </table>
+        </table></div>
     @endif
 </div>
 @endsection

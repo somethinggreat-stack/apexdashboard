@@ -406,6 +406,11 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
 }
 .sidebar-scrim.open { display: block; }
 
+/* Wide data tables scroll horizontally inside their card (keeps the page from
+   breaking and headers/buttons in place). Wrapper added around every table. */
+.table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll > .data-table { width: 100%; }
+
 /* ============================================
    Tablet (<= 900px)
    ============================================ */
@@ -454,6 +459,12 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
     .card { padding: 16px; overflow-x: visible; }
     .data-table { font-size: 13px; }
     .data-table th, .data-table td { padding: 8px 10px; }
+    /* Give tables a readable floor width and let them scroll rather than crush.
+       Keep row action buttons on one line so you scroll to them cleanly. */
+    .table-scroll > .data-table { min-width: 680px; }
+    .table-scroll .row-actions,
+    .table-scroll .u-actions,
+    .table-scroll .att-actions { flex-wrap: nowrap; }
 
     /* Info grid: single column */
     .info-grid { grid-template-columns: 1fr 1fr; gap: 12px; }

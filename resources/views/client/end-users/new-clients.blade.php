@@ -20,7 +20,7 @@
 </div>
 
 <div class="card">
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -50,7 +50,7 @@
                 <tr><td colspan="6" class="empty">No new clients yet — add one to get started.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 @push('head')

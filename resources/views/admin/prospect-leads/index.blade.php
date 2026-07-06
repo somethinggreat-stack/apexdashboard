@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -120,7 +120,7 @@
                 <tr><td colspan="{{ $cols }}" class="empty">No {{ $channelLabel }} leads yet — add the first one.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 {{-- Keys already on file, for the live add-form duplicate check --}}

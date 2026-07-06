@@ -14,3 +14,11 @@
 .timeline-item::before { background: var(--primary); }
 .timeline-marker { color: var(--primary); }
 .auth-body { background: linear-gradient(135deg, #0c4a6e 0%, #0ea5e9 100%); }
+
+/* Responsive: wide data tables scroll horizontally within their card */
+.table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll > .data-table { width: 100%; }
+@media (max-width: 900px) {
+    .table-scroll > .data-table { min-width: 640px; }
+    .table-scroll .row-actions, .table-scroll .u-actions { flex-wrap: nowrap; }
+}

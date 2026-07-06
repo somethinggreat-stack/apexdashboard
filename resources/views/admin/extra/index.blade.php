@@ -45,7 +45,7 @@
         <button class="btn btn-primary" onclick="openExtra()">+ Add</button>
     </div>
 
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Client</th>
@@ -106,7 +106,7 @@
                 <tr><td colspan="{{ $colspan }}" class="empty">Nothing here yet — click “+ Add”.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 {{-- Add / Edit modal --}}

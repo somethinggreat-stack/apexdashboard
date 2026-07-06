@@ -14,7 +14,7 @@
         <button class="btn btn-primary" onclick="openModal('addUserModal')">+ Add User</button>
     </div>
 
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
         </thead>
@@ -53,7 +53,7 @@
                 <tr><td colspan="4" class="empty">No users yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 <div class="card">
@@ -63,7 +63,7 @@
             <p class="muted" style="margin:4px 0 0; font-size:13px;">Showing activity from the last 30 minutes.</p>
         </div>
     </div>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr><th>When</th><th>User</th><th>Action</th><th>Business Owner</th><th>IP</th></tr>
         </thead>
@@ -80,7 +80,7 @@
                 <tr><td colspan="5" class="empty">No activity yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 {{-- Add user --}}

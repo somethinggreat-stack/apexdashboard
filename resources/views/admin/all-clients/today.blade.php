@@ -14,7 +14,7 @@
 
     @forelse ($endUsers as $weekLabel => $group)
         <h3 style="margin: 18px 0 8px;">{{ $weekLabel }} <span class="muted" style="font-weight:400;">— {{ $group->count() }} client(s)</span></h3>
-        <table class="data-table">
+        <div class="table-scroll"><table class="data-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -36,7 +36,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </table></div>
     @empty
         <div class="empty" style="padding: 40px; text-align:center;">
             <p style="font-size: 16px;">All caught up. No clients are behind on their schedule.</p>

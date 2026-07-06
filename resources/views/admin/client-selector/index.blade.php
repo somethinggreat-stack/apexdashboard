@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <table class="data-table att-table">
+        <div class="table-scroll"><table class="data-table att-table">
             <thead>
                 <tr>
                     <th>Business Owner</th>
@@ -109,7 +109,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </table></div>
     </div>
 @endif
 

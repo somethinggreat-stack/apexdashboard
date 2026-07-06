@@ -18,7 +18,7 @@
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name">
         <button class="btn btn-secondary">Filter</button>
     </form>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -70,7 +70,7 @@
                 <tr><td colspan="8" class="empty">No clients yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 @push('head')

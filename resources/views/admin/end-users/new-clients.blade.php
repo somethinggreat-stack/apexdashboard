@@ -61,7 +61,7 @@
         <h2>New Clients <span class="pending-badge">{{ $endUsers->count() }}</span></h2>
     </div>
 
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -108,7 +108,7 @@
                 <tr><td colspan="5" class="empty">No new intake submissions yet.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 @push('head')

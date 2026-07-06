@@ -31,7 +31,7 @@
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name">
         <button class="btn btn-secondary">Filter</button>
     </form>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -114,7 +114,7 @@
                 <tr><td colspan="7" class="empty">No clients found.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 
 {{-- Quick-log step modal (opened from Incomplete pill) --}}

@@ -32,7 +32,7 @@
         <h2>What Your VA Has Been Doing</h2>
         <a href="{{ route('client.end-users.index') }}" class="btn btn-primary">View All My Clients</a>
     </div>
-    <table class="data-table">
+    <div class="table-scroll"><table class="data-table">
         <thead><tr><th>Date</th><th>Client</th><th>Round</th><th>Week</th><th>Step Type</th></tr></thead>
         <tbody>
             @forelse ($recentSteps as $step)
@@ -47,6 +47,6 @@
                 <tr><td colspan="5" class="empty">No activity yet — your VA will start logging work shortly.</td></tr>
             @endforelse
         </tbody>
-    </table>
+    </table></div>
 </div>
 @endsection
