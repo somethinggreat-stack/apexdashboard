@@ -7,36 +7,83 @@
     <title>Secure Client Intake</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin:0; background:#0f172a; color:#0f172a; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
-        .wrap { max-width:720px; margin:0 auto; padding:28px 16px 60px; }
-        .head { text-align:center; color:#fff; padding:24px 0 20px; }
-        .head h1 { margin:0 0 6px; font-size:24px; }
-        .head p { margin:0; color:#cbd5e1; font-size:14px; }
-        .card { background:#fff; border-radius:14px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.25); }
-        .sec-title { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:#2563eb; font-weight:700; margin:22px 0 10px; border-bottom:1px solid #e2e8f0; padding-bottom:6px; }
-        .sec-title:first-of-type { margin-top:0; }
-        .row { display:flex; gap:12px; flex-wrap:wrap; }
-        .fg { margin-bottom:12px; flex:1; min-width:180px; }
-        label { display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:5px; }
+        body {
+            margin:0; color:#0f172a;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+            background:#0b1220;
+            background-image:
+                radial-gradient(900px circle at 12% 8%, rgba(37,99,235,.22), transparent 42%),
+                radial-gradient(800px circle at 88% 92%, rgba(56,189,248,.16), transparent 44%),
+                linear-gradient(160deg,#0b1220 0%,#0f2140 55%,#0b1220 100%);
+            min-height:100vh;
+        }
+        .wrap { max-width:760px; margin:0 auto; padding:34px 16px 70px; }
+
+        .head { text-align:center; color:#fff; padding:10px 0 22px; }
+        .head-badge { display:inline-block; margin-bottom:14px; padding:7px 16px; border-radius:999px;
+            font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+            color:#bfdbfe; background:rgba(37,99,235,.16); border:1px solid rgba(96,165,250,.35); }
+        .head h1 { margin:0 0 8px; font-size:30px; letter-spacing:-.02em; }
+        .head p { margin:0; color:#cbd5e1; font-size:14.5px; }
+
+        .trust { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:16px 0 4px; }
+        .trust span { display:inline-flex; align-items:center; gap:6px; color:#dbeafe; font-size:11.5px; font-weight:600;
+            background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); padding:6px 11px; border-radius:999px; }
+
+        .card { position:relative; background:#fff; border-radius:20px; padding:30px 30px 28px; box-shadow:0 30px 70px rgba(0,0,0,.38); overflow:hidden; }
+        .card::before { content:''; position:absolute; top:0; left:0; right:0; height:5px; background:linear-gradient(90deg,#2563eb,#38bdf8,#22d3ee); }
+
+        .sec-title { display:flex; align-items:center; gap:10px; font-size:12.5px; text-transform:uppercase; letter-spacing:.09em;
+            color:#1e293b; font-weight:800; margin:28px 0 14px; }
+        .sec-title:first-of-type { margin-top:6px; }
+        .sec-title::before { content:''; width:20px; height:4px; border-radius:4px; background:linear-gradient(90deg,#2563eb,#38bdf8); }
+        .sec-title::after { content:''; flex:1; height:1px; background:#eef2f7; }
+
+        .row { display:flex; gap:14px; flex-wrap:wrap; }
+        .fg { margin-bottom:14px; flex:1; min-width:190px; }
+        label { display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px; }
         label .opt { color:#94a3b8; font-weight:500; }
-        input, select { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; }
-        input:focus, select:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
-        .hint { font-size:12px; color:#64748b; margin-top:4px; }
-        .impact { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:8px 10px; border-radius:8px; font-size:12.5px; margin-top:6px; }
-        .enroll-btn { display:inline-block; margin-top:8px; padding:10px 16px; background:#16a34a; color:#fff; text-decoration:none; border-radius:8px; font-size:14px; font-weight:700; }
-        .enroll-btn:hover { background:#15803d; }
-        .errors { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; }
+
+        input, select {
+            width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:11px; font-size:14.5px;
+            background:#f8fafc; transition:border-color .15s, box-shadow .15s, background .15s; color:#0f172a;
+        }
+        input:focus, select:focus { outline:none; border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.14); }
+
+        input[type=file] { padding:9px 12px; background:#fff; cursor:pointer; }
+        input[type=file]::file-selector-button {
+            margin-right:12px; border:0; border-radius:8px; padding:8px 14px; cursor:pointer;
+            background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:700; font-size:13px;
+        }
+        input[type=file]::file-selector-button:hover { background:#1d4ed8; }
+
+        .hint { font-size:12px; color:#64748b; margin-top:5px; }
+        .impact { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:9px 12px; border-radius:10px; font-size:12.5px; margin-top:7px; }
+        .enroll-btn { display:inline-block; margin-top:9px; padding:11px 18px; border-radius:10px; text-decoration:none;
+            background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff; font-size:14px; font-weight:800; box-shadow:0 8px 18px rgba(22,163,74,.28); }
+        .enroll-btn:hover { background:linear-gradient(135deg,#15803d,#16a34a); }
+
+        .errors { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:12px; padding:12px 14px; margin-bottom:18px; font-size:13px; }
         .errors ul { margin:6px 0 0; padding-left:18px; }
-        .submit { width:100%; margin-top:22px; padding:14px; background:#2563eb; color:#fff; border:0; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
-        .submit:hover { background:#1d4ed8; }
-        .secure { text-align:center; color:#94a3b8; font-size:12px; margin-top:14px; }
+
+        .submit { width:100%; margin-top:26px; padding:15px; border:0; border-radius:12px; cursor:pointer;
+            background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-size:15.5px; font-weight:800;
+            box-shadow:0 12px 26px rgba(37,99,235,.36); transition:transform .1s, box-shadow .15s; }
+        .submit:hover { transform:translateY(-1px); box-shadow:0 16px 32px rgba(37,99,235,.46); }
+        .secure { text-align:center; color:#94a3b8; font-size:12px; margin-top:16px; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="head">
+        <div class="head-badge">🔒 Secure Client Onboarding</div>
         <h1>Secure Client Intake</h1>
         <p>Your information is encrypted and used only to work on your credit file.</p>
+        <div class="trust">
+            <span>🔒 Bank-grade encryption</span>
+            <span>🛡️ Private &amp; secure</span>
+            <span>📄 Documents stored privately</span>
+        </div>
     </div>
 
     <div class="card">
