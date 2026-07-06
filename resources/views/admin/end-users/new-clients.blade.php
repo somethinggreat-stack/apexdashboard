@@ -91,6 +91,11 @@
                                 @csrf
                                 <button class="btn btn-sm btn-approve">Approve</button>
                             </form>
+                            <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" class="err-form">
+                                @csrf
+                                <input type="hidden" name="note" value="">
+                                <button type="button" class="btn btn-sm btn-toerror" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
+                            </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
                                   onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their uploaded documents? This cannot be undone.')">
                                 @csrf @method('DELETE')
@@ -114,6 +119,8 @@
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
     .btn-approve { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
     .btn-approve:hover { background:#a7f3d0; }
+    .btn-toerror { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .btn-toerror:hover { background:#fde68a; }
     .review-note { margin-top:4px; font-size:12px; color:#b91c1c; font-weight:600; max-width:320px; }
     .api-field { margin-top:12px; }
     .api-field label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px; }
@@ -141,6 +148,16 @@ function wireCopy(btnId, inputId) {
 }
 wireCopy('copyIntake', 'intakeLink');
 wireCopy('copyKey', 'apiKey');
+
+window.moveToErrors = function (btn, name) {
+    var note = prompt('What is the error for ' + name + '?\n(This is shown in the Errors list.)', '');
+    if (note === null) return;            // cancelled
+    note = note.trim();
+    if (note === '') { alert('Please enter the error.'); return; }
+    var form = btn.closest('form');
+    form.querySelector('input[name="note"]').value = note;
+    form.submit();
+};
 </script>
 @endpush
 @endsection

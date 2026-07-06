@@ -20,6 +20,8 @@
             background: linear-gradient(180deg, #0b1f3a 0%, #103063 55%, #0b1f3a 100%) !important;
             border-right: 1px solid rgba(255,255,255,.06) !important;
         }
+        .sidebar-brand { text-align:center; }
+        .sidebar-brand .brand-logo { max-width:150px; max-height:50px; width:auto; display:block; margin:0 auto 8px; }
         .sidebar-brand strong { color:#fff !important; letter-spacing:.2px; }
         .sidebar-brand .badge-portal {
             background: linear-gradient(135deg, var(--agp-accent), var(--agp-accent2)) !important;
@@ -98,7 +100,7 @@
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <strong>Apex Growth Solutions</strong>
+            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" class="brand-logo" onerror="this.style.display='none'">
             <span class="badge-portal">Client Portal</span>
         </div>
         @php
