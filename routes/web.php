@@ -79,6 +79,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
+
+            // Extra projects — funnels, customer support, ads
+            Route::get('extra/{type}', [Admin\ExtraProjectController::class, 'index'])
+                ->whereIn('type', ['funnel', 'support', 'ads'])->name('extra.index');
+            Route::post('extra/{type}', [Admin\ExtraProjectController::class, 'store'])
+                ->whereIn('type', ['funnel', 'support', 'ads'])->name('extra.store');
+            Route::put('extra/{id}', [Admin\ExtraProjectController::class, 'update'])
+                ->whereNumber('id')->name('extra.update');
+            Route::delete('extra/{id}', [Admin\ExtraProjectController::class, 'destroy'])
+                ->whereNumber('id')->name('extra.destroy');
         });
 
         // ---- Sales leads pipeline: super admin OR a leads agent ----

@@ -35,6 +35,10 @@ class LogActivity
         'admin.prospects.mark-interested' => 'Marked a lead interested',
         'admin.prospects.mark-lost'    => 'Marked a lead lost',
         'admin.prospects.reactivate'   => 'Reactivated a lead',
+        // Extra projects (funnels / customer support / ads)
+        'admin.extra.store'            => 'Added an extra project',
+        'admin.extra.update'           => 'Updated an extra project',
+        'admin.extra.destroy'          => 'Deleted an extra project',
     ];
 
     public function handle(Request $request, Closure $next)

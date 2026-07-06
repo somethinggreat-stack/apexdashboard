@@ -17,9 +17,9 @@
         }
         .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
 
-        /* Brand logo */
-        .sidebar-brand { text-align:center; padding-top:2px; padding-bottom:8px !important; }
-        .sidebar-brand .badge-portal { font-size:9.5px !important; padding:2px 9px !important; margin-top:2px !important; }
+        /* Brand — logo removed on admin; keep just the portal badge, pulled up */
+        .sidebar-brand { text-align:center; padding-top:0; padding-bottom:8px !important; border-bottom:0 !important; }
+        .sidebar-brand .badge-portal { font-size:9.5px !important; padding:2px 9px !important; margin-top:0 !important; }
         .sidebar-brand .brand-logo {
             max-width:120px; max-height:40px; width:auto; display:block; margin:0 auto 6px;
             animation: brandIn .9s cubic-bezier(.2,.8,.2,1) both, brandGlow 4s ease-in-out 1s infinite;
@@ -82,7 +82,6 @@
             $roleLeads = $me?->isLeads();
         @endphp
         <div class="sidebar-brand">
-            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" class="brand-logo" onerror="this.style.display='none'">
             <span class="badge-portal">{{ $roleLeads ? 'Leads Agent' : 'VA Admin' }}</span>
         </div>
 
@@ -144,6 +143,7 @@
                     $isLeads   = request()->routeIs('admin.prospect-leads.index');
                     $isContact = request()->routeIs('admin.prospects.index');
                     $curCh     = request('channel', 'whatsapp');
+                    $curType   = request()->route('type');
                 @endphp
                 @if ($roleLeads)
                     {{-- Leads agent: sales pipeline only, nothing else --}}
@@ -181,6 +181,11 @@
 
                         <span class="nav-label">Website</span>
                         <a href="{{ route('admin.leads.index') }}" class="{{ request()->routeIs('admin.leads.*') ? 'active' : '' }}">Website Forms Leads</a>
+
+                        <span class="nav-label">Extra Projects</span>
+                        <a href="{{ route('admin.extra.index', 'funnel') }}" class="{{ request()->routeIs('admin.extra.index') && $curType === 'funnel' ? 'active' : '' }}">Funnels</a>
+                        <a href="{{ route('admin.extra.index', 'support') }}" class="{{ request()->routeIs('admin.extra.index') && $curType === 'support' ? 'active' : '' }}">Customer Support</a>
+                        <a href="{{ route('admin.extra.index', 'ads') }}" class="{{ request()->routeIs('admin.extra.index') && $curType === 'ads' ? 'active' : '' }}">Ads</a>
 
                         <span class="nav-label">Admin</span>
                         <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">Users &amp; Activity</a>
