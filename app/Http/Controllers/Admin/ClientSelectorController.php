@@ -12,7 +12,7 @@ class ClientSelectorController extends Controller
 {
     public function index()
     {
-        $adminId = Auth::guard('admin')->id();
+        $adminId = Auth::guard('admin')->user()->dataOwnerId();
 
         $clients = Client::forAdmin($adminId)
             ->withCount('endUsers')
@@ -54,7 +54,7 @@ class ClientSelectorController extends Controller
 
     public function select(Request $request, string $id)
     {
-        $client = Client::forAdmin(Auth::guard('admin')->id())->findOrFail($id);
+        $client = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())->findOrFail($id);
         $request->session()->put('selected_client_id', $client->id);
 
         $redirect = $request->input('redirect_to');

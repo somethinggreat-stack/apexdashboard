@@ -12,7 +12,7 @@ class EnsureClientSelected
 {
     public function handle(Request $request, Closure $next)
     {
-        $adminId = Auth::guard('admin')->id();
+        $adminId = Auth::guard('admin')->user()?->dataOwnerId();
         $selectedId = $request->session()->get('selected_client_id');
 
         $client = $selectedId

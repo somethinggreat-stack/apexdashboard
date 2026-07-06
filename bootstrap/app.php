@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'client.selected' => \App\Http\Middleware\EnsureClientSelected::class,
+            'admin.super'     => \App\Http\Middleware\RoleSuper::class,
         ]);
 
         // Server-to-server intake API (key-authenticated) — not a browser form.

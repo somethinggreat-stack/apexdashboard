@@ -10,7 +10,9 @@
 <div class="card">
     <div class="card-header">
         <h2>Select a Business Owner to Work On</h2>
-        <a href="{{ route('admin.clients.index') }}" class="btn btn-secondary">Manage Business Owners</a>
+        @if (Auth::guard('admin')->user()?->isSuper())
+            <a href="{{ route('admin.clients.index') }}" class="btn btn-secondary">Manage Business Owners</a>
+        @endif
     </div>
 
     @if ($clients->isEmpty())

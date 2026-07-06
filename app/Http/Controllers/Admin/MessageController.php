@@ -111,7 +111,7 @@ class MessageController extends Controller
 
     private function resolveSelectedClient(): Client
     {
-        $adminId = Auth::guard('admin')->id();
+        $adminId = Auth::guard('admin')->user()->dataOwnerId();
         $clientId = session('selected_client_id');
 
         abort_unless($clientId, 404);

@@ -35,6 +35,14 @@ class AuthController extends Controller
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::clear($key);
             $request->session()->regenerate();
+            \App\Models\ActivityLog::create([
+                'admin_id'    => Auth::guard('admin')->id(),
+                'action'      => 'login',
+                'description' => 'Logged in',
+                'method'      => 'POST',
+                'path'        => '/admin/login',
+                'ip'          => $request->ip(),
+            ]);
             return redirect()->intended(route('admin.client-selector.index'));
         }
 
@@ -45,6 +53,16 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        if ($id = Auth::guard('admin')->id()) {
+            \App\Models\ActivityLog::create([
+                'admin_id'    => $id,
+                'action'      => 'logout',
+                'description' => 'Logged out',
+                'method'      => 'POST',
+                'path'        => '/admin/logout',
+                'ip'          => $request->ip(),
+            ]);
+        }
         Auth::guard('admin')->logout();
         $request->session()->forget('selected_client_id');
         $request->session()->invalidate();

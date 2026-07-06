@@ -65,30 +65,38 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login', [Admin\AuthController::class, 'login']);
     });
 
-    Route::middleware('auth:admin')->group(function () {
+    Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
 
-        // Leads (from public website forms) — accessible without a business owner being selected
-        Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
-        Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
+        // ---- Super-admin only: leads, prospects, and user management ----
+        Route::middleware('admin.super')->group(function () {
+            // Leads (from public website forms)
+            Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
+            Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
 
-        // Prospects — manual sales pipeline of prospective business owners
-        Route::get('prospects/lost', [Admin\ProspectController::class, 'lost'])->name('prospects.lost');
-        Route::get('prospects/interested', [Admin\ProspectController::class, 'interested'])->name('prospects.interested');
-        Route::resource('prospects', Admin\ProspectController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
-        Route::post('prospects/{prospect}/lost', [Admin\ProspectController::class, 'markLost'])->name('prospects.mark-lost');
-        Route::post('prospects/{prospect}/interested', [Admin\ProspectController::class, 'markInterested'])->name('prospects.mark-interested');
-        Route::post('prospects/{prospect}/reactivate', [Admin\ProspectController::class, 'reactivate'])->name('prospects.reactivate');
+            // Prospects — manual sales pipeline of prospective business owners
+            Route::get('prospects/lost', [Admin\ProspectController::class, 'lost'])->name('prospects.lost');
+            Route::get('prospects/interested', [Admin\ProspectController::class, 'interested'])->name('prospects.interested');
+            Route::resource('prospects', Admin\ProspectController::class)
+                ->only(['index', 'store', 'update', 'destroy']);
+            Route::post('prospects/{prospect}/lost', [Admin\ProspectController::class, 'markLost'])->name('prospects.mark-lost');
+            Route::post('prospects/{prospect}/interested', [Admin\ProspectController::class, 'markInterested'])->name('prospects.mark-interested');
+            Route::post('prospects/{prospect}/reactivate', [Admin\ProspectController::class, 'reactivate'])->name('prospects.reactivate');
 
-        // Prospect leads — simple list of leads (name, verified WhatsApp, socials)
-        Route::resource('prospect-leads', Admin\ProspectLeadController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
-        Route::post('prospect-leads/{prospect_lead}/move', [Admin\ProspectLeadController::class, 'move'])
-            ->name('prospect-leads.move');
-        Route::post('prospect-leads/{prospect_lead}/toggle-hot', [Admin\ProspectLeadController::class, 'toggleHot'])
-            ->name('prospect-leads.toggle-hot');
+            // Prospect leads — simple list of leads (name, verified WhatsApp, socials)
+            Route::resource('prospect-leads', Admin\ProspectLeadController::class)
+                ->only(['index', 'store', 'update', 'destroy']);
+            Route::post('prospect-leads/{prospect_lead}/move', [Admin\ProspectLeadController::class, 'move'])
+                ->name('prospect-leads.move');
+            Route::post('prospect-leads/{prospect_lead}/toggle-hot', [Admin\ProspectLeadController::class, 'toggleHot'])
+                ->name('prospect-leads.toggle-hot');
 
+            // User management + activity log
+            Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
+            Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
+            Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
+            Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
+        });
 
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
@@ -98,8 +106,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])
             ->name('client-selector.clear');
 
-        // Business-owner CRUD — accessible without a selection so VAs can manage BOs
-        Route::resource('clients', Admin\ClientController::class)->except(['show']);
+        // Business-owner CRUD — super admin only (add/remove business owners)
+        Route::resource('clients', Admin\ClientController::class)->except(['show'])->middleware('admin.super');
 
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
@@ -107,26 +115,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('dashboard', fn () => redirect()->route('admin.end-users.index'))->name('dashboard');
             Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
-            // Payments — model & shape switch based on the BO's compensation_model
-            Route::get('payments', [Admin\PaymentController::class, 'index'])->name('payments.index');
-            Route::put('payments/config', [Admin\PaymentController::class, 'updateConfig'])->name('payments.config');
-            // Per-round payments
-            Route::post('payments', [Admin\PaymentController::class, 'storePayment'])->name('payments.store');
-            Route::post('payments/bulk', [Admin\PaymentController::class, 'bulkStorePayment'])->name('payments.bulk');
-            Route::put('payments/client-rate/{id}', [Admin\PaymentController::class, 'updateEndUserFee'])->name('payments.client-rate');
-            Route::put('payments/round-rate/{id}', [Admin\PaymentController::class, 'updateRoundFee'])->name('payments.round-rate');
-            Route::post('payments/invoice', [Admin\PaymentController::class, 'generateInvoice'])->name('payments.invoice.generate');
-            Route::get('payments/invoice/{id}', [Admin\PaymentController::class, 'showInvoice'])->name('payments.invoice.show');
-            Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
-            Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
-            // Hourly — manual hours per period
-            Route::post('payments/period-hours', [Admin\PaymentController::class, 'storePeriodHours'])->name('payments.period.hours');
-            // Hourly time entries (legacy per-day logging)
-            Route::post('payments/time', [Admin\PaymentController::class, 'storeTime'])->name('payments.time.store');
-            Route::delete('payments/time/{id}', [Admin\PaymentController::class, 'destroyTime'])->name('payments.time.destroy');
-            // Hourly payouts
-            Route::post('payments/payout', [Admin\PaymentController::class, 'storePayout'])->name('payments.payout.store');
-            Route::delete('payments/payout/{id}', [Admin\PaymentController::class, 'destroyPayout'])->name('payments.payout.destroy');
+            // Payments — super admin only
+            Route::middleware('admin.super')->group(function () {
+                Route::get('payments', [Admin\PaymentController::class, 'index'])->name('payments.index');
+                Route::put('payments/config', [Admin\PaymentController::class, 'updateConfig'])->name('payments.config');
+                // Per-round payments
+                Route::post('payments', [Admin\PaymentController::class, 'storePayment'])->name('payments.store');
+                Route::post('payments/bulk', [Admin\PaymentController::class, 'bulkStorePayment'])->name('payments.bulk');
+                Route::put('payments/client-rate/{id}', [Admin\PaymentController::class, 'updateEndUserFee'])->name('payments.client-rate');
+                Route::put('payments/round-rate/{id}', [Admin\PaymentController::class, 'updateRoundFee'])->name('payments.round-rate');
+                Route::post('payments/invoice', [Admin\PaymentController::class, 'generateInvoice'])->name('payments.invoice.generate');
+                Route::get('payments/invoice/{id}', [Admin\PaymentController::class, 'showInvoice'])->name('payments.invoice.show');
+                Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
+                Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
+                // Hourly — manual hours per period
+                Route::post('payments/period-hours', [Admin\PaymentController::class, 'storePeriodHours'])->name('payments.period.hours');
+                // Hourly time entries (legacy per-day logging)
+                Route::post('payments/time', [Admin\PaymentController::class, 'storeTime'])->name('payments.time.store');
+                Route::delete('payments/time/{id}', [Admin\PaymentController::class, 'destroyTime'])->name('payments.time.destroy');
+                // Hourly payouts
+                Route::post('payments/payout', [Admin\PaymentController::class, 'storePayout'])->name('payments.payout.store');
+                Route::delete('payments/payout/{id}', [Admin\PaymentController::class, 'destroyPayout'])->name('payments.payout.destroy');
+            });
 
             Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
             Route::post('messages', [Admin\MessageController::class, 'store'])->name('messages.store');
