@@ -19,4 +19,10 @@ return [
         ['email' => env('VA3_EMAIL'), 'password' => env('VA3_PASSWORD'), 'name' => env('VA3_NAME', 'Abid Hussain')],
         ['email' => env('VA4_EMAIL'), 'password' => env('VA4_PASSWORD'), 'name' => env('VA4_NAME', 'Umair Sajid')],
     ],
+
+    // Leads agents — access ONLY the sales leads pipeline (New Leads / In
+    // Contact / Pipeline). No business owners, clients, payments, or website leads.
+    'leads' => [
+        ['email' => env('LEADS1_EMAIL'), 'password' => env('LEADS1_PASSWORD'), 'name' => env('LEADS1_NAME', 'Sanwal')],
+    ],
 ];

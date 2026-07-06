@@ -26,6 +26,8 @@
                     <td>
                         @if ($u->isSuper())
                             <span class="role-badge role-super">Super Admin</span>
+                        @elseif ($u->isLeads())
+                            <span class="role-badge role-leads">Leads Agent</span>
                         @else
                             <span class="role-badge role-va">VA</span>
                         @endif
@@ -89,7 +91,7 @@
             @csrf
             <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" value="{{ old('full_name') }}" required></div>
             <div class="form-group"><label>Email *</label><input type="email" name="email" value="{{ old('email') }}" required></div>
-            <div class="form-group"><label>Password *</label><input type="text" name="password" minlength="6" required></div>
+            <div class="form-group"><label>Password *</label><input type="text" name="password" minlength="10" required></div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add User</button>
@@ -103,6 +105,7 @@
     .role-badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; }
     .role-super { background:#ede9fe; color:#5b21b6; }
     .role-va { background:#e0f2fe; color:#075985; }
+    .role-leads { background:#dcfce7; color:#166534; }
     .u-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .u-actions form { display:inline; margin:0; }
     .u-actions .btn { white-space:nowrap; }
@@ -112,9 +115,9 @@
 @push('scripts')
 <script>
 window.resetPw = function (btn, name) {
-    var pw = prompt('Set a new password for ' + name + ' (min 6 characters):', '');
+    var pw = prompt('Set a new password for ' + name + ' (min 10 characters):', '');
     if (pw === null) return;
-    if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+    if (pw.length < 10) { alert('Password must be at least 10 characters.'); return; }
     var form = btn.closest('form');
     form.querySelector('input[name="password"]').value = pw;
     form.submit();

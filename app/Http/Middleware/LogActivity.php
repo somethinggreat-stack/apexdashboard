@@ -27,6 +27,14 @@ class LogActivity
         'admin.users.store'            => 'Added a user',
         'admin.users.destroy'          => 'Deleted a user',
         'admin.users.password'         => 'Reset a user password',
+        // Leads pipeline
+        'admin.prospect-leads.store'   => 'Added a lead',
+        'admin.prospect-leads.move'    => 'Moved a lead to In Contact',
+        'admin.prospect-leads.destroy' => 'Deleted a lead',
+        'admin.prospects.store'        => 'Added a prospect',
+        'admin.prospects.mark-interested' => 'Marked a lead interested',
+        'admin.prospects.mark-lost'    => 'Marked a lead lost',
+        'admin.prospects.reactivate'   => 'Reactivated a lead',
     ];
 
     public function handle(Request $request, Closure $next)

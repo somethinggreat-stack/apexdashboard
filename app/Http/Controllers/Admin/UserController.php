@@ -12,11 +12,19 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = Admin::orderByRaw("CASE WHEN role = 'super' THEN 0 ELSE 1 END")
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+
+        // Only this org's accounts (the super admin + the users they created).
+        $users = $this->orgScope($ownerId)
+            ->orderByRaw("CASE WHEN role = 'super' THEN 0 ELSE 1 END")
             ->orderBy('full_name')
             ->get();
 
-        $logs = ActivityLog::with('admin')->latest()->limit(300)->get();
+        $logs = ActivityLog::with('admin')
+            ->whereIn('admin_id', $users->pluck('id'))
+            ->latest()
+            ->limit(300)
+            ->get();
 
         return view('admin.users.index', compact('users', 'logs'));
     }
@@ -26,25 +34,27 @@ class UserController extends Controller
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
             'email'     => 'required|email|max:255|unique:admins,email',
-            'password'  => 'required|string|min:6',
+            'password'  => 'required|string|min:10',
         ]);
 
-        Admin::create([
-            'full_name'       => $data['full_name'],
-            'email'           => $data['email'],
-            'password'        => $data['password'],
-            'role'            => 'va',
-            'parent_admin_id' => Auth::guard('admin')->user()->dataOwnerId(),
-        ]);
+        // role + parent_admin_id are NOT mass-assignable — set explicitly.
+        $admin = new Admin();
+        $admin->full_name       = $data['full_name'];
+        $admin->email           = $data['email'];
+        $admin->password        = $data['password'];
+        $admin->role            = 'va';
+        $admin->parent_admin_id = Auth::guard('admin')->user()->dataOwnerId();
+        $admin->save();
 
         return back()->with('status', "{$data['full_name']} added.");
     }
 
     public function resetPassword(Request $request, string $id)
     {
-        $user = Admin::findOrFail($id);
-        $data = $request->validate(['password' => 'required|string|min:6']);
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $user    = $this->orgScope($ownerId)->findOrFail($id);
 
+        $data = $request->validate(['password' => 'required|string|min:10']);
         $user->update(['password' => $data['password']]);
 
         return back()->with('status', "Password updated for {$user->full_name}.");
@@ -52,7 +62,8 @@ class UserController extends Controller
 
     public function destroy(string $id)
     {
-        $user = Admin::findOrFail($id);
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $user    = $this->orgScope($ownerId)->findOrFail($id);
 
         if ($user->isSuper() || $user->id === Auth::guard('admin')->id()) {
             return back()->withErrors(['user' => 'You cannot delete this account.']);
@@ -62,5 +73,11 @@ class UserController extends Controller
         $user->delete();
 
         return back()->with('status', "{$name} removed.");
+    }
+
+    /** Accounts belonging to this admin org: the owner plus the users they created. */
+    private function orgScope(int $ownerId)
+    {
+        return Admin::where(fn ($q) => $q->where('id', $ownerId)->orWhere('parent_admin_id', $ownerId));
     }
 }

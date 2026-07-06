@@ -14,7 +14,7 @@ class ProspectLeadController extends Controller
     public function index(Request $request)
     {
         $channel = $this->channel($request);
-        $adminId = Auth::guard('admin')->id();
+        $adminId = Auth::guard('admin')->user()->dataOwnerId();
 
         $leads = ProspectLead::forAdmin($adminId)
             ->where('channel', $channel)
@@ -57,7 +57,7 @@ class ProspectLeadController extends Controller
     {
         $channel = $this->channel($request);
         $data = $this->validated($request, $channel);
-        $data['admin_id'] = Auth::guard('admin')->id();
+        $data['admin_id'] = Auth::guard('admin')->user()->dataOwnerId();
         $data['channel']  = $channel;
 
         if ($msg = $this->duplicateMessage($channel, $data)) {
@@ -116,7 +116,7 @@ class ProspectLeadController extends Controller
         $notes = trim(($data['notes'] ?? '') . ($extra ? "\n\n" . implode("\n", $extra) : ''));
 
         Prospect::create([
-            'admin_id'          => Auth::guard('admin')->id(),
+            'admin_id'          => Auth::guard('admin')->user()->dataOwnerId(),
             'channel'           => $channel,
             'name'              => $lead->name,
             'whatsapp'          => $channel === 'instagram' ? null : $lead->whatsapp,
@@ -170,7 +170,7 @@ class ProspectLeadController extends Controller
     /** Returns a duplicate error message, or null if this lead is unique. */
     private function duplicateMessage(string $channel, array $data, ?int $exceptId = null): ?string
     {
-        $adminId = Auth::guard('admin')->id();
+        $adminId = Auth::guard('admin')->user()->dataOwnerId();
 
         if ($channel === 'instagram') {
             $key = $this->igKey($data['instagram'] ?? null);
@@ -205,6 +205,6 @@ class ProspectLeadController extends Controller
 
     private function scoped()
     {
-        return ProspectLead::forAdmin(Auth::guard('admin')->id());
+        return ProspectLead::forAdmin(Auth::guard('admin')->user()->dataOwnerId());
     }
 }

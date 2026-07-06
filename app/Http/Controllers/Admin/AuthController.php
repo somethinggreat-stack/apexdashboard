@@ -43,6 +43,13 @@ class AuthController extends Controller
                 'path'        => '/admin/login',
                 'ip'          => $request->ip(),
             ]);
+            // Leads agents can't reach the business-owner workflow — land them
+            // on their leads pipeline instead (and don't honour a stored
+            // "intended" URL they'd only get a 403 on).
+            if (Auth::guard('admin')->user()->isLeads()) {
+                return redirect()->route('admin.prospect-leads.index', ['channel' => 'whatsapp']);
+            }
+
             return redirect()->intended(route('admin.client-selector.index'));
         }
 

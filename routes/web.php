@@ -68,12 +68,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
 
-        // ---- Super-admin only: leads, prospects, and user management ----
+        // ---- Super-admin only: website leads + user management ----
         Route::middleware('admin.super')->group(function () {
             // Leads (from public website forms)
             Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
             Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
 
+            // User management + activity log
+            Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
+            Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
+            Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
+            Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
+        });
+
+        // ---- Sales leads pipeline: super admin OR a leads agent ----
+        Route::middleware('admin.leads')->group(function () {
             // Prospects — manual sales pipeline of prospective business owners
             Route::get('prospects/lost', [Admin\ProspectController::class, 'lost'])->name('prospects.lost');
             Route::get('prospects/interested', [Admin\ProspectController::class, 'interested'])->name('prospects.interested');
@@ -90,13 +99,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->name('prospect-leads.move');
             Route::post('prospect-leads/{prospect_lead}/toggle-hot', [Admin\ProspectLeadController::class, 'toggleHot'])
                 ->name('prospect-leads.toggle-hot');
-
-            // User management + activity log
-            Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
-            Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
-            Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
-            Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
         });
+
+        // ---- Business-owner / client workflow: super admin OR a VA (leads agents blocked) ----
+        Route::middleware('admin.clients')->group(function () {
 
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
@@ -176,6 +182,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture', 'collage'])
                 ->name('files.identity');
         });
+        }); // end admin.clients group
     });
 });
 

@@ -15,7 +15,7 @@ class ProspectController extends Controller
         $channel = $this->channel($request);
 
         // Active pipeline for this channel — everyone except Lost / Interested.
-        $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+        $prospects = Prospect::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
             ->where('channel', $channel)
             ->whereNotIn('status', ['lost', 'interested'])
             ->orderByDesc('updated_at')
@@ -27,7 +27,7 @@ class ProspectController extends Controller
     /** Lost leads across all channels. */
     public function lost()
     {
-        $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+        $prospects = Prospect::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
             ->where('status', 'lost')
             ->orderByDesc('updated_at')
             ->get();
@@ -44,7 +44,7 @@ class ProspectController extends Controller
     /** Interested leads across all channels. */
     public function interested()
     {
-        $prospects = Prospect::forAdmin(Auth::guard('admin')->id())
+        $prospects = Prospect::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
             ->where('status', 'interested')
             ->orderByDesc('updated_at')
             ->get();
@@ -92,7 +92,7 @@ class ProspectController extends Controller
     {
         $channel = $this->channel($request);
         $data = $this->validated($request);
-        $data['admin_id'] = Auth::guard('admin')->id();
+        $data['admin_id'] = Auth::guard('admin')->user()->dataOwnerId();
         $data['channel']  = $channel;
 
         Prospect::create($data);
@@ -142,6 +142,6 @@ class ProspectController extends Controller
 
     private function scoped()
     {
-        return Prospect::forAdmin(Auth::guard('admin')->id());
+        return Prospect::forAdmin(Auth::guard('admin')->user()->dataOwnerId());
     }
 }

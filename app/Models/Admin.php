@@ -10,19 +10,32 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = ['email', 'password', 'full_name', 'role', 'parent_admin_id'];
+    // NOTE: role + parent_admin_id are intentionally NOT mass-assignable — they
+    // are set only via explicit assignment (seeder / UserController) so a stray
+    // create()/update() can never escalate an account. Security invariant.
+    protected $fillable = ['email', 'password', 'full_name'];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['password' => 'hashed'];
 
-    /** Super admins see everything; VAs only work on the business owners. */
+    /**
+     * Roles: 'super' (sees everything), 'va' (business-owner workflow only),
+     * 'leads' (sales leads pipeline only). Fail CLOSED — an unknown/missing
+     * role is treated as least-privileged, never as super.
+     */
     public function isSuper(): bool
     {
-        return ($this->role ?? 'super') === 'super';
+        return ($this->role ?? 'va') === 'super';
     }
 
     public function isVa(): bool
     {
-        return !$this->isSuper();
+        return ($this->role ?? 'va') === 'va';
+    }
+
+    /** Leads agent — only the prospects / prospect-leads pipeline. */
+    public function isLeads(): bool
+    {
+        return ($this->role ?? '') === 'leads';
     }
 
     /**
