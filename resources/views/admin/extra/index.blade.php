@@ -1,22 +1,46 @@
 @extends('layouts.admin')
 
 @php
-    $meta = [
-        'funnel'  => ['title' => 'Funnels',          'amountLabel' => 'Amount (one-time)', 'showLink' => true,  'showWa' => false],
-        'support' => ['title' => 'Customer Support',  'amountLabel' => 'Price / Week',      'showLink' => false, 'showWa' => true],
-        'ads'     => ['title' => 'Ads',               'amountLabel' => 'Weekly Price',      'showLink' => false, 'showWa' => false],
+    // Per-type config. model: 'oneoff' = agreed amount + upfront/full-paid (funnels);
+    // 'weekly' = a single recurring price, no upfront (support / ads).
+    $config = [
+        'funnel'  => [
+            'title' => 'Funnels', 'model' => 'oneoff',
+            'amountLabel' => 'Amount (one-time)', 'showLink' => true, 'showWa' => false,
+            'statuses' => ['in_progress' => 'In Progress', 'completed' => 'Completed'],
+        ],
+        'support' => [
+            'title' => 'Customer Support', 'model' => 'weekly',
+            'amountLabel' => 'Price / Week', 'showLink' => false, 'showWa' => true,
+            'statuses' => ['in_progress' => 'In Progress', 'paused' => 'Paused (ended)'],
+        ],
+        'ads'     => [
+            'title' => 'Ads', 'model' => 'weekly',
+            'amountLabel' => 'Weekly Price', 'showLink' => false, 'showWa' => false,
+            'statuses' => ['in_progress' => 'In Progress', 'paused' => 'Paused (ended)'],
+        ],
     ][$type];
-    $colspan = 4 + ($meta['showLink'] ? 1 : 0) + ($meta['showWa'] ? 1 : 0) + 1; // client + amount + paid + status + notes + actions (+link/wa)
+
+    $showPaid   = $config['model'] === 'oneoff';   // Paid column only for one-off (funnels)
+    $statusLabels = ['in_progress' => 'In Progress', 'waiting' => 'Waiting', 'completed' => 'Completed', 'paused' => 'Paused'];
+    // Fixed columns: Client, Amount, Status, Notes, Actions (5) + optional Link/WhatsApp/Paid
+    $colspan = 5 + ($config['showLink'] ? 1 : 0) + ($config['showWa'] ? 1 : 0) + ($showPaid ? 1 : 0);
 @endphp
 
-@section('title', $meta['title'])
+@section('title', $config['title'])
 
 @section('content')
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 style="margin:0;">{{ $meta['title'] }} <span class="ep-count">{{ $projects->count() }}</span></h2>
-            <p class="muted" style="margin:4px 0 0; font-size:13px;">Track clients, amounts (incl. upfront paid) and status. Edit any field anytime.</p>
+            <h2 style="margin:0;">{{ $config['title'] }} <span class="ep-count">{{ $projects->count() }}</span></h2>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">
+                @if ($config['model'] === 'weekly')
+                    A weekly price per client. In Progress = ongoing, Paused = contract ended.
+                @else
+                    While In Progress, record the agreed amount and any upfront paid. Once Completed, record the full amount paid.
+                @endif
+            </p>
         </div>
         <button class="btn btn-primary" onclick="openExtra()">+ Add</button>
     </div>
@@ -25,10 +49,10 @@
         <thead>
             <tr>
                 <th>Client</th>
-                @if ($meta['showLink'])<th>Funnel Link</th>@endif
-                @if ($meta['showWa'])<th>WhatsApp</th>@endif
-                <th>{{ $meta['amountLabel'] }}</th>
-                <th>Paid</th>
+                @if ($config['showLink'])<th>Funnel Link</th>@endif
+                @if ($config['showWa'])<th>WhatsApp</th>@endif
+                <th>{{ $config['amountLabel'] }}</th>
+                @if ($showPaid)<th>Paid</th>@endif
                 <th>Status</th>
                 <th>Notes</th>
                 <th></th>
@@ -38,14 +62,14 @@
             @forelse ($projects as $p)
                 <tr>
                     <td><strong>{{ $p->client_name }}</strong></td>
-                    @if ($meta['showLink'])
+                    @if ($config['showLink'])
                         <td>
                             @if ($p->link)
                                 <a href="{{ \Illuminate\Support\Str::startsWith($p->link, ['http://','https://']) ? $p->link : 'https://'.$p->link }}" target="_blank" rel="noopener">Open ↗</a>
                             @else — @endif
                         </td>
                     @endif
-                    @if ($meta['showWa'])
+                    @if ($config['showWa'])
                         <td>
                             @if ($p->whatsapp)
                                 <a href="https://wa.me/{{ preg_replace('/\D/', '', $p->whatsapp) }}" target="_blank" rel="noopener">{{ $p->whatsapp }}</a>
@@ -53,8 +77,10 @@
                         </td>
                     @endif
                     <td>{{ $p->amount !== null ? '$'.number_format($p->amount, 2) : '—' }}</td>
-                    <td>{{ $p->paid !== null ? '$'.number_format($p->paid, 2) : '—' }}</td>
-                    <td><span class="ep-pill ep-{{ $p->status }}">{{ $statuses[$p->status] ?? $p->status }}</span></td>
+                    @if ($showPaid)
+                        <td>{{ $p->paid !== null ? '$'.number_format($p->paid, 2) : '—' }}</td>
+                    @endif
+                    <td><span class="ep-pill ep-{{ $p->status }}">{{ $statusLabels[$p->status] ?? $p->status }}</span></td>
                     <td class="ep-notes">{{ $p->notes ?: '—' }}</td>
                     <td class="no-link">
                         <div class="row-actions">
@@ -87,27 +113,35 @@
 <div id="extraModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="extraTitle">Add {{ $meta['title'] }}</h3>
+            <h3 id="extraTitle">Add {{ $config['title'] }}</h3>
             <button class="modal-close" onclick="closeModal('extraModal')">&times;</button>
         </div>
         <form id="extraForm" method="POST" action="{{ route('admin.extra.store', $type) }}">
             @csrf
             <input type="hidden" name="_method" id="extraMethod" value="POST">
             <div class="form-group"><label>Client Name *</label><input type="text" name="client_name" id="ep_client_name" required></div>
-            @if ($meta['showLink'])
+            @if ($config['showLink'])
                 <div class="form-group"><label>Funnel Link</label><input type="text" name="link" id="ep_link" placeholder="https://…"></div>
             @endif
-            @if ($meta['showWa'])
+            @if ($config['showWa'])
                 <div class="form-group"><label>WhatsApp Number</label><input type="text" name="whatsapp" id="ep_whatsapp" placeholder="+1 555 123 4567"></div>
             @endif
-            <div class="form-row" style="display:flex; gap:12px;">
-                <div class="form-group" style="flex:1;"><label>{{ $meta['amountLabel'] }} ($)</label><input type="number" step="0.01" min="0" name="amount" id="ep_amount"></div>
-                <div class="form-group" style="flex:1;"><label>Paid / Upfront ($)</label><input type="number" step="0.01" min="0" name="paid" id="ep_paid"></div>
-            </div>
+
+            @if ($config['model'] === 'weekly')
+                {{-- Weekly: a single recurring price, no upfront --}}
+                <div class="form-group"><label>{{ $config['amountLabel'] }} ($)</label><input type="number" step="0.01" min="0" name="amount" id="ep_amount"></div>
+            @else
+                {{-- One-off (funnels): agreed amount + upfront while In Progress; full paid once Completed --}}
+                <div class="form-row" style="display:flex; gap:12px;">
+                    <div class="form-group" style="flex:1;" id="ep_amount_group"><label>{{ $config['amountLabel'] }} ($)</label><input type="number" step="0.01" min="0" name="amount" id="ep_amount"></div>
+                    <div class="form-group" style="flex:1;"><label id="ep_paid_label">Paid / Upfront ($)</label><input type="number" step="0.01" min="0" name="paid" id="ep_paid"></div>
+                </div>
+            @endif
+
             <div class="form-group">
                 <label>Status *</label>
                 <select name="status" id="ep_status" required>
-                    @foreach ($statuses as $key => $label)
+                    @foreach ($config['statuses'] as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
                 </select>
@@ -145,6 +179,18 @@
 
     function val(id, v) { var el = document.getElementById(id); if (el) el.value = (v === null || v === undefined) ? '' : v; }
 
+    // Funnels only: when Completed, ask for the full amount paid (hide the agreed
+    // amount and relabel the paid field). While In Progress, ask for upfront.
+    function applyStatus() {
+        var sel = document.getElementById('ep_status');
+        if (!sel) return;
+        var completed = (sel.value === 'completed');
+        var agreedGroup = document.getElementById('ep_amount_group'); // funnels only
+        var paidLabel   = document.getElementById('ep_paid_label');   // funnels only
+        if (agreedGroup) agreedGroup.style.display = completed ? 'none' : '';
+        if (paidLabel)   paidLabel.textContent = completed ? 'Amount Fully Paid ($)' : 'Paid / Upfront ($)';
+    }
+
     window.openExtra = function (btn) {
         var data = (btn && btn.dataset) ? btn.dataset : null;
         if (data && data.id) {
@@ -163,10 +209,15 @@
             form.action = storeUrl;
             document.getElementById('extraMethod').value = 'POST';
             ['ep_client_name','ep_link','ep_whatsapp','ep_amount','ep_paid','ep_notes'].forEach(function (id) { val(id, ''); });
-            val('ep_status', 'in_progress');
+            var st = document.getElementById('ep_status');
+            if (st) st.selectedIndex = 0;
         }
+        applyStatus();
         openModal('extraModal');
     };
+
+    var statusSel = document.getElementById('ep_status');
+    if (statusSel) statusSel.addEventListener('change', applyStatus);
 
     @if ($errors->any())
         if (typeof openModal === 'function') openExtra();
