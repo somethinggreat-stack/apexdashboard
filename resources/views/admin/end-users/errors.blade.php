@@ -39,6 +39,10 @@
                                 @csrf
                                 <button class="btn btn-sm btn-fix">Move to Clients</button>
                             </form>
+                            <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline">
+                                @csrf
+                                <button class="btn btn-sm btn-tonew">Move to New Clients</button>
+                            </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
                                   onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their documents? This cannot be undone.')">
                                 @csrf @method('DELETE')
@@ -63,6 +67,8 @@
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
     .btn-fix { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
     .btn-fix:hover { background:#a7f3d0; }
+    .btn-tonew { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
+    .btn-tonew:hover { background:#bae6fd; }
 </style>
 @endpush
 @endsection
