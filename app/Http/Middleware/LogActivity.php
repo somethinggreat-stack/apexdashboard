@@ -10,18 +10,40 @@ use Illuminate\Support\Facades\Auth;
 
 class LogActivity
 {
-    /** Records every mutating admin action for the audit trail. */
+    /**
+     * Only these routes are recorded in the audit trail — the major, meaningful
+     * actions. Everything else (switching business owners, opening pages, etc.)
+     * is intentionally NOT logged so the activity log stays clean and useful.
+     * Login / logout are recorded separately in the AuthController.
+     */
+    private const ACTIONS = [
+        'admin.new-clients.approve'    => 'Approved client → moved to Clients',
+        'admin.end-users.to-errors'    => 'Moved client to Errors',
+        'admin.end-users.store'        => 'Added a client',
+        'admin.end-users.destroy'      => 'Deleted a client',
+        'admin.documents.store'        => 'Uploaded a document',
+        'admin.documents.bulk'         => 'Uploaded documents',
+        'admin.new-clients.regenerate' => 'Regenerated the intake link',
+        'admin.users.store'            => 'Added a user',
+        'admin.users.destroy'          => 'Deleted a user',
+        'admin.users.password'         => 'Reset a user password',
+    ];
+
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
 
         try {
-            if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)
+            $name = optional($request->route())->getName();
+
+            if ($name
+                && isset(self::ACTIONS[$name])
+                && $response->getStatusCode() < 400
                 && Auth::guard('admin')->check()) {
                 ActivityLog::create([
                     'admin_id'    => Auth::guard('admin')->id(),
-                    'action'      => optional($request->route())->getName(),
-                    'description' => $this->describe($request),
+                    'action'      => $name,
+                    'description' => self::ACTIONS[$name],
                     'method'      => $request->method(),
                     'path'        => '/' . ltrim($request->path(), '/'),
                     'subject'     => $this->subject($request),
@@ -35,22 +57,13 @@ class LogActivity
         return $response;
     }
 
-    private function describe(Request $request): string
-    {
-        $name = optional($request->route())->getName();
-        if (!$name) {
-            return strtoupper($request->method()) . ' ' . $request->path();
-        }
-        $clean = str_replace(['admin.', '-', '.'], ['', ' ', ' '], $name);
-        return ucfirst(trim($clean));
-    }
-
     private function subject(Request $request): ?string
     {
         $id = $request->session()->get('selected_client_id');
         if (!$id) {
             return null;
         }
+
         return optional(Client::find($id))->business_name;
     }
 }
