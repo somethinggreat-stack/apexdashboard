@@ -116,6 +116,10 @@
                 </a>
             @endif
             <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">My Clients</a>
+            @php $errorCount = \App\Models\EndUser::forClient($bo->id)->where('intake_status', 'error')->count(); @endphp
+            <a href="{{ route('client.errors') }}" class="{{ request()->routeIs('client.errors') ? 'active' : '' }}">
+                Errors @if ($errorCount > 0)<span class="badge-portal" style="background:#dc2626;">{{ $errorCount }}</span>@endif
+            </a>
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
                 Messages @if ($unread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $unread }}</span>@endif
             </a>

@@ -161,6 +161,17 @@ class EndUserController extends Controller
         return view('client.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
     }
 
+    /** Clients pulled out with an error the VA needs to fix — view only for the BO. */
+    public function errors()
+    {
+        $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->where('intake_status', 'error')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('client.end-users.errors', compact('endUsers'));
+    }
+
     public function create()
     {
         return view('client.end-users.create');

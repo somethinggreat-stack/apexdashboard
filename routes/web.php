@@ -212,6 +212,9 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         // New Clients — intake submissions pending VA review (BOs can view only)
         Route::get('new-clients', [Client\EndUserController::class, 'newClients'])->name('new-clients');
 
+        // Errors — clients the VA pulled out to fix (BOs can view only)
+        Route::get('errors', [Client\EndUserController::class, 'errors'])->name('errors');
+
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
