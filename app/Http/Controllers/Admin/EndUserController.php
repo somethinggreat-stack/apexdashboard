@@ -16,8 +16,9 @@ class EndUserController extends Controller
         $clientId = session('selected_client_id');
 
         $query = EndUser::forClient($clientId)
-            // Intake submissions awaiting review live in "New Clients", not here.
-            ->where(fn ($q) => $q->whereNull('intake_status')->orWhere('intake_status', '!=', 'pending_review'))
+            // Pending intake ("New Clients") and error clients ("Errors") live
+            // in their own sections, not in the main Clients list.
+            ->where(fn ($q) => $q->whereNull('intake_status')->orWhereNotIn('intake_status', ['pending_review', 'error']))
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -175,28 +176,39 @@ class EndUserController extends Controller
         return view('admin.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
     }
 
+    /** Error clients — moved out of Clients with a VA-entered error to fix. */
+    public function errors()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->where('intake_status', 'error')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('admin.end-users.errors', compact('endUsers'));
+    }
+
     public function approveIntake(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
         $endUser->update(['intake_status' => 'approved', 'intake_review_note' => null]);
 
-        return redirect()->route('admin.new-clients')
+        return redirect()->back()
             ->with('status', "{$endUser->full_name} approved — now in Clients.");
     }
 
-    /** Bounce an approved client back to New Clients with a reason to fix. */
-    public function sendToNewClients(Request $request, string $id)
+    /** Move a client into the Errors bucket with a VA-entered error note. */
+    public function moveToErrors(Request $request, string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
         $note = trim((string) $request->input('note', ''));
 
         $endUser->update([
-            'intake_status'      => 'pending_review',
+            'intake_status'      => 'error',
             'intake_review_note' => $note !== '' ? $note : null,
         ]);
 
-        return redirect()->route('admin.new-clients')
-            ->with('status', "{$endUser->full_name} sent back to New Clients.");
+        return redirect()->route('admin.errors')
+            ->with('status', "{$endUser->full_name} moved to Errors.");
     }
 
     public function regenerateIntake()

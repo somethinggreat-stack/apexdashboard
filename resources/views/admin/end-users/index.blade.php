@@ -98,10 +98,10 @@
                         <button type="button" class="btn btn-sm"
                                 onclick="openQuickNote({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">+ Comment</button>
                         <a href="{{ route('admin.end-users.status-report', $eu) }}" target="_blank" class="btn btn-sm">Report</a>
-                        <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline" class="send-back-form">
+                        <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" style="display:inline" class="send-back-form">
                             @csrf
                             <input type="hidden" name="note" value="">
-                            <button type="button" class="btn btn-sm btn-sendback" onclick="sendBack(this, '{{ addslashes($eu->full_name) }}')">To New Clients</button>
+                            <button type="button" class="btn btn-sm btn-sendback" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
                         </form>
                         <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
                             @csrf @method('DELETE')
@@ -520,8 +520,8 @@
     };
 
     /* --------- quick-note modal --------- */
-    window.sendBack = function (btn, name) {
-        var note = prompt('Send ' + name + ' back to New Clients.\n\nReason / error to show on their line (optional):', '');
+    window.moveToErrors = function (btn, name) {
+        var note = prompt('Move ' + name + ' to Errors.\n\nWhat is the error? (shown on their line so it can be fixed):', '');
         if (note === null) return; // cancelled
         var form = btn.closest('form');
         form.querySelector('input[name="note"]').value = note;

@@ -138,7 +138,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('new-clients', [Admin\EndUserController::class, 'newClients'])->name('new-clients');
             Route::post('new-clients/{id}/approve', [Admin\EndUserController::class, 'approveIntake'])->name('new-clients.approve');
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->name('new-clients.regenerate');
-            Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'sendToNewClients'])->name('end-users.to-new-clients');
+            Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
+            Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
