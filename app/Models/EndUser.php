@@ -107,6 +107,39 @@ class EndUser extends Model
     }
 
     /**
+     * Total still owed for this client: the effective fee of every active round
+     * they're in that hasn't been marked paid. Mirrors the Payments page's
+     * "unpaid" calculation. Requires the `payments` relation and `client` to be
+     * loaded (effectiveRoundFee reads $this->client).
+     */
+    public function pendingRoundTotal(): float
+    {
+        $paidByRound = $this->payments->keyBy('round');
+
+        $labelToNum = [
+            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3,
+            '4th Round' => 4, '5th Round' => 5,
+        ];
+        $activeRounds = collect($this->rounds ?? [])
+            ->map(fn ($label) => $labelToNum[$label] ?? null)
+            ->filter()
+            ->values()
+            ->all();
+        if (empty($activeRounds)) {
+            $activeRounds = [1];
+        }
+
+        $sum = 0.0;
+        foreach ($activeRounds as $rn) {
+            if (!$paidByRound->has($rn)) {
+                $sum += $this->effectiveRoundFee($rn);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
      * The fee that applies to this client for a given round. Resolution order:
      *   1. a per-round override for that specific round (per_round_fees[$round])
      *   2. the client's flat per-round override (per_round_fee)

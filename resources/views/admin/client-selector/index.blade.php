@@ -113,8 +113,48 @@
     </div>
 @endif
 
+@if (!empty($payment))
+    <div class="card pay-card">
+        <div class="att-head">
+            <div>
+                <h2 style="margin:0;">Payments Overview</h2>
+                <p class="muted" style="margin:4px 0 0; font-size:13px;">Across all {{ count($clients) }} business owners.</p>
+            </div>
+        </div>
+        <div class="pay-tiles">
+            <div class="pay-tile pt-green">
+                <span class="pt-num">${{ number_format($payment['done'], 2) }}</span>
+                <span class="pt-lbl">Total Collected</span>
+                <span class="pt-sub">Payments received to date</span>
+            </div>
+            <div class="pay-tile pt-amber">
+                <span class="pt-num">${{ number_format($payment['pending'], 2) }}</span>
+                <span class="pt-lbl">Total Pending</span>
+                <span class="pt-sub">Unpaid rounds still owed</span>
+            </div>
+            <div class="pay-tile pt-blue">
+                <span class="pt-num">${{ number_format($payment['total'], 2) }}</span>
+                <span class="pt-lbl">Lifetime Billed</span>
+                <span class="pt-sub">Collected + pending</span>
+            </div>
+        </div>
+    </div>
+@endif
+
 @push('head')
 <style>
+    /* Payments overview tiles (super admin) */
+    .pay-card { margin-top:18px; }
+    .pay-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    @media (max-width:820px) { .pay-tiles { grid-template-columns:1fr; } }
+    .pay-tile { position:relative; overflow:hidden; border-radius:16px; padding:18px 20px; color:#fff; display:flex; flex-direction:column; gap:3px; box-shadow:0 12px 26px rgba(15,23,42,.14); }
+    .pay-tile .pt-num { font-size:30px; font-weight:800; line-height:1.05; }
+    .pay-tile .pt-lbl { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; opacity:.97; }
+    .pay-tile .pt-sub { font-size:11.5px; opacity:.85; }
+    .pt-green { background:linear-gradient(135deg,#059669,#34d399); }
+    .pt-amber { background:linear-gradient(135deg,#d97706,#fbbf24); }
+    .pt-blue  { background:linear-gradient(135deg,#2563eb,#38bdf8); }
+
     /* Business-owner picker cards — subtle lift + accent */
     .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:10px !important; box-shadow:0 1px 2px rgba(15,23,42,.05) !important; }
     .picker-card:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.10) !important; border-color:#bfdbfe !important; }

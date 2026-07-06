@@ -12,17 +12,29 @@ class ClientSelectorController extends Controller
 {
     public function index()
     {
-        $adminId = Auth::guard('admin')->user()->dataOwnerId();
+        $admin   = Auth::guard('admin')->user();
+        $adminId = $admin->dataOwnerId();
+        $isSuper = $admin->isSuper();
 
         $clients = Client::forAdmin($adminId)
             ->withCount('endUsers')
             ->orderBy('business_name')
             ->get();
 
+        // Payments roll-up across all business owners — super admin only.
+        $payDone = 0.0;
+        $payPending = 0.0;
+
         // Cross-BO "needs attention" roll-up: pending intake submissions,
         // incomplete weekly logs, and overdue rounds — per business owner.
         $attention = [];
         foreach ($clients as $client) {
+            if ($isSuper) {
+                $totals = $client->paymentTotals();
+                $payDone += $totals['done'];
+                $payPending += $totals['pending'];
+            }
+
             $eus = EndUser::forClient($client->id)
                 ->withCount([
                     'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -49,7 +61,11 @@ class ClientSelectorController extends Controller
 
         usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
 
-        return view('admin.client-selector.index', compact('clients', 'attention'));
+        $payment = $isSuper
+            ? ['done' => $payDone, 'pending' => $payPending, 'total' => $payDone + $payPending]
+            : null;
+
+        return view('admin.client-selector.index', compact('clients', 'attention', 'payment'));
     }
 
     public function select(Request $request, string $id)

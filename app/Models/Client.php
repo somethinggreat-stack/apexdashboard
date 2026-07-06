@@ -63,6 +63,29 @@ class Client extends Authenticatable
         return Str::random(48);
     }
 
+    /**
+     * Payment roll-up for this business owner: money already collected ('done')
+     * and money still owed ('pending'). Uses the same rules as the Payments
+     * page. For hourly BOs, 'done' is the sum of recorded payouts (round-based
+     * pending doesn't apply to them).
+     */
+    public function paymentTotals(): array
+    {
+        if (($this->compensation_model ?: 'per_round') === 'hourly') {
+            $done = (float) TimePayout::where('client_id', $this->id)->sum('amount_paid');
+
+            return ['done' => $done, 'pending' => 0.0];
+        }
+
+        $endUsers = EndUser::forClient($this->id)->with('payments')->get();
+        $endUsers->each(fn ($eu) => $eu->setRelation('client', $this));
+
+        $done    = (float) ClientPayment::forClient($this->id)->sum('amount');
+        $pending = (float) $endUsers->sum(fn ($eu) => $eu->pendingRoundTotal());
+
+        return ['done' => $done, 'pending' => $pending];
+    }
+
     public function intakeUrl(): string
     {
         return url('/intake/' . $this->intake_token);
