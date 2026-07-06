@@ -148,7 +148,6 @@
                         </form>
                     </span>
                 @endisset
-                <div class="user-chip">{{ Auth::guard('admin')->user()?->full_name }}</div>
             </div>
         </header>
         @if (session('status'))

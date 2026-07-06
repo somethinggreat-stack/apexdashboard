@@ -21,23 +21,14 @@
     @else
         <div class="picker-grid">
             @foreach ($clients as $client)
-                @php
-                    $initials = collect(preg_split('/\s+/', trim($client->business_name)))
-                        ->filter()->take(2)->map(fn ($w) => strtoupper(mb_substr($w, 0, 1)))->implode('');
-                    $av = abs(crc32($client->business_name)) % 6;
-                @endphp
                 <form method="POST" action="{{ route('admin.client-selector.select', $client->id) }}" class="picker-card-form">
                     @csrf
                     <button type="submit" class="picker-card">
                         <div class="pc-top">
-                            <span class="pc-avatar av-{{ $av }}">{{ $initials ?: '?' }}</span>
+                            <span class="picker-card-name">{{ $client->business_name }}</span>
                             <span class="pill pill-{{ $client->status }}">{{ $client->status }}</span>
                         </div>
-                        <div class="picker-card-name">{{ $client->business_name }}</div>
-                        <div class="picker-card-meta">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            {{ $client->end_users_count }} clients
-                        </div>
+                        <div class="picker-card-meta">{{ $client->end_users_count }} clients</div>
                     </button>
                 </form>
             @endforeach
@@ -178,25 +169,14 @@
             radial-gradient(900px circle at 0% 120%, #e9faf2 0%, transparent 42%);
     }
 
-    /* Business-owner cards with avatars */
+    /* Business-owner cards */
     .picker-card {
         display:flex !important; flex-direction:column; align-items:flex-start !important; text-align:left !important;
-        gap:12px; padding:18px !important; background:#fff !important;
+        gap:10px; padding:18px !important; background:#fff !important;
     }
-    .pc-top { display:flex; align-items:center; justify-content:space-between; width:100%; }
-    .pc-avatar {
-        width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;
-        color:#fff; font-weight:800; font-size:16px; box-shadow:0 8px 16px rgba(15,23,42,.18);
-    }
-    .av-0 { background:linear-gradient(135deg,#2563eb,#38bdf8); }
-    .av-1 { background:linear-gradient(135deg,#7c3aed,#a78bfa); }
-    .av-2 { background:linear-gradient(135deg,#059669,#34d399); }
-    .av-3 { background:linear-gradient(135deg,#d97706,#fbbf24); }
-    .av-4 { background:linear-gradient(135deg,#db2777,#f472b6); }
-    .av-5 { background:linear-gradient(135deg,#0891b2,#22d3ee); }
+    .pc-top { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
     .picker-card-name { font-weight:800 !important; font-size:16.5px; color:#0f172a; line-height:1.2; }
-    .picker-card-meta { display:flex !important; align-items:center; gap:7px; color:#64748b; font-size:12.5px; font-weight:600; }
-    .picker-card-meta svg { color:#94a3b8; }
+    .picker-card-meta { color:#64748b; font-size:12.5px; font-weight:600; }
 </style>
 @endpush
 @endsection
