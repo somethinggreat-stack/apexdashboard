@@ -25,6 +25,13 @@
     $statusLabels = ['in_progress' => 'In Progress', 'waiting' => 'Waiting', 'completed' => 'Completed', 'paused' => 'Paused'];
     // Fixed columns: Client, Amount, Status, Notes, Actions (5) + optional Link/WhatsApp/Paid
     $colspan = 5 + ($config['showLink'] ? 1 : 0) + ($config['showWa'] ? 1 : 0) + ($showPaid ? 1 : 0);
+
+    // Totals (funnels: collected / remaining / value; weekly: total weekly + active)
+    $isOneoff       = $config['model'] === 'oneoff';
+    $totalCollected = (float) $projects->sum('paid');
+    $totalPending   = (float) $projects->sum(fn ($p) => max(0, (float) ($p->amount ?? 0) - (float) ($p->paid ?? 0)));
+    $totalWeekly    = (float) $projects->sum('amount');
+    $activeCount    = $projects->where('status', 'in_progress')->count();
 @endphp
 
 @section('title', $config['title'])
@@ -107,6 +114,19 @@
             @endforelse
         </tbody>
     </table></div>
+
+    @if ($projects->count())
+        <div class="ep-totals">
+            @if ($isOneoff)
+                <div class="ep-total"><span class="ept-label">Total Collected</span><span class="ept-val">${{ number_format($totalCollected, 2) }}</span></div>
+                <div class="ep-total ept-amber"><span class="ept-label">Pending (remaining)</span><span class="ept-val">${{ number_format($totalPending, 2) }}</span></div>
+                <div class="ep-total"><span class="ept-label">Total Value</span><span class="ept-val">${{ number_format($totalCollected + $totalPending, 2) }}</span></div>
+            @else
+                <div class="ep-total"><span class="ept-label">Total Weekly</span><span class="ept-val">${{ number_format($totalWeekly, 2) }}</span></div>
+                <div class="ep-total"><span class="ept-label">Active</span><span class="ept-val">{{ $activeCount }}</span></div>
+            @endif
+        </div>
+    @endif
 </div>
 
 {{-- Add / Edit modal --}}
@@ -167,6 +187,12 @@
     .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .row-actions form { display:inline; margin:0; }
     .row-actions .btn { white-space:nowrap; }
+
+    .ep-totals { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+    .ep-total { flex:1 1 160px; background:#f8fafc; border:1px solid #e6ebf2; border-radius:12px; padding:12px 16px; display:flex; flex-direction:column; gap:3px; }
+    .ept-label { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#64748b; }
+    .ept-val { font-size:20px; font-weight:800; color:#0f172a; }
+    .ep-total.ept-amber .ept-val { color:#b45309; }
 </style>
 @endpush
 
