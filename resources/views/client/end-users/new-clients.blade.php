@@ -9,13 +9,8 @@
         <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
     </div>
     <p class="muted" style="margin:8px 0 0; font-size:13px;">
-        @if ($client->intake_external_url)
-            New clients arrive from your onboarding form
-            (<a href="{{ $client->intake_external_url }}" target="_blank" rel="noopener">{{ $client->intake_external_url }}</a>)
-        @else
-            New clients who complete your secure intake form appear here
-        @endif
-        — or add one yourself. Our team reviews each one before it moves into <strong>My Clients</strong>.
+        New client submissions appear here for our team to review — or add one yourself.
+        Once reviewed, they move into <strong>My Clients</strong>.
     </p>
 </div>
 

@@ -3,6 +3,9 @@
 @section('title', 'New Clients')
 
 @section('content')
+{{-- Intake link + API key are sensitive — super admin only. VAs still see/manage the New Clients list below. --}}
+@php $isSuper = Auth::guard('admin')->user()?->isSuper(); @endphp
+@if ($isSuper)
 @if ($client->intake_external_url)
     <div class="card" style="margin-bottom:18px;">
         <div class="card-header">
@@ -94,6 +97,7 @@
         @endif
     </div>
 @endunless
+@endif {{-- $isSuper --}}
 
 <div class="card">
     <div class="card-header">
