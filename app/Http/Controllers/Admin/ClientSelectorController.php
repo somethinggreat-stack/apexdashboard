@@ -12,60 +12,15 @@ class ClientSelectorController extends Controller
 {
     public function index()
     {
-        $admin   = Auth::guard('admin')->user();
-        $adminId = $admin->dataOwnerId();
-        $isSuper = $admin->isSuper();
+        // Just the picker now — Needs Attention + Payments moved to the super-admin Dashboard.
+        $adminId = Auth::guard('admin')->user()->dataOwnerId();
 
         $clients = Client::forAdmin($adminId)
             ->withCount('endUsers')
             ->orderBy('business_name')
             ->get();
 
-        // Payments roll-up across all business owners — super admin only.
-        $payDone = 0.0;
-        $payPending = 0.0;
-
-        // Cross-BO "needs attention" roll-up: pending intake submissions,
-        // incomplete weekly logs, and overdue rounds — per business owner.
-        $attention = [];
-        foreach ($clients as $client) {
-            if ($isSuper) {
-                $totals = $client->paymentTotals();
-                $payDone += $totals['done'];
-                $payPending += $totals['pending'];
-            }
-
-            $eus = EndUser::forClient($client->id)
-                ->withCount([
-                    'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
-                    'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
-                    'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
-                    'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
-                ])->get();
-
-            $pending    = $eus->where('intake_status', 'pending_review')->count();
-            $active     = $eus->filter(fn ($e) => $e->intake_status !== 'pending_review');
-            $incomplete = $active->filter(fn ($e) => $e->is_incomplete)->count();
-            $overdue    = $active->filter(fn ($e) => $e->days_left_in_round !== null && $e->days_left_in_round < 0)->count();
-
-            if ($pending || $incomplete || $overdue) {
-                $attention[] = [
-                    'client'     => $client,
-                    'pending'    => $pending,
-                    'incomplete' => $incomplete,
-                    'overdue'    => $overdue,
-                    'score'      => $pending + $incomplete + $overdue,
-                ];
-            }
-        }
-
-        usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
-
-        $payment = $isSuper
-            ? ['done' => $payDone, 'pending' => $payPending, 'total' => $payDone + $payPending]
-            : null;
-
-        return view('admin.client-selector.index', compact('clients', 'attention', 'payment'));
+        return view('admin.client-selector.index', compact('clients'));
     }
 
     public function select(Request $request, string $id)

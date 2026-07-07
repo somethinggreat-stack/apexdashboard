@@ -115,6 +115,9 @@
         @endunless
 
         <nav class="sidebar-nav">
+            @if ($isSuper)
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+            @endif
             @isset($selectedClient)
                 @if ($selectedClient->intake_enabled)
                     @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'pending_review')->count(); @endphp

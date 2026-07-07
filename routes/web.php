@@ -70,6 +70,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // ---- Super-admin only: website leads + user management ----
         Route::middleware('admin.super')->group(function () {
+            // Main super-admin dashboard — cross-business-owner overview
+            Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+
             // Leads (from public website forms)
             Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
             Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
@@ -127,8 +130,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Everything below is scoped to the currently selected business owner
         Route::middleware('client.selected')->group(function () {
-            // Dashboard removed — anyone landing here goes straight to the clients list.
-            Route::get('dashboard', fn () => redirect()->route('admin.end-users.index'))->name('dashboard');
             Route::get('today-queue', [Admin\AllClientsController::class, 'todayQueue'])->name('today-queue');
 
             // Payments — super admin only
