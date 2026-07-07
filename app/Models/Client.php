@@ -63,6 +63,12 @@ class Client extends Authenticatable
         return Str::random(48);
     }
 
+    /** Server-to-server intake API key (prefixed so it's recognisable in logs). */
+    public static function generateApiKey(): string
+    {
+        return 'ags_' . Str::random(48);
+    }
+
     /**
      * Payment roll-up for this business owner: money already collected ('done')
      * and money still owed ('pending'). Uses the same rules as the Payments

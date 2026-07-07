@@ -164,6 +164,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('new-clients', [Admin\EndUserController::class, 'newClients'])->name('new-clients');
             Route::post('new-clients/{id}/approve', [Admin\EndUserController::class, 'approveIntake'])->name('new-clients.approve');
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->name('new-clients.regenerate');
+            Route::post('new-clients/api-key', [Admin\EndUserController::class, 'regenerateApiKey'])->name('new-clients.api-key');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');

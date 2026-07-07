@@ -242,6 +242,22 @@ class EndUserController extends Controller
             ->with('status', 'Intake link regenerated — the old link no longer works.');
     }
 
+    /**
+     * Generate (or regenerate) the server-to-server API key for the selected BO.
+     * The hosted intake link stays active — a BO can use both their own funnel
+     * (API) and the built-in intake form at the same time.
+     */
+    public function regenerateApiKey()
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($client->intake_enabled, 404);
+
+        $client->update(['intake_api_key' => Client::generateApiKey()]);
+
+        return redirect()->route('admin.new-clients')
+            ->with('status', 'API key generated — copy it now and keep it secret.');
+    }
+
     private function scoped()
     {
         return EndUser::forClient(session('selected_client_id'));

@@ -56,6 +56,45 @@
     </div>
 @endif
 
+@unless ($client->intake_external_url)
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+            <div>
+                <h2>API Access <span class="muted" style="font-size:13px; font-weight:500;">(optional — for a BO's own funnel/site)</span></h2>
+                <p class="muted" style="margin:4px 0 0; font-size:13px;">
+                    An external funnel can POST client submissions to this API and they land in <strong>New Clients</strong>.
+                    The secure intake link above stays active — a BO can use both at once.
+                </p>
+            </div>
+        </div>
+        <div class="api-field">
+            <label>API Endpoint <span class="muted">(POST · multipart/form-data)</span></label>
+            <div class="api-row"><input type="text" value="{{ url('/api/intake') }}" readonly onclick="this.select();"></div>
+        </div>
+        @if ($client->intake_api_key)
+            <div class="api-field">
+                <label>API Key <span class="muted">(send as header <code>X-Intake-Key</code> — keep secret)</span></label>
+                <div class="api-row">
+                    <input type="text" id="apiKey" value="{{ $client->intake_api_key }}" readonly onclick="this.select();">
+                    <button type="button" class="btn btn-primary" id="copyKey">Copy</button>
+                    <form method="POST" action="{{ route('admin.new-clients.api-key') }}" style="display:inline"
+                          onsubmit="return confirm('Regenerate the API key? The current key stops working immediately.')">
+                        @csrf
+                        <button type="submit" class="btn btn-secondary">Regenerate</button>
+                    </form>
+                </div>
+            </div>
+        @else
+            <div class="api-field">
+                <form method="POST" action="{{ route('admin.new-clients.api-key') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary">Generate API Key</button>
+                </form>
+            </div>
+        @endif
+    </div>
+@endunless
+
 <div class="card">
     <div class="card-header">
         <h2>New Clients <span class="pending-badge">{{ $endUsers->count() }}</span></h2>
