@@ -12,7 +12,6 @@ class ClientSelectorController extends Controller
 {
     public function index()
     {
-        // Just the picker now — Needs Attention + Payments moved to the super-admin Dashboard.
         $adminId = Auth::guard('admin')->user()->dataOwnerId();
 
         $clients = Client::forAdmin($adminId)
@@ -20,7 +19,37 @@ class ClientSelectorController extends Controller
             ->orderBy('business_name')
             ->get();
 
-        return view('admin.client-selector.index', compact('clients'));
+        // Cross-BO "Needs Attention" roll-up so every VA sees what needs work.
+        // (Payments stay on the super-admin Dashboard only.)
+        $attention = [];
+        foreach ($clients as $client) {
+            $eus = EndUser::forClient($client->id)
+                ->withCount([
+                    'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+                    'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+                    'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+                    'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+                ])->get();
+
+            $pending    = $eus->where('intake_status', 'pending_review')->count();
+            $active     = $eus->filter(fn ($e) => $e->intake_status !== 'pending_review');
+            $incomplete = $active->filter(fn ($e) => $e->is_incomplete)->count();
+            $overdue    = $active->filter(fn ($e) => $e->days_left_in_round !== null && $e->days_left_in_round < 0)->count();
+
+            if ($pending || $incomplete || $overdue) {
+                $attention[] = [
+                    'client'     => $client,
+                    'pending'    => $pending,
+                    'incomplete' => $incomplete,
+                    'overdue'    => $overdue,
+                    'score'      => $pending + $incomplete + $overdue,
+                ];
+            }
+        }
+
+        usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        return view('admin.client-selector.index', compact('clients', 'attention'));
     }
 
     public function select(Request $request, string $id)

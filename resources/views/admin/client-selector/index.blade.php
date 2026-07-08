@@ -39,104 +39,32 @@
 </div>
 
 @if (!empty($attention))
-    @php
-        $totNew = array_sum(array_column($attention, 'pending'));
-        $totInc = array_sum(array_column($attention, 'incomplete'));
-        $totOver = array_sum(array_column($attention, 'overdue'));
-    @endphp
-    <div class="card att-card">
-        <div class="att-head">
+    <div class="card na-card">
+        <div class="na-head">
             <div>
-                <h2 style="margin:0;">Needs Attention</h2>
-                <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                    {{ count($attention) }} business owner{{ count($attention) === 1 ? '' : 's' }} need a look right now.
-                </p>
+                <h2>Needs Attention</h2>
+                <p class="na-sub">{{ count($attention) }} business owner{{ count($attention) === 1 ? '' : 's' }} need a look right now.</p>
             </div>
+            <span class="na-chip">{{ count($attention) }}</span>
         </div>
-
-        <div class="att-tiles">
-            <div class="att-tile tile-blue">
-                <span class="tile-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-                <span class="tile-num">{{ $totNew }}</span>
-                <span class="tile-lbl">New Intake Clients</span>
-            </div>
-            <div class="att-tile tile-amber">
-                <span class="tile-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-                <span class="tile-num">{{ $totInc }}</span>
-                <span class="tile-lbl">Incomplete Logs</span>
-            </div>
-            <div class="att-tile tile-red">
-                <span class="tile-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-                <span class="tile-num">{{ $totOver }}</span>
-                <span class="tile-lbl">Overdue Rounds</span>
-            </div>
-        </div>
-
-        <div class="table-scroll"><table class="data-table att-table">
-            <thead>
-                <tr>
-                    <th>Business Owner</th>
-                    <th>New Intake</th>
-                    <th>Incomplete Logs</th>
-                    <th>Overdue Rounds</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($attention as $a)
-                    @php $sev = $a['overdue'] ? 'sev-red' : ($a['pending'] ? 'sev-blue' : 'sev-amber'); @endphp
-                    <tr class="att-row {{ $sev }}">
-                        <td><span class="att-name">{{ $a['client']->business_name }}</span></td>
-                        <td>@if ($a['pending'])<span class="att-badge att-blue">{{ $a['pending'] }} new</span>@else <span class="att-dash">—</span>@endif</td>
-                        <td>@if ($a['incomplete'])<span class="att-badge att-amber">{{ $a['incomplete'] }} incomplete</span>@else <span class="att-dash">—</span>@endif</td>
-                        <td>@if ($a['overdue'])<span class="att-badge att-red">{{ $a['overdue'] }} overdue</span>@else <span class="att-dash">—</span>@endif</td>
-                        <td class="no-link">
-                            <div class="att-actions">
-                                @if ($a['pending'])
-                                    <form method="POST" action="{{ route('admin.client-selector.select', $a['client']->id) }}">
-                                        @csrf
-                                        <input type="hidden" name="redirect_to" value="{{ route('admin.new-clients') }}">
-                                        <button type="submit" class="btn btn-sm btn-primary">Review New Clients &rarr;</button>
-                                    </form>
-                                @endif
-                                <form method="POST" action="{{ route('admin.client-selector.select', $a['client']->id) }}">
-                                    @csrf
-                                    <input type="hidden" name="redirect_to" value="{{ route('admin.end-users.index') }}">
-                                    <button type="submit" class="btn btn-sm att-open">Open Clients &rarr;</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table></div>
-    </div>
-@endif
-
-@if (!empty($payment))
-    <div class="card pay-card">
-        <div class="att-head">
-            <div>
-                <h2 style="margin:0;">Payments Overview</h2>
-                <p class="muted" style="margin:4px 0 0; font-size:13px;">Across all {{ count($clients) }} business owners.</p>
-            </div>
-        </div>
-        <div class="pay-tiles">
-            <div class="pay-tile pt-green">
-                <span class="pt-num">${{ number_format($payment['done'], 2) }}</span>
-                <span class="pt-lbl">Total Collected</span>
-                <span class="pt-sub">Payments received to date</span>
-            </div>
-            <div class="pay-tile pt-amber">
-                <span class="pt-num">${{ number_format($payment['pending'], 2) }}</span>
-                <span class="pt-lbl">Total Pending</span>
-                <span class="pt-sub">Unpaid rounds still owed</span>
-            </div>
-            <div class="pay-tile pt-blue">
-                <span class="pt-num">${{ number_format($payment['total'], 2) }}</span>
-                <span class="pt-lbl">Lifetime Billed</span>
-                <span class="pt-sub">Collected + pending</span>
-            </div>
+        <div class="na-colhead"><span>Business Owner</span><span>Status</span><span class="na-act-h">Action</span></div>
+        <div class="na-list">
+            @foreach ($attention as $a)
+                @php $bo = $a['client']; @endphp
+                <div class="na-row">
+                    <span class="na-bo">{{ $bo->business_name }}</span>
+                    <span class="na-badges">
+                        @if ($a['pending'])<span class="nab nab-blue">{{ $a['pending'] }} new</span>@endif
+                        @if ($a['incomplete'])<span class="nab nab-amber">{{ $a['incomplete'] }} incomplete</span>@endif
+                        @if ($a['overdue'])<span class="nab nab-red">{{ $a['overdue'] }} overdue</span>@endif
+                    </span>
+                    <form method="POST" action="{{ route('admin.client-selector.select', $bo->id) }}" class="na-act">
+                        @csrf
+                        <input type="hidden" name="redirect_to" value="{{ $a['pending'] ? route('admin.new-clients') : route('admin.end-users.index') }}">
+                        <button type="submit" class="{{ $a['pending'] ? 'na-btn-primary' : 'na-btn-soft' }}">{{ $a['pending'] ? 'Review New Clients →' : 'Open Clients →' }}</button>
+                    </form>
+                </div>
+            @endforeach
         </div>
     </div>
 @endif
@@ -154,6 +82,28 @@
     .pt-green { background:linear-gradient(135deg,#059669,#34d399); }
     .pt-amber { background:linear-gradient(135deg,#d97706,#fbbf24); }
     .pt-blue  { background:linear-gradient(135deg,#2563eb,#38bdf8); }
+
+    /* Needs Attention — full-width list (shown to all VAs) */
+    .na-card { margin-top:18px; }
+    .na-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .na-head h2 { margin:0; font-size:19px; font-weight:800; color:#0f172a; }
+    .na-sub { margin:4px 0 0; font-size:13px; color:#94a3b8; }
+    .na-chip { background:#fee2e2; color:#b91c1c; font-weight:800; font-size:13px; border-radius:999px; padding:4px 13px; flex:none; }
+    .na-colhead { display:grid; grid-template-columns:1.1fr 1.7fr auto; gap:14px; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#94a3b8; padding:0 0 10px; border-bottom:1px solid #eef1f6; }
+    .na-act-h { text-align:right; }
+    .na-row { display:grid; grid-template-columns:1.1fr 1.7fr auto; gap:14px; align-items:center; padding:14px 0; border-bottom:1px solid #f4f6fa; }
+    .na-row:last-child { border-bottom:0; }
+    .na-bo { font-weight:700; font-size:14.5px; color:#0f172a; }
+    .na-badges { display:flex; flex-wrap:wrap; gap:6px; }
+    .nab { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:3px 11px; border-radius:999px; white-space:nowrap; }
+    .nab::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .nab-blue{ background:#e0f2fe; color:#0369a1; } .nab-amber{ background:#fef3c7; color:#b45309; } .nab-red{ background:#fee2e2; color:#dc2626; }
+    .na-act { margin:0; justify-self:end; }
+    .na-btn-primary { font-size:12.5px; font-weight:700; color:#fff; background:linear-gradient(135deg,#2563eb,#1d4ed8); border:0; border-radius:10px; padding:9px 15px; cursor:pointer; white-space:nowrap; box-shadow:0 6px 16px rgba(37,99,235,.28); transition:filter .12s; }
+    .na-btn-primary:hover { filter:brightness(1.06); }
+    .na-btn-soft { font-size:12.5px; font-weight:700; color:#334155; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:9px 15px; cursor:pointer; white-space:nowrap; transition:background .12s; }
+    .na-btn-soft:hover { background:#f8fafc; }
+    @media (max-width:640px){ .na-colhead { display:none; } .na-row { grid-template-columns:1fr; gap:9px; } .na-act { justify-self:start; } }
 
     /* Business-owner picker cards — subtle lift + accent */
     .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:10px !important; box-shadow:0 1px 2px rgba(15,23,42,.05) !important; }
