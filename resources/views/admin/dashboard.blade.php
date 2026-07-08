@@ -235,8 +235,9 @@
     /* Cards + layout */
     .dcard { background:#fff; border:1px solid #eef1f6; border-radius:16px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
     .dash-grid { display:grid; grid-template-columns:1.55fr 1fr; gap:16px; margin-bottom:16px; align-items:start; }
-    .dash-grid-2 { grid-template-columns:1.15fr 1fr; }
-    @media (max-width:1024px){ .dash-grid, .dash-grid-2 { grid-template-columns:1fr; } }
+    /* Analytics + Payments: each full width, stacked (not split in half) */
+    .dash-grid-2 { grid-template-columns:1fr; }
+    @media (max-width:1024px){ .dash-grid { grid-template-columns:1fr; } }
     .dcard-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
     .dcard-head h2 { margin:0; font-size:16px; font-weight:800; color:#0f172a; }
     .dcard-sub { margin:3px 0 0; font-size:12px; color:#94a3b8; }
