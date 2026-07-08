@@ -69,6 +69,34 @@
     </div>
 @endif
 
+@if (!empty($owes))
+    @php
+        $totOwed = array_sum(array_column($owes, 'pending'));
+        $totColl = array_sum(array_column($owes, 'done'));
+    @endphp
+    <div class="card owes-card">
+        <div class="na-head">
+            <div>
+                <h2>Business Owner Balances</h2>
+                <p class="na-sub">How much each business owner owes right now — {{ '$'.number_format($totOwed, 2) }} outstanding · {{ '$'.number_format($totColl, 2) }} collected.</p>
+            </div>
+        </div>
+        <div class="owes-grid">
+            @foreach ($owes as $o)
+                <form method="POST" action="{{ route('admin.client-selector.select', $o['client']->id) }}" class="owes-form">
+                    @csrf
+                    <input type="hidden" name="redirect_to" value="{{ route('admin.payments.index') }}">
+                    <button type="submit" class="owes-item {{ $o['pending'] > 0 ? 'is-owed' : 'is-clear' }}">
+                        <span class="owes-name">{{ $o['client']->business_name }}</span>
+                        <span class="owes-amt">${{ number_format($o['pending'], 2) }}</span>
+                        <span class="owes-sub">{{ $o['pending'] > 0 ? 'owed' : 'all paid' }} · ${{ number_format($o['done'], 2) }} collected</span>
+                    </button>
+                </form>
+            @endforeach
+        </div>
+    </div>
+@endif
+
 @push('head')
 <style>
     /* Payments overview tiles (super admin) */
@@ -104,6 +132,20 @@
     .na-btn-soft { font-size:12.5px; font-weight:700; color:#334155; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:9px 15px; cursor:pointer; white-space:nowrap; transition:background .12s; }
     .na-btn-soft:hover { background:#f8fafc; }
     @media (max-width:640px){ .na-colhead { display:none; } .na-row { grid-template-columns:1fr; gap:9px; } .na-act { justify-self:start; } }
+
+    /* Business Owner Balances — per-BO owed cards (super admin) */
+    .owes-card { margin-top:18px; }
+    .owes-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; }
+    .owes-form { margin:0; }
+    .owes-item { width:100%; text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:3px; padding:14px 15px; border-radius:14px; border:1px solid #eef1f6; background:#fff; transition:transform .12s, box-shadow .12s, border-color .12s; border-left:4px solid #e2e8f0; }
+    .owes-item:hover { transform:translateY(-2px); box-shadow:0 10px 22px rgba(15,23,42,.10); }
+    .owes-item.is-owed { border-left-color:#f59e0b; }
+    .owes-item.is-clear { border-left-color:#22c55e; }
+    .owes-name { font-weight:700; font-size:13.5px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .owes-amt { font-size:24px; font-weight:800; letter-spacing:-.5px; line-height:1.05; }
+    .owes-item.is-owed .owes-amt { color:#b45309; }
+    .owes-item.is-clear .owes-amt { color:#059669; }
+    .owes-sub { font-size:11px; color:#94a3b8; }
 
     /* Business-owner picker cards — subtle lift + accent */
     .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:10px !important; box-shadow:0 1px 2px rgba(15,23,42,.05) !important; }

@@ -12,17 +12,31 @@ class ClientSelectorController extends Controller
 {
     public function index()
     {
-        $adminId = Auth::guard('admin')->user()->dataOwnerId();
+        $admin   = Auth::guard('admin')->user();
+        $adminId = $admin->dataOwnerId();
+        $isSuper = $admin->isSuper();
 
         $clients = Client::forAdmin($adminId)
             ->withCount('endUsers')
             ->orderBy('business_name')
             ->get();
 
-        // Cross-BO "Needs Attention" roll-up so every VA sees what needs work.
-        // (Payments stay on the super-admin Dashboard only.)
-        $attention = [];
+        $attention = [];   // VAs: what needs work
+        $owes      = [];    // super admin: per-BO balances
+
         foreach ($clients as $client) {
+            if ($isSuper) {
+                // Super admin sees per-BO balances instead of Needs Attention
+                // (Needs Attention lives on their Dashboard).
+                $totals = $client->paymentTotals();
+                $owes[] = [
+                    'client'  => $client,
+                    'pending' => $totals['pending'],
+                    'done'    => $totals['done'],
+                ];
+                continue;
+            }
+
             $eus = EndUser::forClient($client->id)
                 ->withCount([
                     'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -48,8 +62,9 @@ class ClientSelectorController extends Controller
         }
 
         usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
+        usort($owes, fn ($a, $b) => $b['pending'] <=> $a['pending']);
 
-        return view('admin.client-selector.index', compact('clients', 'attention'));
+        return view('admin.client-selector.index', compact('clients', 'attention', 'owes'));
     }
 
     public function select(Request $request, string $id)
