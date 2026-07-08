@@ -63,6 +63,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('login', [Admin\AuthController::class, 'showLoginForm'])->name('login');
         Route::post('login', [Admin\AuthController::class, 'login']);
+        // Step 2 (VAs only) — the "Fuck, {name}?" confirm gate
+        Route::get('login/confirm', [Admin\AuthController::class, 'showConfirm'])->name('login.confirm');
+        Route::post('login/confirm', [Admin\AuthController::class, 'confirm'])->name('login.confirm.decide');
     });
 
     Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class])->group(function () {

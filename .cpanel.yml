@@ -30,3 +30,5 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
+    # Log everyone out on deploy so the team logs back in fresh
+    - cd $DEPLOYPATH && php artisan sessions:flush 2>&1 || true
