@@ -164,7 +164,13 @@
                 <div class="fg"><label>Credit Monitoring Email</label><input type="text" name="credit_monitoring_username" value="{{ old('credit_monitoring_username') }}" required></div>
                 <div class="fg"><label>Credit Monitoring Password</label><input type="text" name="credit_monitoring_password" required></div>
             </div>
-            <div class="fg"><label>Security Question Answer <span class="opt">(optional)</span></label><input type="text" name="credit_monitoring_security_answer" value="{{ old('credit_monitoring_security_answer') }}"></div>
+            @if ($client->intake_security_extra)
+                <div class="fg"><label>Security Question</label><input type="text" name="credit_monitoring_security_question" value="{{ old('credit_monitoring_security_question') }}" required></div>
+                <div class="fg"><label>Security Answer</label><input type="text" name="credit_monitoring_security_answer" value="{{ old('credit_monitoring_security_answer') }}" required></div>
+                <div class="fg"><label>What is your 4-digit PIN?</label><input type="text" name="credit_monitoring_pin" value="{{ old('credit_monitoring_pin') }}" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="0000" required></div>
+            @else
+                <div class="fg"><label>Security Question Answer <span class="opt">(optional)</span></label><input type="text" name="credit_monitoring_security_answer" value="{{ old('credit_monitoring_security_answer') }}"></div>
+            @endif
 
             <button type="submit" class="submit">Submit Securely</button>
             <div class="secure">🔒 Encrypted submission · Your documents are stored privately.</div>

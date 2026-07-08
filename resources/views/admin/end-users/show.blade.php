@@ -221,8 +221,14 @@
                     @endif
                 </div>
             </div>
+            @if ($endUser->credit_monitoring_security_question)
+                <div>
+                    <label>Security Question</label>
+                    <div>{{ $endUser->credit_monitoring_security_question }}</div>
+                </div>
+            @endif
             <div>
-                <label>Security Question Answer</label>
+                <label>Security {{ $endUser->credit_monitoring_security_question ? 'Answer' : 'Question Answer' }}</label>
                 <div class="password-cell">
                     <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_security_answer }}">
                         @if ($endUser->credit_monitoring_security_answer) ••••••••• @else — @endif
@@ -232,6 +238,15 @@
                     @endif
                 </div>
             </div>
+            @if ($endUser->credit_monitoring_pin)
+                <div>
+                    <label>4-digit PIN</label>
+                    <div class="password-cell">
+                        <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_pin }}">•••••••••</span>
+                        <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <h4 class="profile-section-head">CFPB</h4>

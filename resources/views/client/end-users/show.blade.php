@@ -168,7 +168,13 @@
             <div><label>Service Name</label><div>{{ $endUser->credit_monitoring_name ?? '—' }}</div></div>
             <div><label>Username / Email</label><div>{{ $endUser->credit_monitoring_username ?? '—' }}</div></div>
             <div><label>Password</label><div>{{ $endUser->credit_monitoring_password ? '•••••••••' : '—' }}</div></div>
-            <div><label>Security Question Answer</label><div>{{ $endUser->credit_monitoring_security_answer ? '•••••••••' : '—' }}</div></div>
+            @if ($endUser->credit_monitoring_security_question)
+                <div><label>Security Question</label><div>{{ $endUser->credit_monitoring_security_question }}</div></div>
+            @endif
+            <div><label>Security {{ $endUser->credit_monitoring_security_question ? 'Answer' : 'Question Answer' }}</label><div>{{ $endUser->credit_monitoring_security_answer ? '•••••••••' : '—' }}</div></div>
+            @if ($endUser->credit_monitoring_pin)
+                <div><label>4-digit PIN</label><div>•••••••••</div></div>
+            @endif
         </div>
 
         <h4 class="profile-section-head">CFPB</h4>
