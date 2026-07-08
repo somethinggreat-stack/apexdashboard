@@ -69,6 +69,19 @@
             .data-table th { font-size:12px; }
             .stat-value { font-size:24px; }
         }
+
+        /* 🐔 Cursor trail (VA + super admin only) — purely decorative, never blocks clicks */
+        .chick-trail {
+            position: fixed; z-index: 2147483000; pointer-events: none; user-select: none;
+            font-size: 22px; line-height: 1; transform: translate(-50%, -50%);
+            will-change: transform, opacity; animation: chickPop 1s ease-out forwards;
+        }
+        @keyframes chickPop {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0deg); }
+            18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(var(--rot, 0deg)); }
+            100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% - 36px)) scale(.85) rotate(var(--rot, 0deg)); }
+        }
+        @media (prefers-reduced-motion: reduce) { .chick-trail { display: none; } }
     </style>
     @stack('head')
 </head>
@@ -269,6 +282,38 @@
         if (e.metaKey || e.ctrlKey) { window.open(url, '_blank'); }
         else { window.location = url; }
     });
+})();
+
+/* 🐔 Hilarious cursor trail — chickens, chicks & eggs that fade out in ~1s.
+   pointer-events:none + auto-removed, so it never affects functionality.
+   Compensates for the global html { zoom } so it tracks the real cursor. */
+(function () {
+    var EMO = ['🐔', '🐓', '🐥', '🥚'];
+    var last = 0, lx = 0, ly = 0;
+
+    function zoom() {
+        var z = parseFloat(getComputedStyle(document.documentElement).zoom);
+        return (z && z > 0.1) ? z : 1;
+    }
+
+    document.addEventListener('mousemove', function (e) {
+        var now = Date.now();
+        var dx = e.clientX - lx, dy = e.clientY - ly;
+        // throttle: only spawn every ~55ms and after a little movement
+        if (now - last < 55 || (dx * dx + dy * dy) < 130) return;
+        last = now; lx = e.clientX; ly = e.clientY;
+
+        var z = zoom();
+        var el = document.createElement('span');
+        el.className = 'chick-trail';
+        el.textContent = EMO[(Math.random() * EMO.length) | 0];
+        el.style.left = (e.clientX / z) + 'px';
+        el.style.top  = (e.clientY / z) + 'px';
+        el.style.setProperty('--dx',  (Math.random() * 44 - 22).toFixed(0) + 'px');
+        el.style.setProperty('--rot', (Math.random() * 80 - 40).toFixed(0) + 'deg');
+        document.body.appendChild(el);
+        setTimeout(function () { el.remove(); }, 1000);
+    }, { passive: true });
 })();
 </script>
 @stack('scripts')
