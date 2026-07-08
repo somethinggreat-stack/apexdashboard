@@ -424,6 +424,7 @@ class PaymentController extends Controller
     private function buildPerRoundData(Client $client): array
     {
         $endUsers = EndUser::forClient($client->id)
+            ->clientsList()   // only real Clients — not New Clients / Errors
             ->with('payments')
             ->orderBy('first_name')
             ->get();

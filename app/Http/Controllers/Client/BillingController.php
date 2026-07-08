@@ -95,6 +95,7 @@ class BillingController extends Controller
         ];
 
         $endUsers = EndUser::forClient($client->id)
+            ->clientsList()   // only real Clients — not New Clients / Errors
             ->with('payments')
             ->orderBy('first_name')
             ->get();

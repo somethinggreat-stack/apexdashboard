@@ -81,6 +81,17 @@ class EndUser extends Model
         return $query->where('client_id', $clientId);
     }
 
+    /**
+     * Real "Clients" only — the ones shown on the Clients list. Excludes New
+     * Clients (pending_review) and Errors. Used for payments/billing so only
+     * active clients (in a round) are billed.
+     */
+    public function scopeClientsList($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('intake_status')
+            ->orWhereNotIn('intake_status', ['pending_review', 'error']));
+    }
+
     public function processSteps()
     {
         return $this->hasMany(ProcessStep::class)->orderBy('step_date', 'asc');

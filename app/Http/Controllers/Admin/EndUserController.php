@@ -18,7 +18,7 @@ class EndUserController extends Controller
         $query = EndUser::forClient($clientId)
             // Pending intake ("New Clients") and error clients ("Errors") live
             // in their own sections, not in the main Clients list.
-            ->where(fn ($q) => $q->whereNull('intake_status')->orWhereNotIn('intake_status', ['pending_review', 'error']))
+            ->clientsList()
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
