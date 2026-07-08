@@ -182,6 +182,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('process-steps/{id}', [Admin\ProcessStepController::class, 'update'])->name('process-steps.update');
             Route::delete('process-steps/{id}', [Admin\ProcessStepController::class, 'destroy'])->name('process-steps.destroy');
 
+            Route::delete('end-users/{endUser}/identity/{type}', [Admin\EndUserController::class, 'destroyIdentity'])
+                ->whereIn('type', ['photo_id', 'proof_of_address', 'ssn_picture', 'collage'])
+                ->name('end-users.identity.destroy');
+
             Route::post('documents', [Admin\DocumentController::class, 'store'])->name('documents.store');
             Route::post('documents/bulk', [Admin\DocumentController::class, 'bulkStore'])->name('documents.bulk');
             Route::delete('documents/{id}', [Admin\DocumentController::class, 'destroy'])->name('documents.destroy');

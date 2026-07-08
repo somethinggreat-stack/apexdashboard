@@ -258,6 +258,29 @@ class EndUserController extends Controller
             ->with('status', 'API key generated — copy it now and keep it secret.');
     }
 
+    /** Delete one identity document (photo ID / proof of address / SSN / collage). */
+    public function destroyIdentity(string $endUser, string $type)
+    {
+        $user = $this->scoped()->findOrFail($endUser);
+
+        $column = match ($type) {
+            'photo_id'         => 'photo_id_path',
+            'proof_of_address' => 'proof_of_address_path',
+            'ssn_picture'      => 'ssn_picture_path',
+            'collage'          => 'collage_path',
+            default            => abort(404),
+        };
+
+        if ($path = $user->{$column}) {
+            if (Storage::disk('private')->exists($path)) {
+                Storage::disk('private')->delete($path);
+            }
+            $user->update([$column => null]);
+        }
+
+        return back()->with('status', 'Identity document deleted.');
+    }
+
     private function scoped()
     {
         return EndUser::forClient(session('selected_client_id'));
