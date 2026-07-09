@@ -193,6 +193,42 @@
 
     <div class="dcard">
         <div class="dcard-head"><div><h2>Payments Overview</h2></div><a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View Financial Report →</a></div>
+        {{-- Payments received over time --}}
+        <div class="tb-head">
+            <strong>Payments Received</strong>
+            <div class="tb-tabs">
+                <button type="button" class="tb-tab is-on" onclick="pbShow('pmonth', this)">This Month</button>
+                <button type="button" class="tb-tab" onclick="pbShow('pweek', this)">This Week</button>
+                <button type="button" class="tb-tab" onclick="pbShow('pyear', this)">Last 12 Months</button>
+            </div>
+        </div>
+        @foreach (['pmonth' => [$payMonth, 'this month'], 'pweek' => [$payWeek, 'this week'], 'pyear' => [$payYear, 'last 12 months']] as $rk => $rv)
+            @php
+                [$rows, $cap] = $rv;
+                $amts = array_column($rows, 'amount');
+                $mxA  = max(0.01, (float) max($amts));
+                $totA = array_sum($amts);
+                $totC = array_sum(array_column($rows, 'count'));
+            @endphp
+            <div class="tb-chart" id="tb-{{ $rk }}" @if ($rk !== 'pmonth') style="display:none;" @endif>
+                <div class="tb-total"><strong>{{ $money($totA) }}</strong> received · {{ $totC }} payment{{ $totC === 1 ? '' : 's' }} · {{ $cap }}</div>
+                <div class="tb-bars">
+                    @foreach ($rows as $r)
+                        @php
+                            $h = $r['amount'] > 0 ? max(6, (int) round($r['amount'] / $mxA * 100)) : 2;
+                            $short = $r['amount'] >= 1000 ? round($r['amount'] / 1000, 1) . 'k' : (int) round($r['amount']);
+                        @endphp
+                        <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] }} — {{ $money($r['amount']) }} ({{ $r['count'] }} payment{{ $r['count'] === 1 ? '' : 's' }})">
+                            <span class="tb-num">{{ $r['amount'] > 0 ? $short : '' }}</span>
+                            <span class="tb-barwrap"><span class="tb-bar tb-bar-green {{ $r['amount'] ? '' : 'is-zero' }}" style="height:{{ $h }}%"></span></span>
+                            <span class="tb-lbl">{{ $r['label'] }}</span>
+                            <span class="tb-sub">{{ $r['sub'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
+
         <div class="pay-2col">
         <div class="pay-col-left">
         <div class="pay-wrap">
@@ -247,9 +283,10 @@
     .dash-welcome p { margin:3px 0 0; font-size:13px; color:#94a3b8; }
 
     /* Stat cards — top accent, compact */
-    .dash-stats { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:16px; }
-    @media (max-width:1200px){ .dash-stats { grid-template-columns:repeat(3,1fr); } }
-    @media (max-width:640px){ .dash-stats { grid-template-columns:repeat(2,1fr); } }
+    /* 3 per row → two rows of stat cards */
+    .dash-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+    @media (max-width:900px){ .dash-stats { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:560px){ .dash-stats { grid-template-columns:1fr; } }
     .dstat { position:relative; background:#fff; border:1px solid #eef1f6; border-radius:14px; padding:14px 15px; box-shadow:0 1px 2px rgba(15,23,42,.04); overflow:hidden; }
     .dstat::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--c,#3b82f6); }
     .dstat-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -352,8 +389,11 @@
     .pl-val { font-weight:800; color:#0f172a; }
     .pl-pct { color:#94a3b8; font-size:11.5px; width:44px; text-align:right; }
 
+    .tb-bar-green { background:linear-gradient(180deg,#34d399,#059669); }
+
     /* Payments: two columns — donut/legend left, full payments list right */
-    .pay-2col { display:grid; grid-template-columns:minmax(250px, .85fr) 1.15fr; gap:22px; align-items:start; }
+    .pay-2col { display:grid; grid-template-columns:minmax(250px, .85fr) 1.15fr; gap:22px; align-items:start;
+        margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9; }
     @media (max-width:900px){ .pay-2col { grid-template-columns:1fr; } }
     .pay-2col .pay-wrap { flex-direction:column; align-items:stretch; gap:14px; margin-bottom:0; }
     .pay-2col .donut { align-self:center; }
@@ -380,14 +420,20 @@
 
 @push('scripts')
 <script>
-window.tbShow = function (range, btn) {
-    ['month', 'week', 'day'].forEach(function (r) {
+function tbToggle(ids, show, btn) {
+    ids.forEach(function (r) {
         var el = document.getElementById('tb-' + r);
-        if (el) { el.style.display = (r === range) ? '' : 'none'; }
+        if (el) { el.style.display = (r === show) ? '' : 'none'; }
     });
-    document.querySelectorAll('.tb-tab').forEach(function (b) { b.classList.remove('is-on'); });
-    if (btn) { btn.classList.add('is-on'); }
-};
+    if (btn && btn.parentNode) {
+        btn.parentNode.querySelectorAll('.tb-tab').forEach(function (b) { b.classList.remove('is-on'); });
+        btn.classList.add('is-on');
+    }
+}
+// New Clients chart
+window.tbShow = function (range, btn) { tbToggle(['month', 'week', 'day'], range, btn); };
+// Payments Received chart
+window.pbShow = function (range, btn) { tbToggle(['pmonth', 'pweek', 'pyear'], range, btn); };
 
 window.filterBOs = function (q) {
     q = (q || '').trim().toLowerCase();

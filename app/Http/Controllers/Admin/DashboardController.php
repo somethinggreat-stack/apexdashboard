@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ClientPayment;
 use App\Models\EndUser;
+use App\Models\TimePayout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -129,6 +130,61 @@ class DashboardController extends Controller
         $byWeek  = array_values($byWeek);
         $byDay   = array_values($byDay);
 
+        // ---- PAYMENTS RECEIVED over time: this month (by date), this week (by
+        // date), last 12 months. Includes per-round payments + hourly payouts. ----
+        $since12   = Carbon::now()->subMonths(11)->startOfMonth();
+        $clientIds = $clients->pluck('id');
+
+        $payEvents = [];
+        ClientPayment::whereHas('endUser.client', fn ($q) => $q->where('admin_id', $ownerId))
+            ->where('paid_at', '>=', $since12)
+            ->get(['paid_at', 'amount'])
+            ->each(function ($p) use (&$payEvents) {
+                $payEvents[] = [Carbon::parse($p->paid_at), (float) $p->amount];
+            });
+        TimePayout::whereIn('client_id', $clientIds)
+            ->where('paid_at', '>=', $since12)
+            ->get(['paid_at', 'amount_paid'])
+            ->each(function ($p) use (&$payEvents) {
+                $payEvents[] = [Carbon::parse($p->paid_at), (float) $p->amount_paid];
+            });
+
+        // This week (Mon → Sun), with dates
+        $payWeek = [];
+        $ws = Carbon::now()->startOfWeek();
+        for ($i = 0; $i < 7; $i++) {
+            $d = $ws->copy()->addDays($i);
+            $payWeek[$d->format('Y-m-d')] = ['label' => $d->format('j'), 'sub' => $d->format('D'), 'amount' => 0.0, 'count' => 0];
+        }
+
+        // This month, every date
+        $payMonth = [];
+        $ms  = Carbon::now()->startOfMonth();
+        $dim = Carbon::now()->daysInMonth;
+        for ($i = 0; $i < $dim; $i++) {
+            $d = $ms->copy()->addDays($i);
+            $payMonth[$d->format('Y-m-d')] = ['label' => $d->format('j'), 'sub' => '', 'amount' => 0.0, 'count' => 0];
+        }
+
+        // Last 12 months
+        $payYear = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $m = Carbon::now()->subMonths($i);
+            $payYear[$m->format('Y-m')] = ['label' => $m->format('M'), 'sub' => $m->format('y'), 'amount' => 0.0, 'count' => 0];
+        }
+
+        foreach ($payEvents as [$dt, $amt]) {
+            $dk = $dt->format('Y-m-d');
+            $mk = $dt->format('Y-m');
+            if (isset($payWeek[$dk]))  { $payWeek[$dk]['amount']  += $amt; $payWeek[$dk]['count']++; }
+            if (isset($payMonth[$dk])) { $payMonth[$dk]['amount'] += $amt; $payMonth[$dk]['count']++; }
+            if (isset($payYear[$mk]))  { $payYear[$mk]['amount']  += $amt; $payYear[$mk]['count']++; }
+        }
+
+        $payWeek  = array_values($payWeek);
+        $payMonth = array_values($payMonth);
+        $payYear  = array_values($payYear);
+
         // On-track rate: active clients with logs up to date and no overdue round
         $activeTotal = max(0, $totalClients - $sumPending);
         $onTrack     = max(0, $activeTotal - $sumIncomplete - $sumOverdue);
@@ -144,7 +200,8 @@ class DashboardController extends Controller
             'clients', 'attention', 'sumPending', 'sumIncomplete', 'sumOverdue',
             'payment', 'totalClients', 'activeOwners', 'recent',
             'activityVals', 'newThisMonth', 'onTrackRate',
-            'byMonth', 'byWeek', 'byDay'
+            'byMonth', 'byWeek', 'byDay',
+            'payMonth', 'payWeek', 'payYear'
         ));
     }
 }
