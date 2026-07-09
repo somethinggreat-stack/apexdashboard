@@ -111,6 +111,13 @@ html[data-pro-theme="dark"] {
     color: #fff; font-weight: 600;
     box-shadow: 0 6px 18px rgba(79,70,229,.42);
 }
+.pro-nav-label {
+    display: block;
+    margin: 14px 14px 7px; padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    font-size: 10px; font-weight: 700; letter-spacing: .13em;
+    text-transform: uppercase; color: #7c88ad;
+}
 .pro-nav .pro-count {
     margin-left: auto; min-width: 22px; padding: 2px 7px;
     border-radius: 999px; background: #ef4444; color: #fff;
@@ -143,9 +150,12 @@ html[data-pro-theme="dark"] {
     background: var(--pro-card);
     border-bottom: 1px solid var(--pro-line);
 }
+/* Hidden on desktop (the sidebar is always visible there); only appears
+   below 900px, where the sidebar slides off-screen. */
 .pro-hamburger {
+    display: none;
     width: 46px; height: 46px; flex-shrink: 0;
-    display: inline-flex; align-items: center; justify-content: center;
+    align-items: center; justify-content: center;
     background: var(--pro-line-soft); border: 1px solid var(--pro-line);
     border-radius: 13px; cursor: pointer; color: var(--pro-text-soft);
 }
@@ -415,6 +425,7 @@ html[data-pro-theme="dark"] .pro-act.del  { background: rgba(220,38,38,.16);  bo
     .pro-topbar-search input { width: 190px; }
 }
 @media (max-width: 900px) {
+    .pro-hamburger { display: inline-flex; }
     .pro-sidebar { transform: translateX(-100%); transition: transform .22s ease; }
     .pro-sidebar.open { transform: none; }
     .pro-main { margin-left: 0; }

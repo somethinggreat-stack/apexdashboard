@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Users & Activity')
 
@@ -71,10 +71,10 @@
             @forelse ($logs as $log)
                 <tr>
                     <td class="muted" style="white-space:nowrap;">{{ $log->created_at?->format('M j, Y g:ia') }}</td>
-                    <td><strong>{{ $log->admin?->full_name ?? '—' }}</strong></td>
+                    <td><strong>{{ $log->admin?->full_name ?? 'â€”' }}</strong></td>
                     <td>{{ $log->description ?: $log->action }} <span class="muted" style="font-size:11px;">{{ $log->method }} {{ $log->path }}</span></td>
-                    <td class="muted">{{ $log->subject ?: '—' }}</td>
-                    <td class="muted">{{ $log->ip ?: '—' }}</td>
+                    <td class="muted">{{ $log->subject ?: 'â€”' }}</td>
+                    <td class="muted">{{ $log->ip ?: 'â€”' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="5" class="empty">No activity yet.</td></tr>

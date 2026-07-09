@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', $title)
 
@@ -38,7 +38,7 @@
                             @if ($prospect->instagram)
                                 <a href="{{ \Illuminate\Support\Str::startsWith($prospect->instagram, ['http']) ? $prospect->instagram : 'https://' . ltrim($prospect->instagram, '/') }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($prospect->instagram, 32) }}</a>
                             @else
-                                <span class="muted">—</span>
+                                <span class="muted">â€”</span>
                             @endif
                         @elseif ($prospect->whatsapp_digits)
                             @if ($ch === 'phone')
@@ -47,10 +47,10 @@
                                 <a href="https://wa.me/{{ $prospect->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->whatsapp }}</a>
                             @endif
                         @else
-                            <span class="muted">—</span>
+                            <span class="muted">â€”</span>
                         @endif
                     </td>
-                    <td class="prospect-notes">{{ $prospect->notes ?: '—' }}</td>
+                    <td class="prospect-notes">{{ $prospect->notes ?: 'â€”' }}</td>
                     <td class="no-link muted">{{ $prospect->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <div class="row-actions">

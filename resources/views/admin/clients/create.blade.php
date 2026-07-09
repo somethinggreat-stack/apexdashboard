@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Add Business Client')
 
@@ -37,7 +37,7 @@
                 <label>Payment Model *</label>
                 <select name="compensation_model" id="create-comp-model" required>
                     <option value="per_round" @selected(old('compensation_model', 'per_round') === 'per_round')>Per Round (flat fee per client per round)</option>
-                    <option value="hourly"    @selected(old('compensation_model') === 'hourly')>Hourly (rate × hours worked, paid in periods)</option>
+                    <option value="hourly"    @selected(old('compensation_model') === 'hourly')>Hourly (rate Ã— hours worked, paid in periods)</option>
                 </select>
             </div>
 

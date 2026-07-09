@@ -1,18 +1,18 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', $endUser->full_name)
 
 @php
     $documentCategories = [
         'credit_report' => 'Credit Report',
-        'dispute_letter_experian' => 'Dispute Letter — Experian',
-        'dispute_letter_equifax' => 'Dispute Letter — Equifax',
-        'dispute_letter_transunion' => 'Dispute Letter — TransUnion',
-        'dispute_letter_innovis' => 'Dispute Letter — Innovis',
-        'cfpb_complaint_experian' => 'CFPB Complaint — Experian',
-        'cfpb_complaint_equifax' => 'CFPB Complaint — Equifax',
-        'cfpb_complaint_transunion' => 'CFPB Complaint — TransUnion',
-        'cfpb_complaint_innovis' => 'CFPB Complaint — Innovis',
+        'dispute_letter_experian' => 'Dispute Letter â€” Experian',
+        'dispute_letter_equifax' => 'Dispute Letter â€” Equifax',
+        'dispute_letter_transunion' => 'Dispute Letter â€” TransUnion',
+        'dispute_letter_innovis' => 'Dispute Letter â€” Innovis',
+        'cfpb_complaint_experian' => 'CFPB Complaint â€” Experian',
+        'cfpb_complaint_equifax' => 'CFPB Complaint â€” Equifax',
+        'cfpb_complaint_transunion' => 'CFPB Complaint â€” TransUnion',
+        'cfpb_complaint_innovis' => 'CFPB Complaint â€” Innovis',
         'ftc_complaint' => 'FTC Complaint',
         'bureau_response' => 'Bureau Response',
         'escalation_letter' => 'Escalation Letter',
@@ -36,7 +36,7 @@
 
 @section('topbar-content')
     <div class="page-actions">
-        <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary page-action-btn">← All Clients</a>
+        <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary page-action-btn">â† All Clients</a>
         <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
               onsubmit="return confirm('Delete client {{ $endUser->full_name }} and ALL their documents, notes, and process steps? This cannot be undone.')">
             @csrf @method('DELETE')
@@ -53,7 +53,7 @@
     <div class="info-grid client-header-row">
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
         <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
-        <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
+        <div><label>Phone</label><div>{{ $endUser->phone ?? 'â€”' }}</div></div>
         <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
         <div>
             <label>Status</label>
@@ -62,15 +62,15 @@
                       data-id="{{ $endUser->id }}"
                       data-current="{{ $endUser->status }}">
                     <span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span>
-                    <span class="inline-pencil" aria-hidden="true">✎</span>
+                    <span class="inline-pencil" aria-hidden="true">âœŽ</span>
                 </span>
             </div>
         </div>
-        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
+        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : 'â€”' }}</div></div>
     </div>
     @push('head')
     <style>
-        /* Comments tab — pulse amber→red when the client has comments */
+        /* Comments tab â€” pulse amberâ†’red when the client has comments */
         .tab.tab-has-notes { color:#b45309 !important; font-weight:800; animation: notesPulse 1.25s ease-in-out infinite; }
         .tab.tab-has-notes.active { color:#b91c1c !important; }
         .notes-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#dc2626;
@@ -82,7 +82,7 @@
             .notes-dot { animation:none; }
         }
 
-        /* Topbar action buttons — equal width/height */
+        /* Topbar action buttons â€” equal width/height */
         .page-actions { display: flex; gap: 10px; align-items: center; }
         .page-actions form { margin: 0; padding: 0; }
         .page-actions .page-action-btn {
@@ -103,7 +103,7 @@
         .client-header-name { display: flex; align-items: center; padding-bottom: 12px; }
         .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
 
-        /* Single-row, premium header info strip — scoped only to the client detail page */
+        /* Single-row, premium header info strip â€” scoped only to the client detail page */
         .info-grid.client-header-row {
             display: grid !important;
             grid-template-columns: 1.4fr 1.6fr 1fr .8fr .9fr 1fr;
@@ -183,19 +183,19 @@
         <div class="info-grid">
             <div><label>First Name</label><div>{{ $endUser->first_name }}</div></div>
             <div><label>Last Name</label><div>{{ $endUser->last_name }}</div></div>
-            <div><label>Suffix</label><div>{{ $endUser->suffix && $endUser->suffix !== 'None' ? $endUser->suffix : '—' }}</div></div>
+            <div><label>Suffix</label><div>{{ $endUser->suffix && $endUser->suffix !== 'None' ? $endUser->suffix : 'â€”' }}</div></div>
             <div><label>Email Address</label><div>{{ $endUser->email }}</div></div>
-            <div><label>Phone Number</label><div>{{ $endUser->phone ?? '—' }}</div></div>
-            <div><label>Date of Birth</label><div>{{ $endUser->date_of_birth?->format('M d, Y') ?? '—' }}</div></div>
-            <div><label>SSN</label><div>{{ $endUser->ssn ?? '—' }}</div></div>
+            <div><label>Phone Number</label><div>{{ $endUser->phone ?? 'â€”' }}</div></div>
+            <div><label>Date of Birth</label><div>{{ $endUser->date_of_birth?->format('M d, Y') ?? 'â€”' }}</div></div>
+            <div><label>SSN</label><div>{{ $endUser->ssn ?? 'â€”' }}</div></div>
         </div>
 
         <h4 class="profile-section-head">Current Address</h4>
         <div class="info-grid">
-            <div><label>Current Address</label><div>{{ $endUser->current_address ?? '—' }}</div></div>
-            <div><label>City</label><div>{{ $endUser->city ?? '—' }}</div></div>
-            <div><label>State</label><div>{{ $endUser->state ?? '—' }}</div></div>
-            <div><label>Zipcode</label><div>{{ $endUser->zipcode ?? '—' }}</div></div>
+            <div><label>Current Address</label><div>{{ $endUser->current_address ?? 'â€”' }}</div></div>
+            <div><label>City</label><div>{{ $endUser->city ?? 'â€”' }}</div></div>
+            <div><label>State</label><div>{{ $endUser->state ?? 'â€”' }}</div></div>
+            <div><label>Zipcode</label><div>{{ $endUser->zipcode ?? 'â€”' }}</div></div>
         </div>
 
         <h4 class="profile-section-head">Identity Document</h4>
@@ -223,13 +223,13 @@
 
         <h4 class="profile-section-head">Credit Monitoring</h4>
         <div class="info-grid">
-            <div><label>Service Name</label><div>{{ $endUser->credit_monitoring_name ?? '—' }}</div></div>
-            <div><label>Username / Email</label><div>{{ $endUser->credit_monitoring_username ?? '—' }}</div></div>
+            <div><label>Service Name</label><div>{{ $endUser->credit_monitoring_name ?? 'â€”' }}</div></div>
+            <div><label>Username / Email</label><div>{{ $endUser->credit_monitoring_username ?? 'â€”' }}</div></div>
             <div>
                 <label>Password</label>
                 <div class="password-cell">
                     <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_password }}">
-                        @if ($endUser->credit_monitoring_password) ••••••••• @else — @endif
+                        @if ($endUser->credit_monitoring_password) â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢ @else â€” @endif
                     </span>
                     @if ($endUser->credit_monitoring_password)
                         <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
@@ -246,7 +246,7 @@
                 <label>Security {{ $endUser->credit_monitoring_security_question ? 'Answer' : 'Question Answer' }}</label>
                 <div class="password-cell">
                     <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_security_answer }}">
-                        @if ($endUser->credit_monitoring_security_answer) ••••••••• @else — @endif
+                        @if ($endUser->credit_monitoring_security_answer) â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢ @else â€” @endif
                     </span>
                     @if ($endUser->credit_monitoring_security_answer)
                         <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
@@ -257,7 +257,7 @@
                 <div>
                     <label>4-digit PIN</label>
                     <div class="password-cell">
-                        <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_pin }}">•••••••••</span>
+                        <span class="password-mask" data-secret="{{ $endUser->credit_monitoring_pin }}">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</span>
                         <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
                     </div>
                 </div>
@@ -266,12 +266,12 @@
 
         <h4 class="profile-section-head">CFPB</h4>
         <div class="info-grid">
-            <div><label>CFPB Login Email</label><div>{{ $endUser->cfpb_email ?? '—' }}</div></div>
+            <div><label>CFPB Login Email</label><div>{{ $endUser->cfpb_email ?? 'â€”' }}</div></div>
             <div>
                 <label>CFPB Password</label>
                 <div class="password-cell">
                     <span class="password-mask" data-secret="{{ $endUser->cfpb_password }}">
-                        @if ($endUser->cfpb_password) ••••••••• @else — @endif
+                        @if ($endUser->cfpb_password) â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢ @else â€” @endif
                     </span>
                     @if ($endUser->cfpb_password)
                         <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
@@ -291,7 +291,7 @@
         <div class="timeline">
             @forelse ($endUser->processSteps as $step)
                 <div class="timeline-item">
-                    <div class="timeline-marker">R{{ $step->round }}·W{{ $step->week }}</div>
+                    <div class="timeline-marker">R{{ $step->round }}Â·W{{ $step->week }}</div>
                     <div class="timeline-body">
                         <div class="timeline-head">
                             <span class="badge">Round {{ $step->round }}</span>
@@ -331,7 +331,7 @@
             </div>
             <div class="upcard-title">Drag &amp; Drop</div>
             <div class="upcard-sub">or <button type="button" class="upcard-link" id="bulkBrowse">choose a file</button></div>
-            <div class="upcard-hint">PDF, image, audio &amp; office files — multiple at once</div>
+            <div class="upcard-hint">PDF, image, audio &amp; office files â€” multiple at once</div>
         </div>
         <div class="dz-list" id="bulkList" aria-live="polite"></div>
 
@@ -349,7 +349,7 @@
                             <a href="{{ $idoc['url'] }}" download class="btn btn-sm" title="Download"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                             <form method="POST" action="{{ route('admin.end-users.identity.destroy', [$endUser->id, $idoc['type']]) }}" style="display:inline" onsubmit="return confirm('Delete this identity document? This cannot be undone.')">
                                 @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-danger" title="Delete">×</button>
+                                <button class="btn btn-sm btn-danger" title="Delete">Ã—</button>
                             </form>
                         </div>
                     </div>
@@ -374,7 +374,7 @@
                                 <a href="{{ $doc->url }}" download class="btn btn-sm" title="Download"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                                 <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="display:inline" onsubmit="return confirm('Delete this document?')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-danger" title="Delete">×</button>
+                                    <button class="btn btn-sm btn-danger" title="Delete">Ã—</button>
                                 </form>
                             </div>
                         </div>
@@ -395,7 +395,7 @@
             <div class="note-item">
                 <div class="note-meta">
                     <strong>{{ $note->createdBy?->full_name ?? 'VA' }}</strong>
-                    <span class="muted">· {{ $note->created_at?->format('M d, Y H:i') }}</span>
+                    <span class="muted">Â· {{ $note->created_at?->format('M d, Y H:i') }}</span>
                 </div>
                 <div class="note-body">{{ $note->note_text }}</div>
                 <form method="POST" action="{{ route('admin.notes.destroy', $note->id) }}" onsubmit="return confirm('Delete this comment?')">
@@ -517,7 +517,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="form-group"><label>Description (optional)</label><input type="text" name="description" placeholder="e.g. Experian dispute letter — 8 accounts"></div>
+            <div class="form-group"><label>Description (optional)</label><input type="text" name="description" placeholder="e.g. Experian dispute letter â€” 8 accounts"></div>
             <div class="form-group"><label>File (pdf/img/audio, max 10MB)</label><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav" required></div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('uploadDocModal')">Cancel</button>
@@ -548,7 +548,7 @@
 <div id="editProfileModal" class="modal">
     <div class="modal-content modal-wide">
         <div class="modal-header">
-            <h3>Edit Profile — {{ $endUser->full_name }}</h3>
+            <h3>Edit Profile â€” {{ $endUser->full_name }}</h3>
             <button class="modal-close" onclick="closeModal('editProfileModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" enctype="multipart/form-data">
@@ -599,7 +599,7 @@
                     <div class="form-group">
                         <label>Collage</label>
                         @if ($endUser->collage_url)
-                            <div class="muted small"><a href="{{ $endUser->collage_url }}" target="_blank">Current file</a> — uploading replaces it</div>
+                            <div class="muted small"><a href="{{ $endUser->collage_url }}" target="_blank">Current file</a> â€” uploading replaces it</div>
                         @endif
                         <input type="file" name="collage" accept=".pdf,.jpg,.jpeg,.png">
                         <div class="muted small">A single file (image or PDF) containing Photo ID, Proof of Address and SSN.</div>
@@ -678,7 +678,7 @@
             span.textContent = secret;
             btn.textContent = 'Hide';
         } else {
-            span.textContent = '•••••••••';
+            span.textContent = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
             btn.textContent = 'Show';
         }
     }
@@ -702,7 +702,7 @@
                         return '<option value="'+s+'"'+(s===current?' selected':'')+'>'+s+'</option>';
                     }).join('') + '</select>' +
                     '<button class="inline-save" type="button">Save</button>' +
-                    '<button class="inline-cancel" type="button">×</button>';
+                    '<button class="inline-cancel" type="button">Ã—</button>';
                 var sel = el.querySelector('select');
                 sel.focus();
                 sel.addEventListener('click', function (ev) { ev.stopPropagation(); });
@@ -879,7 +879,7 @@
 
     function renderHint() {
         mselHint.className = 'msel-hint';
-        mselHint.textContent = 'Each selected step becomes its own timeline entry for the chosen round & week. Steps marked "Exists" are already logged and can’t be re-added.';
+        mselHint.textContent = 'Each selected step becomes its own timeline entry for the chosen round & week. Steps marked "Exists" are already logged and canâ€™t be re-added.';
     }
 
     function sync() {
@@ -985,7 +985,7 @@
                       '<span class="dz-ico"><span class="dz-spin" aria-hidden="true"></span></span>'
                     + '<span class="dz-name">' + escapeHtml(f.name) + '</span>'
                     + '<span class="dz-bar"><span></span></span>'
-                    + '<span class="dz-state uploading">Uploading…</span>';
+                    + '<span class="dz-state uploading">Uploadingâ€¦</span>';
                 list.appendChild(row);
                 return row;
             });

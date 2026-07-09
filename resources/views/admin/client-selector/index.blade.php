@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Select Business Owner')
 
@@ -61,7 +61,7 @@
                     <form method="POST" action="{{ route('admin.client-selector.select', $bo->id) }}" class="na-act">
                         @csrf
                         <input type="hidden" name="redirect_to" value="{{ $a['pending'] ? route('admin.new-clients') : route('admin.end-users.index') }}">
-                        <button type="submit" class="{{ $a['pending'] ? 'na-btn-primary' : 'na-btn-soft' }}">{{ $a['pending'] ? 'Review New Clients →' : 'Open Clients →' }}</button>
+                        <button type="submit" class="{{ $a['pending'] ? 'na-btn-primary' : 'na-btn-soft' }}">{{ $a['pending'] ? 'Review New Clients â†’' : 'Open Clients â†’' }}</button>
                     </form>
                 </div>
             @endforeach
@@ -78,7 +78,7 @@
         <div class="na-head">
             <div>
                 <h2>Business Owner Balances</h2>
-                <p class="na-sub">How much each business owner owes right now — {{ '$'.number_format($totOwed, 2) }} outstanding · {{ '$'.number_format($totColl, 2) }} collected.</p>
+                <p class="na-sub">How much each business owner owes right now â€” {{ '$'.number_format($totOwed, 2) }} outstanding Â· {{ '$'.number_format($totColl, 2) }} collected.</p>
             </div>
         </div>
         <div class="owes-grid">
@@ -89,7 +89,7 @@
                     <button type="submit" class="owes-item {{ $o['pending'] > 0 ? 'is-owed' : 'is-clear' }}">
                         <span class="owes-name">{{ $o['client']->business_name }}</span>
                         <span class="owes-amt">${{ number_format($o['pending'], 2) }}</span>
-                        <span class="owes-sub">{{ $o['pending'] > 0 ? 'owed' : 'all paid' }} · ${{ number_format($o['done'], 2) }} collected</span>
+                        <span class="owes-sub">{{ $o['pending'] > 0 ? 'owed' : 'all paid' }} Â· ${{ number_format($o['done'], 2) }} collected</span>
                     </button>
                 </form>
             @endforeach
@@ -111,7 +111,7 @@
     .pt-amber { background:linear-gradient(135deg,#d97706,#fbbf24); }
     .pt-blue  { background:linear-gradient(135deg,#2563eb,#38bdf8); }
 
-    /* Needs Attention — full-width list (shown to all VAs) */
+    /* Needs Attention â€” full-width list (shown to all VAs) */
     .na-card { margin-top:18px; }
     .na-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
     .na-head h2 { margin:0; font-size:19px; font-weight:800; color:#0f172a; }
@@ -133,7 +133,7 @@
     .na-btn-soft:hover { background:#f8fafc; }
     @media (max-width:640px){ .na-colhead { display:none; } .na-row { grid-template-columns:1fr; gap:9px; } .na-act { justify-self:start; } }
 
-    /* Business Owner Balances — per-BO owed cards (super admin) */
+    /* Business Owner Balances â€” per-BO owed cards (super admin) */
     .owes-card { margin-top:18px; }
     .owes-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; }
     .owes-form { margin:0; }
@@ -147,7 +147,7 @@
     .owes-item.is-clear .owes-amt { color:#059669; }
     .owes-sub { font-size:11px; color:#94a3b8; }
 
-    /* Business-owner picker cards — subtle lift + accent */
+    /* Business-owner picker cards â€” subtle lift + accent */
     .picker-card { transition: transform .12s, box-shadow .12s, border-color .12s; border:1px solid #e6ebf2 !important; border-radius:10px !important; box-shadow:0 1px 2px rgba(15,23,42,.05) !important; }
     .picker-card:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.10) !important; border-color:#bfdbfe !important; }
     .picker-card-name { font-weight:700; }
@@ -203,7 +203,7 @@
             radial-gradient(900px circle at 0% 120%, #e9faf2 0%, transparent 42%);
     }
 
-    /* Business-owner cards — compact, professional clickable chips */
+    /* Business-owner cards â€” compact, professional clickable chips */
     .picker-grid { grid-template-columns:repeat(auto-fill, minmax(206px,1fr)) !important; gap:12px !important; }
     .picker-card {
         display:flex !important; flex-direction:column; align-items:flex-start !important; text-align:left !important;

@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Website Leads')
 
@@ -8,11 +8,11 @@
         <div>
             <h2>Website Leads</h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                All submissions from across the public site — popup and contact form.
+                All submissions from across the public site â€” popup and contact form.
             </p>
         </div>
         <div class="lead-search">
-            <input type="text" id="leadSearch" placeholder="Search name, email, phone, message…">
+            <input type="text" id="leadSearch" placeholder="Search name, email, phone, messageâ€¦">
         </div>
     </div>
 
@@ -43,7 +43,7 @@
         <tbody>
             @forelse ($leads as $lead)
                 <tr class="lead-row">
-                    <td><strong>{{ $lead->fullName() ?: '—' }}</strong></td>
+                    <td><strong>{{ $lead->fullName() ?: 'â€”' }}</strong></td>
                     <td>
                         @if ($lead->email)
                             <a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a><br>
@@ -71,10 +71,10 @@
                                     $lead->urgency ? 'Urgency: ' . $lead->urgency : null,
                                 ]);
                             @endphp
-                            {{ $bits ? implode(' · ', $bits) : '—' }}
+                            {{ $bits ? implode(' Â· ', $bits) : 'â€”' }}
                         @endif
                     </td>
-                    <td class="muted">{{ $lead->source_page ?: '—' }}</td>
+                    <td class="muted">{{ $lead->source_page ?: 'â€”' }}</td>
                     <td class="muted" style="white-space:nowrap;">
                         {{ optional($lead->created_at)->diffForHumans() }}<br>
                         <span style="font-size:11px;">{{ optional($lead->created_at)->format('M j, Y g:ia') }}</span>

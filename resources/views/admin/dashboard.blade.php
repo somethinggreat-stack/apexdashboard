@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Dashboard')
 
@@ -37,7 +37,7 @@
 @endphp
 
 <div class="dash-welcome">
-    <h1>Welcome back, {{ $me?->full_name ?: 'Admin' }} 👋</h1>
+    <h1>Welcome back, {{ $me?->full_name ?: 'Admin' }} ðŸ‘‹</h1>
     <p>Here's what's happening with your business owners today.</p>
 </div>
 
@@ -83,10 +83,10 @@
                 <h2>Business Owners Overview</h2>
                 <p class="dcard-sub">{{ $activeOwners }} active business owners</p>
             </div>
-            <a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View All →</a>
+            <a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View All â†’</a>
         </div>
 
-        <input type="text" id="boSearch" class="dsearch" placeholder="Search business owners…" onkeyup="filterBOs(this.value)">
+        <input type="text" id="boSearch" class="dsearch" placeholder="Search business ownersâ€¦" onkeyup="filterBOs(this.value)">
 
         <div class="bo-grid" id="boGrid">
             @foreach ($clients as $client)
@@ -100,7 +100,7 @@
                             <span class="bo-meta">{{ $client->end_users_count }} clients</span>
                         </span>
                         <span class="bo-pill pill-{{ $client->status }}">{{ strtoupper($client->status) }}</span>
-                        <span class="bo-menu">⋮</span>
+                        <span class="bo-menu">â‹®</span>
                     </button>
                 </form>
             @endforeach
@@ -127,11 +127,11 @@
                 <form method="POST" action="{{ route('admin.client-selector.select', $bo->id) }}" class="att-act">
                     @csrf
                     <input type="hidden" name="redirect_to" value="{{ $a['pending'] ? route('admin.new-clients') : route('admin.end-users.index') }}">
-                    <button type="submit" class="{{ $a['pending'] ? 'dbtn-primary' : 'dbtn-soft' }}">{{ $a['pending'] ? 'Review New Clients →' : 'Open Clients →' }}</button>
+                    <button type="submit" class="{{ $a['pending'] ? 'dbtn-primary' : 'dbtn-soft' }}">{{ $a['pending'] ? 'Review New Clients â†’' : 'Open Clients â†’' }}</button>
                 </form>
             </div>
         @empty
-            <div class="dempty">Everything looks good — nothing needs attention.</div>
+            <div class="dempty">Everything looks good â€” nothing needs attention.</div>
         @endforelse
         </div>
     </div>
@@ -175,13 +175,13 @@
                 $cap = ['month' => 'last 12 months', 'week' => 'last 12 weeks', 'day' => 'last 30 days'][$range];
             @endphp
             <div class="tb-chart" id="tb-{{ $range }}" @if ($range !== 'month') style="display:none;" @endif>
-                <div class="tb-total"><strong>{{ number_format($tot) }}</strong> new client{{ $tot === 1 ? '' : 's' }} · {{ $cap }}</div>
+                <div class="tb-total"><strong>{{ number_format($tot) }}</strong> new client{{ $tot === 1 ? '' : 's' }} Â· {{ $cap }}</div>
                 <div class="tb-plot">
                     <div class="tb-grid"></div>
                     <div class="tb-bars">
                         @foreach ($rows as $r)
                             @php $h = $r['count'] > 0 ? max(4, (int) round($r['count'] / $mx * 100)) : 0; @endphp
-                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] ?? '' }} — {{ $r['count'] }} new">
+                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] ?? '' }} â€” {{ $r['count'] }} new">
                                 <span class="tb-num">{{ $r['count'] ?: '' }}</span>
                                 <span class="tb-track"><span class="tb-bar" style="height:{{ $h }}%"></span></span>
                                 <span class="tb-labels">
@@ -197,7 +197,7 @@
     </div>
 
     <div class="dcard">
-        <div class="dcard-head"><div><h2>Payments Overview</h2></div><a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View Financial Report →</a></div>
+        <div class="dcard-head"><div><h2>Payments Overview</h2></div><a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View Financial Report â†’</a></div>
         {{-- Payments received over time --}}
         <div class="tb-head">
             <strong>Payments Received</strong>
@@ -216,7 +216,7 @@
                 $totC = array_sum(array_column($rows, 'count'));
             @endphp
             <div class="tb-chart" id="tb-{{ $rk }}" @if ($rk !== 'pmonth') style="display:none;" @endif>
-                <div class="tb-total"><strong>{{ $money($totA) }}</strong> received · {{ $totC }} payment{{ $totC === 1 ? '' : 's' }} · {{ $cap }}</div>
+                <div class="tb-total"><strong>{{ $money($totA) }}</strong> received Â· {{ $totC }} payment{{ $totC === 1 ? '' : 's' }} Â· {{ $cap }}</div>
                 <div class="tb-plot">
                     <div class="tb-grid"></div>
                     <div class="tb-bars">
@@ -225,7 +225,7 @@
                                 $h = $r['amount'] > 0 ? max(4, (int) round($r['amount'] / $mxA * 100)) : 0;
                                 $short = $r['amount'] >= 1000 ? rtrim(rtrim(number_format($r['amount'] / 1000, 1), '0'), '.') . 'k' : (int) round($r['amount']);
                             @endphp
-                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] }} — {{ $money($r['amount']) }} ({{ $r['count'] }} payment{{ $r['count'] === 1 ? '' : 's' }})">
+                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] }} â€” {{ $money($r['amount']) }} ({{ $r['count'] }} payment{{ $r['count'] === 1 ? '' : 's' }})">
                                 <span class="tb-num">{{ $r['amount'] > 0 ? $short : '' }}</span>
                                 <span class="tb-track"><span class="tb-bar tb-bar-green" style="height:{{ $h }}%"></span></span>
                                 <span class="tb-labels">
@@ -267,8 +267,8 @@
                     <div class="rp-item">
                         <span class="rp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
                         <span class="rp-body">
-                            <span class="rp-name">{{ $p->endUser?->client?->business_name ?? '—' }}</span>
-                            <span class="rp-sub">{{ $p->endUser?->full_name ?? 'Payment received' }} · Round {{ $p->round }}</span>
+                            <span class="rp-name">{{ $p->endUser?->client?->business_name ?? 'â€”' }}</span>
+                            <span class="rp-sub">{{ $p->endUser?->full_name ?? 'Payment received' }} Â· Round {{ $p->round }}</span>
                         </span>
                         <span class="rp-amt">{{ $money($p->amount) }}</span>
                         <span class="rp-date">{{ $p->paid_at?->format('M j, Y') }}</span>
@@ -292,8 +292,8 @@
     .dash-welcome h1 { margin:0; font-size:22px; font-weight:800; color:#0f172a; }
     .dash-welcome p { margin:3px 0 0; font-size:13px; color:#94a3b8; }
 
-    /* Stat cards — top accent, compact */
-    /* 3 per row → two rows of stat cards */
+    /* Stat cards â€” top accent, compact */
+    /* 3 per row â†’ two rows of stat cards */
     .dash-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
     @media (max-width:900px){ .dash-stats { grid-template-columns:repeat(2,1fr); } }
     @media (max-width:560px){ .dash-stats { grid-template-columns:1fr; } }
@@ -368,7 +368,7 @@
     .an-chart-head strong { font-size:13px; color:#0f172a; }
     .an-chart { width:100%; }
 
-    /* New Clients Over Time — month / week / day bars */
+    /* New Clients Over Time â€” month / week / day bars */
     .tb-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:2px 0 10px; }
     .tb-head strong { font-size:13px; color:#0f172a; }
     .tb-tabs { display:flex; gap:3px; background:#f1f5f9; padding:3px; border-radius:10px; }
@@ -409,7 +409,7 @@
 
     .tb-bar-green { background:linear-gradient(180deg,#34d399,#059669); }
 
-    /* Payments: two columns — donut/legend left, full payments list right */
+    /* Payments: two columns â€” donut/legend left, full payments list right */
     .pay-2col { display:grid; grid-template-columns:minmax(250px, .85fr) 1.15fr; gap:22px; align-items:start;
         margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9; }
     @media (max-width:900px){ .pay-2col { grid-template-columns:1fr; } }
