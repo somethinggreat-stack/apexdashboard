@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Secure Client Intake</title>
+    @php
+        // Per-BO branding: opt-in by setting intake_display_name. Any BO without
+        // it keeps the generic form exactly as before.
+        $brand    = $client->intake_display_name;
+        $brandLogo = $client->intakeLogoUrl();
+    @endphp
+    <title>{{ $brand ? $brand . ' — Client Intake' : 'Secure Client Intake' }}</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -24,7 +30,11 @@
             font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
             color:#bfdbfe; background:rgba(37,99,235,.16); border:1px solid rgba(96,165,250,.35); }
         .head h1 { margin:0 0 8px; font-size:30px; letter-spacing:-.02em; }
+        .head h1.branded { text-transform:uppercase; letter-spacing:.03em; font-size:27px; font-weight:800; }
         .head p { margin:0; color:#cbd5e1; font-size:14.5px; }
+        .brand-logo { display:block; margin:0 auto 16px; max-height:70px; max-width:230px; width:auto;
+            filter:drop-shadow(0 8px 20px rgba(0,0,0,.35)); }
+        @media (max-width:600px){ .head h1.branded { font-size:22px; } }
 
         .trust { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:16px 0 4px; }
         .trust span { display:inline-flex; align-items:center; gap:6px; color:#dbeafe; font-size:11.5px; font-weight:600;
@@ -76,9 +86,17 @@
 <body>
 <div class="wrap">
     <div class="head">
+        @if ($brandLogo)
+            <img src="{{ $brandLogo }}" alt="{{ $brand ?: $client->business_name }}" class="brand-logo">
+        @endif
         <div class="head-badge">🔒 Secure Client Onboarding</div>
-        <h1>Secure Client Intake</h1>
-        <p>Your information is encrypted and used only to work on your credit file.</p>
+        @if ($brand)
+            <h1 class="branded">{{ $brand }} Client Intake</h1>
+            <p>Welcome to {{ $brand }}. Your information is encrypted and used only to work on your credit file.</p>
+        @else
+            <h1>Secure Client Intake</h1>
+            <p>Your information is encrypted and used only to work on your credit file.</p>
+        @endif
         <div class="trust">
             <span>🔒 Bank-grade encryption</span>
             <span>🛡️ Private &amp; secure</span>
