@@ -95,13 +95,7 @@
                     </td>
                     <td class="no-link">
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
-                        @if (($bucket ?? 'in_progress') === 'clients')
-                            <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}" style="display:inline"
-                                  onsubmit="return confirm('Move {{ addslashes($eu->full_name) }} back to In Progress?')">
-                                @csrf
-                                <button class="btn btn-sm btn-tonew">Move to In Progress</button>
-                            </form>
-                        @else
+                        @if (($bucket ?? 'in_progress') !== 'clients')
                             <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}" style="display:inline">
                                 @csrf
                                 <button class="btn btn-sm btn-todone">Move to Clients</button>
