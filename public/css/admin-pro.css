@@ -38,8 +38,8 @@ html { zoom: 0.75; }
     --pro-side-2:    #141a3e;
     --pro-side-3:    #1b1350;
 
-    /* wide enough for "Add/Remove Business Owners" on a single line */
-    --pro-side-w:    322px;
+    /* wide enough for "Add/Remove Business Owners" on a single line at 15px */
+    --pro-side-w:    360px;
 }
 
 
@@ -58,10 +58,11 @@ html, body { height: 100%; }
 .pro-layout { display: flex; min-height: 100%; }
 
 /* ------------------------------ sidebar ---------------------------------
-   One fixed, full-height panel. Wide enough that no label ever wraps, and
-   short enough that the whole nav fits without a scrollbar. Everything is
-   sized so the tallest case (super admin, no BO selected: 7 sections,
-   16 links) still clears a 768px-tall viewport at zoom 0.75.
+   One fixed, full-height panel: logo, business-owner box, flat nav, logout.
+   Wide enough that no label ever wraps, and short enough that the tallest
+   case (super admin with no BO selected: 16 links) fits a 768px-tall viewport
+   at zoom 0.75 without a scrollbar. If you add a link or grow a font, re-check
+   that budget -- there is ~30px of headroom, not more.
    ------------------------------------------------------------------------ */
 .pro-sidebar {
     width: var(--pro-side-w); flex-shrink: 0;
@@ -71,32 +72,32 @@ html, body { height: 100%; }
     color: #cbd5e1;
     overflow: hidden;            /* nothing scrolls the panel itself */
 }
-.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 18px 18px 14px; }
+.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 16px 18px 10px; }
 .pro-brand img {
-    width: 100%; max-width: 200px; height: auto; max-height: 62px;
+    width: 100%; max-width: 208px; height: auto; max-height: 60px;
     object-fit: contain; display: block;
 }
 
 .pro-working {
     position: relative; flex-shrink: 0;
-    margin: 0 14px 10px; padding: 11px 13px 12px;
+    margin: 0 15px 9px; padding: 11px 14px 12px;
     background: linear-gradient(160deg, rgba(79,70,229,.30), rgba(15,23,42,.35));
     border: 1px solid rgba(148,163,255,.18);
     border-radius: 12px;
 }
-.pro-working .pro-crown { position: absolute; top: 10px; right: 11px; color: #fbbf24; }
-.pro-working-label { font-size: 9px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: #93a0c8; }
+.pro-working .pro-crown { position: absolute; top: 10px; right: 12px; color: #fbbf24; }
+.pro-working-label { font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: #93a0c8; }
 .pro-working-name {
-    margin: 4px 0 9px; font-size: 13.5px; font-weight: 700; color: #fff;
+    margin: 4px 0 10px; font-size: 15px; font-weight: 700; color: #fff;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.pro-working-name.none { color: #cbd5e1; font-weight: 600; font-size: 13px; }
+.pro-working-name.none { color: #cbd5e1; font-weight: 600; font-size: 14px; }
 .pro-switch {
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-    width: 100%; padding: 8px 10px; cursor: pointer; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 9px 12px; cursor: pointer; white-space: nowrap;
     background: linear-gradient(135deg, #4f46e5, #4338ca);
     border: 0; border-radius: 9px;
-    color: #fff; font: inherit; font-size: 12px; font-weight: 600; text-decoration: none;
+    color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; text-decoration: none;
     transition: filter .15s, transform .15s;
 }
 .pro-switch:hover { filter: brightness(1.12); transform: translateY(-1px); }
@@ -105,19 +106,19 @@ html, body { height: 100%; }
    short, the nav (not the panel) scrolls, silently. */
 .pro-nav {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    padding: 0 12px 10px; display: flex; flex-direction: column; gap: 1px;
+    padding: 0 13px 6px; display: flex; flex-direction: column; gap: 0;
     scrollbar-width: none; -ms-overflow-style: none;
 }
 .pro-nav::-webkit-scrollbar { width: 0; height: 0; }
 .pro-nav a {
-    display: flex; align-items: center; gap: 12px;
-    padding: 8.5px 13px; border-radius: 10px;
-    color: #aab4d4; text-decoration: none;
-    font-size: 13.5px; font-weight: 500; line-height: 1.2;
+    display: flex; align-items: center; gap: 13px;
+    padding: 9px 14px; border-radius: 10px;
+    color: #b3bdd8; text-decoration: none;
+    font-size: 15px; font-weight: 500; line-height: 1.2;
     white-space: nowrap;              /* never wrap to a second line */
     transition: background .14s, color .14s;
 }
-.pro-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+.pro-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
 .i-dash { color: #a5b4fc; }
 .pro-nav a:hover { background: rgba(255,255,255,.055); color: #e6ebf7; }
 .pro-nav a.active {
@@ -151,12 +152,12 @@ html, body { height: 100%; }
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
 
-.pro-logout-wrap { flex-shrink: 0; padding: 10px 14px 14px; }
+.pro-logout-wrap { flex-shrink: 0; padding: 6px 15px 10px; }
 .pro-logout {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
     width: 100%; padding: 10px 14px; cursor: pointer;
     background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4);
-    border-radius: 10px; color: #fecaca; font: inherit; font-size: 13px; font-weight: 700;
+    border-radius: 10px; color: #fecaca; font: inherit; font-size: 14px; font-weight: 700;
     transition: background .15s, color .15s, border-color .15s;
 }
 .pro-logout:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
