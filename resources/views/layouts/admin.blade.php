@@ -82,10 +82,31 @@
             100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% - 36px)) scale(.85) rotate(var(--rot, 0deg)); }
         }
         @media (prefers-reduced-motion: reduce) { .chick-trail { display: none; } }
+
+        /* Flash image — VAs only. Fires on every page/view load, then removes itself.
+           pointer-events:none so it can never block a click. */
+        .flash-img {
+            position: fixed; inset: 0; z-index: 2147483600; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,.6);
+            animation: flashIn 1.2s ease-out forwards;
+        }
+        .flash-img img { max-width: 70vw; max-height: 70vh; border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+        @keyframes flashIn {
+            0%   { opacity: 0; }
+            10%  { opacity: 1; }
+            65%  { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
     </style>
     @stack('head')
 </head>
 <body class="admin-body">
+@if (Auth::guard('admin')->user()?->isVa())
+    <div id="flashImg" class="flash-img" aria-hidden="true">
+        <img src="{{ asset('Images/flashimage.jpg') }}" alt="" onerror="this.closest('.flash-img').remove()">
+    </div>
+@endif
 <div class="layout">
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
@@ -314,6 +335,12 @@
         document.body.appendChild(el);
         setTimeout(function () { el.remove(); }, 1000);
     }, { passive: true });
+})();
+
+/* Flash image (VAs only) — drop it from the DOM once the animation is done. */
+(function () {
+    var f = document.getElementById('flashImg');
+    if (f) { setTimeout(function () { f.remove(); }, 1400); }
 })();
 </script>
 @stack('scripts')
