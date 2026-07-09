@@ -304,7 +304,7 @@
     var parts = [];
     var lx = 0, ly = 0, hx = 0, hy = 0, headA = 0, primed = false;
     var running = false, idle = 0;
-    var W = 0, H = 0;
+    var W = 0, H = 0, ox = 0, oy = 0;   // canvas size + viewport offset, in clientX space
 
     function rnd(a, b) { return a + Math.random() * (b - a); }
 
@@ -342,17 +342,16 @@
         });
     });
 
-    function zoom() {
-        var z = parseFloat(getComputedStyle(document.documentElement).zoom);
-        return (z && z > 0.1) ? z : 1;
-    }
+    /* Ask the browser where the canvas actually is instead of trying to undo
+       html{zoom} by hand — getBoundingClientRect() reports in the same space as
+       event.clientX, so the trail lands exactly under the cursor at any zoom. */
     function resize() {
-        var z = zoom(), dpr = Math.min(window.devicePixelRatio || 1, 2), s = dpr * z;
-        W = document.documentElement.clientWidth;
-        H = document.documentElement.clientHeight;
-        canvas.width  = Math.max(1, Math.round(W * s));
-        canvas.height = Math.max(1, Math.round(H * s));
-        ctx.setTransform(s, 0, 0, s, 0, 0);
+        var r = canvas.getBoundingClientRect();
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = r.width; H = r.height; ox = r.left; oy = r.top;
+        canvas.width  = Math.max(1, Math.round(W * dpr));
+        canvas.height = Math.max(1, Math.round(H * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     resize();
     window.addEventListener('resize', resize, { passive: true });
@@ -382,23 +381,25 @@
         var steps = Math.min(6, Math.ceil(dist / 8));
         var speed = Math.min(dist, 40);
 
-        for (var i = 0; i < steps; i++) {
+        /* t runs 1..steps so the last particle is born exactly under the cursor
+           tip — the tail is drawn behind it by drift, not by spawning behind. */
+        for (var i = 1; i <= steps; i++) {
             var t = i / steps;
             var x = x0 + dx * t, y = y0 + dy * t;
-            var back = 0.02 + speed * 0.012;     // trail streams away from the cursor
+            var back = 0.4 + speed * 0.05;       // trail streams away from the cursor
 
-            push(x + rnd(-2, 2), y + rnd(-2, 2),
-                 -ux * rnd(0.3, 1.5) * back * 8 + nx * rnd(-1.1, 1.1),
-                 -uy * rnd(0.3, 1.5) * back * 8 + ny * rnd(-1.1, 1.1), 'core');
+            push(x + rnd(-1, 1), y + rnd(-1, 1),
+                 -ux * rnd(0.2, 1) * back + nx * rnd(-0.8, 0.8),
+                 -uy * rnd(0.2, 1) * back + ny * rnd(-0.8, 0.8), 'core');
 
             var dustN = Math.random() < 0.5 ? 2 : 1;
             for (var d = 0; d < dustN; d++) {
-                push(x + rnd(-7, 7), y + rnd(-7, 7),
-                     -ux * rnd(0, 0.7) * back * 6 + nx * rnd(-2.4, 2.4) * 0.7,
-                     -uy * rnd(0, 0.7) * back * 6 + ny * rnd(-2.4, 2.4) * 0.7, 'dust');
+                push(x + rnd(-3, 3), y + rnd(-3, 3),
+                     -ux * rnd(0, 0.5) * back * 0.7 + nx * rnd(-1.5, 1.5),
+                     -uy * rnd(0, 0.5) * back * 0.7 + ny * rnd(-1.5, 1.5), 'dust');
             }
             if (Math.random() < 0.09) {
-                push(x, y, -ux * rnd(1.5, 3.6), -uy * rnd(1.5, 3.6), 'star');
+                push(x, y, -ux * rnd(1.2, 2.6), -uy * rnd(1.2, 2.6), 'star');
             }
         }
     }
@@ -451,8 +452,7 @@
     }
 
     document.addEventListener('mousemove', function (e) {
-        var z = zoom();
-        var x = e.clientX / z, y = e.clientY / z;
+        var x = e.clientX - ox, y = e.clientY - oy;
 
         hx = x; hy = y; headA = 1; idle = 0;
 
