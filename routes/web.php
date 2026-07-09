@@ -168,7 +168,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->middleware('admin.super')->name('new-clients.regenerate');
             Route::post('new-clients/api-key', [Admin\EndUserController::class, 'regenerateApiKey'])->middleware('admin.super')->name('new-clients.api-key');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
-            Route::get('clients-done', [Admin\EndUserController::class, 'clientsDone'])->name('clients-done');
+            // The main Clients list (1st round done; remaining rounds worked here)
+            Route::get('client-list', [Admin\EndUserController::class, 'activeClients'])->name('client-list');
             Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');

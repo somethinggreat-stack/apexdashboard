@@ -142,8 +142,8 @@
                 <a href="{{ route('admin.errors') }}" class="{{ request()->routeIs('admin.errors') ? 'active' : '' }}">
                     Errors @if ($errorCount > 0)<span class="badge-portal" style="background:#dc2626;">{{ $errorCount }}</span>@endif
                 </a>
-                <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.index') || request()->routeIs('admin.end-users.show') ? 'active' : '' }}">In Progress</a>
-                <a href="{{ route('admin.clients-done') }}" class="{{ request()->routeIs('admin.clients-done') ? 'active' : '' }}">Clients Done</a>
+                <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.index') ? 'active' : '' }}">In Progress</a>
+                <a href="{{ route('admin.client-list') }}" class="{{ request()->routeIs('admin.client-list') || request()->routeIs('admin.end-users.show') ? 'active' : '' }}">Clients</a>
                 @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
                     Messages @if ($adminUnread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $adminUnread }}</span>@endif

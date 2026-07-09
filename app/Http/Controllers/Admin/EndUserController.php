@@ -11,14 +11,28 @@ use Illuminate\Support\Facades\Storage;
 
 class EndUserController extends Controller
 {
+    /**
+     * "In Progress" — verified clients whose 1st round isn't done yet.
+     * Once round 1 is complete a VA moves them to Clients, where the
+     * remaining rounds are worked.
+     */
     public function index(Request $request)
+    {
+        return $this->listView($request, 'in_progress');
+    }
+
+    /** "Clients" — the main working list; all rounds after the 1st happen here. */
+    public function activeClients(Request $request)
+    {
+        return $this->listView($request, 'clients');
+    }
+
+    private function listView(Request $request, string $bucket)
     {
         $clientId = session('selected_client_id');
 
         $query = EndUser::forClient($clientId)
-            // New Clients (pending_review), Errors, and Clients Done each live
-            // in their own section — this list is "In Progress" only.
-            ->inProgress()
+            ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -48,7 +62,7 @@ class EndUserController extends Controller
             })
             ->values();
 
-        return view('admin.end-users.index', compact('endUsers'));
+        return view('admin.end-users.index', compact('endUsers', 'bucket'));
     }
 
     public function store(Request $request)
@@ -191,40 +205,31 @@ class EndUserController extends Controller
     {
         $endUser = $this->scoped()->findOrFail($id);
 
-        $data = ['intake_status' => 'approved', 'intake_review_note' => null];
-
-        // Start the round clock (Days Left) at approval — i.e. when the client
-        // enters the Clients list. Only on a fresh approval from New Clients;
-        // recovering from Errors keeps the existing clock.
-        if ($endUser->intake_status === 'pending_review') {
-            $data['start_date'] = now()->toDateString();
-        }
-
-        $endUser->update($data);
+        // Move to In Progress. The round clock does NOT start here — it starts
+        // when the client is moved into the Clients list (see moveToDone).
+        $endUser->update(['intake_status' => 'approved', 'intake_review_note' => null]);
 
         return redirect()->back()
-            ->with('status', "{$endUser->full_name} approved — now in Clients.");
+            ->with('status', "{$endUser->full_name} moved to In Progress.");
     }
 
-    /** Clients Done — finished clients, pulled out of the In Progress list. */
-    public function clientsDone()
-    {
-        $endUsers = EndUser::forClient(session('selected_client_id'))
-            ->done()
-            ->orderBy('first_name')
-            ->get();
-
-        return view('admin.end-users.done', compact('endUsers'));
-    }
-
-    /** Mark a client finished — moves them into Clients Done. One click, no prompt. */
+    /**
+     * Move a client into the main Clients list (1st round complete).
+     * The round clock starts here — start_date is stamped on this move, so
+     * Round Started / Next Round Date / Days Left count from today.
+     */
     public function moveToDone(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['intake_status' => 'done', 'intake_review_note' => null]);
+
+        $endUser->update([
+            'intake_status'      => 'done',
+            'intake_review_note' => null,
+            'start_date'         => now()->toDateString(),
+        ]);
 
         return redirect()->back()
-            ->with('status', "{$endUser->full_name} moved to Clients Done.");
+            ->with('status', "{$endUser->full_name} moved to Clients — round clock started.");
     }
 
     /** Move a client back into the New Clients (pending review) list — one click, no prompt. */

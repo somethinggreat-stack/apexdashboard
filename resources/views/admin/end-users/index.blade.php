@@ -18,7 +18,7 @@
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h2>In Progress — {{ $selectedClient->business_name }}</h2>
+        <h2>{{ ($bucket ?? 'in_progress') === 'clients' ? 'Clients' : 'In Progress' }} — {{ $selectedClient->business_name }}</h2>
         <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
     </div>
     <form method="GET" class="filter-bar">
@@ -95,10 +95,18 @@
                     </td>
                     <td class="no-link">
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
-                        <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}" style="display:inline">
-                            @csrf
-                            <button class="btn btn-sm btn-todone">Move to Clients Done</button>
-                        </form>
+                        @if (($bucket ?? 'in_progress') === 'clients')
+                            <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}" style="display:inline"
+                                  onsubmit="return confirm('Move {{ addslashes($eu->full_name) }} back to In Progress?')">
+                                @csrf
+                                <button class="btn btn-sm btn-tonew">Move to In Progress</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}" style="display:inline">
+                                @csrf
+                                <button class="btn btn-sm btn-todone">Move to Clients</button>
+                            </form>
+                        @endif
                         <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" style="display:inline" class="send-back-form">
                             @csrf
                             <input type="hidden" name="note" value="">
