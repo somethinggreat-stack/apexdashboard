@@ -943,3 +943,11 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
     .msel2-list { max-height: 220px; }
     .msel2-opt { padding: 11px 12px; }
 }
+
+/* Galaxy cursor trail canvas (see public/js/galaxy-trail.js).
+   pointer-events:none means it can never intercept a click. */
+#gxCanvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 2147483000; pointer-events: none; user-select: none;
+}
+@media (prefers-reduced-motion: reduce) { #gxCanvas { display: none; } }

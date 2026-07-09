@@ -33,6 +33,9 @@ class EndUserController extends Controller
 
         $query = EndUser::forClient($clientId)
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
+            // progress % is derived from the step log — eager load it so the
+            // accessor doesn't fire a query per row
+            ->with('processSteps:id,end_user_id,round,step_type')
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -62,7 +65,41 @@ class EndUserController extends Controller
             })
             ->values();
 
-        return view('admin.end-users.index', compact('endUsers', 'bucket'));
+        // Optional column sort (pro console). Without it, the default ordering
+        // above stands: incomplete files first, then oldest start date.
+        $sortKeys = [
+            'name'     => fn ($e) => mb_strtolower($e->full_name),
+            'round'    => fn ($e) => $e->current_round,
+            'started'  => fn ($e) => $e->current_round_start_date ?? '',
+            'next'     => fn ($e) => $e->next_round_date ?? '',
+            'days'     => fn ($e) => $e->days_left_in_round ?? PHP_INT_MAX,
+            'status'   => fn ($e) => $e->status,
+            'progress' => fn ($e) => $e->progress_percent,
+        ];
+
+        if ($key = $sortKeys[$request->query('sort')] ?? null) {
+            $desc = $request->query('dir', 'asc') === 'desc';
+            $endUsers = $endUsers->sortBy($key, SORT_REGULAR, $desc)->values();
+        }
+
+        $daysLeft = $endUsers->map->days_left_in_round->filter(fn ($d) => $d !== null);
+
+        $stats = [
+            'total'    => $endUsers->count(),
+            'active'   => $endUsers->where('status', 'active')->count(),
+            'paused'   => $endUsers->where('status', 'paused')->count(),
+            'negative' => $daysLeft->filter(fn ($d) => $d < 0)->count(),
+            'avg_days' => $daysLeft->isEmpty() ? 0 : (int) round($daysLeft->avg()),
+        ];
+
+        $view = $this->adminView('admin.end-users.index');
+
+        // The pro console pages the table; the original view lists every row.
+        if ($view !== 'admin.end-users.index') {
+            $endUsers = $this->paginateCollection($endUsers, 10, $request);
+        }
+
+        return view($view, compact('endUsers', 'bucket', 'stats'));
     }
 
     public function store(Request $request)
@@ -187,7 +224,7 @@ class EndUserController extends Controller
             ->orderByDesc('intake_submitted_at')
             ->get();
 
-        return view('admin.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
+        return view($this->adminView('admin.end-users.new-clients'), ['endUsers' => $endUsers, 'client' => $client]);
     }
 
     /** Error clients — moved out of Clients with a VA-entered error to fix. */
@@ -198,7 +235,7 @@ class EndUserController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
-        return view('admin.end-users.errors', compact('endUsers'));
+        return view($this->adminView('admin.end-users.errors'), compact('endUsers'));
     }
 
     public function approveIntake(string $id)

@@ -1,6 +1,7 @@
-@extends('layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Messages')
+@section('subtitle', 'Conversation with ' . $client->business_name)
 
 @push('head')
 <style>

@@ -1,6 +1,7 @@
-@extends('layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
-@section('title', 'Payments — ' . $client->business_name)
+@section('title', 'Payments')
+@section('subtitle', $client->business_name)
 
 @section('content')
 

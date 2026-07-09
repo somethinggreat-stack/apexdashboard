@@ -361,6 +361,28 @@ class EndUser extends Model
         return (int) now()->startOfDay()->diffInDays($roundEnd, false);
     }
 
+    /**
+     * How far through the current round this client is, 0–100.
+     * Derived purely from process steps: distinct step types logged for the
+     * current round, over the number of step types a full round contains (9).
+     * Read-only — nothing is stored, so this can never drift from the log.
+     */
+    public function getProgressPercentAttribute(): int
+    {
+        $total = count(ProcessStep::allStepTypes());
+        if ($total === 0) {
+            return 0;
+        }
+
+        $round = $this->current_round;
+
+        $done = $this->relationLoaded('processSteps')
+            ? $this->processSteps->where('round', $round)->pluck('step_type')->unique()->count()
+            : $this->processSteps()->where('round', $round)->distinct()->count('step_type');
+
+        return (int) min(100, round($done / $total * 100));
+    }
+
     public function getTotalDeletionsAttribute()
     {
         return (int) $this->processSteps->sum(function ($s) {
