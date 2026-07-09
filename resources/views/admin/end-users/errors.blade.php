@@ -35,7 +35,7 @@
                         <div class="row-actions">
                             <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Review</a>
                             <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
-                                  onsubmit="return confirm('Fixed? Move {{ addslashes($eu->full_name) }} to In Progress?')">
+                                  onsubmit="return confirm(@js('Are you sure you want to move ' . $eu->full_name . ' to In Progress?'))">
                                 @csrf
                                 <button class="btn btn-sm btn-fix">Move to In Progress</button>
                             </form>

@@ -9,7 +9,7 @@
         <a href="{{ route('client.new-clients') }}" class="btn btn-secondary">← Back</a>
     </div>
     <p class="muted" style="margin:8px 0 16px; font-size:13px;">
-        This client will appear in <strong>New Clients</strong> and move into My Clients once our team reviews it.
+        This client will appear in <strong>New Clients</strong> and move into <strong>In Progress</strong> once our team reviews it.
     </p>
 
     <form method="POST" action="{{ route('client.end-users.store') }}" enctype="multipart/form-data">

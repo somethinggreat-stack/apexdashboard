@@ -36,7 +36,7 @@
 
 @section('topbar-content')
     <div class="page-actions">
-        <a href="{{ route('client.end-users.index') }}" class="btn btn-secondary page-action-btn">← My Clients</a>
+        <a href="{{ $endUser->intake_status === 'done' ? route('client.client-list') : route('client.end-users.index') }}" class="btn btn-secondary page-action-btn">← Back</a>
     </div>
 @endsection
 

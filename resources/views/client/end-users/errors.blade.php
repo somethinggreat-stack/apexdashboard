@@ -10,7 +10,7 @@
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 Clients our team pulled out of your main list because something needs fixing
                 (bad login, missing document, billing, etc.). We're on it — they'll move back into
-                <strong>My Clients</strong> once resolved.
+                <strong>In Progress</strong> once resolved.
             </p>
         </div>
     </div>

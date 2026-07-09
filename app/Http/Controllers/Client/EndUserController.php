@@ -11,13 +11,25 @@ use Illuminate\Support\Facades\Storage;
 
 class EndUserController extends Controller
 {
+    /** "In Progress" — verified clients whose 1st round isn't done yet. */
     public function index(Request $request)
+    {
+        return $this->listView($request, 'in_progress');
+    }
+
+    /** "Done Clients" — the main list; all rounds after the 1st are worked here. */
+    public function doneClients(Request $request)
+    {
+        return $this->listView($request, 'clients');
+    }
+
+    private function listView(Request $request, string $bucket)
     {
         $clientId = Auth::guard('client')->id();
 
         $query = EndUser::forClient($clientId)
-            // Intake submissions awaiting review live in "New Clients".
-            ->where(fn ($q) => $q->whereNull('intake_status')->orWhere('intake_status', '!=', 'pending_review'))
+            // New Clients (pending_review) and Errors live in their own sections.
+            ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -47,7 +59,7 @@ class EndUserController extends Controller
             })
             ->values();
 
-        return view('client.end-users.index', compact('endUsers'));
+        return view('client.end-users.index', compact('endUsers', 'bucket'));
     }
 
     public function show(string $id)

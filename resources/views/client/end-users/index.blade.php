@@ -1,13 +1,22 @@
 @extends('layouts.client')
 
-@section('title', 'My Clients')
+@php $isDone = ($bucket ?? 'in_progress') === 'clients'; @endphp
+
+@section('title', $isDone ? 'Done Clients' : 'In Progress')
 
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h2>My Credit Repair Clients</h2>
+        <h2>{{ $isDone ? 'Done Clients' : 'In Progress' }}</h2>
         <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
     </div>
+    <p class="muted" style="margin:-4px 0 14px; font-size:13px;">
+        @if ($isDone)
+            Clients whose first round is complete. Every round after that is worked here — rounds, dates and days left are tracked below.
+        @else
+            Clients our team has verified and is actively working through the first round. They move into <strong>Done Clients</strong> once round&nbsp;1 is complete.
+        @endif
+    </p>
     <form method="GET" class="filter-bar">
         <select name="status">
             <option value="">All statuses</option>

@@ -10,7 +10,7 @@
     </div>
     <p class="muted" style="margin:8px 0 0; font-size:13px;">
         New client submissions appear here for our team to review — or add one yourself.
-        Once reviewed, they move into <strong>My Clients</strong>.
+        Once reviewed, they move into <strong>In Progress</strong>.
     </p>
 </div>
 

@@ -236,7 +236,12 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         // Errors — clients the VA pulled out to fix (BOs can view only)
         Route::get('errors', [Client\EndUserController::class, 'errors'])->name('errors');
 
+        // In Progress — verified clients whose 1st round isn't done yet
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');
+
+        // Done Clients — the main list; all rounds after the 1st are worked here
+        Route::get('client-list', [Client\EndUserController::class, 'doneClients'])->name('client-list');
+
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');

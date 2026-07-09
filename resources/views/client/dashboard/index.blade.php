@@ -30,7 +30,7 @@
 <div class="card">
     <div class="card-header">
         <h2>What Your VA Has Been Doing</h2>
-        <a href="{{ route('client.end-users.index') }}" class="btn btn-primary">View All My Clients</a>
+        <a href="{{ route('client.client-list') }}" class="btn btn-primary">View All Clients</a>
     </div>
     <div class="table-scroll"><table class="data-table">
         <thead><tr><th>Date</th><th>Client</th><th>Round</th><th>Week</th><th>Step Type</th></tr></thead>
