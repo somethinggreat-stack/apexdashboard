@@ -70,35 +70,13 @@
             .stat-value { font-size:24px; }
         }
 
-        /* ✨ Galaxy spark cursor trail — purely decorative, never blocks clicks */
-        .gx-spark {
-            position: fixed; z-index: 2147483000; pointer-events: none; user-select: none;
-            width: var(--s, 6px); height: var(--s, 6px); border-radius: 50%;
-            background: radial-gradient(circle, #fff 0%, var(--c, #a78bfa) 42%, transparent 72%);
-            box-shadow: 0 0 6px var(--c, #a78bfa), 0 0 16px var(--c, #a78bfa);
-            transform: translate(-50%, -50%);
-            will-change: transform, opacity;
-            animation: gxFade var(--d, 900ms) cubic-bezier(.15,.7,.3,1) forwards;
+        /* 🌌 Galaxy cursor trail — a single decorative canvas over everything.
+           pointer-events:none means it can never intercept a click. */
+        #gxCanvas {
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            z-index: 2147483000; pointer-events: none; user-select: none;
         }
-        /* occasional 4-point star flare */
-        .gx-spark.gx-star::before,
-        .gx-spark.gx-star::after {
-            content: ''; position: absolute; left: 50%; top: 50%;
-            background: var(--c, #fff); border-radius: 2px;
-            box-shadow: 0 0 8px var(--c, #fff);
-            transform: translate(-50%, -50%);
-        }
-        .gx-spark.gx-star::before { width: 1.6px; height: 16px; }
-        .gx-spark.gx-star::after  { width: 16px; height: 1.6px; }
-
-        @keyframes gxFade {
-            0%   { opacity: 0; transform: translate(-50%, -50%) scale(.25) rotate(0deg); }
-            14%  { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(var(--rot, 0deg)); }
-            100% { opacity: 0;
-                   transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)))
-                              scale(.2) rotate(var(--rot, 0deg)); }
-        }
-        @media (prefers-reduced-motion: reduce) { .gx-spark { display: none; } }
+        @media (prefers-reduced-motion: reduce) { #gxCanvas { display: none; } }
     </style>
     @stack('head')
 </head>
@@ -302,50 +280,187 @@
     });
 })();
 
-/* ✨ Galaxy spark cursor trail — glowing particles that drift like a comet tail
-   and fade out. pointer-events:none + auto-removed, so it never affects
-   functionality. Compensates for the global html { zoom } to track the cursor. */
+/* 🌌 Galaxy cursor trail — a canvas particle system: a bright comet head, a
+   dense stream of star dust that curls into a nebula ribbon, and the odd
+   streaking star. Purely decorative: the canvas is pointer-events:none, the
+   render loop parks itself when the cursor is still, and the whole thing is
+   skipped for prefers-reduced-motion. Coordinates compensate for html{zoom}. */
 (function () {
-    var COLORS = ['#a78bfa', '#818cf8', '#60a5fa', '#22d3ee', '#f472b6', '#fcd34d', '#ffffff'];
-    var last = 0, lx = 0, ly = 0;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var canvas = document.createElement('canvas');
+    canvas.id = 'gxCanvas';
+    canvas.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+
+    /* deep-space palette: violet → indigo → blue → cyan, with magenta accents */
+    var COLORS = [
+        [139,  92, 246], [124,  58, 237], [ 99, 102, 241],
+        [ 79,  70, 229], [ 59, 130, 246], [ 34, 211, 238],
+        [232,  62, 189], [192, 132, 252]
+    ];
+    var MAX = 1000;
+    var parts = [];
+    var lx = 0, ly = 0, hx = 0, hy = 0, headA = 0, primed = false;
+    var running = false, idle = 0;
+    var W = 0, H = 0;
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+
+    /* Pre-rendered sprites: drawing a gradient per particle per frame is far too
+       slow, so each colour gets one glow sprite and one star sprite, blitted. */
+    function sprite(draw) {
+        var c = document.createElement('canvas');
+        c.width = c.height = 64;
+        draw(c.getContext('2d'));
+        return c;
+    }
+    function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+
+    var GLOW = COLORS.map(function (c) {
+        return sprite(function (g) {
+            var grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grd.addColorStop(0,    rgba(c, 1));
+            grd.addColorStop(0.18, rgba(c, 0.72));
+            grd.addColorStop(0.45, rgba(c, 0.22));
+            grd.addColorStop(1,    rgba(c, 0));
+            g.fillStyle = grd;
+            g.fillRect(0, 0, 64, 64);
+        });
+    });
+    var STAR = COLORS.map(function (c) {
+        return sprite(function (g) {
+            var grd = g.createRadialGradient(32, 32, 0, 32, 32, 12);
+            grd.addColorStop(0, rgba(c, 1));
+            grd.addColorStop(1, rgba(c, 0));
+            g.fillStyle = grd;
+            g.fillRect(0, 0, 64, 64);
+            g.fillStyle = rgba(c, 0.85);          // 4-point flare
+            g.fillRect(31.2, 4, 1.6, 56);
+            g.fillRect(4, 31.2, 56, 1.6);
+        });
+    });
 
     function zoom() {
         var z = parseFloat(getComputedStyle(document.documentElement).zoom);
         return (z && z > 0.1) ? z : 1;
     }
-    function rnd(a, b) { return a + Math.random() * (b - a); }
-    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+    function resize() {
+        var z = zoom(), dpr = Math.min(window.devicePixelRatio || 1, 2), s = dpr * z;
+        W = document.documentElement.clientWidth;
+        H = document.documentElement.clientHeight;
+        canvas.width  = Math.max(1, Math.round(W * s));
+        canvas.height = Math.max(1, Math.round(H * s));
+        ctx.setTransform(s, 0, 0, s, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
 
-    function spark(x, y, vx, vy, z) {
-        var el = document.createElement('span');
-        var c  = COLORS[(Math.random() * COLORS.length) | 0];
-        var isStar = Math.random() < 0.14;
+    function push(x, y, vx, vy, kind) {
+        if (parts.length >= MAX) parts.shift();
+        var i = (Math.random() * COLORS.length) | 0;
+        var life = kind === 'dust' ? rnd(55, 105) : (kind === 'star' ? rnd(20, 34) : rnd(30, 60));
+        parts.push({
+            x: x, y: y, px: x, py: y, vx: vx, vy: vy,
+            life: life, max: life,
+            size: kind === 'dust' ? rnd(0.8, 2.4) : (kind === 'star' ? rnd(2.2, 4) : rnd(3, 8)),
+            w: rnd(-0.055, 0.055),                // per-frame curl → spiral arms
+            img: kind === 'star' ? STAR[i] : GLOW[i],
+            rgb: COLORS[i],
+            streak: kind === 'star'
+        });
+    }
 
-        el.className = 'gx-spark' + (isStar ? ' gx-star' : '');
-        el.style.left = ((x + rnd(-6, 6)) / z) + 'px';
-        el.style.top  = ((y + rnd(-6, 6)) / z) + 'px';
-        el.style.setProperty('--c', c);
-        el.style.setProperty('--s', rnd(3, 7).toFixed(1) + 'px');
-        el.style.setProperty('--d', rnd(700, 1100).toFixed(0) + 'ms');
-        el.style.setProperty('--rot', rnd(-60, 60).toFixed(0) + 'deg');
-        // drift opposite to cursor motion (comet tail) + a little float
-        el.style.setProperty('--dx', clamp(-vx * 0.4 + rnd(-12, 12), -40, 40).toFixed(0) + 'px');
-        el.style.setProperty('--dy', clamp(-vy * 0.4 + rnd(-12, 12) - 8, -46, 34).toFixed(0) + 'px');
+    /* Emit along the segment the cursor travelled, so fast moves stay continuous
+       instead of leaving gaps between frames. */
+    function emit(x0, y0, x1, y1) {
+        var dx = x1 - x0, dy = y1 - y0;
+        var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        var ux = dx / dist, uy = dy / dist;      // direction of travel
+        var nx = -uy, ny = ux;                   // perpendicular
+        var steps = Math.min(6, Math.ceil(dist / 8));
+        var speed = Math.min(dist, 40);
 
-        document.body.appendChild(el);
-        setTimeout(function () { el.remove(); }, 1150);
+        for (var i = 0; i < steps; i++) {
+            var t = i / steps;
+            var x = x0 + dx * t, y = y0 + dy * t;
+            var back = 0.02 + speed * 0.012;     // trail streams away from the cursor
+
+            push(x + rnd(-2, 2), y + rnd(-2, 2),
+                 -ux * rnd(0.3, 1.5) * back * 8 + nx * rnd(-1.1, 1.1),
+                 -uy * rnd(0.3, 1.5) * back * 8 + ny * rnd(-1.1, 1.1), 'core');
+
+            var dustN = Math.random() < 0.5 ? 2 : 1;
+            for (var d = 0; d < dustN; d++) {
+                push(x + rnd(-7, 7), y + rnd(-7, 7),
+                     -ux * rnd(0, 0.7) * back * 6 + nx * rnd(-2.4, 2.4) * 0.7,
+                     -uy * rnd(0, 0.7) * back * 6 + ny * rnd(-2.4, 2.4) * 0.7, 'dust');
+            }
+            if (Math.random() < 0.09) {
+                push(x, y, -ux * rnd(1.5, 3.6), -uy * rnd(1.5, 3.6), 'star');
+            }
+        }
+    }
+
+    function frame() {
+        ctx.clearRect(0, 0, W, H);
+
+        for (var i = parts.length - 1; i >= 0; i--) {
+            var p = parts[i];
+            p.life--;
+            if (p.life <= 0) { parts.splice(i, 1); continue; }
+
+            p.px = p.x; p.py = p.y;
+            var cs = Math.cos(p.w), sn = Math.sin(p.w);   // rotate velocity → curl
+            var vx = p.vx * cs - p.vy * sn;
+            p.vy = p.vx * sn + p.vy * cs;
+            p.vx = vx;
+            p.vx *= 0.968; p.vy *= 0.968;
+            p.vy -= 0.014;                                 // slow drift upward
+            p.x += p.vx; p.y += p.vy;
+
+            var t = p.life / p.max;                        // 1 → 0
+            var a = Math.min(1, (1 - t) * 7) * t;          // quick fade in, long fade out
+            var s = p.size * (0.55 + 0.45 * t);
+
+            if (p.streak) {
+                ctx.strokeStyle = rgba(p.rgb, a * 0.5);
+                ctx.lineWidth = s * 0.4;
+                ctx.beginPath();
+                ctx.moveTo(p.px, p.py);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = a;
+            ctx.drawImage(p.img, p.x - s * 2, p.y - s * 2, s * 4, s * 4);
+        }
+
+        /* comet head: a hot core riding the cursor, fading out when it stops */
+        if (headA > 0.01) {
+            ctx.globalAlpha = headA;
+            ctx.drawImage(GLOW[0], hx - 26, hy - 26, 52, 52);
+            ctx.globalAlpha = headA * 0.9;
+            ctx.drawImage(STAR[5], hx - 13, hy - 13, 26, 26);
+            headA *= 0.9;
+        }
+        ctx.globalAlpha = 1;
+
+        if (parts.length === 0 && ++idle > 60) { running = false; return; }
+        requestAnimationFrame(frame);
     }
 
     document.addEventListener('mousemove', function (e) {
-        var now = Date.now();
-        var vx = e.clientX - lx, vy = e.clientY - ly;
-        // throttle: spawn every ~28ms and only after a little movement
-        if (now - last < 28 || (vx * vx + vy * vy) < 20) return;
-        last = now; lx = e.clientX; ly = e.clientY;
-
         var z = zoom();
-        var n = Math.random() < 0.45 ? 2 : 1;   // occasional double-spark for density
-        for (var i = 0; i < n; i++) { spark(e.clientX, e.clientY, vx, vy, z); }
+        var x = e.clientX / z, y = e.clientY / z;
+
+        hx = x; hy = y; headA = 1; idle = 0;
+
+        if (!primed) { primed = true; lx = x; ly = y; }
+        var dx = x - lx, dy = y - ly;
+        if (dx * dx + dy * dy >= 4) { emit(lx, ly, x, y); lx = x; ly = y; }
+
+        if (!running) { running = true; requestAnimationFrame(frame); }
     }, { passive: true });
 })();
 </script>
