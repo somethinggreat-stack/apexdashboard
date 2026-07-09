@@ -140,7 +140,7 @@
 {{-- ===================== Analytics + Payments ===================== --}}
 <div class="dash-grid dash-grid-2">
     <div class="dcard">
-        <div class="dcard-head"><div><h2>Analytics Overview</h2></div><span class="dchip">This Month</span></div>
+        <div class="dcard-head"><div><h2>Analytics Overview</h2></div></div>
         <div class="an-tiles">
             <div class="an-tile">
                 <span class="an-lbl">Total Clients</span><span class="an-val">{{ number_format($totalClients) }}</span>
@@ -176,16 +176,21 @@
             @endphp
             <div class="tb-chart" id="tb-{{ $range }}" @if ($range !== 'month') style="display:none;" @endif>
                 <div class="tb-total"><strong>{{ number_format($tot) }}</strong> new client{{ $tot === 1 ? '' : 's' }} · {{ $cap }}</div>
-                <div class="tb-bars">
-                    @foreach ($rows as $r)
-                        @php $h = $r['count'] > 0 ? max(6, (int) round($r['count'] / $mx * 100)) : 2; @endphp
-                        <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] ?? '' }} — {{ $r['count'] }} new">
-                            <span class="tb-num">{{ $r['count'] ?: '' }}</span>
-                            <span class="tb-barwrap"><span class="tb-bar {{ $r['count'] ? '' : 'is-zero' }}" style="height:{{ $h }}%"></span></span>
-                            <span class="tb-lbl">{{ $r['label'] }}</span>
-                            <span class="tb-sub">{{ $r['sub'] ?? '' }}</span>
-                        </div>
-                    @endforeach
+                <div class="tb-plot">
+                    <div class="tb-grid"></div>
+                    <div class="tb-bars">
+                        @foreach ($rows as $r)
+                            @php $h = $r['count'] > 0 ? max(4, (int) round($r['count'] / $mx * 100)) : 0; @endphp
+                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] ?? '' }} — {{ $r['count'] }} new">
+                                <span class="tb-num">{{ $r['count'] ?: '' }}</span>
+                                <span class="tb-track"><span class="tb-bar" style="height:{{ $h }}%"></span></span>
+                                <span class="tb-labels">
+                                    <span class="tb-lbl">{{ $r['label'] }}</span>
+                                    <span class="tb-sub">{{ $r['sub'] ?? '' }}</span>
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         @endforeach
@@ -212,19 +217,24 @@
             @endphp
             <div class="tb-chart" id="tb-{{ $rk }}" @if ($rk !== 'pmonth') style="display:none;" @endif>
                 <div class="tb-total"><strong>{{ $money($totA) }}</strong> received · {{ $totC }} payment{{ $totC === 1 ? '' : 's' }} · {{ $cap }}</div>
-                <div class="tb-bars">
-                    @foreach ($rows as $r)
-                        @php
-                            $h = $r['amount'] > 0 ? max(6, (int) round($r['amount'] / $mxA * 100)) : 2;
-                            $short = $r['amount'] >= 1000 ? round($r['amount'] / 1000, 1) . 'k' : (int) round($r['amount']);
-                        @endphp
-                        <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] }} — {{ $money($r['amount']) }} ({{ $r['count'] }} payment{{ $r['count'] === 1 ? '' : 's' }})">
-                            <span class="tb-num">{{ $r['amount'] > 0 ? $short : '' }}</span>
-                            <span class="tb-barwrap"><span class="tb-bar tb-bar-green {{ $r['amount'] ? '' : 'is-zero' }}" style="height:{{ $h }}%"></span></span>
-                            <span class="tb-lbl">{{ $r['label'] }}</span>
-                            <span class="tb-sub">{{ $r['sub'] }}</span>
-                        </div>
-                    @endforeach
+                <div class="tb-plot">
+                    <div class="tb-grid"></div>
+                    <div class="tb-bars">
+                        @foreach ($rows as $r)
+                            @php
+                                $h = $r['amount'] > 0 ? max(4, (int) round($r['amount'] / $mxA * 100)) : 0;
+                                $short = $r['amount'] >= 1000 ? rtrim(rtrim(number_format($r['amount'] / 1000, 1), '0'), '.') . 'k' : (int) round($r['amount']);
+                            @endphp
+                            <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] }} — {{ $money($r['amount']) }} ({{ $r['count'] }} payment{{ $r['count'] === 1 ? '' : 's' }})">
+                                <span class="tb-num">{{ $r['amount'] > 0 ? $short : '' }}</span>
+                                <span class="tb-track"><span class="tb-bar tb-bar-green" style="height:{{ $h }}%"></span></span>
+                                <span class="tb-labels">
+                                    <span class="tb-lbl">{{ $r['label'] }}</span>
+                                    <span class="tb-sub">{{ $r['sub'] }}</span>
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         @endforeach
@@ -364,17 +374,25 @@
     .tb-tabs { display:flex; gap:3px; background:#f1f5f9; padding:3px; border-radius:10px; }
     .tb-tab { border:0; background:transparent; font-size:12px; font-weight:700; color:#64748b; padding:6px 13px; border-radius:8px; cursor:pointer; }
     .tb-tab.is-on { background:#fff; color:#0f172a; box-shadow:0 1px 2px rgba(15,23,42,.10); }
-    .tb-total { font-size:11.5px; color:#94a3b8; margin-bottom:8px; }
-    .tb-total strong { color:#0f172a; font-size:13px; }
-    .tb-bars { display:flex; align-items:stretch; gap:6px; height:165px; overflow-x:auto; padding-bottom:2px; }
-    .tb-col { flex:1 1 0; min-width:24px; display:flex; flex-direction:column; align-items:center; }
-    .tb-num { font-size:10px; font-weight:800; color:#334155; height:13px; }
-    .tb-barwrap { flex:1; width:100%; display:flex; align-items:flex-end; justify-content:center; }
-    .tb-bar { width:100%; max-width:34px; border-radius:6px 6px 3px 3px; background:linear-gradient(180deg,#3b82f6,#2563eb); }
-    .tb-bar.is-zero { background:#e8edf3; }
-    .tb-col:hover .tb-bar { filter:brightness(1.12); }
-    .tb-lbl { font-size:10px; font-weight:700; color:#475569; margin-top:6px; white-space:nowrap; }
-    .tb-sub { font-size:9px; color:#cbd5e1; }
+    .tb-total { font-size:11.5px; color:#94a3b8; margin:2px 0 10px; }
+    .tb-total strong { color:#0f172a; font-size:14px; }
+
+    /* Plot: gridlines + baseline + a light track behind every column */
+    .tb-plot { position:relative; }
+    .tb-grid { position:absolute; left:0; right:0; top:15px; bottom:32px; pointer-events:none;
+        background-image:linear-gradient(to bottom, #eef2f7 1px, transparent 1px); background-size:100% 25%; }
+    .tb-bars { position:relative; display:flex; align-items:stretch; gap:5px; height:196px; overflow-x:auto; }
+    .tb-bars::after { content:''; position:absolute; left:0; right:0; bottom:32px; height:1px; background:#e2e8f0; }
+    .tb-col { flex:1 1 0; min-width:18px; display:flex; flex-direction:column; align-items:center; }
+    .tb-num { height:15px; font-size:9.5px; font-weight:800; color:#0f172a; letter-spacing:-.2px; white-space:nowrap; }
+    .tb-track { flex:1; width:100%; max-width:28px; display:flex; align-items:flex-end;
+        background:#f5f7fa; border-radius:7px; overflow:hidden; }
+    .tb-bar { width:100%; border-radius:7px 7px 0 0; background:linear-gradient(180deg,#60a5fa,#2563eb); transition:filter .12s; }
+    .tb-col:hover .tb-track { background:#e9eef5; }
+    .tb-col:hover .tb-bar { filter:brightness(1.08); }
+    .tb-labels { height:32px; display:flex; flex-direction:column; align-items:center; padding-top:7px; }
+    .tb-lbl { font-size:9.5px; font-weight:700; color:#475569; white-space:nowrap; line-height:1.2; }
+    .tb-sub { font-size:8.5px; color:#cbd5e1; line-height:1.2; }
 
     /* Payments */
     .pay-wrap { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
