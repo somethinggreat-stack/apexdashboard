@@ -107,6 +107,10 @@
                             <input type="hidden" name="note" value="">
                             <button type="button" class="btn btn-sm btn-sendback" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
                         </form>
+                        <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline">
+                            @csrf
+                            <button class="btn btn-sm btn-tonew">Move to New Clients</button>
+                        </form>
                         <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}" style="display:inline" onsubmit="return confirm('Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.')">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">Delete</button>

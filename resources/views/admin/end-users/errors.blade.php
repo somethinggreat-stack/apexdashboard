@@ -9,7 +9,8 @@
             <h2 style="margin:0;">Errors <span class="err-count">{{ $endUsers->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 Clients pulled out of the main list because something needs fixing (bad login, missing doc, etc.).
-                Fix the issue, then <strong>Move to Clients</strong> to put them back.
+                Fix the issue, then <strong>Move to In Progress</strong> to put them back —
+                or send them back to <strong>New Clients</strong> for a fresh review.
             </p>
         </div>
     </div>
@@ -38,6 +39,10 @@
                                   onsubmit="return confirm(@js('Are you sure you want to move ' . $eu->full_name . ' to In Progress?'))">
                                 @csrf
                                 <button class="btn btn-sm btn-fix">Move to In Progress</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-tonew">Move to New Clients</button>
                             </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
                                   onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their documents? This cannot be undone.')">
