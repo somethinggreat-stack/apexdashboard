@@ -38,8 +38,8 @@ html { zoom: 0.75; }
     --pro-side-2:    #141a3e;
     --pro-side-3:    #1b1350;
 
-    /* wide enough for "Instagram Leads in Contact" on a single line */
-    --pro-side-w:    300px;
+    /* wide enough for "Add/Remove Business Owners" on a single line */
+    --pro-side-w:    322px;
 }
 
 
@@ -73,30 +73,9 @@ html, body { height: 100%; }
 }
 .pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 18px 18px 14px; }
 .pro-brand img {
-    width: 100%; max-width: 196px; height: auto; max-height: 64px;
+    width: 100%; max-width: 200px; height: auto; max-height: 62px;
     object-fit: contain; display: block;
 }
-
-/* Signed-in admin, pinned under the logo */
-.pro-userbox {
-    flex-shrink: 0; display: flex; align-items: center; gap: 11px;
-    margin: 0 14px 12px; padding: 10px 12px;
-    background: rgba(255,255,255,.055);
-    border: 1px solid rgba(255,255,255,.09);
-    border-radius: 12px;
-}
-.pro-userbox .pro-avatar { width: 34px; height: 34px; font-size: 12.5px; }
-.pro-userbox-text { flex: 1; min-width: 0; line-height: 1.3; }
-.pro-userbox-text strong {
-    display: block; color: #fff; font-size: 13px; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.pro-userbox-text span { display: block; color: #8794b8; font-size: 10.5px; }
-.pro-logout {
-    flex-shrink: 0; background: none; border: 0; cursor: pointer;
-    padding: 6px; border-radius: 8px; color: #8794b8; display: inline-flex;
-}
-.pro-logout:hover { color: #fca5a5; background: rgba(239,68,68,.12); }
 
 .pro-working {
     position: relative; flex-shrink: 0;
@@ -131,14 +110,15 @@ html, body { height: 100%; }
 }
 .pro-nav::-webkit-scrollbar { width: 0; height: 0; }
 .pro-nav a {
-    display: flex; align-items: center; gap: 11px;
-    padding: 8.5px 12px; border-radius: 9px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 8.5px 13px; border-radius: 10px;
     color: #aab4d4; text-decoration: none;
-    font-size: 12.5px; font-weight: 500; line-height: 1.2;
+    font-size: 13.5px; font-weight: 500; line-height: 1.2;
     white-space: nowrap;              /* never wrap to a second line */
     transition: background .14s, color .14s;
 }
-.pro-nav a svg { width: 17px; height: 17px; flex-shrink: 0; }
+.pro-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+.i-dash { color: #a5b4fc; }
 .pro-nav a:hover { background: rgba(255,255,255,.055); color: #e6ebf7; }
 .pro-nav a.active {
     background: linear-gradient(135deg, #4f46e5, #4c3fd8);
@@ -159,20 +139,27 @@ html, body { height: 100%; }
 .i-ads  { color: #fbbf24; }
 .i-adm  { color: #94a3b8; }
 
-.pro-nav-label {
-    display: block;
-    margin: 11px 12px 5px; padding-top: 11px;
-    border-top: 1px solid rgba(255,255,255,.08);
-    font-size: 9px; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: #6f7b9f; white-space: nowrap;
+/* one hairline under Dashboard, so it isn't clicked by mistake */
+.pro-rule {
+    display: block; height: 1px; flex-shrink: 0;
+    margin: 7px 12px; background: rgba(255,255,255,.09);
 }
-.pro-nav-label:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .pro-nav .pro-count {
     margin-left: auto; min-width: 20px; padding: 2px 6px;
     border-radius: 999px; background: #ef4444; color: #fff;
     font-size: 10px; font-weight: 700; text-align: center; line-height: 1.4;
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
+
+.pro-logout-wrap { flex-shrink: 0; padding: 10px 14px 14px; }
+.pro-logout {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 10px 14px; cursor: pointer;
+    background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4);
+    border-radius: 10px; color: #fecaca; font: inherit; font-size: 13px; font-weight: 700;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.pro-logout:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
 
 /* ------------------------------- main ----------------------------------- */
 .pro-main { flex: 1; min-width: 0; margin-left: var(--pro-side-w); display: flex; flex-direction: column; }
