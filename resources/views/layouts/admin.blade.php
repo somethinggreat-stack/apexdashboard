@@ -70,18 +70,35 @@
             .stat-value { font-size:24px; }
         }
 
-        /* 🐔 Cursor trail (VA + super admin only) — purely decorative, never blocks clicks */
-        .chick-trail {
+        /* ✨ Galaxy spark cursor trail — purely decorative, never blocks clicks */
+        .gx-spark {
             position: fixed; z-index: 2147483000; pointer-events: none; user-select: none;
-            font-size: 22px; line-height: 1; transform: translate(-50%, -50%);
-            will-change: transform, opacity; animation: chickPop 1s ease-out forwards;
+            width: var(--s, 6px); height: var(--s, 6px); border-radius: 50%;
+            background: radial-gradient(circle, #fff 0%, var(--c, #a78bfa) 42%, transparent 72%);
+            box-shadow: 0 0 6px var(--c, #a78bfa), 0 0 16px var(--c, #a78bfa);
+            transform: translate(-50%, -50%);
+            will-change: transform, opacity;
+            animation: gxFade var(--d, 900ms) cubic-bezier(.15,.7,.3,1) forwards;
         }
-        @keyframes chickPop {
-            0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0deg); }
-            18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(var(--rot, 0deg)); }
-            100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% - 36px)) scale(.85) rotate(var(--rot, 0deg)); }
+        /* occasional 4-point star flare */
+        .gx-spark.gx-star::before,
+        .gx-spark.gx-star::after {
+            content: ''; position: absolute; left: 50%; top: 50%;
+            background: var(--c, #fff); border-radius: 2px;
+            box-shadow: 0 0 8px var(--c, #fff);
+            transform: translate(-50%, -50%);
         }
-        @media (prefers-reduced-motion: reduce) { .chick-trail { display: none; } }
+        .gx-spark.gx-star::before { width: 1.6px; height: 16px; }
+        .gx-spark.gx-star::after  { width: 16px; height: 1.6px; }
+
+        @keyframes gxFade {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(.25) rotate(0deg); }
+            14%  { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(var(--rot, 0deg)); }
+            100% { opacity: 0;
+                   transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)))
+                              scale(.2) rotate(var(--rot, 0deg)); }
+        }
+        @media (prefers-reduced-motion: reduce) { .gx-spark { display: none; } }
     </style>
     @stack('head')
 </head>
@@ -285,35 +302,50 @@
     });
 })();
 
-/* 🐔 Hilarious cursor trail — chickens, chicks & eggs that fade out in ~1s.
-   pointer-events:none + auto-removed, so it never affects functionality.
-   Compensates for the global html { zoom } so it tracks the real cursor. */
+/* ✨ Galaxy spark cursor trail — glowing particles that drift like a comet tail
+   and fade out. pointer-events:none + auto-removed, so it never affects
+   functionality. Compensates for the global html { zoom } to track the cursor. */
 (function () {
-    var EMO = ['🐔', '🐓', '🐥', '🥚'];
+    var COLORS = ['#a78bfa', '#818cf8', '#60a5fa', '#22d3ee', '#f472b6', '#fcd34d', '#ffffff'];
     var last = 0, lx = 0, ly = 0;
 
     function zoom() {
         var z = parseFloat(getComputedStyle(document.documentElement).zoom);
         return (z && z > 0.1) ? z : 1;
     }
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+    function spark(x, y, vx, vy, z) {
+        var el = document.createElement('span');
+        var c  = COLORS[(Math.random() * COLORS.length) | 0];
+        var isStar = Math.random() < 0.14;
+
+        el.className = 'gx-spark' + (isStar ? ' gx-star' : '');
+        el.style.left = ((x + rnd(-6, 6)) / z) + 'px';
+        el.style.top  = ((y + rnd(-6, 6)) / z) + 'px';
+        el.style.setProperty('--c', c);
+        el.style.setProperty('--s', rnd(3, 7).toFixed(1) + 'px');
+        el.style.setProperty('--d', rnd(700, 1100).toFixed(0) + 'ms');
+        el.style.setProperty('--rot', rnd(-60, 60).toFixed(0) + 'deg');
+        // drift opposite to cursor motion (comet tail) + a little float
+        el.style.setProperty('--dx', clamp(-vx * 0.4 + rnd(-12, 12), -40, 40).toFixed(0) + 'px');
+        el.style.setProperty('--dy', clamp(-vy * 0.4 + rnd(-12, 12) - 8, -46, 34).toFixed(0) + 'px');
+
+        document.body.appendChild(el);
+        setTimeout(function () { el.remove(); }, 1150);
+    }
 
     document.addEventListener('mousemove', function (e) {
         var now = Date.now();
-        var dx = e.clientX - lx, dy = e.clientY - ly;
-        // throttle: only spawn every ~55ms and after a little movement
-        if (now - last < 55 || (dx * dx + dy * dy) < 130) return;
+        var vx = e.clientX - lx, vy = e.clientY - ly;
+        // throttle: spawn every ~28ms and only after a little movement
+        if (now - last < 28 || (vx * vx + vy * vy) < 20) return;
         last = now; lx = e.clientX; ly = e.clientY;
 
         var z = zoom();
-        var el = document.createElement('span');
-        el.className = 'chick-trail';
-        el.textContent = EMO[(Math.random() * EMO.length) | 0];
-        el.style.left = (e.clientX / z) + 'px';
-        el.style.top  = (e.clientY / z) + 'px';
-        el.style.setProperty('--dx',  (Math.random() * 44 - 22).toFixed(0) + 'px');
-        el.style.setProperty('--rot', (Math.random() * 80 - 40).toFixed(0) + 'deg');
-        document.body.appendChild(el);
-        setTimeout(function () { el.remove(); }, 1000);
+        var n = Math.random() < 0.45 ? 2 : 1;   // occasional double-spark for density
+        for (var i = 0; i < n; i++) { spark(e.clientX, e.clientY, vx, vy, z); }
     }, { passive: true });
 })();
 </script>
