@@ -16,9 +16,9 @@ class EndUserController extends Controller
         $clientId = session('selected_client_id');
 
         $query = EndUser::forClient($clientId)
-            // Pending intake ("New Clients") and error clients ("Errors") live
-            // in their own sections, not in the main Clients list.
-            ->clientsList()
+            // New Clients (pending_review), Errors, and Clients Done each live
+            // in their own section — this list is "In Progress" only.
+            ->inProgress()
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -204,6 +204,27 @@ class EndUserController extends Controller
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} approved — now in Clients.");
+    }
+
+    /** Clients Done — finished clients, pulled out of the In Progress list. */
+    public function clientsDone()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->done()
+            ->orderBy('first_name')
+            ->get();
+
+        return view('admin.end-users.done', compact('endUsers'));
+    }
+
+    /** Mark a client finished — moves them into Clients Done. One click, no prompt. */
+    public function moveToDone(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['intake_status' => 'done', 'intake_review_note' => null]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} moved to Clients Done.");
     }
 
     /** Move a client back into the New Clients (pending review) list — one click, no prompt. */

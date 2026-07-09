@@ -35,13 +35,9 @@
                         <div class="row-actions">
                             <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Review</a>
                             <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
-                                  onsubmit="return confirm('Fixed? Move {{ addslashes($eu->full_name) }} back into Clients?')">
+                                  onsubmit="return confirm('Fixed? Move {{ addslashes($eu->full_name) }} to In Progress?')">
                                 @csrf
-                                <button class="btn btn-sm btn-fix">Move to Clients</button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline">
-                                @csrf
-                                <button class="btn btn-sm btn-tonew">Move to New Clients</button>
+                                <button class="btn btn-sm btn-fix">Move to In Progress</button>
                             </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
                                   onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their documents? This cannot be undone.')">

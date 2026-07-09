@@ -18,7 +18,7 @@
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h2>Clients — {{ $selectedClient->business_name }}</h2>
+        <h2>In Progress — {{ $selectedClient->business_name }}</h2>
         <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
     </div>
     <form method="GET" class="filter-bar">
@@ -95,9 +95,9 @@
                     </td>
                     <td class="no-link">
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
-                        <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}" style="display:inline">
+                        <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}" style="display:inline">
                             @csrf
-                            <button class="btn btn-sm btn-tonew">Move to New Clients</button>
+                            <button class="btn btn-sm btn-todone">Move to Clients Done</button>
                         </form>
                         <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" style="display:inline" class="send-back-form">
                             @csrf
@@ -388,6 +388,8 @@
     .btn-sendback:hover { background:#fde68a; }
     .btn-tonew { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
     .btn-tonew:hover { background:#bae6fd; }
+    .btn-todone { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+    .btn-todone:hover { background:#bbf7d0; }
     .days-left { font-weight:600; }
     .days-left-soon { color:#ea580c; }
     .days-left-over { color:#dc2626; font-weight:700; }

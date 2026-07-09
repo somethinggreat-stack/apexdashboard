@@ -70,6 +70,18 @@
     </div>
     @push('head')
     <style>
+        /* Comments tab — pulse amber→red when the client has comments */
+        .tab.tab-has-notes { color:#b45309 !important; font-weight:800; animation: notesPulse 1.25s ease-in-out infinite; }
+        .tab.tab-has-notes.active { color:#b91c1c !important; }
+        .notes-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#dc2626;
+            margin-left:6px; vertical-align:middle; animation: notesDot 1.25s ease-in-out infinite; }
+        @keyframes notesPulse { 0%,100% { color:#b45309; } 50% { color:#dc2626; } }
+        @keyframes notesDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.8); } }
+        @media (prefers-reduced-motion: reduce) {
+            .tab.tab-has-notes { animation:none; color:#b91c1c !important; }
+            .notes-dot { animation:none; }
+        }
+
         /* Topbar action buttons — equal width/height */
         .page-actions { display: flex; gap: 10px; align-items: center; }
         .page-actions form { margin: 0; padding: 0; }
@@ -151,7 +163,10 @@
     <button class="tab" data-target="tab-profile">Profile</button>
     <button class="tab" data-target="tab-timeline">Process Timeline ({{ $endUser->processSteps->count() }})</button>
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
-    <button class="tab" data-target="tab-notes">Comments ({{ $endUser->notes->count() }})</button>
+    @php $noteCount = $endUser->notes->count(); @endphp
+    <button class="tab {{ $noteCount ? 'tab-has-notes' : '' }}" data-target="tab-notes">
+        Comments ({{ $noteCount }})@if ($noteCount)<span class="notes-dot" aria-hidden="true"></span>@endif
+    </button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
 </div>
 

@@ -83,14 +83,26 @@ class EndUser extends Model
     }
 
     /**
-     * Real "Clients" only — the ones shown on the Clients list. Excludes New
-     * Clients (pending_review) and Errors. Used for payments/billing so only
-     * active clients (in a round) are billed.
+     * Billable clients — In Progress + Clients Done. Excludes New Clients
+     * (pending_review) and Errors. Used for payments/billing.
      */
     public function scopeClientsList($query)
     {
         return $query->where(fn ($q) => $q->whereNull('intake_status')
             ->orWhereNotIn('intake_status', ['pending_review', 'error']));
+    }
+
+    /** "In Progress" — actively worked clients (not new, not error, not done). */
+    public function scopeInProgress($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('intake_status')
+            ->orWhereNotIn('intake_status', ['pending_review', 'error', 'done']));
+    }
+
+    /** "Clients Done" — finished clients. */
+    public function scopeDone($query)
+    {
+        return $query->where('intake_status', 'done');
     }
 
     public function processSteps()

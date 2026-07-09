@@ -13,6 +13,7 @@ class AllClientsController extends Controller
         $clientId = session('selected_client_id');
 
         $endUsers = EndUser::forClient($clientId)
+            ->inProgress()   // exclude New Clients / Errors / Clients Done
             ->where('status', 'active')
             ->withCount([
                 'processSteps',

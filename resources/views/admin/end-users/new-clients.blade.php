@@ -130,9 +130,9 @@
                         <div class="row-actions">
                             <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Review</a>
                             <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
-                                  onsubmit="return confirm('Approve {{ addslashes($eu->full_name) }} and move to Clients?')">
+                                  onsubmit="return confirm('Move {{ addslashes($eu->full_name) }} to In Progress?')">
                                 @csrf
-                                <button class="btn btn-sm btn-approve">Approve</button>
+                                <button class="btn btn-sm btn-approve">Move to In Progress</button>
                             </form>
                             <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" class="err-form">
                                 @csrf
