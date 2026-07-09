@@ -32,70 +32,28 @@ class AuthController extends Controller
             ]);
         }
 
-        if (Auth::guard('admin')->validate($credentials)) {
+        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::clear($key);
-            $admin = \App\Models\Admin::where('email', $credentials['email'])->first();
+            $request->session()->regenerate();
+            $this->logLogin($request);
 
-            // Super admin logs straight in — no gag.
-            if ($admin && $admin->isSuper()) {
-                Auth::guard('admin')->login($admin, $request->boolean('remember'));
-                $request->session()->regenerate();
-                $this->logLogin($request);
-
+            // Leads agents can't reach the business-owner workflow — land them
+            // on their leads pipeline instead (and don't honour a stored
+            // "intended" URL they'd only get a 403 on).
+            $user = Auth::guard('admin')->user();
+            if ($user->isLeads()) {
+                return redirect()->route('admin.prospect-leads.index', ['channel' => 'whatsapp']);
+            }
+            if ($user->isSuper()) {
                 return redirect()->intended(route('admin.dashboard'));
             }
 
-            // Everyone else on the team (VAs / leads) gets the confirm gate.
-            $request->session()->put('pending_admin_id', $admin->id);
-            $request->session()->put('pending_remember', $request->boolean('remember'));
-
-            return redirect()->route('admin.login.confirm');
+            return redirect()->intended(route('admin.client-selector.index'));
         }
 
         RateLimiter::hit($key, 60);
 
         return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
-    }
-
-    /** Step 2 for VAs: the "Fuck, {name}? 😤" gate. */
-    public function showConfirm(Request $request)
-    {
-        $id = $request->session()->get('pending_admin_id');
-        $admin = $id ? \App\Models\Admin::find($id) : null;
-
-        if (!$admin) {
-            $request->session()->forget(['pending_admin_id', 'pending_remember']);
-            return redirect()->route('admin.login');
-        }
-
-        return view('admin.auth.confirm', ['name' => $admin->full_name ?: 'you']);
-    }
-
-    public function confirm(Request $request)
-    {
-        $id = $request->session()->get('pending_admin_id');
-        if (!$id) {
-            return redirect()->route('admin.login');
-        }
-
-        // "No" → not approved for login.
-        if ($request->input('answer') !== 'yes') {
-            $request->session()->forget(['pending_admin_id', 'pending_remember']);
-            return redirect()->route('admin.login')->with('status', "No worries — come back when you're ready. 🐔");
-        }
-
-        $remember = (bool) $request->session()->get('pending_remember', false);
-        Auth::guard('admin')->loginUsingId($id, $remember);
-        $request->session()->forget(['pending_admin_id', 'pending_remember']);
-        $request->session()->regenerate();
-        $this->logLogin($request);
-
-        $user = Auth::guard('admin')->user();
-        if ($user->isLeads()) {
-            return redirect()->route('admin.prospect-leads.index', ['channel' => 'whatsapp']);
-        }
-
-        return redirect()->intended(route('admin.client-selector.index'));
     }
 
     private function logLogin(Request $request): void
