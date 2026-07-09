@@ -1,4 +1,4 @@
-﻿@extends($adminLayout ?? 'layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @php
     $isIg         = $channel === 'instagram';
@@ -16,7 +16,7 @@
         <div>
             <h2>{{ $channelLabel }} Leads in Contact <span class="lead-count-badge">{{ $prospects->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
-                {{ $channelLabel }} leads you're actively talking to â€” track where each conversation stands.
+                {{ $channelLabel }} leads you're actively talking to — track where each conversation stands.
             </p>
         </div>
         <button class="btn btn-primary" onclick="openModal('createProspectModal')">+ Add Lead</button>
@@ -52,7 +52,7 @@
                             @if ($prospect->instagram)
                                 <a href="{{ \Illuminate\Support\Str::startsWith($prospect->instagram, ['http']) ? $prospect->instagram : 'https://' . ltrim($prospect->instagram, '/') }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($prospect->instagram, 36) }}</a>
                             @else
-                                <span class="muted">â€”</span>
+                                <span class="muted">—</span>
                             @endif
                         </td>
                     @else
@@ -64,7 +64,7 @@
                                     <a href="https://wa.me/{{ $prospect->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->whatsapp }}</a>
                                 @endif
                             @else
-                                <span class="muted">â€”</span>
+                                <span class="muted">—</span>
                             @endif
                         </td>
                         <td>
@@ -75,12 +75,12 @@
                                     <a href="https://wa.me/{{ $prospect->outreach_whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $prospect->outreach_whatsapp }}</a>
                                 @endif
                             @else
-                                <span class="muted">â€”</span>
+                                <span class="muted">—</span>
                             @endif
                         </td>
                     @endif
                     <td><span class="prospect-pill prospect-pill-{{ $prospect->status }}">{{ $prospect->status_label }}</span></td>
-                    <td class="prospect-notes">{{ $prospect->notes ?: 'â€”' }}</td>
+                    <td class="prospect-notes">{{ $prospect->notes ?: '—' }}</td>
                     <td class="no-link muted">{{ $prospect->updated_at?->format('M j, Y') }}</td>
                     <td class="no-link">
                         <div class="row-actions">
@@ -162,7 +162,7 @@
             </div>
             <div class="form-group">
                 <label>Discussion / Comments</label>
-                <textarea name="notes" rows="4" placeholder="What was discussed, objections, next stepsâ€¦">{{ old('notes') }}</textarea>
+                <textarea name="notes" rows="4" placeholder="What was discussed, objections, next steps…">{{ old('notes') }}</textarea>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createProspectModal')">Cancel</button>
@@ -220,7 +220,7 @@
             </div>
             <div class="form-group">
                 <label>Discussion / Comments</label>
-                <textarea name="notes" id="ep-notes" rows="5" placeholder="What was discussed, objections, next stepsâ€¦"></textarea>
+                <textarea name="notes" id="ep-notes" rows="5" placeholder="What was discussed, objections, next steps…"></textarea>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editProspectModal')">Cancel</button>

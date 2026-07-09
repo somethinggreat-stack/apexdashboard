@@ -1,11 +1,11 @@
-﻿@extends($adminLayout ?? 'layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', "Today's Queue")
 
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h2>Today's Queue â€” {{ $selectedClient->business_name }}</h2>
+        <h2>Today's Queue — {{ $selectedClient->business_name }}</h2>
     </div>
 
     <p class="muted" style="padding: 0 4px 12px;">
@@ -13,7 +13,7 @@
     </p>
 
     @forelse ($endUsers as $weekLabel => $group)
-        <h3 style="margin: 18px 0 8px;">{{ $weekLabel }} <span class="muted" style="font-weight:400;">â€” {{ $group->count() }} client(s)</span></h3>
+        <h3 style="margin: 18px 0 8px;">{{ $weekLabel }} <span class="muted" style="font-weight:400;">— {{ $group->count() }} client(s)</span></h3>
         <div class="table-scroll"><table class="data-table">
             <thead>
                 <tr>

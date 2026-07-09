@@ -1,4 +1,4 @@
-﻿@extends($adminLayout ?? 'layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @section('title', 'Business Clients')
 
@@ -26,7 +26,7 @@
                 <tr>
                     <td>{{ $client->business_name }}</td>
                     <td>{{ $client->email }}</td>
-                    <td>{{ $client->phone ?? 'â€”' }}</td>
+                    <td>{{ $client->phone ?? '—' }}</td>
                     <td>{{ $client->end_users_count }}</td>
                     <td>${{ number_format($client->monthly_fee, 2) }}</td>
                     <td>${{ number_format($client->monthly_revenue, 2) }}</td>
@@ -83,7 +83,7 @@
                     <label>Payment Model *</label>
                     <select name="compensation_model" id="modal-comp-model" required>
                         <option value="per_round" @selected(old('compensation_model', 'per_round') === 'per_round')>Per Round (flat fee per client per round)</option>
-                        <option value="hourly"    @selected(old('compensation_model') === 'hourly')>Hourly (rate Ã— hours worked, paid in periods)</option>
+                        <option value="hourly"    @selected(old('compensation_model') === 'hourly')>Hourly (rate × hours worked, paid in periods)</option>
                     </select>
                 </div>
 

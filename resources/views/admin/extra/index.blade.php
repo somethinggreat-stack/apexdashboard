@@ -1,4 +1,4 @@
-﻿@extends($adminLayout ?? 'layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @php
     // Per-type config. model: 'oneoff' = agreed amount + upfront/full-paid (funnels);
@@ -72,23 +72,23 @@
                     @if ($config['showLink'])
                         <td>
                             @if ($p->link)
-                                <a href="{{ \Illuminate\Support\Str::startsWith($p->link, ['http://','https://']) ? $p->link : 'https://'.$p->link }}" target="_blank" rel="noopener">Open â†—</a>
-                            @else â€” @endif
+                                <a href="{{ \Illuminate\Support\Str::startsWith($p->link, ['http://','https://']) ? $p->link : 'https://'.$p->link }}" target="_blank" rel="noopener">Open ↗</a>
+                            @else — @endif
                         </td>
                     @endif
                     @if ($config['showWa'])
                         <td>
                             @if ($p->whatsapp)
                                 <a href="https://wa.me/{{ preg_replace('/\D/', '', $p->whatsapp) }}" target="_blank" rel="noopener">{{ $p->whatsapp }}</a>
-                            @else â€” @endif
+                            @else — @endif
                         </td>
                     @endif
-                    <td>{{ $p->amount !== null ? '$'.number_format($p->amount, 2) : 'â€”' }}</td>
+                    <td>{{ $p->amount !== null ? '$'.number_format($p->amount, 2) : '—' }}</td>
                     @if ($showPaid)
-                        <td>{{ $p->paid !== null ? '$'.number_format($p->paid, 2) : 'â€”' }}</td>
+                        <td>{{ $p->paid !== null ? '$'.number_format($p->paid, 2) : '—' }}</td>
                     @endif
                     <td><span class="ep-pill ep-{{ $p->status }}">{{ $statusLabels[$p->status] ?? $p->status }}</span></td>
-                    <td class="ep-notes">{{ $p->notes ?: 'â€”' }}</td>
+                    <td class="ep-notes">{{ $p->notes ?: '—' }}</td>
                     <td class="no-link">
                         <div class="row-actions">
                             <button type="button" class="btn btn-sm"
@@ -110,7 +110,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="{{ $colspan }}" class="empty">Nothing here yet â€” click â€œ+ Addâ€.</td></tr>
+                <tr><td colspan="{{ $colspan }}" class="empty">Nothing here yet — click “+ Add”.</td></tr>
             @endforelse
         </tbody>
     </table></div>
@@ -141,7 +141,7 @@
             <input type="hidden" name="_method" id="extraMethod" value="POST">
             <div class="form-group"><label>Client Name *</label><input type="text" name="client_name" id="ep_client_name" required></div>
             @if ($config['showLink'])
-                <div class="form-group"><label>Funnel Link</label><input type="text" name="link" id="ep_link" placeholder="https://â€¦"></div>
+                <div class="form-group"><label>Funnel Link</label><input type="text" name="link" id="ep_link" placeholder="https://…"></div>
             @endif
             @if ($config['showWa'])
                 <div class="form-group"><label>WhatsApp Number</label><input type="text" name="whatsapp" id="ep_whatsapp" placeholder="+1 555 123 4567"></div>

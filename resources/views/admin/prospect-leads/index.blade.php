@@ -1,4 +1,4 @@
-﻿@extends($adminLayout ?? 'layouts.admin')
+@extends($adminLayout ?? 'layouts.admin')
 
 @php
     $isIg         = $channel === 'instagram';
@@ -20,9 +20,9 @@
             <h2>Prospect {{ $channelLabel }} Leads <span class="lead-count-badge">{{ $leads->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 @if ($isIg)
-                    Quick list of {{ $channelLabel }} leads â€” name and Instagram link.
+                    Quick list of {{ $channelLabel }} leads — name and Instagram link.
                 @else
-                    Quick list of {{ $channelLabel }} leads â€” name, a verified {{ $channelLabel }} number, and optional Instagram.
+                    Quick list of {{ $channelLabel }} leads — name, a verified {{ $channelLabel }} number, and optional Instagram.
                 @endif
             </p>
         </div>
@@ -66,7 +66,7 @@
                     <td>
                         <strong>{{ $lead->name }}</strong>
                         @if ($isDup)
-                            <span class="dup-flag" title="This {{ $isIg ? 'Instagram link' : 'number' }} is on more than one lead">âš  Duplicate</span>
+                            <span class="dup-flag" title="This {{ $isIg ? 'Instagram link' : 'number' }} is on more than one lead">⚠ Duplicate</span>
                         @endif
                     </td>
                     @unless ($isIg)
@@ -78,7 +78,7 @@
                                     <a href="https://wa.me/{{ $lead->whatsapp_digits }}" target="_blank" rel="noopener" class="wa-link">{{ $lead->whatsapp }}</a>
                                 @endif
                             @else
-                                <span class="muted">â€”</span>
+                                <span class="muted">—</span>
                             @endif
                         </td>
                     @endunless
@@ -86,14 +86,14 @@
                         @if ($lead->instagram)
                             <a href="{{ $lead->linkHref($lead->instagram) }}" target="_blank" rel="noopener">{{ \Illuminate\Support\Str::limit($lead->instagram, 36) }}</a>
                         @else
-                            <span class="muted">â€”</span>
+                            <span class="muted">—</span>
                         @endif
                     </td>
                     <td class="no-link">
                         <form method="POST" action="{{ route('admin.prospect-leads.toggle-hot', $lead) }}" style="display:inline">
                             @csrf
                             <button type="submit" class="hot-flag {{ $lead->hot_lead ? 'hot-on' : 'hot-off' }}" title="Click to toggle Hot Lead">
-                                {{ $lead->hot_lead ? 'ðŸ”¥ Hot Lead' : 'Mark Hot' }}
+                                {{ $lead->hot_lead ? '🔥 Hot Lead' : 'Mark Hot' }}
                             </button>
                         </form>
                     </td>
@@ -117,7 +117,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="{{ $cols }}" class="empty">No {{ $channelLabel }} leads yet â€” add the first one.</td></tr>
+                <tr><td colspan="{{ $cols }}" class="empty">No {{ $channelLabel }} leads yet — add the first one.</td></tr>
             @endforelse
         </tbody>
     </table></div>
@@ -144,13 +144,13 @@
                 <div class="form-group">
                     <label>Instagram Link *</label>
                     <input type="text" name="instagram" id="add-key-input" value="{{ old('instagram') }}" placeholder="instagram.com/handle" required>
-                    <div id="add-dup-warning" class="dup-warning" style="display:none;">âš  This Instagram link already exists â€” duplicate not allowed.</div>
+                    <div id="add-dup-warning" class="dup-warning" style="display:none;">⚠ This Instagram link already exists — duplicate not allowed.</div>
                 </div>
             @else
                 <div class="form-group">
                     <label>{{ $numberLabel }}</label>
                     <input type="text" name="whatsapp" id="add-key-input" value="{{ old('whatsapp') }}" placeholder="{{ $numberLabel }}">
-                    <div id="add-dup-warning" class="dup-warning" style="display:none;">âš  This number already exists in WhatsApp/Phone leads â€” duplicate not allowed.</div>
+                    <div id="add-dup-warning" class="dup-warning" style="display:none;">⚠ This number already exists in WhatsApp/Phone leads — duplicate not allowed.</div>
                 </div>
                 <div class="form-group">
                     <label>Instagram Link <span class="muted">(optional)</span></label>
@@ -224,7 +224,7 @@
             </div>
             <div class="form-group">
                 <label>Discussion / Comments</label>
-                <textarea name="notes" id="ml-notes" rows="4" placeholder="What was discussed, next stepsâ€¦"></textarea>
+                <textarea name="notes" id="ml-notes" rows="4" placeholder="What was discussed, next steps…"></textarea>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('moveLeadModal')">Cancel</button>

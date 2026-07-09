@@ -1,4 +1,12 @@
-﻿(function () {
+/* Galaxy cursor trail — a canvas particle system: a bright comet head, a dense
+   stream of star dust that curls into a nebula ribbon, and the odd streaking
+   star. Purely decorative: the canvas is pointer-events:none, the render loop
+   parks itself when the cursor is still, and the whole thing is skipped for
+   prefers-reduced-motion. Coordinates come from getBoundingClientRect(), so it
+   tracks the pointer correctly under html{zoom}.
+
+   Shared by layouts/admin.blade.php and layouts/admin-pro.blade.php. */
+(function () {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     var canvas = document.createElement('canvas');
@@ -7,7 +15,7 @@
     document.body.appendChild(canvas);
     var ctx = canvas.getContext('2d');
 
-    /* deep-space palette: violet â†’ indigo â†’ blue â†’ cyan, with magenta accents */
+    /* deep-space palette: violet → indigo → blue → cyan, with magenta accents */
     var COLORS = [
         [139,  92, 246], [124,  58, 237], [ 99, 102, 241],
         [ 79,  70, 229], [ 59, 130, 246], [ 34, 211, 238],
@@ -56,7 +64,7 @@
     });
 
     /* Ask the browser where the canvas actually is instead of trying to undo
-       html{zoom} by hand â€” getBoundingClientRect() reports in the same space as
+       html{zoom} by hand — getBoundingClientRect() reports in the same space as
        event.clientX, so the trail lands exactly under the cursor at any zoom. */
     function resize() {
         var r = canvas.getBoundingClientRect();
@@ -77,7 +85,7 @@
             x: x, y: y, px: x, py: y, vx: vx, vy: vy,
             life: life, max: life,
             size: kind === 'dust' ? rnd(0.8, 2.4) : (kind === 'star' ? rnd(2.2, 4) : rnd(3, 8)),
-            w: rnd(-0.055, 0.055),                // per-frame curl â†’ spiral arms
+            w: rnd(-0.055, 0.055),                // per-frame curl → spiral arms
             img: kind === 'star' ? STAR[i] : GLOW[i],
             rgb: COLORS[i],
             streak: kind === 'star'
@@ -95,7 +103,7 @@
         var speed = Math.min(dist, 40);
 
         /* t runs 1..steps so the last particle is born exactly under the cursor
-           tip â€” the tail is drawn behind it by drift, not by spawning behind. */
+           tip — the tail is drawn behind it by drift, not by spawning behind. */
         for (var i = 1; i <= steps; i++) {
             var t = i / steps;
             var x = x0 + dx * t, y = y0 + dy * t;
@@ -126,7 +134,7 @@
             if (p.life <= 0) { parts.splice(i, 1); continue; }
 
             p.px = p.x; p.py = p.y;
-            var cs = Math.cos(p.w), sn = Math.sin(p.w);   // rotate velocity â†’ curl
+            var cs = Math.cos(p.w), sn = Math.sin(p.w);   // rotate velocity → curl
             var vx = p.vx * cs - p.vy * sn;
             p.vy = p.vx * sn + p.vy * cs;
             p.vx = vx;
@@ -134,7 +142,7 @@
             p.vy -= 0.014;                                 // slow drift upward
             p.x += p.vx; p.y += p.vy;
 
-            var t = p.life / p.max;                        // 1 â†’ 0
+            var t = p.life / p.max;                        // 1 → 0
             var a = Math.min(1, (1 - t) * 7) * t;          // quick fade in, long fade out
             var s = p.size * (0.55 + 0.45 * t);
 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     <style>
-        /* Logout â€” proper button, clean red hover */
+        /* Logout — proper button, clean red hover */
         .sidebar-logout { padding:10px 16px !important; }
         .sidebar-logout .btn-link {
             display:block; width:100%; text-align:center; text-decoration:none;
@@ -17,7 +17,7 @@
         }
         .sidebar-logout .btn-link:hover { background:#dc2626 !important; color:#fff !important; border-color:#dc2626 !important; }
 
-        /* Brand â€” logo removed on admin; keep just the portal badge, pulled up */
+        /* Brand — logo removed on admin; keep just the portal badge, pulled up */
         .sidebar-brand { text-align:center; padding-top:0; padding-bottom:8px !important; border-bottom:0 !important; }
         .sidebar-brand .badge-portal { font-size:9.5px !important; padding:2px 9px !important; margin-top:0 !important; }
         .sidebar-brand .brand-logo {
@@ -57,7 +57,7 @@
         .sidebar-nav { padding:6px 0 !important; }
         .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
 
-        /* Tighter, crisper density â€” real px sizes (NO zoom, so text stays sharp, no blur). */
+        /* Tighter, crisper density — real px sizes (NO zoom, so text stays sharp, no blur). */
         @media (min-width: 992px) {
             .main { padding:18px 26px; }
             .card { padding:16px; margin-bottom:16px; border-radius:10px; }
@@ -273,9 +273,7 @@
     });
 })();
 
-
 </script>
 @stack('scripts')
 </body>
 </html>
-

@@ -17,19 +17,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin-pro.css') }}">
-    <script>
-        /* Apply the saved theme before first paint so there's no flash. */
-        (function () {
-            try {
-                var t = localStorage.getItem('apexProTheme');
-                if (t) document.documentElement.setAttribute('data-pro-theme', t);
-            } catch (e) {}
-        })();
-    </script>
     @stack('head')
 </head>
 <body class="pro-body admin-body">
-<div class="pro-scrim" id="proScrim"></div>
 <div class="pro-layout">
 
     <aside class="pro-sidebar" id="proSidebar">
@@ -184,10 +174,6 @@
 
     <main class="pro-main">
         <header class="pro-topbar">
-            <button type="button" class="pro-hamburger" id="proMenuToggle" aria-label="Toggle menu" aria-controls="proSidebar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            </button>
-
             <div class="pro-heading">
                 <h1>@yield('title', 'Dashboard')</h1>
                 <p>@yield('subtitle', $bo ? 'Working on ' . $bo->business_name : 'Apex Growth Solutions')</p>
@@ -199,11 +185,6 @@
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Search clients by name...">
                 </form>
             @endisset
-
-            <button type="button" class="pro-icon-btn" id="proThemeToggle" title="Toggle theme" aria-label="Toggle theme">
-                <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="6" y2="18"/><line x1="18" y1="6" x2="19.8" y2="4.2"/></svg>
-                <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-            </button>
 
             {{-- pages that ship their own topbar controls (e.g. the client
                  detail view's back / report buttons) --}}
@@ -232,29 +213,6 @@
 <script src="{{ asset('js/admin.js') }}"></script>
 <script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>
-(function () {
-    var toggle = document.getElementById('proMenuToggle');
-    var sidebar = document.getElementById('proSidebar');
-    var scrim = document.getElementById('proScrim');
-    function close() { sidebar.classList.remove('open'); scrim.classList.remove('open'); }
-    toggle.addEventListener('click', function () {
-        sidebar.classList.toggle('open');
-        scrim.classList.toggle('open', sidebar.classList.contains('open'));
-    });
-    scrim.addEventListener('click', close);
-    sidebar.addEventListener('click', function (e) { if (e.target.closest('a')) close(); });
-    window.addEventListener('resize', function () { if (window.innerWidth > 900) close(); });
-
-    /* Light / dark toggle, remembered per browser. */
-    var themeBtn = document.getElementById('proThemeToggle');
-    themeBtn.addEventListener('click', function () {
-        var root = document.documentElement;
-        var next = root.getAttribute('data-pro-theme') === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-pro-theme', next);
-        try { localStorage.setItem('apexProTheme', next); } catch (e) {}
-    });
-})();
-
 /* Rows with data-href are clickable, minus the real controls inside them. */
 (function () {
     document.addEventListener('click', function (e) {
