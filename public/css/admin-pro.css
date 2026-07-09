@@ -7,9 +7,10 @@
    ========================================================================== */
 @import url('admin.css');
 
-/* The base sheet scales the whole app to 90%. This console is designed at
-   100%, so opt out for the pages that use it. */
-html { zoom: 1; }
+/* Render the console the way it looks at 75% browser zoom, so more of the
+   table fits on screen without the user touching their browser zoom.
+   (The base sheet uses 0.9; this overrides it for super-admin pages only.) */
+html { zoom: 0.75; }
 
 :root {
     --pro-bg:        #f5f6fb;
@@ -68,11 +69,11 @@ html[data-pro-theme="dark"] {
     color: #cbd5e1;
     overflow-y: auto;
 }
-.pro-brand { display: flex; align-items: center; gap: 11px; padding: 22px 20px 18px; }
-.pro-brand img { width: 38px; height: 38px; object-fit: contain; }
-.pro-brand-text { line-height: 1.15; }
-.pro-brand-text strong { display: block; color: #fff; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
-.pro-brand-text span { display: block; color: #8e9ac2; font-size: 12px; }
+.pro-brand { display: flex; align-items: center; justify-content: center; padding: 24px 18px 20px; }
+.pro-brand img {
+    width: 100%; max-width: 210px; height: auto; max-height: 76px;
+    object-fit: contain; display: block;
+}
 
 .pro-working {
     position: relative;
@@ -117,23 +118,9 @@ html[data-pro-theme="dark"] {
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
 
-.pro-invite {
-    margin: 18px 16px 14px; padding: 18px;
-    background: linear-gradient(150deg, #4f46e5 0%, #7c3aed 55%, #6d28d9 100%);
-    border-radius: 15px; color: #fff;
-}
-.pro-invite h4 { margin: 0 0 6px; font-size: 14.5px; font-weight: 700; }
-.pro-invite p { margin: 0 0 14px; font-size: 12px; line-height: 1.5; color: #e0dcfb; }
-.pro-invite a {
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-    padding: 9px; border-radius: 10px; text-decoration: none;
-    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22);
-    color: #fff; font-size: 12.5px; font-weight: 600;
-}
-.pro-invite a:hover { background: rgba(255,255,255,.26); }
-
 .pro-user {
     display: flex; align-items: center; gap: 11px;
+    margin-top: 18px;
     padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.07);
 }
 .pro-user .pro-avatar { width: 34px; height: 34px; font-size: 13px; }

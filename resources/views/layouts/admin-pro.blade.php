@@ -34,11 +34,7 @@
 
     <aside class="pro-sidebar" id="proSidebar">
         <div class="pro-brand">
-            <img src="{{ asset('Images/whitelogo.png') }}" alt="">
-            <div class="pro-brand-text">
-                <strong>Apex Growth</strong>
-                <span>Solutions</span>
-            </div>
+            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
         </div>
 
         @isset($selectedClient)
@@ -120,15 +116,6 @@
                 </a>
             @endisset
         </nav>
-
-        <div class="pro-invite">
-            <h4>Grow Your Business 🚀</h4>
-            <p>Invite your team and manage more clients efficiently.</p>
-            <a href="{{ route('admin.users.index') }}">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                Invite Team
-            </a>
-        </div>
 
         <div class="pro-user">
             <span class="pro-avatar" style="background:linear-gradient(140deg,#6366f1,#4f46e5); color:#fff;">{{ $ini }}</span>
