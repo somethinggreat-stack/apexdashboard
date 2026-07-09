@@ -46,7 +46,7 @@ class ClientSelectorController extends Controller
                 ])->get();
 
             $pending    = $eus->where('intake_status', 'pending_review')->count();
-            $active     = $eus->filter(fn ($e) => !in_array($e->intake_status, ['pending_review', 'done'], true));
+            $active     = $eus->filter(fn ($e) => $e->intake_status !== 'pending_review');
             $incomplete = $active->filter(fn ($e) => $e->is_incomplete)->count();
             $overdue    = $active->filter(fn ($e) => $e->days_left_in_round !== null && $e->days_left_in_round < 0)->count();
 

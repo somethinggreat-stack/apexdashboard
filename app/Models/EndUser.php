@@ -99,7 +99,7 @@ class EndUser extends Model
             ->orWhereNotIn('intake_status', ['pending_review', 'error', 'done']));
     }
 
-    /** "Clients Done" — finished clients. */
+    /** "Clients Done" — finished clients. Moved here only via the button. */
     public function scopeDone($query)
     {
         return $query->where('intake_status', 'done');
