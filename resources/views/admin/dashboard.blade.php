@@ -159,18 +159,42 @@
                 <svg class="an-spark" viewBox="0 0 96 30" preserveAspectRatio="none"><polyline points="{{ $miniPoly }}" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
         </div>
-        <div class="an-chart-head"><strong>Client Activity</strong><span class="dcard-sub">New clients · last 14 days</span></div>
-        <div class="an-chart">
-            <svg viewBox="0 0 600 90" preserveAspectRatio="none" width="100%" height="88">
-                <defs><linearGradient id="actFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.22"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
-                <polygon points="{{ $bigArea }}" fill="url(#actFill)"/>
-                <polyline points="{{ $bigPoly }}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
+        <div class="tb-head">
+            <strong>New Clients Over Time</strong>
+            <div class="tb-tabs">
+                <button type="button" class="tb-tab is-on" onclick="tbShow('month', this)">Month</button>
+                <button type="button" class="tb-tab" onclick="tbShow('week', this)">Week</button>
+                <button type="button" class="tb-tab" onclick="tbShow('day', this)">Day</button>
+            </div>
         </div>
+        @foreach (['month' => $byMonth, 'week' => $byWeek, 'day' => $byDay] as $range => $rows)
+            @php
+                $counts = array_column($rows, 'count');
+                $mx  = max(1, (int) max($counts));
+                $tot = array_sum($counts);
+                $cap = ['month' => 'last 12 months', 'week' => 'last 12 weeks', 'day' => 'last 30 days'][$range];
+            @endphp
+            <div class="tb-chart" id="tb-{{ $range }}" @if ($range !== 'month') style="display:none;" @endif>
+                <div class="tb-total"><strong>{{ number_format($tot) }}</strong> new client{{ $tot === 1 ? '' : 's' }} · {{ $cap }}</div>
+                <div class="tb-bars">
+                    @foreach ($rows as $r)
+                        @php $h = $r['count'] > 0 ? max(6, (int) round($r['count'] / $mx * 100)) : 2; @endphp
+                        <div class="tb-col" title="{{ $r['label'] }} {{ $r['sub'] ?? '' }} — {{ $r['count'] }} new">
+                            <span class="tb-num">{{ $r['count'] ?: '' }}</span>
+                            <span class="tb-barwrap"><span class="tb-bar {{ $r['count'] ? '' : 'is-zero' }}" style="height:{{ $h }}%"></span></span>
+                            <span class="tb-lbl">{{ $r['label'] }}</span>
+                            <span class="tb-sub">{{ $r['sub'] ?? '' }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
     </div>
 
     <div class="dcard">
         <div class="dcard-head"><div><h2>Payments Overview</h2></div><a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View Financial Report →</a></div>
+        <div class="pay-2col">
+        <div class="pay-col-left">
         <div class="pay-wrap">
             <div class="donut">
                 <svg viewBox="0 0 132 132" width="140" height="140">
@@ -188,22 +212,28 @@
                 <div class="pl-row"><span class="pl-dot" style="background:#3b82f6"></span><span class="pl-name">Lifetime Billed</span><span class="pl-val">{{ $money($dTotal) }}</span><span class="pl-pct">100%</span></div>
             </div>
         </div>
+        </div>{{-- /pay-col-left --}}
 
-        <div class="rp-head"><strong>Recent Payments</strong><a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View All →</a></div>
-        @forelse ($recent as $p)
-            <div class="rp-item">
-                <span class="rp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
-                <span class="rp-body">
-                    <span class="rp-name">{{ $p->endUser?->client?->business_name ?? '—' }}</span>
-                    <span class="rp-sub">Payment received</span>
-                </span>
-                <span class="rp-amt">{{ $money($p->amount) }}</span>
-                <span class="rp-date">{{ $p->paid_at?->format('M j, Y') }}</span>
-                <span class="rp-badge">Completed</span>
+        <div class="pay-col-right">
+            <div class="rp-head"><strong>All Payments</strong><span class="dcard-sub">{{ number_format($recent->count()) }} recorded</span></div>
+            <div class="rp-list">
+                @forelse ($recent as $p)
+                    <div class="rp-item">
+                        <span class="rp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+                        <span class="rp-body">
+                            <span class="rp-name">{{ $p->endUser?->client?->business_name ?? '—' }}</span>
+                            <span class="rp-sub">{{ $p->endUser?->full_name ?? 'Payment received' }} · Round {{ $p->round }}</span>
+                        </span>
+                        <span class="rp-amt">{{ $money($p->amount) }}</span>
+                        <span class="rp-date">{{ $p->paid_at?->format('M j, Y') }}</span>
+                        <span class="rp-badge">Completed</span>
+                    </div>
+                @empty
+                    <div class="dempty">No payments recorded yet.</div>
+                @endforelse
             </div>
-        @empty
-            <div class="dempty">No payments recorded yet.</div>
-        @endforelse
+        </div>
+        </div>{{-- /pay-2col --}}
     </div>
 </div>
 
@@ -291,6 +321,24 @@
     .an-chart-head strong { font-size:13px; color:#0f172a; }
     .an-chart { width:100%; }
 
+    /* New Clients Over Time — month / week / day bars */
+    .tb-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:2px 0 10px; }
+    .tb-head strong { font-size:13px; color:#0f172a; }
+    .tb-tabs { display:flex; gap:3px; background:#f1f5f9; padding:3px; border-radius:10px; }
+    .tb-tab { border:0; background:transparent; font-size:12px; font-weight:700; color:#64748b; padding:6px 13px; border-radius:8px; cursor:pointer; }
+    .tb-tab.is-on { background:#fff; color:#0f172a; box-shadow:0 1px 2px rgba(15,23,42,.10); }
+    .tb-total { font-size:11.5px; color:#94a3b8; margin-bottom:8px; }
+    .tb-total strong { color:#0f172a; font-size:13px; }
+    .tb-bars { display:flex; align-items:stretch; gap:6px; height:165px; overflow-x:auto; padding-bottom:2px; }
+    .tb-col { flex:1 1 0; min-width:24px; display:flex; flex-direction:column; align-items:center; }
+    .tb-num { font-size:10px; font-weight:800; color:#334155; height:13px; }
+    .tb-barwrap { flex:1; width:100%; display:flex; align-items:flex-end; justify-content:center; }
+    .tb-bar { width:100%; max-width:34px; border-radius:6px 6px 3px 3px; background:linear-gradient(180deg,#3b82f6,#2563eb); }
+    .tb-bar.is-zero { background:#e8edf3; }
+    .tb-col:hover .tb-bar { filter:brightness(1.12); }
+    .tb-lbl { font-size:10px; font-weight:700; color:#475569; margin-top:6px; white-space:nowrap; }
+    .tb-sub { font-size:9px; color:#cbd5e1; }
+
     /* Payments */
     .pay-wrap { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
     .donut { position:relative; flex:none; }
@@ -304,7 +352,17 @@
     .pl-val { font-weight:800; color:#0f172a; }
     .pl-pct { color:#94a3b8; font-size:11.5px; width:44px; text-align:right; }
 
-    .rp-head { display:flex; align-items:center; justify-content:space-between; margin:14px 0 2px; padding-top:14px; border-top:1px solid #f1f5f9; }
+    /* Payments: two columns — donut/legend left, full payments list right */
+    .pay-2col { display:grid; grid-template-columns:minmax(250px, .85fr) 1.15fr; gap:22px; align-items:start; }
+    @media (max-width:900px){ .pay-2col { grid-template-columns:1fr; } }
+    .pay-2col .pay-wrap { flex-direction:column; align-items:stretch; gap:14px; margin-bottom:0; }
+    .pay-2col .donut { align-self:center; }
+    .pay-2col .pay-legend { min-width:0; }
+    .rp-list { max-height:430px; overflow-y:auto; padding-right:4px; }
+    .pay-col-right { border-left:1px solid #f1f5f9; padding-left:20px; }
+    @media (max-width:900px){ .pay-col-right { border-left:0; padding-left:0; border-top:1px solid #f1f5f9; padding-top:14px; } }
+
+    .rp-head { display:flex; align-items:center; justify-content:space-between; margin:0 0 6px; }
     .rp-head strong { font-size:13px; color:#0f172a; }
     .rp-item { display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #f6f8fb; }
     .rp-item:first-of-type { border-top:0; }
@@ -322,6 +380,15 @@
 
 @push('scripts')
 <script>
+window.tbShow = function (range, btn) {
+    ['month', 'week', 'day'].forEach(function (r) {
+        var el = document.getElementById('tb-' + r);
+        if (el) { el.style.display = (r === range) ? '' : 'none'; }
+    });
+    document.querySelectorAll('.tb-tab').forEach(function (b) { b.classList.remove('is-on'); });
+    if (btn) { btn.classList.add('is-on'); }
+};
+
 window.filterBOs = function (q) {
     q = (q || '').trim().toLowerCase();
     var any = false;

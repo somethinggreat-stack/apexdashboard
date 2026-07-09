@@ -66,12 +66,12 @@ class DashboardController extends Controller
         $totalClients = (int) $clients->sum('end_users_count');
         $activeOwners = $clients->count();
 
-        // Recent payments across all business owners
+        // All payments across all business owners (newest first)
         $recent = ClientPayment::whereHas('endUser.client', fn ($q) => $q->where('admin_id', $ownerId))
             ->with('endUser.client')
             ->latest('paid_at')
             ->latest('id')
-            ->take(6)
+            ->limit(300)
             ->get();
 
         // Client activity — new clients per day for the last 14 days (sparkline)
@@ -95,6 +95,40 @@ class DashboardController extends Controller
             ->where('created_at', '>=', Carbon::now()->startOfMonth())
             ->count();
 
+        // ---- New clients over time: by month (12), by week (12), by day (30) ----
+        $byMonth = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $m = Carbon::now()->subMonths($i);
+            $byMonth[$m->format('Y-m')] = ['label' => $m->format('M'), 'sub' => $m->format('Y'), 'count' => 0];
+        }
+        $byWeek = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $w = Carbon::now()->subWeeks($i)->startOfWeek();
+            $byWeek[$w->format('Y-m-d')] = ['label' => $w->format('M j'), 'sub' => 'wk', 'count' => 0];
+        }
+        $byDay = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = Carbon::now()->subDays($i);
+            $byDay[$d->format('Y-m-d')] = ['label' => $d->format('j'), 'sub' => $d->format('M'), 'count' => 0];
+        }
+
+        EndUser::whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
+            ->where('created_at', '>=', Carbon::now()->subMonths(12)->startOfMonth())
+            ->pluck('created_at')
+            ->each(function ($c) use (&$byMonth, &$byWeek, &$byDay) {
+                $dt = Carbon::parse($c);
+                $mk = $dt->format('Y-m');
+                $wk = $dt->copy()->startOfWeek()->format('Y-m-d');
+                $dk = $dt->format('Y-m-d');
+                if (isset($byMonth[$mk])) { $byMonth[$mk]['count']++; }
+                if (isset($byWeek[$wk]))  { $byWeek[$wk]['count']++; }
+                if (isset($byDay[$dk]))   { $byDay[$dk]['count']++; }
+            });
+
+        $byMonth = array_values($byMonth);
+        $byWeek  = array_values($byWeek);
+        $byDay   = array_values($byDay);
+
         // On-track rate: active clients with logs up to date and no overdue round
         $activeTotal = max(0, $totalClients - $sumPending);
         $onTrack     = max(0, $activeTotal - $sumIncomplete - $sumOverdue);
@@ -109,7 +143,8 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact(
             'clients', 'attention', 'sumPending', 'sumIncomplete', 'sumOverdue',
             'payment', 'totalClients', 'activeOwners', 'recent',
-            'activityVals', 'newThisMonth', 'onTrackRate'
+            'activityVals', 'newThisMonth', 'onTrackRate',
+            'byMonth', 'byWeek', 'byDay'
         ));
     }
 }
