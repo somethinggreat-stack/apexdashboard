@@ -37,6 +37,9 @@ html { zoom: 0.75; }
     --pro-side-1:    #0c1130;
     --pro-side-2:    #141a3e;
     --pro-side-3:    #1b1350;
+
+    /* wide enough for "Instagram Leads in Contact" on a single line */
+    --pro-side-w:    300px;
 }
 
 
@@ -54,97 +57,125 @@ html, body { height: 100%; }
 }
 .pro-layout { display: flex; min-height: 100%; }
 
-/* ------------------------------ sidebar --------------------------------- */
+/* ------------------------------ sidebar ---------------------------------
+   One fixed, full-height panel. Wide enough that no label ever wraps, and
+   short enough that the whole nav fits without a scrollbar. Everything is
+   sized so the tallest case (super admin, no BO selected: 7 sections,
+   16 links) still clears a 768px-tall viewport at zoom 0.75.
+   ------------------------------------------------------------------------ */
 .pro-sidebar {
-    width: 270px; flex-shrink: 0;
+    width: var(--pro-side-w); flex-shrink: 0;
     position: fixed; top: 0; bottom: 0; left: 0; z-index: 60;
     display: flex; flex-direction: column;
     background: linear-gradient(180deg, var(--pro-side-1) 0%, var(--pro-side-2) 52%, var(--pro-side-3) 100%);
     color: #cbd5e1;
-    overflow: hidden;            /* the nav scrolls, not the whole panel */
+    overflow: hidden;            /* nothing scrolls the panel itself */
 }
-.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 22px 18px 16px; }
+.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 18px 18px 14px; }
 .pro-brand img {
-    width: 100%; max-width: 210px; height: auto; max-height: 76px;
+    width: 100%; max-width: 196px; height: auto; max-height: 64px;
     object-fit: contain; display: block;
 }
 
+/* Signed-in admin, pinned under the logo */
+.pro-userbox {
+    flex-shrink: 0; display: flex; align-items: center; gap: 11px;
+    margin: 0 14px 12px; padding: 10px 12px;
+    background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 12px;
+}
+.pro-userbox .pro-avatar { width: 34px; height: 34px; font-size: 12.5px; }
+.pro-userbox-text { flex: 1; min-width: 0; line-height: 1.3; }
+.pro-userbox-text strong {
+    display: block; color: #fff; font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pro-userbox-text span { display: block; color: #8794b8; font-size: 10.5px; }
+.pro-logout {
+    flex-shrink: 0; background: none; border: 0; cursor: pointer;
+    padding: 6px; border-radius: 8px; color: #8794b8; display: inline-flex;
+}
+.pro-logout:hover { color: #fca5a5; background: rgba(239,68,68,.12); }
+
 .pro-working {
     position: relative; flex-shrink: 0;
-    margin: 0 16px 14px; padding: 15px 16px 16px;
+    margin: 0 14px 10px; padding: 11px 13px 12px;
     background: linear-gradient(160deg, rgba(79,70,229,.30), rgba(15,23,42,.35));
     border: 1px solid rgba(148,163,255,.18);
-    border-radius: 14px;
+    border-radius: 12px;
 }
-.pro-working .pro-crown { position: absolute; top: 12px; right: 13px; color: #fbbf24; }
-.pro-working-label { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #93a0c8; }
-.pro-working-name { margin: 5px 0 12px; font-size: 15px; font-weight: 700; color: #fff; }
-.pro-working-name.none { color: #cbd5e1; font-weight: 600; font-size: 14px; }
+.pro-working .pro-crown { position: absolute; top: 10px; right: 11px; color: #fbbf24; }
+.pro-working-label { font-size: 9px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: #93a0c8; }
+.pro-working-name {
+    margin: 4px 0 9px; font-size: 13.5px; font-weight: 700; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pro-working-name.none { color: #cbd5e1; font-weight: 600; font-size: 13px; }
 .pro-switch {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; padding: 9px 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; padding: 8px 10px; cursor: pointer; white-space: nowrap;
     background: linear-gradient(135deg, #4f46e5, #4338ca);
-    border: 0; border-radius: 10px;
-    color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; text-decoration: none;
+    border: 0; border-radius: 9px;
+    color: #fff; font: inherit; font-size: 12px; font-weight: 600; text-decoration: none;
     transition: filter .15s, transform .15s;
 }
 .pro-switch:hover { filter: brightness(1.12); transform: translateY(-1px); }
 
-/* Only the nav scrolls when the list is long, and it does so without a visible
-   scrollbar, so the sidebar always reads as one solid full-height panel. */
+/* Fits without scrolling in the normal case; if a viewport is genuinely too
+   short, the nav (not the panel) scrolls, silently. */
 .pro-nav {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    padding: 0 12px 8px; display: flex; flex-direction: column; gap: 2px;
+    padding: 0 12px 10px; display: flex; flex-direction: column; gap: 1px;
     scrollbar-width: none; -ms-overflow-style: none;
 }
 .pro-nav::-webkit-scrollbar { width: 0; height: 0; }
 .pro-nav a {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 14px; border-radius: 11px;
+    display: flex; align-items: center; gap: 11px;
+    padding: 8.5px 12px; border-radius: 9px;
     color: #aab4d4; text-decoration: none;
-    font-size: 14px; font-weight: 500; line-height: 1;
+    font-size: 12.5px; font-weight: 500; line-height: 1.2;
+    white-space: nowrap;              /* never wrap to a second line */
     transition: background .14s, color .14s;
 }
-.pro-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+.pro-nav a svg { width: 17px; height: 17px; flex-shrink: 0; }
 .pro-nav a:hover { background: rgba(255,255,255,.055); color: #e6ebf7; }
 .pro-nav a.active {
     background: linear-gradient(135deg, #4f46e5, #4c3fd8);
     color: #fff; font-weight: 600;
-    box-shadow: 0 6px 18px rgba(79,70,229,.42);
+    box-shadow: 0 5px 16px rgba(79,70,229,.42);
 }
+.pro-nav a.active svg { color: #fff !important; }
+
+/* per-channel icon tints, as in the reference */
+.i-wa   { color: #25d366; }
+.i-ph   { color: #38bdf8; }
+.i-ig   { color: #e1306c; }
+.i-int  { color: #a78bfa; }
+.i-lost { color: #fb923c; }
+.i-web  { color: #60a5fa; }
+.i-fun  { color: #c084fc; }
+.i-sup  { color: #2dd4bf; }
+.i-ads  { color: #fbbf24; }
+.i-adm  { color: #94a3b8; }
+
 .pro-nav-label {
     display: block;
-    margin: 14px 14px 7px; padding-top: 15px;
+    margin: 11px 12px 5px; padding-top: 11px;
     border-top: 1px solid rgba(255,255,255,.08);
-    font-size: 10px; font-weight: 700; letter-spacing: .13em;
-    text-transform: uppercase; color: #7c88ad;
+    font-size: 9px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: #6f7b9f; white-space: nowrap;
 }
+.pro-nav-label:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .pro-nav .pro-count {
-    margin-left: auto; min-width: 22px; padding: 2px 7px;
+    margin-left: auto; min-width: 20px; padding: 2px 6px;
     border-radius: 999px; background: #ef4444; color: #fff;
-    font-size: 11px; font-weight: 700; text-align: center;
+    font-size: 10px; font-weight: 700; text-align: center; line-height: 1.4;
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
 
-.pro-user {
-    flex-shrink: 0;
-    display: flex; align-items: center; gap: 11px;
-    padding: 15px 20px; border-top: 1px solid rgba(255,255,255,.07);
-    background: rgba(0,0,0,.15);
-}
-.pro-user .pro-avatar { width: 34px; height: 34px; font-size: 13px; }
-.pro-user-text { line-height: 1.3; flex: 1; min-width: 0; }
-.pro-user-text strong { display: block; color: #fff; font-size: 13.5px; font-weight: 600; }
-.pro-user-text span { display: flex; align-items: center; gap: 5px; color: #8e9ac2; font-size: 11.5px; }
-.pro-user-text span::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
-.pro-logout {
-    background: none; border: 0; cursor: pointer; padding: 6px; border-radius: 8px;
-    color: #8e9ac2; display: inline-flex;
-}
-.pro-logout:hover { color: #fca5a5; background: rgba(239,68,68,.12); }
-
 /* ------------------------------- main ----------------------------------- */
-.pro-main { flex: 1; min-width: 0; margin-left: 270px; display: flex; flex-direction: column; }
+.pro-main { flex: 1; min-width: 0; margin-left: var(--pro-side-w); display: flex; flex-direction: column; }
 .pro-topbar {
     position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; gap: 18px;
