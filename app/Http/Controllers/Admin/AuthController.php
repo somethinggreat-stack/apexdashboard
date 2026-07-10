@@ -41,6 +41,13 @@ class AuthController extends Controller
             // on their leads pipeline instead (and don't honour a stored
             // "intended" URL they'd only get a 403 on).
             $user = Auth::guard('admin')->user();
+
+            // One-shot flag: the walk-on animation plays on the first page the
+            // super admin or a VA sees after signing in, then clears itself.
+            if ($user->isSuper() || $user->isVa()) {
+                $request->session()->put('walker_once', true);
+            }
+
             if ($user->isLeads()) {
                 return redirect()->route('admin.prospect-leads.index', ['channel' => 'whatsapp']);
             }

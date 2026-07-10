@@ -238,6 +238,17 @@
         </div>
     </main>
 </div>
+
+{{-- Walk-on animation: shown once, on the first page after login. pull() clears
+     the flag so a refresh doesn't replay it. --}}
+@if (session()->pull('walker_once', false))
+    <div id="fatmanWalker" data-src="{{ asset('lottie/superfatmanwalk.json') }}" aria-hidden="true">
+        <div class="fw-art"></div>
+    </div>
+    <script src="{{ asset('js/lottie-light.min.js') }}"></script>
+    <script src="{{ asset('js/walker.js') }}" defer></script>
+@endif
+
 <script src="{{ asset('js/admin.js') }}"></script>
 <script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>
