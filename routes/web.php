@@ -83,6 +83,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
+            // Letter Generator — upload a 3-bureau report, audit it, select disputes
+            Route::get('letter-generator', [Admin\LetterGeneratorController::class, 'index'])->name('letter-generator.index');
+            Route::post('letter-generator', [Admin\LetterGeneratorController::class, 'store'])->name('letter-generator.store');
+            Route::get('letter-generator/{id}', [Admin\LetterGeneratorController::class, 'show'])->name('letter-generator.show');
+            Route::post('letter-generator/{id}/save', [Admin\LetterGeneratorController::class, 'save'])->name('letter-generator.save');
+            Route::delete('letter-generator/{id}', [Admin\LetterGeneratorController::class, 'destroy'])->name('letter-generator.destroy');
+
             // Extra projects — funnels, customer support, ads
             Route::get('extra/{type}', [Admin\ExtraProjectController::class, 'index'])
                 ->whereIn('type', ['funnel', 'support', 'ads'])->name('extra.index');

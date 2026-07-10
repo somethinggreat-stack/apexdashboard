@@ -170,6 +170,10 @@
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-4z"/></svg>
                     Users &amp; Activity
                 </a>
+                <a href="{{ route('admin.letter-generator.index') }}" class="{{ request()->routeIs('admin.letter-generator.*') ? 'active' : '' }}">
+                    <svg class="i-fun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><polyline points="14 4 14 10 20 10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="17.5" x2="13" y2="17.5"/></svg>
+                    Letter Generator
+                </a>
             @endisset
         </nav>
 
