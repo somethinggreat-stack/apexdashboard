@@ -15,11 +15,12 @@
     document.body.appendChild(canvas);
     var ctx = canvas.getContext('2d');
 
-    /* deep-space palette: violet → indigo → blue → cyan, with magenta accents */
+    /* ember palette: scarlet → crimson → rose, with orange and hot-pink accents.
+       Index 0 is the head glow, index 5 the hot core riding the cursor. */
     var COLORS = [
-        [139,  92, 246], [124,  58, 237], [ 99, 102, 241],
-        [ 79,  70, 229], [ 59, 130, 246], [ 34, 211, 238],
-        [232,  62, 189], [192, 132, 252]
+        [239,  68,  68], [220,  38,  38], [185,  28,  28],
+        [248, 113, 113], [244,  63,  94], [255, 106,  90],
+        [249, 115,  22], [236,  72, 153]
     ];
     var MAX = 1000;
     var parts = [];
