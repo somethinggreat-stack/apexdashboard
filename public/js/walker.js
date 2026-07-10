@@ -6,18 +6,47 @@
        intercept a click;
      - it removes itself from the DOM when the walk ends;
      - it is skipped entirely under prefers-reduced-motion;
-     - if lottie or the JSON fails to load, nothing happens and nothing throws. */
+     - if lottie or the JSON fails to load, nothing happens and nothing throws.
+
+   Deliberately does NOT use requestAnimationFrame to kick off the transition:
+   rAF does not fire in every context (background tabs, some headless/virtualised
+   renderers), and a missed frame there meant the walk never started and the
+   character stood off-screen forever. setTimeout always fires. */
 (function () {
     var host = document.getElementById('fatmanWalker');
     if (!host) return;
 
-    function bail() { if (host && host.parentNode) host.remove(); }
-
-    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return bail();
-    if (typeof lottie === 'undefined' || !lottie.loadAnimation) return bail();
-
     var WALK_MS = 22000;          // right edge → left edge, slow amble
-    var anim;
+    var START_DELAY = 80;         // let the browser paint the start position
+    var SAFETY_MS = 2000;         // walk even if lottie never reports DOMLoaded
+
+    var started = false, done = false, anim = null;
+
+    function cleanup() {
+        if (done) return;
+        done = true;
+        if (anim) { try { anim.destroy(); } catch (e) {} }
+        if (host && host.parentNode) host.remove();
+    }
+
+    function walk() {
+        if (started || done) return;
+        started = true;
+
+        // Distance is measured in the element's own coordinate space
+        // (clientWidth, not innerWidth) so html{zoom} can't stretch the walk.
+        var distance = document.documentElement.clientWidth + (host.offsetWidth || 150);
+
+        host.style.transition = 'transform ' + WALK_MS + 'ms linear';
+        setTimeout(function () {
+            host.style.transform = 'translateX(-' + distance + 'px)';
+        }, START_DELAY);
+
+        setTimeout(cleanup, WALK_MS + START_DELAY + 400);
+    }
+
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return cleanup();
+    if (typeof lottie === 'undefined' || !lottie.loadAnimation) return cleanup();
 
     try {
         anim = lottie.loadAnimation({
@@ -28,29 +57,12 @@
             path: host.dataset.src,
         });
     } catch (e) {
-        return bail();
+        return cleanup();
     }
 
-    // If the JSON 404s or is malformed, don't leave a ghost element behind.
-    anim.addEventListener('data_failed', bail);
+    anim.addEventListener('data_failed', cleanup);
+    anim.addEventListener('DOMLoaded', walk);
 
-    anim.addEventListener('DOMLoaded', function () {
-        // Distance is measured in the element's own coordinate space
-        // (clientWidth, not innerWidth) so html{zoom} can't stretch the walk.
-        var distance = document.documentElement.clientWidth + host.offsetWidth;
-
-        host.style.transition = 'transform ' + WALK_MS + 'ms linear';
-
-        // rAF so the browser commits the start position before the transition.
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                host.style.transform = 'translateX(-' + distance + 'px)';
-            });
-        });
-
-        setTimeout(function () {
-            try { anim.destroy(); } catch (e) {}
-            bail();
-        }, WALK_MS + 400);
-    });
+    // If DOMLoaded never arrives (slow JSON, odd renderer), walk anyway.
+    setTimeout(walk, SAFETY_MS);
 })();
