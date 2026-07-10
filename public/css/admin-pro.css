@@ -7,10 +7,10 @@
    ========================================================================== */
 @import url('admin.css');
 
-/* Global scale for the console. 0.75 read as too small; 0.8 keeps the wide
-   client table on one screen while making the dashboard and sidebar noticeably
-   larger. Raising this further will push the sidebar into scrolling — see the
-   height budget noted on .pro-sidebar below.
+/* Global scale for the console. This one is tuned for the SIDEBAR: at 0.8 the
+   16px labels sit at the size we want and all 16 rows fit without scrolling.
+   Do not change it to resize the main column — use --pro-main-zoom instead,
+   which scales the topbar and content only and leaves the sidebar alone.
    (The base sheet uses 0.9; this overrides it for super-admin pages only.) */
 html { zoom: 0.8; }
 
@@ -44,6 +44,11 @@ html { zoom: 0.8; }
        "Add/Remove Business Owners") need 302px of row. 312 leaves ~10px slack.
        Narrower than this and they crop -- shrink the font first. */
     --pro-side-w:    312px;
+
+    /* Scales the main column on top of html{zoom}. Effective size of the
+       dashboard/tables = 0.8 x this. The sidebar is outside it, so changing
+       this never moves or resizes the sidebar. */
+    --pro-main-zoom: 1.15;
 }
 
 
@@ -195,6 +200,12 @@ html, body { height: 100%; }
     min-width: 0; min-height: 100%;
     display: flex; flex-direction: column;
 }
+/* Only the main column scales. The sidebar is a sibling of .pro-main, so it
+   keeps the html zoom untouched. Applying the zoom to these two children
+   rather than to .pro-main itself leaves its margin-left in the same
+   coordinate space as the sidebar's width, so the two stay flush. */
+.pro-topbar, .pro-content { zoom: var(--pro-main-zoom); }
+
 .pro-topbar {
     position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; gap: 18px;
