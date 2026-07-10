@@ -16,7 +16,7 @@
     var host = document.getElementById('fatmanWalker');
     if (!host) return;
 
-    var WALK_MS = 11000;          // right edge → left edge, brisk walk
+    var WALK_MS = 8000;           // left edge → right edge, brisk walk
     var START_DELAY = 80;         // let the browser paint the start position
     var SAFETY_MS = 2000;         // walk even if lottie never reports DOMLoaded
 
@@ -33,13 +33,14 @@
         if (started || done) return;
         started = true;
 
-        // Distance is measured in the element's own coordinate space
-        // (clientWidth, not innerWidth) so html{zoom} can't stretch the walk.
-        var distance = document.documentElement.clientWidth + (host.offsetWidth || 460);
+        // CSS parks him at translateX(-100%), just off the left edge. Walk him
+        // to the full viewport width so he exits completely off the right.
+        // clientWidth, not innerWidth: html{zoom} would skew the latter.
+        var distance = document.documentElement.clientWidth;
 
         host.style.transition = 'transform ' + WALK_MS + 'ms linear';
         setTimeout(function () {
-            host.style.transform = 'translateX(-' + distance + 'px)';
+            host.style.transform = 'translateX(' + distance + 'px)';
         }, START_DELAY);
 
         setTimeout(cleanup, WALK_MS + START_DELAY + 400);

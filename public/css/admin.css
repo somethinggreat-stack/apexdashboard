@@ -956,7 +956,8 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
    Starts just off the right edge; pointer-events:none so it never blocks a
    click, and it removes itself from the DOM when the walk finishes. */
 #fatmanWalker {
-    position: fixed; left: 100%; bottom: 0;
+    position: fixed; left: 0; bottom: 0;
+    transform: translateX(-100%);   /* parked just off the LEFT edge */
     width: 460px; height: 460px;
     z-index: 2147482000; pointer-events: none; user-select: none;
     will-change: transform;
