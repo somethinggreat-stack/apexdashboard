@@ -40,8 +40,10 @@ html { zoom: 0.8; }
     --pro-side-2:    #141a3e;
     --pro-side-3:    #1b1350;
 
-    /* wide enough for "Add/Remove Business Owners" on a single line at 15px */
-    --pro-side-w:    360px;
+    /* The floor at 16px type: the longest labels ("Instagram Leads in Contact",
+       "Add/Remove Business Owners") need 302px of row. 312 leaves ~10px slack.
+       Narrower than this and they crop -- shrink the font first. */
+    --pro-side-w:    312px;
 }
 
 
@@ -66,10 +68,10 @@ html, body { height: 100%; }
 
 /* ------------------------------ sidebar ---------------------------------
    One fixed, full-height panel: logo, business-owner box, flat nav, logout.
-   Wide enough that no label ever wraps, and short enough that the tallest
-   case (super admin with no BO selected: 16 links) fits a 768px-tall viewport
-   at zoom 0.75 without a scrollbar. If you add a link or grow a font, re-check
-   that budget -- there is ~30px of headroom, not more.
+   Width is the floor for 16px labels (see --pro-side-w); height is budgeted so
+   the tallest case (super admin, no BO selected: 16 links) never scrolls. Short
+   viewports fall back to the compact block further down. Re-check both budgets
+   before adding a link or growing a font.
    ------------------------------------------------------------------------ */
 .pro-sidebar {
     /* pinned: exact width, exact viewport height, never scrolls with the page */
@@ -80,15 +82,15 @@ html, body { height: 100%; }
     color: #cbd5e1;
     overflow: hidden;            /* nothing scrolls the panel itself */
 }
-.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 16px 18px 10px; }
+.pro-brand { flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 16px 16px 10px; }
 .pro-brand img {
-    width: 100%; max-width: 208px; height: auto; max-height: 60px;
+    width: 100%; max-width: 190px; height: auto; max-height: 56px;
     object-fit: contain; display: block;
 }
 
 .pro-working {
     position: relative; flex-shrink: 0;
-    margin: 0 15px 9px; padding: 11px 14px 12px;
+    margin: 0 13px 9px; padding: 11px 13px 12px;
     background: linear-gradient(160deg, rgba(79,70,229,.30), rgba(15,23,42,.35));
     border: 1px solid rgba(148,163,255,.18);
     border-radius: 12px;
@@ -114,13 +116,13 @@ html, body { height: 100%; }
    short, the nav (not the panel) scrolls, silently. */
 .pro-nav {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    padding: 0 13px 6px; display: flex; flex-direction: column; gap: 0;
+    padding: 0 12px 6px; display: flex; flex-direction: column; gap: 0;
     scrollbar-width: none; -ms-overflow-style: none;
 }
 .pro-nav::-webkit-scrollbar { width: 0; height: 0; }
 .pro-nav a {
-    display: flex; align-items: center; gap: 13px;
-    padding: 8.5px 14px; border-radius: 10px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 8.5px 12px; border-radius: 10px;
     color: #bcc5dd; text-decoration: none;
     font-size: 16px; font-weight: 500; line-height: 1.2;
     white-space: nowrap;              /* never wrap to a second line */
@@ -160,7 +162,7 @@ html, body { height: 100%; }
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
 
-.pro-logout-wrap { flex-shrink: 0; padding: 6px 15px 10px; }
+.pro-logout-wrap { flex-shrink: 0; padding: 6px 13px 10px; }
 .pro-logout {
     display: flex; align-items: center; justify-content: center; gap: 9px;
     width: 100%; padding: 10px 14px; cursor: pointer;
