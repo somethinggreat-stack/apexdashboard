@@ -183,6 +183,9 @@
     </aside>
 
     <main class="pro-main">
+        {{-- A page can drop the whole topbar with @section('no-topbar', '1') --
+             the dashboard does, since it already has its own welcome header. --}}
+        @sectionMissing('no-topbar')
         <header class="pro-topbar">
             <div class="pro-heading">
                 <h1>@yield('title', 'Dashboard')</h1>
@@ -204,6 +207,7 @@
 
             @yield('topbar-action')
         </header>
+        @endif
 
         <div class="pro-content">
             @if (session('status'))
