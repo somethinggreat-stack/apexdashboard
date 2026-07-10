@@ -2,6 +2,10 @@
 
 @section('title', 'Select Business Owner')
 
+{{-- No topbar: the "Select a Business Owner to Work On" card already titles it.
+     (Honoured by layouts/admin-pro only; the VA layout ignores it.) --}}
+@section('no-topbar', '1')
+
 @section('topbar-content')
     <div class="sbo-topbar-spacer"></div>
 @endsection
