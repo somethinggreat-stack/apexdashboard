@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
-use App\Models\ClientPayment;
 use App\Models\EndUser;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -66,14 +65,6 @@ class DashboardController extends Controller
         $totalClients = (int) $clients->sum('end_users_count');
         $activeOwners = $clients->count();
 
-        // All payments across all business owners (newest first)
-        $recent = ClientPayment::whereHas('endUser.client', fn ($q) => $q->where('admin_id', $ownerId))
-            ->with('endUser.client')
-            ->latest('paid_at')
-            ->latest('id')
-            ->limit(300)
-            ->get();
-
         $newThisMonth = EndUser::whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
             ->where('created_at', '>=', Carbon::now()->startOfMonth())
             ->count();
@@ -91,7 +82,7 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', compact(
             'clients', 'attention', 'sumPending', 'sumIncomplete', 'sumOverdue',
-            'payment', 'totalClients', 'activeOwners', 'recent',
+            'payment', 'totalClients', 'activeOwners',
             'newThisMonth', 'onTrackRate'
         ));
     }

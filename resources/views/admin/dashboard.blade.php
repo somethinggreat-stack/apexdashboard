@@ -136,39 +136,6 @@
         </div>
     </div>
 </div>
-
-{{-- ===================== All Payments ===================== --}}
-{{-- Charts removed by request: the numbers that mattered (Total Clients,
-     Active Owners, New This Month, On-Track Rate, and the payment totals)
-     now live in the stat cards above. This card keeps the raw ledger. --}}
-<div class="dash-grid dash-grid-2">
-    <div class="dcard">
-        <div class="dcard-head">
-            <div>
-                <h2>All Payments</h2>
-                <span class="dcard-sub">{{ number_format($recent->count()) }} recorded · {{ $money($payment['done']) }} collected of {{ $money($payment['total']) }} billed</span>
-            </div>
-            <a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View Financial Report →</a>
-        </div>
-        <div class="rp-list">
-            @forelse ($recent as $p)
-                <div class="rp-item">
-                    <span class="rp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
-                    <span class="rp-body">
-                        <span class="rp-name">{{ $p->endUser?->client?->business_name ?? '—' }}</span>
-                        <span class="rp-sub">{{ $p->endUser?->full_name ?? 'Payment received' }} · Round {{ $p->round }}</span>
-                    </span>
-                    <span class="rp-amt">{{ $money($p->amount) }}</span>
-                    <span class="rp-date">{{ $p->paid_at?->format('M j, Y') }}</span>
-                    <span class="rp-badge">Completed</span>
-                </div>
-            @empty
-                <div class="dempty">No payments recorded yet.</div>
-            @endforelse
-        </div>
-    </div>
-</div>
-
 @push('head')
 <style>
     .content { background:#f6f8fc; }
@@ -246,24 +213,6 @@
     .ab-blue{ background:#e0f2fe; color:#0369a1; } .ab-amber{ background:#fef3c7; color:#b45309; } .ab-red{ background:#fee2e2; color:#dc2626; }
     .att-act { margin:0; justify-self:end; }
 
-    /* Analytics */
-
-
-    /* Payments */
-
-    .rp-head { display:flex; align-items:center; justify-content:space-between; margin:0 0 6px; }
-    .rp-head strong { font-size:13px; color:#0f172a; }
-    .rp-item { display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #f6f8fb; }
-    .rp-item:first-of-type { border-top:0; }
-    .rp-ico { width:30px; height:30px; border-radius:9px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; flex:none; }
-    .rp-ico svg { width:15px; height:15px; }
-    .rp-body { display:flex; flex-direction:column; min-width:0; flex:1; }
-    .rp-name { font-weight:700; font-size:12.5px; color:#0f172a; }
-    .rp-sub { font-size:11px; color:#94a3b8; }
-    .rp-amt { font-weight:800; color:#059669; font-size:12.5px; white-space:nowrap; }
-    .rp-date { font-size:11px; color:#94a3b8; white-space:nowrap; }
-    .rp-badge { flex:none; font-size:10px; font-weight:700; color:#166534; background:#dcfce7; padding:3px 9px; border-radius:999px; }
-    @media (max-width:520px){ .rp-date { display:none; } }
 </style>
 @endpush
 
