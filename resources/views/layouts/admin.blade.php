@@ -74,7 +74,7 @@
         .sw-name { font-size:13px !important; margin-bottom:8px !important; }
         .sidebar-working .sw-switch { padding:9px 12px !important; font-size:12.5px !important; }
         .sidebar-nav { padding:6px 0 !important; }
-        .sidebar-nav a { padding:6.5px 20px !important; font-size:12.5px !important; line-height:1.25; }
+        .sidebar-nav a { padding:7.5px 20px !important; font-size:14.5px !important; line-height:1.25; }
 
         /* Tighter, crisper density — real px sizes (NO zoom, so text stays sharp, no blur). */
         @media (min-width: 992px) {
