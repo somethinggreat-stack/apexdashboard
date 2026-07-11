@@ -48,6 +48,14 @@
             color:#8296b0; padding:11px 20px 4px; margin-top:3px; border-top:1px solid rgba(255,255,255,.09);
         }
 
+        /* Sidebar — same hero image + indigo wash as the dashboard, so the VA
+           console matches the super-admin one. Heavy overlay keeps nav legible. */
+        .sidebar {
+            background:
+                linear-gradient(180deg, rgba(12,17,48,.95) 0%, rgba(20,26,62,.92) 55%, rgba(27,19,80,.91) 100%),
+                #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
+        }
+
         /* Compact sidebar so every item fits on one screen (no inner scroll) */
         .sidebar { padding-top:12px; padding-bottom:8px; }
         .sidebar-working { margin:6px 12px 4px !important; padding:9px 11px !important; }
