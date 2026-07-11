@@ -46,6 +46,25 @@ class LetterGeneratorController extends Controller
         }
 
         $parsed  = (new MyFreeScoreNowParser())->parse($html);
+
+        // If nothing came through, the save was almost certainly the pre-render
+        // page (Angular hadn't populated the values) or a partial "Complete"
+        // wrapper. Don't create an empty report — fail with a diagnosable hint.
+        if (! $parsed['accounts'] && ! $parsed['inquiries'] && ! $parsed['addresses']) {
+            $fp = sprintf(
+                'tables=%d, ng=%d, tpartition=%d, hasTU=%s, len=%dKB',
+                substr_count($html, 'rpt_content_table'),
+                substr_count($html, 'ng-binding'),
+                substr_count($html, 'tpartition'),
+                stripos($html, 'transunion') !== false ? 'y' : 'n',
+                (int) round(strlen($html) / 1024)
+            );
+            return back()->withErrors(['report' =>
+                "Couldn't read any accounts from this file. Re-save the report page from the browser " .
+                "with right-click → Save As → “Webpage, HTML Only” after it has fully loaded, then upload " .
+                "that. (debug: {$fp})"]);
+        }
+
         $audited = (new DisputeAuditor())->audit($parsed);
 
         $report = DB::transaction(function () use ($audited) {
