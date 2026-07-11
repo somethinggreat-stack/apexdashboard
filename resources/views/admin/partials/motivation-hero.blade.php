@@ -30,9 +30,9 @@
     session(['motiv_quote_i' => ($mi + 1) % count($motivQuotes)]);
 @endphp
 @php
-    // Controls that used to live in the white top bar now ride in this banner.
-    $motivHasActions = isset($selectedClient)
-        || $__env->hasSection('topbar-content')
+    // Page buttons that used to live in the white top bar now ride in this banner.
+    // (The client search is rendered full-width below the banner, not here.)
+    $motivHasActions = $__env->hasSection('topbar-content')
         || $__env->hasSection('topbar-action');
 @endphp
 <div class="motiv-hero">
@@ -46,12 +46,6 @@
         </div>
         @if ($motivHasActions)
         <div class="motiv-actions">
-            @isset($selectedClient)
-                <form method="GET" action="{{ route('admin.client-list') }}" class="motiv-search">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search clients by name...">
-                </form>
-            @endisset
             @yield('topbar-content')
             @yield('topbar-action')
         </div>

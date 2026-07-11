@@ -192,6 +192,21 @@
                  @section('own-hero','1') if it ships its own header (dashboard). --}}
             @sectionMissing('own-hero')
                 @include('admin.partials.motivation-hero')
+
+                {{-- Full-width client search under the banner — but not on pages
+                     that already carry their own controls (In Progress, Clients,
+                     client detail), which have their own in-page search. --}}
+                @php
+                    $proShowSearch = isset($selectedClient)
+                        && ! $__env->hasSection('topbar-action')
+                        && ! $__env->hasSection('topbar-content');
+                @endphp
+                @if ($proShowSearch)
+                    <form method="GET" action="{{ route('admin.client-list') }}" class="pro-searchbar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search clients by name...">
+                    </form>
+                @endif
             @endif
 
             @if (session('status'))

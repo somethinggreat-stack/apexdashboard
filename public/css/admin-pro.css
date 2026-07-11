@@ -287,15 +287,17 @@ html, body { height: 100%; }
 .motiv-actions form { margin: 0; }
 .motiv-actions .page-actions { display: flex; align-items: center; gap: 10px; margin: 0; }
 
-.motiv-search { position: relative; display: inline-flex; align-items: center; }
-.motiv-search svg { position: absolute; left: 11px; color: #c7d0f5; pointer-events: none; }
-.motiv-search input {
-    width: 210px; padding: 9px 12px 9px 34px;
-    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28);
-    border-radius: 10px; color: #fff; font: inherit; font-size: 13px;
+/* Full-width client search, sits under the banner and above the page content. */
+.pro-searchbar { position: relative; display: block; margin: 0 0 18px; }
+.pro-searchbar svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--pro-muted); pointer-events: none; }
+.pro-searchbar input {
+    width: 100%; padding: 13px 16px 13px 46px;
+    background: var(--pro-card); border: 1px solid var(--pro-line); border-radius: 14px;
+    color: var(--pro-text); font: inherit; font-size: 14px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
 }
-.motiv-search input::placeholder { color: #c7d0f5; }
-.motiv-search input:focus { outline: none; border-color: #fff; background: rgba(255,255,255,.18); }
+.pro-searchbar input::placeholder { color: var(--pro-muted); }
+.pro-searchbar input:focus { outline: none; border-color: var(--pro-indigo); }
 
 /* Orange primary, translucent secondary, red danger — all tuned for the dark banner. */
 .motiv-actions .pro-cta {
@@ -314,15 +316,12 @@ html, body { height: 100%; }
 .motiv-actions .btn-danger { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
 .motiv-actions .btn-danger:hover { filter: brightness(1.08); }
 
-@media (max-width: 1100px) { .motiv-search input { width: 168px; } }
 @media (max-width: 900px) {
     .motiv-hero { margin: -16px -16px 16px; border-radius: 0 0 16px 0; }
     .motiv-hero-body { padding: 15px 18px; }
     .motiv-quote { font-size: 16.5px; }
     .motiv-hype { display: none; }
     .motiv-actions { order: 3; width: 100%; }
-    .motiv-search { flex: 1 1 auto; }
-    .motiv-search input { width: 100%; }
 }
 
 /* ----------------------------- stat cards -------------------------------- */
