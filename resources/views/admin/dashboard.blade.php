@@ -162,17 +162,21 @@
 
     /* Hero header — dark indigo (sidebar palette) with the hero image behind,
        overlaid so the brand colours stay dominant and the text stays legible. */
+    /* Full-bleed banner: break out of .pro-content's 24px/26px padding so it
+       touches the sidebar, the right edge and the top. Flush top/sides,
+       rounded bottom. */
     .dash-hero {
-        position:relative; overflow:hidden; margin-bottom:20px; border-radius:18px;
+        position:relative; overflow:hidden;
+        margin:-24px -26px 22px; border-radius:0 0 22px 22px;
         background:
-            linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.86) 45%, rgba(27,19,80,.72) 100%),
+            linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
             #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
-        box-shadow:0 14px 34px rgba(15,23,42,.16);
+        box-shadow:0 12px 30px rgba(15,23,42,.18);
     }
     .dash-hero-body {
         position:relative; z-index:1;
         display:flex; align-items:center; justify-content:space-between; gap:20px;
-        padding:26px 30px;
+        padding:36px 34px 32px;
     }
     .dash-hero-text { min-width:0; }
     .dash-greet { display:block; max-width:620px; font-size:14.5px; font-style:italic; font-weight:500; color:#b4c0ec; letter-spacing:.01em; line-height:1.4; }
@@ -186,8 +190,10 @@
     }
     .dash-date svg { color:#8ea0dc; }
     .dash-hero-logo { flex:none; height:46px; width:auto; opacity:.95; }
-    @media (max-width:820px) {
-        .dash-hero-body { padding:20px 20px; }
+    @media (max-width:900px) {
+        /* content padding drops to 16px here — match the breakout */
+        .dash-hero { margin:-16px -16px 16px; }
+        .dash-hero-body { padding:24px 18px; }
         .dash-name { font-size:26px; }
         .dash-hero-logo { display:none; }
     }
