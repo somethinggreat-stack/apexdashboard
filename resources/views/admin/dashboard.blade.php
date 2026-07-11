@@ -154,22 +154,22 @@
     .dash-hero-body {
         position:relative; z-index:1;
         display:flex; align-items:center; justify-content:space-between; gap:20px;
-        padding:20px 34px 18px;
+        padding:13px 34px 12px;
     }
     .dash-hero-text { min-width:0; }
     .dash-greet { display:block; max-width:620px; font-size:14.5px; font-style:italic; font-weight:500; color:#b4c0ec; letter-spacing:.01em; line-height:1.4; }
     .dash-name {
-        margin:2px 0 0; font-size:34px; line-height:1.1; font-weight:800; letter-spacing:-.02em;
+        margin:2px 0 0; font-size:28px; line-height:1.1; font-weight:800; letter-spacing:-.02em;
         color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.25); word-break:break-word;
     }
     .dash-date {
-        display:inline-flex; align-items:center; gap:8px; margin-top:12px;
+        display:inline-flex; align-items:center; gap:8px; margin-top:8px;
         color:#c3cdf2; font-size:13px; font-weight:500;
     }
     .dash-date svg { color:#8ea0dc; }
     /* Motivational animation where the logo used to be */
     .dash-hero-hype { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; }
-    .dash-hero-anim { width:88px; height:88px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
+    .dash-hero-anim { width:74px; height:74px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
     .dash-hero-anim svg { width:100% !important; height:100% !important; }
     .dash-hype-tag {
         font-size:10.5px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
