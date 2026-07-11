@@ -14,10 +14,38 @@
 
 @endphp
 
-<div class="dash-welcome">
-    <h1>Welcome {{ $me?->full_name ?: 'Admin' }} 👋</h1>
-    <p>Here's what's happening with your business owners today.</p>
+@php
+    // Server-side fallback greeting (UTC). The real one is set client-side from
+    // the viewer's local clock, so it's always correct regardless of server tz.
+    $h = (int) now()->format('G');
+    $serverGreet = $h < 5 ? 'Good night' : ($h < 12 ? 'Good morning' : ($h < 17 ? 'Good afternoon' : ($h < 21 ? 'Good evening' : 'Good night')));
+@endphp
+<div class="dash-hero">
+    <div class="dash-hero-body">
+        <div class="dash-hero-text">
+            <span class="dash-greet" id="dashGreet">{{ $serverGreet }},</span>
+            <h1 class="dash-name">{{ $me?->full_name ?: 'Admin' }}.</h1>
+            <div class="dash-date">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg>
+                <span id="dashDate">{{ now()->format('l, j F Y') }}</span>
+            </div>
+        </div>
+        <img class="dash-hero-logo" src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
+    </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    var h = new Date().getHours();
+    var g = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night';
+    var gel = document.getElementById('dashGreet');
+    if (gel) gel.textContent = g + ',';
+    var del = document.getElementById('dashDate');
+    if (del) { try { del.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long', year:'numeric' }); } catch (e) {} }
+})();
+</script>
+@endpush
 
 {{-- ===================== Top stat cards ===================== --}}
 <div class="dash-stats">
@@ -141,9 +169,37 @@
     .content { background:#f6f8fc; }
     body.admin-body .main { background:#f6f8fc; }
 
-    .dash-welcome { margin-bottom:16px; }
-    .dash-welcome h1 { margin:0; font-size:22px; font-weight:800; color:#0f172a; }
-    .dash-welcome p { margin:3px 0 0; font-size:13px; color:#94a3b8; }
+    /* Hero header — dark indigo (sidebar palette) with the hero image behind,
+       overlaid so the brand colours stay dominant and the text stays legible. */
+    .dash-hero {
+        position:relative; overflow:hidden; margin-bottom:20px; border-radius:18px;
+        background:
+            linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.86) 45%, rgba(27,19,80,.72) 100%),
+            #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
+        box-shadow:0 14px 34px rgba(15,23,42,.16);
+    }
+    .dash-hero-body {
+        position:relative; z-index:1;
+        display:flex; align-items:center; justify-content:space-between; gap:20px;
+        padding:26px 30px;
+    }
+    .dash-hero-text { min-width:0; }
+    .dash-greet { display:block; font-size:16px; font-weight:600; color:#a9b6e8; letter-spacing:.01em; }
+    .dash-name {
+        margin:2px 0 0; font-size:34px; line-height:1.1; font-weight:800; letter-spacing:-.02em;
+        color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.25); word-break:break-word;
+    }
+    .dash-date {
+        display:inline-flex; align-items:center; gap:8px; margin-top:12px;
+        color:#c3cdf2; font-size:13px; font-weight:500;
+    }
+    .dash-date svg { color:#8ea0dc; }
+    .dash-hero-logo { flex:none; height:46px; width:auto; opacity:.95; }
+    @media (max-width:820px) {
+        .dash-hero-body { padding:20px 20px; }
+        .dash-name { font-size:26px; }
+        .dash-hero-logo { display:none; }
+    }
 
     /* Stat cards — top accent, compact */
     /* 3 per row → two rows of stat cards */
