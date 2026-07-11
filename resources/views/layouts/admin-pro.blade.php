@@ -210,6 +210,12 @@
         @endif
 
         <div class="pro-content">
+            {{-- Motivational hero on every page. A page can opt out with
+                 @section('own-hero','1') if it ships its own header (dashboard). --}}
+            @sectionMissing('own-hero')
+                @include('admin.partials.motivation-hero')
+            @endif
+
             @if (session('status'))
                 <div class="alert alert-success">{{ session('status') }}</div>
             @endif

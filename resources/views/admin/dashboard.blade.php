@@ -6,6 +6,9 @@
      (Only honoured by layouts/admin-pro; the VA layout is unaffected.) --}}
 @section('no-topbar', '1')
 
+{{-- This page has its own welcome header, so skip the global motivational hero. --}}
+@section('own-hero', '1')
+
 @section('content')
 @php
     $me = Auth::guard('admin')->user();
