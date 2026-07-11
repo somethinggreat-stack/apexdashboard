@@ -14,17 +14,11 @@
 
 @endphp
 
-@php
-    // Server-side fallback greeting (UTC). The real one is set client-side from
-    // the viewer's local clock, so it's always correct regardless of server tz.
-    $h = (int) now()->format('G');
-    $serverGreet = $h < 5 ? 'Good night' : ($h < 12 ? 'Good morning' : ($h < 17 ? 'Good afternoon' : ($h < 21 ? 'Good evening' : 'Good night')));
-@endphp
 <div class="dash-hero">
     <div class="dash-hero-body">
         <div class="dash-hero-text">
-            <span class="dash-greet" id="dashGreet">{{ $serverGreet }},</span>
-            <h1 class="dash-name">{{ $me?->full_name ?: 'Admin' }}.</h1>
+            <span class="dash-greet">“He who cannot be a good follower cannot be a good leader.”</span>
+            <h1 class="dash-name">Welcome {{ $me?->full_name ?: 'Admin' }}.</h1>
             <div class="dash-date">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg>
                 <span id="dashDate">{{ now()->format('l, j F Y') }}</span>
@@ -37,10 +31,7 @@
 @push('scripts')
 <script>
 (function () {
-    var h = new Date().getHours();
-    var g = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night';
-    var gel = document.getElementById('dashGreet');
-    if (gel) gel.textContent = g + ',';
+    // Show today's date in the viewer's local time (server runs on UTC).
     var del = document.getElementById('dashDate');
     if (del) { try { del.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long', year:'numeric' }); } catch (e) {} }
 })();
@@ -184,7 +175,7 @@
         padding:26px 30px;
     }
     .dash-hero-text { min-width:0; }
-    .dash-greet { display:block; font-size:16px; font-weight:600; color:#a9b6e8; letter-spacing:.01em; }
+    .dash-greet { display:block; max-width:620px; font-size:14.5px; font-style:italic; font-weight:500; color:#b4c0ec; letter-spacing:.01em; line-height:1.4; }
     .dash-name {
         margin:2px 0 0; font-size:34px; line-height:1.1; font-weight:800; letter-spacing:-.02em;
         color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.25); word-break:break-word;
