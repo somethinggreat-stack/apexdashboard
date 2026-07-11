@@ -83,7 +83,13 @@ html, body { height: 100%; }
     width: var(--pro-side-w); flex-shrink: 0;
     position: fixed; top: 0; bottom: 0; left: 0; z-index: 60;
     display: flex; flex-direction: column;
-    background: linear-gradient(180deg, var(--pro-side-1) 0%, var(--pro-side-2) 52%, var(--pro-side-3) 100%);
+    /* Same dark-indigo + credit-report image as the dashboard hero, so the
+       sidebar and the banner read as one continuous surface. The overlay is
+       heavy enough to keep the nav text legible; the image shows through
+       faintly, matching the hero's dark left edge. */
+    background:
+        linear-gradient(180deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.91) 55%, rgba(27,19,80,.90) 100%),
+        #12163a url("../Images/heroimage.png") center/cover no-repeat;
     color: #cbd5e1;
     overflow: hidden;            /* nothing scrolls the panel itself */
 }

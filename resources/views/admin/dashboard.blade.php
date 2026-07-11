@@ -167,7 +167,7 @@
        rounded bottom. */
     .dash-hero {
         position:relative; overflow:hidden;
-        margin:-24px -26px 22px; border-radius:0 0 22px 22px;
+        margin:-24px -26px 22px; border-radius:0 0 22px 0;   /* bottom-left sharp → merges with sidebar */
         background:
             linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
             #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
