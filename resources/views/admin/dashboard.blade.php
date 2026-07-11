@@ -211,13 +211,13 @@
     .dash-date svg { color:#8ea0dc; }
     /* Motivational animation where the logo used to be */
     .dash-hero-hype { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; }
-    .dash-hero-anim { width:170px; height:170px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
+    .dash-hero-anim { width:112px; height:112px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
     .dash-hero-anim svg { width:100% !important; height:100% !important; }
     .dash-hype-tag {
-        font-size:12.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+        font-size:11px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
         color:#c7d0f5; text-shadow:0 2px 10px rgba(0,0,0,.35);
     }
-    @media (max-width:1200px) { .dash-hero-anim { width:140px; height:140px; } }
+    @media (max-width:1200px) { .dash-hero-anim { width:92px; height:92px; } }
     @media (max-width:900px) {
         /* content padding drops to 16px here — match the breakout */
         .dash-hero { margin:-16px -16px 16px; }
