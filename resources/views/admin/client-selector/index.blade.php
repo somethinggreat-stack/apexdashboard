@@ -6,9 +6,14 @@
      (Honoured by layouts/admin-pro only; the VA layout ignores it.) --}}
 @section('no-topbar', '1')
 
+{{-- The spacer only blanks the VA layout's title bar. The super (pro) layout
+     has no top bar, and defining topbar-content there would wrongly trigger the
+     banner's actions area, pushing the animation to the middle. --}}
+@unless (Auth::guard('admin')->user()?->isSuper())
 @section('topbar-content')
     <div class="sbo-topbar-spacer"></div>
 @endsection
+@endunless
 
 @section('content')
 @php

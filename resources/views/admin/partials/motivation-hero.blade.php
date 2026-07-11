@@ -40,15 +40,19 @@
         <div class="motiv-hero-text">
             <span class="motiv-quote">&ldquo;{{ $motivQuote }}&rdquo;</span>
         </div>
-        <div class="motiv-hype" aria-hidden="true">
-            <div id="motivHero3d" class="motiv-anim"></div>
-            <div class="motiv-tag">Lead by example.</div>
-        </div>
         @if ($motivHasActions)
-        <div class="motiv-actions">
-            @yield('topbar-content')
-            @yield('topbar-action')
-        </div>
+            {{-- Pages with buttons (Add New Client, back/delete): show the
+                 buttons on the right, no animation. --}}
+            <div class="motiv-actions">
+                @yield('topbar-content')
+                @yield('topbar-action')
+            </div>
+        @else
+            {{-- Pages without buttons: animation + tagline on the right. --}}
+            <div class="motiv-hype" aria-hidden="true">
+                <div id="motivHero3d" class="motiv-anim"></div>
+                <div class="motiv-tag">Lead by example.</div>
+            </div>
         @endif
     </div>
 </div>

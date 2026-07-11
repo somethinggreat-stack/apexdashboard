@@ -288,16 +288,26 @@ html, body { height: 100%; }
 .motiv-actions .page-actions { display: flex; align-items: center; gap: 10px; margin: 0; }
 
 /* Full-width client search, sits under the banner and above the page content. */
-.pro-searchbar { position: relative; display: block; margin: 0 0 18px; }
-.pro-searchbar svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--pro-muted); pointer-events: none; }
-.pro-searchbar input {
+.pro-searchbar { display: flex; align-items: stretch; gap: 10px; margin: 0 0 18px; }
+.pro-searchbar-field { position: relative; flex: 1 1 auto; display: flex; align-items: center; }
+.pro-searchbar-field svg { position: absolute; left: 16px; color: var(--pro-muted); pointer-events: none; }
+.pro-searchbar-field input {
     width: 100%; padding: 13px 16px 13px 46px;
     background: var(--pro-card); border: 1px solid var(--pro-line); border-radius: 14px;
     color: var(--pro-text); font: inherit; font-size: 14px;
     box-shadow: 0 1px 2px rgba(15,23,42,.04);
 }
-.pro-searchbar input::placeholder { color: var(--pro-muted); }
-.pro-searchbar input:focus { outline: none; border-color: var(--pro-indigo); }
+.pro-searchbar-field input::placeholder { color: var(--pro-muted); }
+.pro-searchbar-field input:focus { outline: none; border-color: var(--pro-indigo); }
+.pro-searchbar-btn {
+    flex: none; display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 22px; border: 0; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    color: #fff; font: inherit; font-size: 14px; font-weight: 600;
+    box-shadow: 0 6px 16px rgba(79,70,229,.28);
+    transition: filter .15s;
+}
+.pro-searchbar-btn:hover { filter: brightness(1.08); }
 
 /* Orange primary, translucent secondary, red danger — all tuned for the dark banner. */
 .motiv-actions .pro-cta {
