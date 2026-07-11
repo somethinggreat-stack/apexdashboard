@@ -53,7 +53,7 @@
     .dash-hero-body {
         position:relative; z-index:1;
         display:flex; align-items:center; justify-content:space-between; gap:20px;
-        padding:34px 34px 30px;
+        padding:20px 34px 18px;
     }
     .dash-hero-text { min-width:0; }
     .dash-greet { display:block; max-width:620px; font-size:14.5px; font-style:italic; font-weight:500; color:#b4c0ec; letter-spacing:.01em; line-height:1.4; }
@@ -67,10 +67,10 @@
     }
     .dash-date svg { color:#8ea0dc; }
     .dash-hero-hype { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; }
-    .dash-hero-anim { width:112px; height:112px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
+    .dash-hero-anim { width:88px; height:88px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
     .dash-hero-anim svg { width:100% !important; height:100% !important; }
     .dash-hype-tag {
-        font-size:11px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+        font-size:10.5px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
         color:#c7d0f5; text-shadow:0 2px 10px rgba(0,0,0,.35);
     }
 
@@ -81,7 +81,7 @@
         .admin-body .main > .topbar .sbo-topbar-spacer { display:none; }
     }
     @media (max-width:991px) { .dash-hero { margin:-24px -32px 20px; } }
-    @media (max-width:1200px) { .dash-hero-anim { width:92px; height:92px; } }
+    @media (max-width:1200px) { .dash-hero-anim { width:74px; height:74px; } }
     @media (max-width:900px) {
         .dash-hero { margin:-16px -16px 16px; border-radius:0 0 16px 0; }
         .dash-hero-body { padding:24px 18px; }
