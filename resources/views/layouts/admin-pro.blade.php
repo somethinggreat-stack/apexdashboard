@@ -183,32 +183,10 @@
     </aside>
 
     <main class="pro-main">
-        {{-- A page can drop the whole topbar with @section('no-topbar', '1') --
-             the dashboard does, since it already has its own welcome header. --}}
-        @sectionMissing('no-topbar')
-        <header class="pro-topbar">
-            <div class="pro-heading">
-                <h1>@yield('title', 'Dashboard')</h1>
-                <p>@yield('subtitle', $bo ? 'Working on ' . $bo->business_name : 'Apex Growth Solutions')</p>
-            </div>
-
-            @isset($selectedClient)
-                <form method="GET" action="{{ route('admin.client-list') }}" class="pro-topbar-search">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search clients by name...">
-                </form>
-            @endisset
-
-            {{-- pages that ship their own topbar controls (e.g. the client
-                 detail view's back / report buttons) --}}
-            @hasSection('topbar-content')
-                @yield('topbar-content')
-            @endif
-
-            @yield('topbar-action')
-        </header>
-        @endif
-
+        {{-- The white title/top bar was removed. The page header is now the
+             motivational banner (below), which also hosts any page controls
+             (client search, "Add New Client", back / delete) via its actions
+             area — see admin/partials/motivation-hero. --}}
         <div class="pro-content">
             {{-- Motivational hero on every page. A page can opt out with
                  @section('own-hero','1') if it ships its own header (dashboard). --}}

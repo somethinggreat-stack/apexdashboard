@@ -274,11 +274,55 @@ html, body { height: 100%; }
     color: #c7d0f5; text-shadow: 0 2px 10px rgba(0,0,0,.35);
 }
 @media (max-width: 1200px) { .motiv-anim { width: 64px; height: 64px; } }
+
+/* Page controls relocated into the banner (search + add/back/delete buttons).
+   Order across the row: quote (left) · animation · actions (far right). */
+.motiv-hero-body { flex-wrap: wrap; row-gap: 10px; }
+.motiv-hero-text { flex: 1 1 240px; }
+.motiv-hype { order: 2; }
+.motiv-actions {
+    order: 3; flex: none;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.motiv-actions form { margin: 0; }
+.motiv-actions .page-actions { display: flex; align-items: center; gap: 10px; margin: 0; }
+
+.motiv-search { position: relative; display: inline-flex; align-items: center; }
+.motiv-search svg { position: absolute; left: 11px; color: #c7d0f5; pointer-events: none; }
+.motiv-search input {
+    width: 210px; padding: 9px 12px 9px 34px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28);
+    border-radius: 10px; color: #fff; font: inherit; font-size: 13px;
+}
+.motiv-search input::placeholder { color: #c7d0f5; }
+.motiv-search input:focus { outline: none; border-color: #fff; background: rgba(255,255,255,.18); }
+
+/* Orange primary, translucent secondary, red danger — all tuned for the dark banner. */
+.motiv-actions .pro-cta {
+    padding: 10px 16px; font-size: 13px;
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+    box-shadow: 0 8px 20px rgba(234,88,12,.38);
+}
+.motiv-actions .btn,
+.motiv-actions .page-action-btn {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    padding: 9px 14px; border-radius: 10px; border: 1px solid transparent;
+    font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.motiv-actions .btn-secondary { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.3); }
+.motiv-actions .btn-secondary:hover { background: rgba(255,255,255,.22); }
+.motiv-actions .btn-danger { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
+.motiv-actions .btn-danger:hover { filter: brightness(1.08); }
+
+@media (max-width: 1100px) { .motiv-search input { width: 168px; } }
 @media (max-width: 900px) {
     .motiv-hero { margin: -16px -16px 16px; border-radius: 0 0 16px 0; }
     .motiv-hero-body { padding: 15px 18px; }
     .motiv-quote { font-size: 16.5px; }
     .motiv-hype { display: none; }
+    .motiv-actions { order: 3; width: 100%; }
+    .motiv-search { flex: 1 1 auto; }
+    .motiv-search input { width: 100%; }
 }
 
 /* ----------------------------- stat cards -------------------------------- */
