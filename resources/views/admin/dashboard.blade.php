@@ -24,7 +24,10 @@
                 <span id="dashDate">{{ now()->format('l, j F Y') }}</span>
             </div>
         </div>
-        <img class="dash-hero-logo" src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
+        <div class="dash-hero-hype" aria-hidden="true">
+            <div id="dashHero3d" class="dash-hero-anim"></div>
+            <div class="dash-hype-tag">Lead by example.</div>
+        </div>
     </div>
 </div>
 
@@ -34,6 +37,23 @@
     // Show today's date in the viewer's local time (server runs on UTC).
     var del = document.getElementById('dashDate');
     if (del) { try { del.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long', year:'numeric' }); } catch (e) {} }
+})();
+</script>
+<script src="{{ asset('js/lottie-light.min.js') }}"></script>
+<script>
+(function () {
+    var host = document.getElementById('dashHero3d');
+    if (!host || !window.lottie) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try {
+        window.lottie.loadAnimation({
+            container: host,
+            renderer: 'svg',
+            loop: true,
+            autoplay: !reduce,
+            path: '{{ asset('lottie/superfatmanwalk.json') }}'
+        });
+    } catch (e) {}
 })();
 </script>
 @endpush
@@ -189,13 +209,21 @@
         color:#c3cdf2; font-size:13px; font-weight:500;
     }
     .dash-date svg { color:#8ea0dc; }
-    .dash-hero-logo { flex:none; height:46px; width:auto; opacity:.95; }
+    /* Motivational animation where the logo used to be */
+    .dash-hero-hype { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .dash-hero-anim { width:170px; height:170px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
+    .dash-hero-anim svg { width:100% !important; height:100% !important; }
+    .dash-hype-tag {
+        font-size:12.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+        color:#c7d0f5; text-shadow:0 2px 10px rgba(0,0,0,.35);
+    }
+    @media (max-width:1200px) { .dash-hero-anim { width:140px; height:140px; } }
     @media (max-width:900px) {
         /* content padding drops to 16px here — match the breakout */
         .dash-hero { margin:-16px -16px 16px; }
         .dash-hero-body { padding:24px 18px; }
         .dash-name { font-size:26px; }
-        .dash-hero-logo { display:none; }
+        .dash-hero-hype { display:none; }
     }
 
     /* Stat cards — top accent, compact */
