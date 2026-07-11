@@ -56,8 +56,19 @@
                 #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
         }
 
+        /* Big logo at the top, with room beneath so the picker box starts lower
+           — matches the super-admin sidebar. */
+        .va-brand {
+            flex-shrink:0; display:flex; align-items:center; justify-content:center;
+            padding:20px 16px 26px; border-bottom:0;
+        }
+        .va-brand img {
+            width:100%; max-width:216px; height:auto; max-height:68px;
+            object-fit:contain; display:block;
+        }
+
         /* Compact sidebar so every item fits on one screen (no inner scroll) */
-        .sidebar { padding-top:12px; padding-bottom:8px; }
+        .sidebar { padding-top:10px; padding-bottom:8px; }
         .sidebar-working { margin:6px 12px 4px !important; padding:9px 11px !important; }
         .sw-label { margin-bottom:3px !important; font-size:9px !important; }
         .sw-name { font-size:13px !important; margin-bottom:8px !important; }
@@ -90,6 +101,10 @@
             $isSuper   = $me?->isSuper();
             $roleLeads = $me?->isLeads();
         @endphp
+
+        <div class="va-brand">
+            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
+        </div>
 
         @unless ($roleLeads)
         @isset($selectedClient)
