@@ -445,17 +445,8 @@ class PaymentController extends Controller
         $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, &$totalUnpaid) {
             $euRate = $eu->effectiveRoundFee();
             $paidByRound = $eu->payments->keyBy('round');
-            $cells = [];
-            for ($r = 1; $r <= 5; $r++) {
-                $cells[$r] = [
-                    'state'   => $paidByRound->has($r) ? 'paid' : 'unpaid',
-                    'payment' => $paidByRound->get($r),
-                    'rate'    => $eu->effectiveRoundFee($r),
-                    'custom'  => $eu->hasCustomRoundFee($r),
-                ];
-            }
 
-            // Active rounds = rounds this client is actually in
+            // Active rounds = rounds this client has actually reached/done.
             $activeRounds = collect($eu->rounds ?? [])
                 ->map(fn ($label) => $roundLabelToNum[$label] ?? null)
                 ->filter()
@@ -464,6 +455,20 @@ class PaymentController extends Controller
             // If no rounds set, treat them as being in Round 1 by default
             if (empty($activeRounds)) {
                 $activeRounds = [1];
+            }
+
+            $cells = [];
+            for ($r = 1; $r <= 5; $r++) {
+                $isPaid = $paidByRound->has($r);
+                $cells[$r] = [
+                    'state'   => $isPaid ? 'paid' : 'unpaid',
+                    'payment' => $paidByRound->get($r),
+                    'rate'    => $eu->effectiveRoundFee($r),
+                    'custom'  => $eu->hasCustomRoundFee($r),
+                    // "due" = this round has been done by the client but is not
+                    // paid yet → chip blinks as a collect-the-money hint.
+                    'due'     => !$isPaid && in_array($r, $activeRounds, true),
+                ];
             }
 
             foreach ($activeRounds as $rn) {

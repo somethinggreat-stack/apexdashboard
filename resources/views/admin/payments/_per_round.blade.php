@@ -150,8 +150,8 @@
                                             @csrf
                                             <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
                                             <input type="hidden" name="round" value="{{ $r }}">
-                                            <button type="submit" class="chip chip-unpaid {{ $cell['custom'] ? 'chip-custom' : '' }}"
-                                                    title="Click to mark Round {{ $r }} paid (${{ number_format($cellRate, 2) }}){{ $cell['custom'] ? ' — custom rate for this round' : '' }}">
+                                            <button type="submit" class="chip chip-unpaid {{ $cell['custom'] ? 'chip-custom' : '' }} {{ $cell['due'] ? 'chip-due' : '' }}"
+                                                    title="{{ $cell['due'] ? 'Round '.$r.' is done — click to mark it paid (${'.number_format($cellRate, 2).'})' : 'Click to mark Round '.$r.' paid (${'.number_format($cellRate, 2).'})' }}{{ $cell['custom'] ? ' — custom rate for this round' : '' }}">
                                                 ${{ $cellRateLabel }}
                                             </button>
                                         </form>
@@ -347,6 +347,25 @@
         border: 1.5px solid #ddd6fe;
     }
     .chip-unpaid.chip-custom:hover { background: #ede9fe; border-color: #8b5cf6; }
+
+    /* "Due" chip — this round is done but not marked paid yet. Gently pulses
+       amber to nudge the VA to collect for it. Turns plain green on click. */
+    .chip-unpaid.chip-due {
+        color: #b45309; border-style: solid; border-color: #fcd34d;
+        animation: chipDuePulse 1.35s ease-in-out infinite;
+    }
+    .chip-unpaid.chip-due:hover {
+        background: #fef3c7; border-color: #f59e0b;
+        animation: none;
+    }
+    @keyframes chipDuePulse {
+        0%, 100% { background: #fffbeb; border-color: #fcd34d; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        50%      { background: #fef3c7; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
+    }
+    /* Respect users who prefer no motion — fall back to a static amber chip. */
+    @media (prefers-reduced-motion: reduce) {
+        .chip-unpaid.chip-due { animation: none; background: #fef3c7; border-color: #f59e0b; }
+    }
 
     .inline-pay-form { display: inline; margin: 0; padding: 0; }
 
