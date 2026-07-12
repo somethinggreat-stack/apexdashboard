@@ -5,6 +5,12 @@
 {{-- No topbar: the "Select a Business Owner to Work On" card already titles it. --}}
 @section('no-topbar', '1')
 
+{{-- This is the VA's home page (they have no dashboard), so greet them by name
+     like the super admin's dashboard — opt out of the rotating quote banner. --}}
+@unless (Auth::guard('admin')->user()?->isSuper())
+@section('own-hero', '1')
+@endunless
+
 @section('content')
 @php
     $isSuper = Auth::guard('admin')->user()?->isSuper();
@@ -28,6 +34,11 @@
     $glyphOf  = fn ($name) => $glyphs[crc32($name) % count($glyphs)];
     $money    = fn ($v) => '$' . number_format((float) $v, 2);
 @endphp
+
+{{-- VA welcome banner (super admin gets this on their dashboard instead). --}}
+@unless ($isSuper)
+<div class="dash-hero">@include('admin.partials.welcome-hero', ['heroMe' => Auth::guard('admin')->user()])</div>
+@endunless
 
 <div class="card sbo-card">
     <div class="sbo-head">
