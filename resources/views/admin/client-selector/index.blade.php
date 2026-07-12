@@ -2,18 +2,8 @@
 
 @section('title', 'Select Business Owner')
 
-{{-- No topbar: the "Select a Business Owner to Work On" card already titles it.
-     (Honoured by layouts/admin-pro only; the VA layout ignores it.) --}}
+{{-- No topbar: the "Select a Business Owner to Work On" card already titles it. --}}
 @section('no-topbar', '1')
-
-{{-- The spacer only blanks the VA layout's title bar. The super (pro) layout
-     has no top bar, and defining topbar-content there would wrongly trigger the
-     banner's actions area, pushing the animation to the middle. --}}
-@unless (Auth::guard('admin')->user()?->isSuper())
-@section('topbar-content')
-    <div class="sbo-topbar-spacer"></div>
-@endsection
-@endunless
 
 @section('content')
 @php
@@ -38,64 +28,6 @@
     $glyphOf  = fn ($name) => $glyphs[crc32($name) % count($glyphs)];
     $money    = fn ($v) => '$' . number_format((float) $v, 2);
 @endphp
-
-{{-- Welcome hero — shown to VAs (the super admin already has it on the
-     dashboard, which they can't reach). Full-bleed banner at the top. --}}
-@unless ($isSuper)
-<div class="dash-hero va-hero">@include('admin.partials.welcome-hero')</div>
-@push('head')
-<style>
-    /* Full-bleed hero for the VA layout: break out of .main's padding so it
-       touches the sidebar, the right edge and the top. */
-    .dash-hero {
-        position:relative; overflow:hidden;
-        margin:-18px -26px 22px; border-radius:0 0 22px 0;   /* bottom-left sharp → merges with sidebar */
-        background:
-            linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
-            #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
-        box-shadow:0 12px 30px rgba(15,23,42,.18);
-    }
-    .dash-hero-body {
-        position:relative; z-index:1;
-        display:flex; align-items:center; justify-content:space-between; gap:20px;
-        padding:13px 34px 12px;
-    }
-    .dash-hero-text { min-width:0; }
-    .dash-greet { display:block; max-width:620px; font-size:14.5px; font-style:italic; font-weight:500; color:#b4c0ec; letter-spacing:.01em; line-height:1.4; }
-    .dash-name {
-        margin:2px 0 0; font-size:28px; line-height:1.1; font-weight:800; letter-spacing:-.02em;
-        color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.25); word-break:break-word;
-    }
-    .dash-date {
-        display:inline-flex; align-items:center; gap:8px; margin-top:8px;
-        color:#c3cdf2; font-size:13px; font-weight:500;
-    }
-    .dash-date svg { color:#8ea0dc; }
-    .dash-hero-hype { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; }
-    .dash-hero-anim { width:74px; height:74px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
-    .dash-hero-anim svg { width:100% !important; height:100% !important; }
-    .dash-hype-tag {
-        font-size:10.5px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
-        color:#c7d0f5; text-shadow:0 2px 10px rgba(0,0,0,.35);
-    }
-
-    /* Collapse the empty topbar on desktop so the hero sits flush at the top.
-       Kept on mobile — it holds the menu button. */
-    @media (min-width:992px) {
-        .admin-body .main > .topbar { margin:0; min-height:0; }
-        .admin-body .main > .topbar .sbo-topbar-spacer { display:none; }
-    }
-    @media (max-width:991px) { .dash-hero { margin:-24px -32px 20px; } }
-    @media (max-width:1200px) { .dash-hero-anim { width:74px; height:74px; } }
-    @media (max-width:900px) {
-        .dash-hero { margin:-16px -16px 16px; border-radius:0 0 16px 0; }
-        .dash-hero-body { padding:24px 18px; }
-        .dash-name { font-size:26px; }
-        .dash-hero-hype { display:none; }
-    }
-</style>
-@endpush
-@endunless
 
 <div class="card sbo-card">
     <div class="sbo-head">

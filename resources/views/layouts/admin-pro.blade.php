@@ -4,8 +4,9 @@
     agents keep layouts/admin.blade.php untouched.
 --}}
 @php
-    $me  = Auth::guard('admin')->user();
-    $bo  = $selectedClient ?? null;
+    $me      = Auth::guard('admin')->user();
+    $isSuper = $me?->isSuper();
+    $bo      = $selectedClient ?? null;
     $ini = collect(explode(' ', trim($me?->full_name ?: 'Admin')))
             ->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
 @endphp
@@ -61,12 +62,14 @@
         @endisset
 
         <nav class="pro-nav">
+            @if ($isSuper)
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <svg class="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
                 Dashboard
             </a>
 
             <span class="pro-rule" aria-hidden="true"></span>
+            @endif
 
             @isset($selectedClient)
                 @if ($selectedClient->intake_enabled)
@@ -102,10 +105,12 @@
                     @if ($adminUnread > 0)<span class="pro-count">{{ $adminUnread }}</span>@endif
                 </a>
 
+                @if ($isSuper)
                 <a href="{{ route('admin.payments.index') }}" class="{{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
                     <svg class="i-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     Payments
                 </a>
+                @endif
             @else
                 @php
                     $isLeads   = request()->routeIs('admin.prospect-leads.index');
@@ -123,6 +128,7 @@
                     Business Owners
                 </a>
 
+                @if ($isSuper)
                 <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                     Add/Remove Business Owners
@@ -170,6 +176,7 @@
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-4z"/></svg>
                     Users &amp; Activity
                 </a>
+                @endif
             @endisset
         </nav>
 
@@ -252,6 +259,29 @@
         if (e.metaKey || e.ctrlKey) { window.open(url, '_blank'); }
         else { window.location = url; }
     });
+})();
+
+/* Under-banner client search: live-filter the current page's list (Errors,
+   New Clients, Today Queue…). Works the same for the super admin and VAs. */
+(function () {
+    var bar = document.querySelector('.pro-searchbar');
+    if (!bar) return;
+    var input = bar.querySelector('input[name="search"]');
+    if (!input) return;
+    // Don't navigate away on Enter — filter in place.
+    bar.addEventListener('submit', function (e) { e.preventDefault(); });
+    var rows = Array.prototype.slice
+        .call(document.querySelectorAll('.pro-content table tbody tr'))
+        .filter(function (r) { return !r.querySelector('.empty'); });
+    function apply() {
+        var q = (input.value || '').trim().toLowerCase();
+        rows.forEach(function (r) {
+            var t = (r.textContent || '').toLowerCase();
+            r.style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
+        });
+    }
+    input.addEventListener('input', apply);
+    apply();
 })();
 </script>
 @stack('scripts')

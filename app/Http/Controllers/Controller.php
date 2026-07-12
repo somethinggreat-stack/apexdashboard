@@ -13,15 +13,16 @@ abstract class Controller
     /**
      * Resolve the view to render for an admin page.
      *
-     * The super admin gets the redesigned console: if a matching view exists
-     * under admin/pro/… it wins. Everyone else (VAs, leads agents) keeps the
-     * original view. Same controller, same data — only the template differs.
+     * The super admin AND VAs get the redesigned console: if a matching view
+     * exists under admin/pro/… it wins, so their pages look identical. Leads
+     * agents keep the original view. Same controller, same data — only the
+     * template differs.
      */
     protected function adminView(string $view): string
     {
         $me = Auth::guard('admin')->user();
 
-        if ($me && $me->isSuper()) {
+        if ($me && ! $me->isLeads()) {
             $pro = Str::replaceFirst('admin.', 'admin.pro.', $view);
             if (view()->exists($pro)) {
                 return $pro;

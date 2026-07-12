@@ -5,8 +5,11 @@
 
 @section('content')
 
-{{-- Intake link + API key are sensitive. This view only ever renders for the
-     super admin (Controller::adminView), so no extra role check is needed. --}}
+{{-- Intake link + API key are super-admin only. VAs also render this view now
+     (Controller::adminView), so the whole sensitive block is gated behind
+     $isSuper. VAs still see the New-Clients review list further below. --}}
+@php $isSuper = Auth::guard('admin')->user()?->isSuper(); @endphp
+@if ($isSuper)
 @if ($client->intake_external_url)
     <div class="pro-panel" style="margin-bottom:20px; padding:22px;">
         <div class="pro-panel-title" style="margin-bottom:6px;">
@@ -96,6 +99,7 @@
         @endif
     </div>
 @endunless
+@endif {{-- $isSuper: intake link + API key --}}
 
 <div class="pro-panel">
     <div class="pro-panel-head">
