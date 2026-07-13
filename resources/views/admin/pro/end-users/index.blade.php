@@ -2,6 +2,7 @@
 
 @php
     $isDone = ($bucket ?? 'in_progress') === 'clients';
+    $isSuper = Auth::guard('admin')->user()?->isSuper();
     $statusOptions = ['active','paused','graduated','cancelled'];
 
     // avatar tint, stable per client name
@@ -22,6 +23,13 @@
 @section('subtitle', 'Manage and monitor all your clients in one place.')
 
 @section('topbar-action')
+    @if ($isDone && $isSuper)
+        <a href="{{ route('admin.client-list.cfpb-export') }}" class="btn btn-secondary"
+           title="Download all CFPB logins for this business owner as a CSV">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Export CFPB Logins</span>
+        </a>
+    @endif
     <button type="button" class="pro-cta" onclick="openModal('createEndUserModal')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>Add New Client</span>

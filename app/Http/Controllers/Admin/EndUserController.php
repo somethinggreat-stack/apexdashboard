@@ -102,6 +102,44 @@ class EndUserController extends Controller
         return view($view, compact('endUsers', 'bucket', 'stats'));
     }
 
+    /**
+     * Download every active client's CFPB login for the selected business owner
+     * as a CSV — the fast bulk alternative to clicking "Show" on each profile.
+     *
+     * Super-admin ONLY (enforced by the route's admin.super middleware): VAs must
+     * never bulk-export credentials. cfpb_password is encrypted at rest and is
+     * decrypted here on read. The file is streamed, never written to disk.
+     */
+    public function exportCfpb(Request $request)
+    {
+        $clientId = session('selected_client_id');
+        $bo = Client::findOrFail($clientId);
+
+        // Same set as the "Clients" list (round 1 done), but unpaginated — every one.
+        $clients = EndUser::forClient($clientId)->done()
+            ->orderBy('start_date', 'asc')
+            ->orderBy('first_name')
+            ->get();
+
+        $filename = 'cfpb-logins-'
+            . \Illuminate\Support\Str::slug($bo->business_name ?: 'business-owner')
+            . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($clients) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel reads it correctly
+            fputcsv($out, ['Client Name', 'CFPB Email', 'CFPB Password']);
+            foreach ($clients as $eu) {
+                fputcsv($out, [$eu->full_name, $eu->cfpb_email ?? '', $eu->cfpb_password ?? '']);
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type'  => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'        => 'no-cache',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request, true);

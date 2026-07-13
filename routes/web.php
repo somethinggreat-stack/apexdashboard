@@ -170,6 +170,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
             // The main Clients list (1st round done; remaining rounds worked here)
             Route::get('client-list', [Admin\EndUserController::class, 'activeClients'])->name('client-list');
+            // Bulk CFPB logins export (CSV) — super admin only, never VAs
+            Route::get('client-list/cfpb-export', [Admin\EndUserController::class, 'exportCfpb'])
+                ->middleware('admin.super')->name('client-list.cfpb-export');
             Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');
