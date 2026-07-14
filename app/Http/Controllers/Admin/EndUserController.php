@@ -96,7 +96,7 @@ class EndUserController extends Controller
 
         // The pro console pages the table; the original view lists every row.
         if ($view !== 'admin.end-users.index') {
-            $endUsers = $this->paginateCollection($endUsers, 10, $request);
+            $endUsers = $this->paginateCollection($endUsers, 50, $request);
         }
 
         return view($view, compact('endUsers', 'bucket', 'stats'));
