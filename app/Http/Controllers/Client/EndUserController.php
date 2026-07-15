@@ -28,6 +28,7 @@ class EndUserController extends Controller
         $clientId = Auth::guard('client')->id();
 
         $query = EndUser::forClient($clientId)
+            ->notHeld()   // Hold/Pause clients live in their own section
             // New Clients (pending_review) and Errors live in their own sections.
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             ->withCount([
@@ -166,6 +167,7 @@ class EndUserController extends Controller
         abort_unless($client->intake_enabled, 404);
 
         $endUsers = EndUser::forClient($client->id)
+            ->notHeld()
             ->where('intake_status', 'pending_review')
             ->orderByDesc('intake_submitted_at')
             ->get();
@@ -177,11 +179,23 @@ class EndUserController extends Controller
     public function errors()
     {
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->notHeld()
             ->where('intake_status', 'error')
             ->orderByDesc('updated_at')
             ->get();
 
         return view('client.end-users.errors', compact('endUsers'));
+    }
+
+    /** Hold / Pause — the BO's clients the team has parked. View only for the BO. */
+    public function holdList()
+    {
+        $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->onHold()
+            ->orderByDesc('held_at')
+            ->get();
+
+        return view('client.end-users.hold', compact('endUsers'));
     }
 
     public function create()

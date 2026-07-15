@@ -110,17 +110,21 @@
             <a href="{{ route('client.dashboard') }}" class="{{ request()->routeIs('client.dashboard') ? 'active' : '' }}">Dashboard</a>
             @php $bo = Auth::guard('client')->user(); @endphp
             @if ($bo?->intake_enabled)
-                @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->where('intake_status', 'pending_review')->count(); @endphp
+                @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
                 <a href="{{ route('client.new-clients') }}" class="{{ request()->routeIs('client.new-clients*') ? 'active' : '' }}">
                     New Clients @if ($pendingIntake > 0)<span class="badge-portal" style="background:#dc2626;">{{ $pendingIntake }}</span>@endif
                 </a>
             @endif
-            @php $errorCount = \App\Models\EndUser::forClient($bo->id)->where('intake_status', 'error')->count(); @endphp
+            @php $errorCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
             <a href="{{ route('client.errors') }}" class="{{ request()->routeIs('client.errors') ? 'active' : '' }}">
                 Errors @if ($errorCount > 0)<span class="badge-portal" style="background:#dc2626;">{{ $errorCount }}</span>@endif
             </a>
             <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">In Progress</a>
             <a href="{{ route('client.client-list') }}" class="{{ request()->routeIs('client.client-list') ? 'active' : '' }}">Done Clients</a>
+            @php $holdCount = \App\Models\EndUser::forClient($bo->id)->onHold()->count(); @endphp
+            <a href="{{ route('client.hold') }}" class="{{ request()->routeIs('client.hold') ? 'active' : '' }}">
+                Hold/Pause @if ($holdCount > 0)<span class="badge-portal" style="background:#64748b;">{{ $holdCount }}</span>@endif
+            </a>
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
                 Messages @if ($unread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $unread }}</span>@endif
             </a>
