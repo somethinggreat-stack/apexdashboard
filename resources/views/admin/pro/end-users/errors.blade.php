@@ -61,6 +61,11 @@
                                     <button class="pro-act move">Move to New Clients</button>
                                 </form>
 
+                                <form method="POST" action="{{ route('admin.end-users.hold', $eu->id) }}">
+                                    @csrf
+                                    <button class="pro-act hold">Hold/Pause</button>
+                                </form>
+
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
                                       onsubmit="return confirm(@js('Delete ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">
                                     @csrf @method('DELETE')

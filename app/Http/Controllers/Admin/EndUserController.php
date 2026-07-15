@@ -32,6 +32,7 @@ class EndUserController extends Controller
         $clientId = session('selected_client_id');
 
         $query = EndUser::forClient($clientId)
+            ->notHeld()
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             // progress % is derived from the step log — eager load it so the
             // accessor doesn't fire a query per row
@@ -298,6 +299,7 @@ class EndUserController extends Controller
         }
 
         $endUsers = EndUser::forClient($client->id)
+            ->notHeld()
             ->where('intake_status', 'pending_review')
             ->orderByDesc('intake_submitted_at')
             ->get();
@@ -309,11 +311,43 @@ class EndUserController extends Controller
     public function errors()
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->notHeld()
             ->where('intake_status', 'error')
             ->orderByDesc('updated_at')
             ->get();
 
         return view($this->adminView('admin.end-users.errors'), compact('endUsers'));
+    }
+
+    /** Hold / Pause — clients parked out of the normal buckets. */
+    public function holdList()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->onHold()
+            ->orderByDesc('held_at')
+            ->get();
+
+        return view($this->adminView('admin.end-users.hold'), compact('endUsers'));
+    }
+
+    /** Put a client on hold — hides them from their bucket until resumed. */
+    public function hold(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['held_at' => now()]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} placed on Hold/Pause.");
+    }
+
+    /** Resume a held client — drops them back into their normal bucket. */
+    public function resume(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['held_at' => null]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} resumed.");
     }
 
     public function approveIntake(string $id)

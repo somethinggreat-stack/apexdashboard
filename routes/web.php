@@ -178,6 +178,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');
+            // Hold / Pause — park a client out of the normal buckets, or resume them
+            Route::get('hold', [Admin\EndUserController::class, 'holdList'])->name('hold');
+            Route::post('end-users/{id}/hold', [Admin\EndUserController::class, 'hold'])->name('end-users.hold');
+            Route::post('end-users/{id}/resume', [Admin\EndUserController::class, 'resume'])->name('end-users.resume');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');

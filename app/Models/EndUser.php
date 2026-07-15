@@ -47,12 +47,13 @@ class EndUser extends Model
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer', 'credit_monitoring_security_question', 'credit_monitoring_pin',
         'cfpb_email', 'cfpb_password',
-        'current_score', 'goal_score', 'status', 'rounds', 'round_dates', 'start_date',
+        'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note',
     ];
     protected $casts = [
         'start_date' => 'date',
+        'held_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
         'per_round_fees' => 'array',
@@ -103,6 +104,23 @@ class EndUser extends Model
     public function scopeDone($query)
     {
         return $query->where('intake_status', 'done');
+    }
+
+    /** On Hold / Pause — parked out of the normal buckets. */
+    public function scopeOnHold($query)
+    {
+        return $query->whereNotNull('held_at');
+    }
+
+    /** Not held — the default working set (excludes Hold/Pause). */
+    public function scopeNotHeld($query)
+    {
+        return $query->whereNull('held_at');
+    }
+
+    public function getIsOnHoldAttribute(): bool
+    {
+        return $this->held_at !== null;
     }
 
     public function processSteps()

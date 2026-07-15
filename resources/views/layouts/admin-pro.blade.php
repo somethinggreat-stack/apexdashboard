@@ -73,7 +73,7 @@
 
             @isset($selectedClient)
                 @if ($selectedClient->intake_enabled)
-                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'pending_review')->count(); @endphp
+                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
                     <a href="{{ route('admin.new-clients') }}" class="{{ request()->routeIs('admin.new-clients*') ? 'active' : '' }}">
                         <svg class="i-int" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                         New Clients
@@ -81,7 +81,7 @@
                     </a>
                 @endif
 
-                @php $errorCount = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'error')->count(); @endphp
+                @php $errorCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
                 <a href="{{ route('admin.errors') }}" class="{{ request()->routeIs('admin.errors') ? 'active' : '' }}">
                     <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
                     Errors
@@ -96,6 +96,13 @@
                 <a href="{{ route('admin.client-list') }}" class="{{ request()->routeIs('admin.client-list') || request()->routeIs('admin.end-users.show') ? 'active' : '' }}">
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     Clients
+                </a>
+
+                @php $holdCount = \App\Models\EndUser::forClient($selectedClient->id)->onHold()->count(); @endphp
+                <a href="{{ route('admin.hold') }}" class="{{ request()->routeIs('admin.hold') ? 'active' : '' }}">
+                    <svg class="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                    Hold/Pause
+                    @if ($holdCount > 0)<span class="pro-count">{{ $holdCount }}</span>@endif
                 </a>
 
                 @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp

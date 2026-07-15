@@ -158,6 +158,11 @@
                                     <button type="button" class="pro-act warn" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
                                 </form>
 
+                                <form method="POST" action="{{ route('admin.end-users.hold', $eu->id) }}">
+                                    @csrf
+                                    <button class="pro-act hold">Hold/Pause</button>
+                                </form>
+
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
                                       onsubmit="return confirm(@js('Delete ' . $eu->full_name . ' and all their uploaded documents? This cannot be undone.'))">
                                     @csrf @method('DELETE')
