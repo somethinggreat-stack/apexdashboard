@@ -43,6 +43,13 @@ class LogActivity
 
     public function handle(Request $request, Closure $next)
     {
+        // Capture the client's name BEFORE a delete runs — afterwards it's gone,
+        // so the audit trail would otherwise only have their internal id.
+        $deletedName = null;
+        if (optional($request->route())->getName() === 'admin.end-users.destroy') {
+            $deletedName = optional(\App\Models\EndUser::find($request->route('id')))->full_name;
+        }
+
         $response = $next($request);
 
         try {
@@ -52,10 +59,14 @@ class LogActivity
                 && isset(self::ACTIONS[$name])
                 && $response->getStatusCode() < 400
                 && Auth::guard('admin')->check()) {
+                $description = self::ACTIONS[$name];
+                if ($name === 'admin.end-users.destroy' && $deletedName) {
+                    $description .= ": {$deletedName}";
+                }
                 ActivityLog::create([
                     'admin_id'    => Auth::guard('admin')->id(),
                     'action'      => $name,
-                    'description' => self::ACTIONS[$name],
+                    'description' => $description,
                     'method'      => $request->method(),
                     'path'        => '/' . ltrim($request->path(), '/'),
                     'subject'     => $this->subject($request),

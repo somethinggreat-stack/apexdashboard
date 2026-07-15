@@ -60,8 +60,20 @@
     <div class="card-header">
         <div>
             <h2 style="margin:0;">Activity Log</h2>
-            <p class="muted" style="margin:4px 0 0; font-size:13px;">Showing activity from the last 30 minutes.</p>
+            <p class="muted" style="margin:4px 0 0; font-size:13px;">
+                {{ $ranges[$range]['label'] }}@if ($search) · matching &ldquo;{{ $search }}&rdquo;@endif · {{ $logs->count() }} shown.
+                Tip: to find a deletion, search the business owner's name and pick a wider range.
+            </p>
         </div>
+        <form method="GET" class="log-filter">
+            <input type="text" name="q" value="{{ $search }}" placeholder="Search user, action, owner, IP…">
+            <select name="range" onchange="this.form.submit()">
+                @foreach ($ranges as $key => $r)
+                    <option value="{{ $key }}" @selected($range === $key)>{{ $r['label'] }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">Search</button>
+        </form>
     </div>
     <div class="table-scroll"><table class="data-table">
         <thead>
@@ -112,6 +124,12 @@
     .u-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .u-actions form { display:inline; margin:0; }
     .u-actions .btn { white-space:nowrap; }
+    .log-filter { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .log-filter input, .log-filter select {
+        padding:8px 12px; border:1px solid #d7dee8; border-radius:9px; font-size:13px; background:#fff; color:#0f172a;
+    }
+    .log-filter input { min-width:220px; }
+    .log-filter input:focus, .log-filter select:focus { outline:none; border-color:#2563eb; }
 </style>
 @endpush
 

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
 
@@ -20,15 +20,36 @@ class UserController extends Controller
             ->orderBy('full_name')
             ->get();
 
-        // Only the last 30 minutes of activity is shown here.
+        // Activity log — pick a time window and/or search (find older events like
+        // "who deleted this client three days ago").
+        $ranges = [
+            '30m' => ['label' => 'Last 30 minutes', 'since' => now()->subMinutes(30)],
+            '24h' => ['label' => 'Last 24 hours',   'since' => now()->subDay()],
+            '7d'  => ['label' => 'Last 7 days',     'since' => now()->subDays(7)],
+            '30d' => ['label' => 'Last 30 days',    'since' => now()->subDays(30)],
+            'all' => ['label' => 'All time',        'since' => null],
+        ];
+        $range  = array_key_exists($request->query('range'), $ranges) ? $request->query('range') : '30m';
+        $search = trim((string) $request->query('q', ''));
+
         $logs = ActivityLog::with('admin')
             ->whereIn('admin_id', $users->pluck('id'))
-            ->where('created_at', '>=', now()->subMinutes(30))
+            ->when($ranges[$range]['since'], fn ($q, $since) => $q->where('created_at', '>=', $since))
+            ->when($search !== '', function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where(function ($w) use ($like) {
+                    $w->where('description', 'like', $like)
+                        ->orWhere('subject', 'like', $like)
+                        ->orWhere('path', 'like', $like)
+                        ->orWhere('ip', 'like', $like)
+                        ->orWhereHas('admin', fn ($a) => $a->where('full_name', 'like', $like)->orWhere('email', 'like', $like));
+                });
+            })
             ->latest()
-            ->limit(300)
+            ->limit(500)
             ->get();
 
-        return view('admin.users.index', compact('users', 'logs'));
+        return view('admin.users.index', compact('users', 'logs', 'ranges', 'range', 'search'));
     }
 
     public function store(Request $request)
