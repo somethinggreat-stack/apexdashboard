@@ -140,6 +140,46 @@ class EndUserController extends Controller
         ]);
     }
 
+    /**
+     * Download every active client's credit-monitoring login for the selected
+     * business owner as a CSV. Super-admin only (route middleware); VAs never
+     * bulk-export credentials. credit_monitoring_password is encrypted at rest
+     * and decrypted here on read. Streamed, never written to disk.
+     */
+    public function exportCreditMonitoring(Request $request)
+    {
+        $clientId = session('selected_client_id');
+        $bo = Client::findOrFail($clientId);
+
+        $clients = EndUser::forClient($clientId)->done()
+            ->orderBy('start_date', 'asc')
+            ->orderBy('first_name')
+            ->get();
+
+        $filename = 'credit-monitoring-logins-'
+            . \Illuminate\Support\Str::slug($bo->business_name ?: 'business-owner')
+            . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($clients) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+            fputcsv($out, ['Client Name', 'Service Name', 'Username / Email', 'Password']);
+            foreach ($clients as $eu) {
+                fputcsv($out, [
+                    $eu->full_name,
+                    $eu->credit_monitoring_name ?? '',
+                    $eu->credit_monitoring_username ?? '',
+                    $eu->credit_monitoring_password ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type'  => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'        => 'no-cache',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request, true);
