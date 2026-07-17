@@ -8,37 +8,58 @@
     <link rel="stylesheet" href="{{ asset('css/client.css') }}">
     <style>
         :root { --agp-accent:#2563eb; --agp-accent2:#38bdf8; }
-        .client-body {
-            background:
-                radial-gradient(1100px circle at 100% -5%, #e2ecff 0%, transparent 42%),
-                radial-gradient(950px circle at -5% 108%, #e6fbf4 0%, transparent 44%),
-                #eef2f7 !important;
-        }
+        /* Match the admin console's flat light background. */
+        .client-body { background: #f5f6fb !important; }
 
-        /* Sidebar */
+        /* Sidebar — same dark-indigo + credit-report image as the admin console. */
         .sidebar {
-            background: linear-gradient(180deg, #0b1f3a 0%, #103063 55%, #0b1f3a 100%) !important;
-            border-right: 1px solid rgba(255,255,255,.06) !important;
+            background:
+                linear-gradient(180deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.91) 55%, rgba(27,19,80,.90) 100%),
+                #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat !important;
+            border-right: 0 !important;
         }
-        .sidebar-brand { text-align:center; }
+        .sidebar-brand { text-align:center; padding-top:6px; }
         .sidebar-brand .brand-logo { max-width:150px; max-height:50px; width:auto; display:block; margin:0 auto 8px; }
         .sidebar-brand strong { color:#fff !important; letter-spacing:.2px; }
         .sidebar-brand .badge-portal {
             background: linear-gradient(135deg, var(--agp-accent), var(--agp-accent2)) !important;
             color:#fff !important; border:0 !important;
         }
+
+        /* Nav rows — flat pills with icons, indigo-gradient active, like admin. */
         .sidebar-nav a {
-            color:#c7d2e2 !important; border-radius:11px; margin:3px 10px; padding:11px 14px;
-            font-weight:600; position:relative; transition: background .15s, color .15s, box-shadow .15s;
+            display:flex; align-items:center; gap:12px;
+            margin:2px 12px; padding:9px 13px; border-radius:10px;
+            color:#bcc5dd !important; font-size:15px; font-weight:500; line-height:1.2;
+            text-decoration:none; white-space:nowrap; position:relative;
+            transition: background .14s, color .14s;
         }
-        .sidebar-nav a:hover { background: rgba(255,255,255,.08) !important; color:#fff !important; }
+        .sidebar-nav a svg { width:21px; height:21px; flex-shrink:0; }
+        .sidebar-nav a:hover { background: rgba(255,255,255,.055) !important; color:#e6ebf7 !important; }
         .sidebar-nav a.active {
-            background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(56,189,248,.8)) !important;
-            color:#fff !important; box-shadow:0 8px 20px rgba(37,99,235,.35);
+            background: linear-gradient(135deg, #4f46e5, #4c3fd8) !important;
+            color:#fff !important; font-weight:600; box-shadow:0 5px 16px rgba(79,70,229,.42);
         }
-        .sidebar-nav a.active::before {
-            content:''; position:absolute; left:-10px; top:9px; bottom:9px; width:4px; border-radius:4px; background:#38bdf8;
+        .sidebar-nav a.active svg { color:#fff !important; }
+        .sidebar-nav a.active::before { display:none !important; }
+
+        /* icon tints, like the admin console */
+        .sidebar-nav .i-dash { color:#a5b4fc; }
+        .sidebar-nav .i-int  { color:#a78bfa; }
+        .sidebar-nav .i-lost { color:#fb923c; }
+        .sidebar-nav .i-sup  { color:#2dd4bf; }
+        .sidebar-nav .i-adm  { color:#94a3b8; }
+        .sidebar-nav .i-hold { color:#93a4c8; }
+        .sidebar-nav .i-web  { color:#60a5fa; }
+        .sidebar-nav .i-wa   { color:#34d399; }
+
+        /* count pill, pushed to the far right of the row */
+        .sidebar-nav .nav-count {
+            margin-left:auto; min-width:20px; padding:2px 6px; border-radius:999px;
+            background:#ef4444; color:#fff; font-size:10px; font-weight:700; text-align:center; line-height:1.4;
         }
+        .sidebar-nav .nav-count-slate { background:#64748b; }
+        .sidebar-nav a.active .nav-count { background: rgba(255,255,255,.22); }
 
         /* Logout — proper button, clean red hover */
         .sidebar-logout { padding:14px 16px !important; }
@@ -107,28 +128,48 @@
             $unread = Auth::guard('client')->user()?->unreadCountForClient() ?? 0;
         @endphp
         <nav class="sidebar-nav">
-            <a href="{{ route('client.dashboard') }}" class="{{ request()->routeIs('client.dashboard') ? 'active' : '' }}">Dashboard</a>
+            <a href="{{ route('client.dashboard') }}" class="{{ request()->routeIs('client.dashboard') ? 'active' : '' }}">
+                <svg class="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
+                <span>Dashboard</span>
+            </a>
             @php $bo = Auth::guard('client')->user(); @endphp
             @if ($bo?->intake_enabled)
                 @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
                 <a href="{{ route('client.new-clients') }}" class="{{ request()->routeIs('client.new-clients*') ? 'active' : '' }}">
-                    New Clients @if ($pendingIntake > 0)<span class="badge-portal" style="background:#dc2626;">{{ $pendingIntake }}</span>@endif
+                    <svg class="i-int" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    <span>New Clients</span>
+                    @if ($pendingIntake > 0)<span class="nav-count">{{ $pendingIntake }}</span>@endif
                 </a>
             @endif
             @php $errorCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
             <a href="{{ route('client.errors') }}" class="{{ request()->routeIs('client.errors') ? 'active' : '' }}">
-                Errors @if ($errorCount > 0)<span class="badge-portal" style="background:#dc2626;">{{ $errorCount }}</span>@endif
+                <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+                <span>Errors</span>
+                @if ($errorCount > 0)<span class="nav-count">{{ $errorCount }}</span>@endif
             </a>
-            <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">In Progress</a>
-            <a href="{{ route('client.client-list') }}" class="{{ request()->routeIs('client.client-list') ? 'active' : '' }}">Done Clients</a>
+            <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">
+                <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>In Progress</span>
+            </a>
+            <a href="{{ route('client.client-list') }}" class="{{ request()->routeIs('client.client-list') ? 'active' : '' }}">
+                <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Done Clients</span>
+            </a>
             @php $holdCount = \App\Models\EndUser::forClient($bo->id)->onHold()->count(); @endphp
             <a href="{{ route('client.hold') }}" class="{{ request()->routeIs('client.hold') ? 'active' : '' }}">
-                Hold/Pause @if ($holdCount > 0)<span class="badge-portal" style="background:#64748b;">{{ $holdCount }}</span>@endif
+                <svg class="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                <span>Hold/Pause</span>
+                @if ($holdCount > 0)<span class="nav-count nav-count-slate">{{ $holdCount }}</span>@endif
             </a>
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
-                Messages @if ($unread > 0)<span class="badge-portal" style="background:#dc2626;">{{ $unread }}</span>@endif
+                <svg class="i-web" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>Messages</span>
+                @if ($unread > 0)<span class="nav-count">{{ $unread }}</span>@endif
             </a>
-            <a href="{{ route('client.billing.index') }}" class="{{ request()->routeIs('client.billing.*') ? 'active' : '' }}">Billing</a>
+            <a href="{{ route('client.billing.index') }}" class="{{ request()->routeIs('client.billing.*') ? 'active' : '' }}">
+                <svg class="i-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span>Billing</span>
+            </a>
         </nav>
         <form method="POST" action="{{ route('client.logout') }}" class="sidebar-logout">
             @csrf
