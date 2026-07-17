@@ -83,6 +83,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
+            // Referral commissions (e.g. Chantal earns per client payment of the BOs she referred)
+            Route::get('commissions', [Admin\CommissionController::class, 'index'])->name('commissions.index');
+            Route::post('commissions/assign', [Admin\CommissionController::class, 'assign'])->name('commissions.assign');
+            Route::post('commissions/payout', [Admin\CommissionController::class, 'storePayout'])->name('commissions.payout.store');
+            Route::delete('commissions/payout/{id}', [Admin\CommissionController::class, 'destroyPayout'])->whereNumber('id')->name('commissions.payout.destroy');
+
             // Extra projects — funnels, customer support, ads
             Route::get('extra/{type}', [Admin\ExtraProjectController::class, 'index'])
                 ->whereIn('type', ['funnel', 'support', 'ads'])->name('extra.index');
