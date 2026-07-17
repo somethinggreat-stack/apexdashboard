@@ -146,25 +146,25 @@
                                         {{ $isFreePaid ? 'Free' : optional($cell['payment']->paid_at)->format('M j') }}
                                     </button>
                                 @else
-                                    <div class="chip-cell">
-                                        <form method="POST" action="{{ route('admin.payments.store') }}" class="inline-pay-form">
-                                            @csrf
-                                            <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
-                                            <input type="hidden" name="round" value="{{ $r }}">
-                                            <button type="submit" class="chip chip-unpaid {{ $cell['custom'] ? 'chip-custom' : '' }} {{ $cell['due'] ? 'chip-due' : '' }}"
-                                                    title="{{ $cell['due'] ? 'Round '.$r.' is done — click to mark it paid (${'.number_format($cellRate, 2).'})' : 'Click to mark Round '.$r.' paid (${'.number_format($cellRate, 2).'})' }}{{ $cell['custom'] ? ' — custom rate for this round' : '' }}">
-                                                ${{ $cellRateLabel }}
-                                            </button>
-                                            <button type="submit" name="free" value="1" class="chip-free"
-                                                    title="Mark Round {{ $r }} done as free/test — closes the round at $0, not billed and no commission">
+                                    <form method="POST" action="{{ route('admin.payments.store') }}" class="chip-stack">
+                                        @csrf
+                                        <input type="hidden" name="end_user_id" value="{{ $eu->id }}">
+                                        <input type="hidden" name="round" value="{{ $r }}">
+                                        <button type="submit" class="chip chip-unpaid {{ $cell['custom'] ? 'chip-custom' : '' }} {{ $cell['due'] ? 'chip-due' : '' }}"
+                                                title="{{ $cell['due'] ? 'Round '.$r.' is done — click to mark it paid (${'.number_format($cellRate, 2).'})' : 'Click to mark Round '.$r.' paid (${'.number_format($cellRate, 2).'})' }}{{ $cell['custom'] ? ' — custom rate for this round' : '' }}">
+                                            ${{ $cellRateLabel }}
+                                        </button>
+                                        <div class="chip-actions">
+                                            <button type="submit" name="free" value="1" class="chip-mini chip-free"
+                                                    title="Mark Round {{ $r }} done as free/test — $0, not billed, no commission">
                                                 Free
                                             </button>
-                                        </form>
-                                        <button type="button" class="chip-edit" title="Edit Round {{ $r }} rate for {{ $eu->full_name }}"
-                                                onclick="openRoundRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $r }}, {{ json_encode($cell['custom'] ? (float) $cellRate : null) }}, {{ json_encode((float) $data['rate']) }})">
-                                            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                        </button>
-                                    </div>
+                                            <button type="button" class="chip-mini chip-edit" title="Edit Round {{ $r }} rate for {{ $eu->full_name }}"
+                                                    onclick="openRoundRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $r }}, {{ json_encode($cell['custom'] ? (float) $cellRate : null) }}, {{ json_encode((float) $data['rate']) }})">
+                                                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            </button>
+                                        </div>
+                                    </form>
                                 @endif
                             </td>
                         @endforeach
@@ -374,31 +374,28 @@
 
     .inline-pay-form { display: inline; margin: 0; padding: 0; }
 
-    /* Unpaid cell: the pay chip + a small inline edit-rate button */
-    .chip-cell { display: inline-flex; align-items: center; gap: 1px; }
-    .chip-cell .chip { min-width: 50px; padding: 6px 8px; }
-    .chip-edit {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 24px; height: 28px; padding: 0;
-        background: transparent; color: #94a3b8; border: 0; border-radius: 6px;
-        cursor: pointer; opacity: .85; transition: color .12s, background .12s, opacity .12s;
+    /* Unpaid cell: big $ chip on top, small "Free" + edit-rate beneath it. */
+    .chip-stack { display: inline-flex; flex-direction: column; gap: 4px; align-items: stretch; min-width: 62px; margin: 0; }
+    .chip-stack .chip { width: 100%; min-width: 0; padding: 7px 8px; }
+    .chip-actions { display: flex; gap: 4px; }
+    .chip-mini {
+        flex: 1; display: inline-flex; align-items: center; justify-content: center;
+        padding: 4px 6px; border-radius: 7px; font-size: 11px; font-weight: 700; line-height: 1;
+        cursor: pointer; transition: background .12s, color .12s, border-color .12s;
     }
-    .chip-edit:hover { color: #6d28d9; background: #f5f3ff; opacity: 1; }
+    /* "Free / test" — mark a round done at $0 (no revenue, no commission) */
+    .chip-free { background: #f1f5f9; color: #64748b; border: 1px solid #d7dee8; }
+    .chip-free:hover { background: #e2e8f0; color: #475569; border-color: #94a3b8; }
+    /* Edit this round's rate */
+    .chip-edit { background: #fff; color: #a3aec0; border: 1px solid #e6ebf2; }
+    .chip-edit:hover { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+    .chip-edit svg { width: 12px; height: 12px; }
     /* Stronger affordance when a custom rate is already set on this round */
-    .chip-cell:has(.chip-custom) .chip-edit { color: #8b5cf6; opacity: 1; }
-    .chip-cell:has(.chip-custom) .chip-edit:hover { color: #6d28d9; }
+    .chip-stack:has(.chip-custom) .chip-edit { color: #8b5cf6; border-color: #ddd6fe; }
+    .chip-stack:has(.chip-custom) .chip-edit:hover { color: #6d28d9; }
 
-    /* "Free / test" button — mark a round done at $0 (no revenue, no commission) */
-    .chip-free {
-        min-width: 0; padding: 6px 9px; margin-left: 2px;
-        background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 8px;
-        font-size: 12px; font-weight: 700; cursor: pointer; transition: background .12s, border-color .12s;
-    }
-    .chip-free:hover { background: #e2e8f0; border-color: #94a3b8; }
     /* A round closed as free/test — slate instead of the green paid chip */
-    .chip-free-paid {
-        background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1;
-    }
+    .chip-free-paid { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; }
     .chip-free-paid:hover { background: #e2e8f0; border-color: #94a3b8; }
 
     /* Per-client rate pill (next to client name) */
