@@ -40,8 +40,9 @@ class ClientController extends Controller
             'pay_cycle_anchor'    => 'nullable|date',
         ]);
 
-        $data['admin_id']    = Auth::guard('admin')->id();
-        $data['monthly_fee'] = $data['monthly_fee'] ?? 149.00;
+        $data['admin_id']            = Auth::guard('admin')->id();
+        $data['monthly_fee']         = $data['monthly_fee'] ?? 149.00;
+        $data['referred_by_chantal'] = $request->boolean('referred_by_chantal');
 
         // Clear irrelevant fields for the chosen model so we don't store mixed config.
         if ($data['compensation_model'] === 'per_round') {
@@ -82,6 +83,8 @@ class ClientController extends Controller
         if (empty($data['password'])) {
             unset($data['password']);
         }
+
+        $data['referred_by_chantal'] = $request->boolean('referred_by_chantal');
 
         $client->update($data);
 

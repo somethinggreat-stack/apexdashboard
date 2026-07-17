@@ -41,6 +41,12 @@
                     <option value="inactive" @selected(old('status', $client->status) === 'inactive')>Inactive</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" name="referred_by_chantal" value="1" style="width:18px; height:18px;" {{ old('referred_by_chantal', $client->referred_by_chantal) ? 'checked' : '' }}>
+                    <span>Referred by Chantal <span class="muted" style="font-weight:400;">— she earns $5 for each client payment of this business owner</span></span>
+                </label>
+            </div>
         </div>
 
         <div class="form-actions">

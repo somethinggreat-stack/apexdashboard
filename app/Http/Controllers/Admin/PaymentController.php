@@ -88,13 +88,20 @@ class PaymentController extends Controller
             'notes'       => 'nullable|string|max:1000',
         ]);
 
-        // Sensible defaults — VA can mark paid in 1 click without filling a form.
-        // Default amount uses the client's effective rate (their custom per-round
-        // fee if set, otherwise the BO default).
-        if (($data['amount'] ?? null) === null) {
+        // Test/free: closes the round like a normal payment, but at $0 and flagged
+        // so it never counts toward revenue or Chantal's commission.
+        $isFree = $request->boolean('free');
+
+        if ($isFree) {
+            $data['amount'] = 0;
+        } elseif (($data['amount'] ?? null) === null) {
+            // Sensible default — mark paid in 1 click. Uses the client's effective
+            // rate (their custom per-round fee if set, otherwise the BO default).
             $endUser = EndUser::with('client')->find($data['end_user_id']);
             $data['amount'] = $endUser ? $endUser->effectiveRoundFee((int) $data['round']) : (float) ($client->per_round_fee ?? 0);
         }
+
+        $data['is_free'] = $isFree;
         $data['paid_at'] = $data['paid_at'] ?? now()->toDateString();
         $data['created_by_admin_id'] = Auth::guard('admin')->id();
 
