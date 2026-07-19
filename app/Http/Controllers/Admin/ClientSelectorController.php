@@ -77,7 +77,9 @@ class ClientSelectorController extends Controller
             return redirect($redirect);
         }
 
-        return redirect()->route('admin.end-users.index');
+        // Picking a business owner lands on their Clients list (the main working
+        // list), not In Progress.
+        return redirect()->route('admin.client-list');
     }
 
     public function clear(Request $request)
