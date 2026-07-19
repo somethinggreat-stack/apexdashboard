@@ -152,6 +152,10 @@
         background:
             linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
             #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
+        /* WebP where supported (13x smaller); the PNG above stays the fallback. */
+        background:
+            linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
+            #12163a image-set(url("{{ asset('Images/heroimage.webp') }}") type("image/webp"), url("{{ asset('Images/heroimage.png') }}") type("image/png")) center/cover no-repeat;
         box-shadow:0 12px 30px rgba(15,23,42,.18);
     }
     .dash-hero-body {

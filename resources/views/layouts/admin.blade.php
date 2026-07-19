@@ -55,6 +55,12 @@
                 linear-gradient(180deg, rgba(12,17,48,.95) 0%, rgba(20,26,62,.92) 55%, rgba(27,19,80,.91) 100%),
                 #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
         }
+        /* WebP where supported (13x smaller); PNG above stays the fallback. */
+        .sidebar {
+            background:
+                linear-gradient(180deg, rgba(12,17,48,.95) 0%, rgba(20,26,62,.92) 55%, rgba(27,19,80,.91) 100%),
+                #12163a image-set(url("{{ asset('Images/heroimage.webp') }}") type("image/webp"), url("{{ asset('Images/heroimage.png') }}") type("image/png")) center/cover no-repeat;
+        }
 
         /* Big logo at the top, with room beneath so the picker box starts lower
            — matches the super-admin sidebar. */
@@ -62,6 +68,7 @@
             flex-shrink:0; display:flex; align-items:center; justify-content:center;
             padding:20px 16px 26px; border-bottom:0;
         }
+        .va-brand picture { display:contents; }   /* no extra box around the logo */
         .va-brand img {
             width:100%; max-width:216px; height:auto; max-height:68px;
             object-fit:contain; display:block;
@@ -103,7 +110,10 @@
         @endphp
 
         <div class="va-brand">
-            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
+            <picture>
+                <source srcset="{{ asset('Images/whitelogo.webp') }}" type="image/webp">
+                <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" decoding="async">
+            </picture>
         </div>
 
         @unless ($roleLeads)

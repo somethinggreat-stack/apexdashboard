@@ -18,7 +18,14 @@
                 #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat !important;
             border-right: 0 !important;
         }
+        /* WebP where supported (13x smaller); PNG above stays the fallback. */
+        .sidebar {
+            background:
+                linear-gradient(180deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.91) 55%, rgba(27,19,80,.90) 100%),
+                #12163a image-set(url("{{ asset('Images/heroimage.webp') }}") type("image/webp"), url("{{ asset('Images/heroimage.png') }}") type("image/png")) center/cover no-repeat !important;
+        }
         .sidebar-brand { text-align:center; padding-top:6px; }
+        .sidebar-brand picture { display:contents; }   /* no extra box around the logo */
         .sidebar-brand .brand-logo { max-width:150px; max-height:50px; width:auto; display:block; margin:0 auto 8px; }
         .sidebar-brand strong { color:#fff !important; letter-spacing:.2px; }
         .sidebar-brand .badge-portal {
@@ -121,7 +128,10 @@
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" class="brand-logo" onerror="this.style.display='none'">
+            <picture>
+                <source srcset="{{ asset('Images/whitelogo.webp') }}" type="image/webp">
+                <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" class="brand-logo" decoding="async" onerror="this.style.display='none'">
+            </picture>
             <span class="badge-portal">Client Portal</span>
         </div>
         @php

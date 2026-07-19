@@ -25,7 +25,10 @@
 
     <aside class="pro-sidebar" id="proSidebar">
         <div class="pro-brand">
-            <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions">
+            <picture>
+                <source srcset="{{ asset('Images/whitelogo.webp') }}" type="image/webp">
+                <img src="{{ asset('Images/whitelogo.png') }}" alt="Apex Growth Solutions" decoding="async">
+            </picture>
         </div>
 
         @isset($selectedClient)
