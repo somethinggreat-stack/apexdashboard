@@ -261,6 +261,8 @@
     <script src="{{ asset('js/walker.js') }}" defer></script>
 @endif
 
+@include('partials.idle-logout', ['logoutRoute' => route('admin.logout')])
+
 <script src="{{ asset('js/admin.js') }}"></script>
 <script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>

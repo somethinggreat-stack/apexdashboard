@@ -32,7 +32,15 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    /*
+     * 15 minutes, to back the 10-minute inactivity policy enforced in the
+     * browser (warning at 10, sign-out at 11). Active users are never affected:
+     * the idle-timeout script sends a heartbeat every 4 minutes while someone is
+     * working, so a session can't lapse under an open page. The extra few
+     * minutes are slack so the browser countdown always wins the race, and it
+     * means a closed laptop can't leave a live session on client SSN data.
+     */
+    'lifetime' => env('SESSION_LIFETIME', 15),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

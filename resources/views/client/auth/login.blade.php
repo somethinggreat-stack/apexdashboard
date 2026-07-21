@@ -33,6 +33,11 @@
             background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
             border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px;
         }
+        /* Informational (session expired / signed out) — not an error */
+        .notice {
+            background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+            border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px;
+        }
         .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
         .field input[type=email], .field input[type=password] {
@@ -69,6 +74,10 @@
 
             <h2>Welcome back</h2>
             <div class="sub">Sign in to manage and review your credit repair clients.</div>
+
+            @if (session('status'))
+                <div class="notice">{{ session('status') }}</div>
+            @endif
 
             @if ($errors->any())
                 <div class="alert">
