@@ -20,7 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Server-to-server intake API (key-authenticated) — not a browser form.
-        $middleware->validateCsrfTokens(except: ['api/intake']);
+        // Server-to-server intake endpoints are key-authenticated, not session-based.
+        // 'partner-intake' is the same endpoint off the /api prefix (WAF workaround).
+        $middleware->validateCsrfTokens(except: ['api/intake', 'partner-intake']);
 
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('business-owner') || $request->is('business-owner/*')) {

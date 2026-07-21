@@ -50,14 +50,94 @@ class IntakeController extends Controller
             return response()->json(['ok' => false, 'message' => 'Invalid or missing intake key.'], 401);
         }
 
-        $validator = validator($request->all(), $this->rules($client));
+        // Documents normally arrive as multipart file parts. Some hosts run a WAF
+        // that rejects any multipart upload before PHP even runs (HTTP 406), which
+        // would make the endpoint unusable for those partners. So a document may
+        // instead be sent as base64 in a plain JSON body — same validation, same
+        // private storage. Multipart remains the default and is unchanged.
+        [$base64Docs, $base64Errors] = $this->decodeBase64Documents($request);
+
+        if ($base64Errors) {
+            return response()->json(['ok' => false, 'errors' => $base64Errors], 422);
+        }
+
+        $rules = $this->rules($client);
+        // A document supplied as base64 no longer needs a file part for that field.
+        foreach (array_keys($base64Docs) as $field) {
+            $rules[$field] = 'nullable';
+        }
+
+        $validator = validator($request->all(), $rules);
         if ($validator->fails()) {
             return response()->json(['ok' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $endUser = $this->createEndUser($client, $validator->validated(), $request);
+        $endUser = $this->createEndUser($client, $validator->validated(), $request, $base64Docs);
 
         return response()->json(['ok' => true, 'id' => $endUser->id], 201);
+    }
+
+    /**
+     * Pull any base64-encoded documents off the request.
+     *
+     * Accepts "<field>_base64" (e.g. drivers_license_base64), optionally with
+     * "<field>_filename". Returns [decoded, errors]; decoded is
+     * ['drivers_license' => ['contents' => binary, 'filename' => safe name], ...].
+     * Applies the same size and type limits as the multipart path.
+     */
+    private function decodeBase64Documents(Request $request): array
+    {
+        $allowed = ['drivers_license', 'ssn_card', 'proof_of_address'];
+        $maxBytes = 10 * 1024 * 1024;                       // 10 MB, matches max:10240
+        $allowedMimes = [
+            'application/pdf' => 'pdf',
+            'image/jpeg'      => 'jpg',
+            'image/png'       => 'png',
+            'image/webp'      => 'webp',
+        ];
+
+        $decoded = [];
+        $errors  = [];
+
+        foreach ($allowed as $field) {
+            $raw = $request->input($field . '_base64');
+            if (!is_string($raw) || $raw === '') {
+                continue;
+            }
+
+            // tolerate a data: URI prefix and whitespace/newlines
+            if (str_contains($raw, ',') && str_starts_with(trim($raw), 'data:')) {
+                $raw = substr($raw, strpos($raw, ',') + 1);
+            }
+            $binary = base64_decode(preg_replace('/\s+/', '', $raw), true);
+
+            if ($binary === false || $binary === '') {
+                $errors[$field . '_base64'] = ['The ' . $field . ' base64 payload could not be decoded.'];
+                continue;
+            }
+
+            if (strlen($binary) > $maxBytes) {
+                $errors[$field . '_base64'] = ['The ' . $field . ' may not be greater than 10 MB.'];
+                continue;
+            }
+
+            // Trust the bytes, not the caller: sniff the real type.
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: '';
+            if (!isset($allowedMimes[$mime])) {
+                $errors[$field . '_base64'] = ['The ' . $field . ' must be a PDF, JPG, PNG or WEBP file.'];
+                continue;
+            }
+
+            $given = (string) $request->input($field . '_filename', '');
+            $name  = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($given));
+            if ($name === '' || !str_contains($name, '.')) {
+                $name = $field . '.' . $allowedMimes[$mime];
+            }
+
+            $decoded[$field] = ['contents' => $binary, 'filename' => $name];
+        }
+
+        return [$decoded, $errors];
     }
 
     /* ---------------- shared ---------------- */
@@ -92,7 +172,7 @@ class IntakeController extends Controller
         ];
     }
 
-    private function createEndUser(Client $client, array $data, Request $request): EndUser
+    private function createEndUser(Client $client, array $data, Request $request, array $base64Docs = []): EndUser
     {
         // Force the BO's fixed monitoring provider when one is configured.
         if ($client->intake_monitoring_provider) {
@@ -140,6 +220,12 @@ class IntakeController extends Controller
                 $file = $request->file($field);
                 $filename = time() . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
                 $paths[$column] = $file->storeAs("uploads/{$endUser->id}/identity", $filename, 'private');
+            } elseif (isset($base64Docs[$field])) {
+                // Same destination and private disk as an uploaded file.
+                $filename = time() . '_' . $base64Docs[$field]['filename'];
+                $path = "uploads/{$endUser->id}/identity/{$filename}";
+                \Illuminate\Support\Facades\Storage::disk('private')->put($path, $base64Docs[$field]['contents']);
+                $paths[$column] = $path;
             }
         }
         if ($paths) {

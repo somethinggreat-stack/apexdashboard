@@ -51,6 +51,10 @@ Route::middleware('throttle:20,1')->group(function () {
 
 // Server-to-server intake API (key-authenticated; CSRF-exempt via bootstrap/app.php)
 Route::post('/api/intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('api.intake');
+// Same endpoint off the /api prefix. Some WAFs block multipart uploads under
+// /api/* before PHP runs (HTTP 406); partners can post here instead. Identical
+// controller, identical key auth — only the path differs.
+Route::post('/partner-intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('partner.intake');
 
 /*
 |--------------------------------------------------------------------------
