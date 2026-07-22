@@ -25,14 +25,18 @@
             <thead>
                 <tr>
                     <th>Client Name</th>
+                    <th>Round</th>
+                    <th>Round Started</th>
+                    <th>Next Round Date</th>
+                    <th>Days Left</th>
                     <th>Error Type</th>
                     <th>Reason</th>
-                    <th>Email</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($endUsers as $eu)
+                    @php $dl = $eu->days_left_in_round; @endphp
                     <tr>
                         <td>
                             <div class="pro-name">
@@ -42,9 +46,32 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
+                        <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
+                        <td>
+                            <div class="pro-round-dates">
+                                @forelse ($eu->round_timeline as $label => $date)
+                                    <div>
+                                        <b>{{ \Illuminate\Support\Str::before($label, ' Round') }}</b>
+                                        <span>{{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}</span>
+                                    </div>
+                                @empty
+                                    —
+                                @endforelse
+                            </div>
+                        </td>
+                        <td>
+                            <span class="pro-next {{ $dl !== null && $dl < 0 ? 'over' : '' }}">
+                                {{ $eu->next_round_date ? \Carbon\Carbon::parse($eu->next_round_date)->format('M j, Y') : '—' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="pro-days {{ $dl !== null && $dl < 0 ? 'over' : ($dl !== null && $dl <= 3 ? 'soon' : '') }}"
+                                  title="{{ $eu->round_end_date ? 'Current round ends '.\Carbon\Carbon::parse($eu->round_end_date)->format('M j, Y') : '' }}">
+                                {{ $dl === null ? '—' : $dl }}
+                            </span>
+                        </td>
                         <td><span class="re-type">{{ $eu->error_type ?: '—' }}</span></td>
                         <td><span class="re-reason">{{ $eu->intake_review_note ?: '—' }}</span></td>
-                        <td>{{ $eu->email }}</td>
                         <td>
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
@@ -64,7 +91,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">No round errors — all clients are on track.</td></tr>
+                    <tr><td colspan="8" class="empty">No round errors — all clients are on track.</td></tr>
                 @endforelse
             </tbody>
         </table>
