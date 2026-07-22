@@ -255,6 +255,12 @@ class EndUserController extends Controller
             $data['next_round_override'] = $data['next_round_override'] ?? null;
         }
 
+        // Inline Round-Errors edit: the reason is stored in intake_review_note.
+        if ($request->has('reason')) {
+            $data['intake_review_note'] = $data['reason'] ?? null;
+            unset($data['reason']);
+        }
+
         // Strip empty secrets so they don't overwrite existing values
         if (array_key_exists('credit_monitoring_password', $data) && $data['credit_monitoring_password'] === null) {
             unset($data['credit_monitoring_password']);
@@ -555,6 +561,9 @@ class EndUserController extends Controller
             // Inline date edits from the Clients list (both optional).
             'round_started'               => 'sometimes|nullable|date',
             'next_round_override'         => 'sometimes|nullable|date',
+            // Inline edits from the Round Errors list.
+            'error_type'                  => 'sometimes|nullable|string|max:120',
+            'reason'                      => 'sometimes|nullable|string|max:1000',
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
             'rounds'                      => 'nullable|array|max:5',
             'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),

@@ -70,8 +70,18 @@
                                 {{ $dl === null ? '—' : $dl }}
                             </span>
                         </td>
-                        <td><span class="re-type">{{ $eu->error_type ?: '—' }}</span></td>
-                        <td><span class="re-reason">{{ $eu->intake_review_note ?: '—' }}</span></td>
+                        <td>
+                            <span class="re-edit" data-id="{{ $eu->id }}" data-field="error_type" data-current="{{ $eu->error_type }}" title="Click to edit">
+                                <span class="re-type">{{ $eu->error_type ?: '—' }}</span>
+                                <span class="re-pencil" aria-hidden="true">✎</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="re-edit re-edit-multi" data-id="{{ $eu->id }}" data-field="reason" data-current="{{ $eu->intake_review_note }}" title="Click to edit">
+                                <span class="re-reason">{{ $eu->intake_review_note ?: '—' }}</span>
+                                <span class="re-pencil" aria-hidden="true">✎</span>
+                            </span>
+                        </td>
                         <td>
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
@@ -102,6 +112,66 @@
 <style>
     .re-type { display:inline-block; padding:3px 10px; border-radius:999px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:12.5px; font-weight:600; }
     .re-reason { display:inline-block; max-width:360px; color:#b45309; font-size:13px; white-space:pre-wrap; word-break:break-word; }
+    /* click-to-edit error type + reason */
+    .re-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    .re-edit-multi { max-width:380px; }
+    .re-pencil { opacity:0; transition:opacity .15s; font-size:11px; color:var(--pro-muted); }
+    .re-edit:hover .re-pencil { opacity:1; }
+    .re-edit.editing { display:inline-flex; flex-wrap:wrap; gap:6px; align-items:flex-start; }
+    .re-edit input[type="text"], .re-edit textarea {
+        font-size:12.5px; padding:5px 8px; border-radius:6px; border:1px solid var(--pro-line);
+        background:#fff; color:var(--pro-text); min-width:180px; font-family:inherit;
+    }
+    .re-edit textarea { min-width:260px; resize:vertical; }
+    .re-save   { font-size:11px; padding:4px 10px; cursor:pointer; background:#16a34a; color:#fff; border:0; border-radius:5px; }
+    .re-cancel { font-size:11px; padding:4px 10px; cursor:pointer; background:var(--pro-line); color:var(--pro-text-soft); border:0; border-radius:5px; }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (!meta) return;
+    var csrf = meta.getAttribute('content');
+    var tpl = "{{ url('admin/end-users') }}/__ID__";
+    function stop(e) { e.preventDefault(); e.stopPropagation(); }
+
+    document.querySelectorAll('.re-edit').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            if (el.classList.contains('editing')) return;
+            stop(e);
+            var multi = el.classList.contains('re-edit-multi');
+            var input = document.createElement(multi ? 'textarea' : 'input');
+            if (!multi) input.type = 'text';
+            if (multi) input.rows = 2;
+            input.value = el.dataset.current || '';           // set as value — no escaping needed
+            var save = document.createElement('button'); save.type = 'button'; save.className = 're-save'; save.textContent = 'Save';
+            var cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 're-cancel'; cancel.textContent = '×';
+
+            el.classList.add('editing');
+            el.innerHTML = '';
+            el.appendChild(input); el.appendChild(save); el.appendChild(cancel);
+            input.addEventListener('click', stop);
+            input.focus();
+
+            cancel.addEventListener('click', function (e2) { stop(e2); window.location.reload(); });
+            save.addEventListener('click', function (e2) {
+                stop(e2);
+                var fd = new FormData();
+                fd.append('_method', 'PUT');
+                fd.append('_token', csrf);
+                fd.append(el.dataset.field, input.value);      // blank clears
+                fetch(tpl.replace('__ID__', el.dataset.id), {
+                    method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                }).then(function (r) {
+                    if (r.ok) window.location.reload();
+                    else alert('Could not save.');
+                });
+            });
+        });
+    });
+})();
+</script>
 @endpush
 @endsection
