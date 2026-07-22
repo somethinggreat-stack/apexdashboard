@@ -319,6 +319,51 @@ class EndUserController extends Controller
         return view($this->adminView('admin.end-users.errors'), compact('endUsers'));
     }
 
+    /** Round Errors — clients past round 1 pulled out with an import problem. */
+    public function roundErrors()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->notHeld()
+            ->roundError()
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view($this->adminView('admin.end-users.round-errors'), compact('endUsers'));
+    }
+
+    /** Move a Clients-list client into Round Errors with a type + reason. */
+    public function moveToRoundError(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'error_type' => 'required|string|max:120',
+            'reason'     => 'nullable|string|max:1000',
+        ]);
+
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update([
+            'intake_status'      => 'round_error',
+            'error_type'         => $data['error_type'],
+            'intake_review_note' => $data['reason'] ?? null,
+        ]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} moved to Round Errors.");
+    }
+
+    /** Resolve a round error — send the client back to the Clients list. */
+    public function resolveRoundError(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update([
+            'intake_status'      => 'done',
+            'error_type'         => null,
+            'intake_review_note' => null,
+        ]);
+
+        return redirect()->back()
+            ->with('status', "{$endUser->full_name} resolved — back in Clients.");
+    }
+
     /** Hold / Pause — clients parked out of the normal buckets. */
     public function holdList()
     {

@@ -191,6 +191,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('hold', [Admin\EndUserController::class, 'holdList'])->name('hold');
             Route::post('end-users/{id}/hold', [Admin\EndUserController::class, 'hold'])->name('end-users.hold');
             Route::post('end-users/{id}/resume', [Admin\EndUserController::class, 'resume'])->name('end-users.resume');
+            // Round Errors — 2nd/3rd round import problems, moved from the Clients list
+            Route::get('round-errors', [Admin\EndUserController::class, 'roundErrors'])->name('round-errors');
+            Route::post('end-users/{id}/to-round-error', [Admin\EndUserController::class, 'moveToRoundError'])->name('end-users.to-round-error');
+            Route::post('end-users/{id}/resolve-round-error', [Admin\EndUserController::class, 'resolveRoundError'])->name('end-users.resolve-round-error');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
@@ -262,6 +266,9 @@ Route::prefix('business-owner')->name('client.')->group(function () {
 
         // Hold / Pause — clients the team parked (BOs can view only)
         Route::get('hold', [Client\EndUserController::class, 'holdList'])->name('hold');
+
+        // Round Errors — 2nd/3rd round problems the team is fixing (BOs can view only)
+        Route::get('round-errors', [Client\EndUserController::class, 'roundErrors'])->name('round-errors');
 
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');

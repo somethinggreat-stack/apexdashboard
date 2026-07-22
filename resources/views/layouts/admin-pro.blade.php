@@ -87,7 +87,7 @@
                 @php $errorCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
                 <a href="{{ route('admin.errors') }}" class="{{ request()->routeIs('admin.errors') ? 'active' : '' }}">
                     <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
-                    Errors
+                    New Client Errors
                     @if ($errorCount > 0)<span class="pro-count">{{ $errorCount }}</span>@endif
                 </a>
 
@@ -99,6 +99,13 @@
                 <a href="{{ route('admin.client-list') }}" class="{{ request()->routeIs('admin.client-list') || request()->routeIs('admin.end-users.show') ? 'active' : '' }}">
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     Clients
+                </a>
+
+                @php $roundErrCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'round_error')->count(); @endphp
+                <a href="{{ route('admin.round-errors') }}" class="{{ request()->routeIs('admin.round-errors') ? 'active' : '' }}">
+                    <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12a9.5 9.5 0 1 0 2.8-6.7"/><polyline points="2.5 4 2.5 8 6.5 8"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="15.5" x2="12" y2="15.5"/></svg>
+                    Round Errors
+                    @if ($roundErrCount > 0)<span class="pro-count">{{ $roundErrCount }}</span>@endif
                 </a>
 
                 @php $holdCount = \App\Models\EndUser::forClient($selectedClient->id)->onHold()->count(); @endphp

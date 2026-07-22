@@ -90,20 +90,26 @@ class EndUser extends Model
     public function scopeClientsList($query)
     {
         return $query->where(fn ($q) => $q->whereNull('intake_status')
-            ->orWhereNotIn('intake_status', ['pending_review', 'error']));
+            ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']));
     }
 
     /** "In Progress" — actively worked clients (not new, not error, not done). */
     public function scopeInProgress($query)
     {
         return $query->where(fn ($q) => $q->whereNull('intake_status')
-            ->orWhereNotIn('intake_status', ['pending_review', 'error', 'done']));
+            ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error', 'done']));
     }
 
     /** "Clients Done" — finished clients. Moved here only via the button. */
     public function scopeDone($query)
     {
         return $query->where('intake_status', 'done');
+    }
+
+    /** "Round Errors" — clients past round 1 pulled out with an import problem. */
+    public function scopeRoundError($query)
+    {
+        return $query->where('intake_status', 'round_error');
     }
 
     /** On Hold / Pause — parked out of the normal buckets. */

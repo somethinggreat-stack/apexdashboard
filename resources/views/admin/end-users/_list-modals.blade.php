@@ -255,6 +255,34 @@
     </div>
 </div>
 
+{{-- Move a Clients-list client to Round Errors (asks for a type + reason) --}}
+<div id="roundErrorModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Move to Round Errors</h3>
+            <button class="modal-close" onclick="closeModal('roundErrorModal')">&times;</button>
+        </div>
+        <form method="POST" id="roundErrorForm" action="">
+            @csrf
+            <p class="muted" id="roundErrorWho" style="margin:0 0 12px; font-size:13px;"></p>
+            <div class="form-group">
+                <label>Error Type *</label>
+                <input type="text" name="error_type" maxlength="120" required
+                       placeholder="e.g. Import failed, Login not working, Score not updated">
+            </div>
+            <div class="form-group">
+                <label>Reason</label>
+                <textarea name="reason" rows="3" maxlength="1000"
+                          placeholder="What happened / what needs fixing (shown on their line)"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('roundErrorModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Move to Round Errors</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @if ($hasErrors)
     @push('scripts')
     <script>

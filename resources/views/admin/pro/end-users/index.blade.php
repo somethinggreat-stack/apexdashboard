@@ -257,11 +257,18 @@
                                     </form>
                                 @endunless
 
-                                <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" class="send-back-form">
-                                    @csrf
-                                    <input type="hidden" name="note" value="">
-                                    <button type="button" class="pro-act warn" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
-                                </form>
+                                @if ($isDone)
+                                    {{-- Clients list (past round 1): a later-round problem goes to Round Errors with a type + reason. --}}
+                                    <button type="button" class="pro-act warn"
+                                            onclick="openRoundError({{ $eu->id }}, '{{ addslashes($eu->full_name) }}')">Move to Round Errors</button>
+                                @else
+                                    {{-- In Progress (1st round): a new-client problem goes to New Client Errors. --}}
+                                    <form method="POST" action="{{ route('admin.end-users.to-errors', $eu->id) }}" class="send-back-form">
+                                        @csrf
+                                        <input type="hidden" name="note" value="">
+                                        <button type="button" class="pro-act warn" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
+                                    </form>
+                                @endif
 
                                 <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}">
                                     @csrf

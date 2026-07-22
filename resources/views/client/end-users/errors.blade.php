@@ -1,12 +1,12 @@
 @extends('layouts.client')
 
-@section('title', 'Errors')
+@section('title', 'New Client Errors')
 
 @section('content')
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 style="margin:0;">Errors <span class="err-count">{{ $endUsers->count() }}</span></h2>
+            <h2 style="margin:0;">New Client Errors <span class="err-count">{{ $endUsers->count() }}</span></h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 Clients our team pulled out of your main list because something needs fixing
                 (bad login, missing document, billing, etc.). We're on it — they'll move back into

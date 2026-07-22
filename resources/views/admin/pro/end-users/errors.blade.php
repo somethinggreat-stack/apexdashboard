@@ -1,7 +1,7 @@
 @extends('layouts.admin-pro')
 
-@section('title', 'Errors')
-@section('subtitle', 'Clients pulled out of the main list because something needs fixing.')
+@section('title', 'New Client Errors')
+@section('subtitle', 'New / 1st-round clients pulled out because something needs fixing.')
 
 @section('content')
 <div class="pro-panel">
@@ -10,7 +10,7 @@
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#f87171,#ef4444);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </span>
-            <h2>Errors</h2>
+            <h2>New Client Errors</h2>
             <span class="pro-panel-count danger">{{ $endUsers->count() }}</span>
         </div>
     </div>

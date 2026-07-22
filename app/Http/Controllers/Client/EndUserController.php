@@ -198,6 +198,18 @@ class EndUserController extends Controller
         return view('client.end-users.hold', compact('endUsers'));
     }
 
+    /** Round Errors — 2nd/3rd round problems the team is fixing. View only for the BO. */
+    public function roundErrors()
+    {
+        $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->notHeld()
+            ->roundError()
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('client.end-users.round-errors', compact('endUsers'));
+    }
+
     public function create()
     {
         return view('client.end-users.create');

@@ -133,6 +133,16 @@
         document.getElementById('quickNoteName').textContent = name;
         openModal('quickNoteModal');
     };
+
+    /* --------- move a Clients-list client to Round Errors (type + reason) --------- */
+    window.openRoundError = function (euId, name) {
+        var form = document.getElementById('roundErrorForm');
+        if (!form) return;
+        form.reset();
+        form.action = updateUrlTpl.replace('__ID__', euId) + '/to-round-error';
+        document.getElementById('roundErrorWho').textContent = 'Moving ' + name + ' to Round Errors.';
+        openModal('roundErrorModal');
+    };
 })();
 </script>
 @endpush
