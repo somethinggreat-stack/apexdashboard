@@ -45,9 +45,6 @@
                 <tr class="row-link" data-href="{{ route('client.end-users.show', $eu) }}">
                     <td>
                         <a href="{{ route('client.end-users.show', $eu) }}" class="name-link">{{ $eu->full_name }}</a>
-                        @if ($eu->is_incomplete)
-                            <span class="pill pill-incomplete" title="{{ $eu->incomplete_reason }}">Incomplete</span>
-                        @endif
                     </td>
                     <td class="no-link">{{ $eu->email }}</td>
                     <td class="no-link">{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
@@ -86,9 +83,6 @@
 <style>
     .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
     .name-link:hover { text-decoration:underline; }
-    .pill-incomplete { background:#fee2e2; color:#991b1b; margin-left:6px;
-        padding:2px 10px; border-radius:999px; font-size:11px; font-weight:600;
-        text-transform:uppercase; letter-spacing:.3px; }
 </style>
 @endpush
 @endsection
