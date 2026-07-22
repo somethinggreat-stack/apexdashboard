@@ -252,6 +252,9 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::get('billing', [Client\BillingController::class, 'index'])->name('billing.index');
         Route::get('billing/invoice/{id}', [Client\BillingController::class, 'showInvoice'])->name('billing.invoice.show');
 
+        // Referral commission — visible only to the owner flagged is_commission_referrer (Chantal).
+        Route::get('commissions', [Client\CommissionController::class, 'index'])->name('commissions.index');
+
         // New Clients — intake submissions pending VA review (BOs can view only)
         Route::get('new-clients', [Client\EndUserController::class, 'newClients'])->name('new-clients');
 

@@ -186,6 +186,12 @@
                 <svg class="i-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 <span>Billing</span>
             </a>
+            @if ($bo?->is_commission_referrer)
+                <a href="{{ route('client.commissions.index') }}" class="{{ request()->routeIs('client.commissions.*') ? 'active' : '' }}">
+                    <svg class="i-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M20 9l1.5-1.5M20 15l1.5 1.5"/></svg>
+                    <span>Commissions</span>
+                </a>
+            @endif
         </nav>
         <form method="POST" action="{{ route('client.logout') }}" class="sidebar-logout">
             @csrf
