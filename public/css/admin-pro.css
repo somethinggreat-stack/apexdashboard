@@ -582,6 +582,9 @@ html, body { height: 100%; }
 .pro-table .inline-pencil { opacity: 0; transition: opacity .15s; font-size: 11px; color: var(--pro-muted); }
 .pro-table .inline-edit:hover .inline-pencil { opacity: 1; }
 .pro-table .inline-edit select { font-size: 12px; padding: 3px 6px; min-width: 120px; border-radius: 6px; border: 1px solid var(--pro-line); }
+.pro-table .inline-edit input[type="date"] { font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--pro-line); background: #fff; color: var(--pro-text); }
+/* keep the round-started timeline aligned with its pencil */
+.pro-table .inline-edit-round-started { align-items: flex-start; }
 .pro-table .inline-save   { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #16a34a; color: #fff; border: 0; border-radius: 5px; }
 .pro-table .inline-cancel { font-size: 11px; padding: 3px 9px; cursor: pointer; background: var(--pro-line); color: var(--pro-text-soft); border: 0; border-radius: 5px; }
 

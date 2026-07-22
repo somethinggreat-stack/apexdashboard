@@ -134,6 +134,43 @@
         openModal('quickNoteModal');
     };
 
+    /* --------- inline date edits: Round Started + Next Round Date --------- */
+    function inlineDateEdit(selector, field) {
+        document.querySelectorAll(selector).forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                if (el.classList.contains('editing')) return;
+                inlineStop(e);
+                var current = el.dataset.current || '';
+                el.classList.add('editing');
+                el.innerHTML =
+                    '<input type="date" value="' + current + '">' +
+                    '<button class="inline-save" type="button">Save</button>' +
+                    '<button class="inline-cancel" type="button">×</button>';
+                var input = el.querySelector('input');
+                input.addEventListener('click', inlineStop);
+                input.focus();
+                el.querySelector('.inline-cancel').addEventListener('click', function (e2) {
+                    inlineStop(e2); window.location.reload();
+                });
+                el.querySelector('.inline-save').addEventListener('click', function (e2) {
+                    inlineStop(e2);
+                    var fd = new FormData();
+                    fd.append('_method', 'PUT');
+                    fd.append('_token', csrf);
+                    fd.append(field, input.value);   // blank clears / reverts to auto
+                    fetch(updateUrlTpl.replace('__ID__', el.dataset.id), {
+                        method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                    }).then(function (r) {
+                        if (r.ok) window.location.reload();
+                        else alert('Could not save the date.');
+                    });
+                });
+            });
+        });
+    }
+    inlineDateEdit('.inline-edit-round-started', 'round_started');
+    inlineDateEdit('.inline-edit-next', 'next_round_override');
+
     /* --------- move a Clients-list client to Round Errors (type + reason) --------- */
     window.openRoundError = function (euId, name) {
         var form = document.getElementById('roundErrorForm');

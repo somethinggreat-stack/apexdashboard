@@ -50,9 +50,11 @@ class EndUser extends Model
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
+        'next_round_override',
     ];
     protected $casts = [
         'start_date' => 'date',
+        'next_round_override' => 'date',
         'held_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
@@ -353,11 +355,28 @@ class EndUser extends Model
      */
     public function getNextRoundDateAttribute(): ?string
     {
+        // A hand-set override (from the Clients list) wins over the auto date.
+        if ($this->next_round_override) {
+            return Carbon::parse($this->next_round_override)->toDateString();
+        }
         $start = $this->current_round_start_date;
         if (!$start) {
             return null;
         }
         return Carbon::parse($start)->addMonthNoOverflow()->toDateString();
+    }
+
+    /** The label of the round the client is currently on (highest selected). */
+    public function getCurrentRoundLabelAttribute(): string
+    {
+        $selected = $this->rounds ?? [];
+        $highest = '1st Round';
+        foreach (self::ROUND_OPTIONS as $label) {
+            if (in_array($label, $selected, true)) {
+                $highest = $label;
+            }
+        }
+        return $highest;
     }
 
     /** The date the current 30-day round is due to end. */

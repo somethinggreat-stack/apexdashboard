@@ -204,21 +204,33 @@
                         </td>
 
                         <td>
-                            <div class="pro-round-dates">
-                                @forelse ($eu->round_timeline as $label => $date)
-                                    <div>
-                                        <b>{{ \Illuminate\Support\Str::before($label, ' Round') }}</b>
-                                        <span>{{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}</span>
-                                    </div>
-                                @empty
-                                    —
-                                @endforelse
-                            </div>
+                            <span class="inline-edit inline-edit-round-started"
+                                  data-id="{{ $eu->id }}"
+                                  data-current="{{ $eu->current_round_start_date ?? '' }}"
+                                  title="Edit {{ $eu->current_round_label }} start date">
+                                <span class="pro-round-dates">
+                                    @forelse ($eu->round_timeline as $label => $date)
+                                        <div>
+                                            <b>{{ \Illuminate\Support\Str::before($label, ' Round') }}</b>
+                                            <span>{{ $date ? \Carbon\Carbon::parse($date)->format('M j, Y') : '—' }}</span>
+                                        </div>
+                                    @empty
+                                        —
+                                    @endforelse
+                                </span>
+                                <span class="inline-pencil" aria-hidden="true">✎</span>
+                            </span>
                         </td>
 
                         <td>
-                            <span class="pro-next {{ $dl !== null && $dl < 0 ? 'over' : '' }}">
-                                {{ $eu->next_round_date ? \Carbon\Carbon::parse($eu->next_round_date)->format('M j, Y') : '—' }}
+                            <span class="inline-edit inline-edit-next"
+                                  data-id="{{ $eu->id }}"
+                                  data-current="{{ $eu->next_round_date ?? '' }}"
+                                  title="Edit next round date{{ $eu->next_round_override ? ' (manually set)' : '' }}">
+                                <span class="pro-next {{ $dl !== null && $dl < 0 ? 'over' : '' }}">
+                                    {{ $eu->next_round_date ? \Carbon\Carbon::parse($eu->next_round_date)->format('M j, Y') : '—' }}
+                                </span>
+                                <span class="inline-pencil" aria-hidden="true">✎</span>
                             </span>
                         </td>
 

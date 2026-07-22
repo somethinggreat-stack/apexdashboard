@@ -233,6 +233,28 @@ class EndUserController extends Controller
 
         $data = $this->validatedPayload($request, false);
 
+        // Inline "Round Started" edit: the date the current round began. For the
+        // 1st round that IS the client's start_date; for a later round it lives in
+        // round_dates[label]. Blank clears a later round's date (1st falls back to
+        // no start).
+        if ($request->has('round_started')) {
+            $rs = $data['round_started'] ?? null;
+            $label = $endUser->current_round_label;
+            if ($label === '1st Round') {
+                $data['start_date'] = $rs;
+            } else {
+                $dates = $endUser->round_dates ?? [];
+                if ($rs) { $dates[$label] = $rs; } else { unset($dates[$label]); }
+                $data['round_dates'] = $dates ?: null;
+            }
+            unset($data['round_started']);
+        }
+
+        // Inline "Next Round Date" edit: a manual override; blank reverts to auto.
+        if ($request->has('next_round_override')) {
+            $data['next_round_override'] = $data['next_round_override'] ?? null;
+        }
+
         // Strip empty secrets so they don't overwrite existing values
         if (array_key_exists('credit_monitoring_password', $data) && $data['credit_monitoring_password'] === null) {
             unset($data['credit_monitoring_password']);
@@ -530,6 +552,9 @@ class EndUserController extends Controller
             'cfpb_email'                  => 'nullable|email|max:255',
             'cfpb_password'               => 'nullable|string|max:255',
             'start_date'                  => "$req|date",
+            // Inline date edits from the Clients list (both optional).
+            'round_started'               => 'sometimes|nullable|date',
+            'next_round_override'         => 'sometimes|nullable|date',
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
             'rounds'                      => 'nullable|array|max:5',
             'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),
