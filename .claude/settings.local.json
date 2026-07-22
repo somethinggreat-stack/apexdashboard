@@ -3,7 +3,36 @@
     "allow": [
       "Bash(git --version)",
       "Bash(gh --version)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(Copy-Item *)",
+      "Bash(php artisan *)",
+      "Bash(curl -fsS -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8765/trial)",
+      "Bash(curl -fsS -o /dev/null -w \"trial: %{http_code}\\\\n\" http://127.0.0.1:8765/trial)",
+      "Bash(curl -fsS -o /dev/null -w \"home:  %{http_code}\\\\n\" http://127.0.0.1:8765/)",
+      "Bash(curl -fsS -o /dev/null -w \"about: %{http_code}\\\\n\" http://127.0.0.1:8765/about)",
+      "Bash(curl -fsS http://127.0.0.1:8765/trial)",
+      "Bash(jobs -l)",
+      "Bash(pkill -f \"artisan serve\")",
+      "Bash(php -l app/Models/EndUser.php)",
+      "Bash(php -l app/Http/Controllers/Admin/EndUserController.php)",
+      "Bash(php -l database/migrations/2026_05_15_000002_add_rounds_to_end_users.php)",
+      "Bash(php -l app/Models/Message.php)",
+      "Bash(php -l app/Http/Controllers/Admin/MessageController.php)",
+      "Bash(php -l database/migrations/2026_05_15_000003_add_actions_to_messages.php)",
+      "Bash(php -l app/Models/ProcessStep.php)",
+      "Bash(php -l app/Http/Controllers/ServiceAreasController.php)",
+      "Bash(php -l config/service_areas.php)",
+      "Bash(php *)",
+      "Bash(command -v cwebp)",
+      "Bash(cwebp -version)",
+      "Bash(command -v magick)",
+      "Bash(magick --version)",
+      "Bash(grep *)",
+      "Bash(git reset *)"
     ]
   }
 }

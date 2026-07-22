@@ -14,14 +14,6 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-/*
- * Session heartbeat. The idle-timeout script pings this while someone is
- * actively working, so a long session on a single page (reading a client file,
- * filling a form) can't silently expire and turn the next click into an error.
- * Touching it is enough — the session middleware refreshes last-activity.
- */
-Route::get('/session-keepalive', fn () => response()->noContent())->name('session.keepalive');
-
 Route::get('/',         fn () => view('index'))->name('home');
 Route::get('/about',    fn () => view('about'))->name('about');
 Route::get('/contact',  fn () => view('contact'))->name('contact');

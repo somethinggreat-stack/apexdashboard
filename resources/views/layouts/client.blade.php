@@ -215,8 +215,6 @@
         </div>
     </main>
 </div>
-@include('partials.idle-logout', ['logoutRoute' => route('client.logout')])
-
 <script src="{{ asset('js/client.js') }}"></script>
 <script>
 (function () {

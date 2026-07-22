@@ -33,14 +33,11 @@ return [
     */
 
     /*
-     * 15 minutes, to back the 10-minute inactivity policy enforced in the
-     * browser (warning at 10, sign-out at 11). Active users are never affected:
-     * the idle-timeout script sends a heartbeat every 4 minutes while someone is
-     * working, so a session can't lapse under an open page. The extra few
-     * minutes are slack so the browser countdown always wins the race, and it
-     * means a closed laptop can't leave a live session on client SSN data.
+     * Long-lived on purpose: the team stays signed in across days, no idle
+     * logout. (An expired session, if it ever happens, still lands on the login
+     * page gracefully rather than an error — see bootstrap/app.php.)
      */
-    'lifetime' => env('SESSION_LIFETIME', 15),
+    'lifetime' => env('SESSION_LIFETIME', 43200),   // 30 days
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
