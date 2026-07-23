@@ -463,31 +463,35 @@
             <div class="form-group"><label>Date</label><input type="date" name="step_date" value="{{ now()->toDateString() }}" required></div>
             <div id="w4s2-fields" class="w4s2-fields" hidden>
                 <div class="bureau-block">
+                    <h4>Round Results</h4>
+                    <div class="bureau-row">
+                        <div class="form-group"><label>Total Deletions</label><input type="number" name="total_deletions" min="0"></div>
+                        <div class="form-group"><label>Updated to Positive</label><input type="number" name="updated_to_positive" min="0"></div>
+                    </div>
+                    <div class="bureau-row">
+                        <div class="form-group"><label>Updated to Negative</label><input type="number" name="updated_to_negative" min="0"></div>
+                        <div class="form-group"><label>Added</label><input type="number" name="items_added" min="0"></div>
+                    </div>
+                </div>
+                <div class="bureau-block">
                     <h4>Experian</h4>
                     <div class="bureau-row">
-                        <div class="form-group"><label>Accounts Disputed</label><input type="number" name="experian_accounts_disputed" min="0"></div>
-                        <div class="form-group"><label>Inquiries Disputed</label><input type="number" name="experian_inquiries_disputed" min="0"></div>
+                        <div class="form-group"><label>Score Before</label><input type="number" name="experian_score_before" min="300" max="850"></div>
+                        <div class="form-group"><label>Score Now</label><input type="number" name="experian_score_now" min="300" max="850"></div>
                     </div>
                 </div>
                 <div class="bureau-block">
                     <h4>TransUnion</h4>
                     <div class="bureau-row">
-                        <div class="form-group"><label>Accounts Disputed</label><input type="number" name="transunion_accounts_disputed" min="0"></div>
-                        <div class="form-group"><label>Inquiries Disputed</label><input type="number" name="transunion_inquiries_disputed" min="0"></div>
+                        <div class="form-group"><label>Score Before</label><input type="number" name="transunion_score_before" min="300" max="850"></div>
+                        <div class="form-group"><label>Score Now</label><input type="number" name="transunion_score_now" min="300" max="850"></div>
                     </div>
                 </div>
                 <div class="bureau-block">
                     <h4>Equifax</h4>
                     <div class="bureau-row">
-                        <div class="form-group"><label>Accounts Disputed</label><input type="number" name="equifax_accounts_disputed" min="0"></div>
-                        <div class="form-group"><label>Inquiries Disputed</label><input type="number" name="equifax_inquiries_disputed" min="0"></div>
-                    </div>
-                </div>
-                <div class="bureau-block">
-                    <h4>Credit Scores</h4>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Previous Credit Score</label><input type="number" name="previous_credit_score" min="300" max="850"></div>
-                        <div class="form-group"><label>Credit Score Now</label><input type="number" name="credit_score_now" min="300" max="850"></div>
+                        <div class="form-group"><label>Score Before</label><input type="number" name="equifax_score_before" min="300" max="850"></div>
+                        <div class="form-group"><label>Score Now</label><input type="number" name="equifax_score_now" min="300" max="850"></div>
                     </div>
                 </div>
             </div>
@@ -800,7 +804,9 @@
 
     function refreshTrackingFields() {
         if (!w4s2Fields) return;
-        var show = (currentWeek() === 4 && selected.has('record_deletions'));
+        // Round-outcome metrics apply whenever the report is pulled or deletions
+        // are recorded — any round, any week.
+        var show = (selected.has('record_deletions') || selected.has('pull_latest_report'));
         w4s2Fields.hidden = !show;
         if (show) prefillFromLastRound();
     }

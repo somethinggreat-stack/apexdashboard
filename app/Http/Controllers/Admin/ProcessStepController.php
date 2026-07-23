@@ -39,6 +39,17 @@ class ProcessStepController extends Controller
             'equifax_inquiries_disputed'   => 'nullable|integer|min:0',
             'previous_credit_score'        => 'nullable|integer|min:300|max:850',
             'credit_score_now'             => 'nullable|integer|min:300|max:850',
+            // Round outcome metrics — all optional.
+            'total_deletions'              => 'nullable|integer|min:0',
+            'updated_to_positive'          => 'nullable|integer|min:0',
+            'updated_to_negative'          => 'nullable|integer|min:0',
+            'items_added'                  => 'nullable|integer|min:0',
+            'experian_score_before'        => 'nullable|integer|min:300|max:850',
+            'experian_score_now'           => 'nullable|integer|min:300|max:850',
+            'transunion_score_before'      => 'nullable|integer|min:300|max:850',
+            'transunion_score_now'         => 'nullable|integer|min:300|max:850',
+            'equifax_score_before'         => 'nullable|integer|min:300|max:850',
+            'equifax_score_now'            => 'nullable|integer|min:300|max:850',
         ]);
 
         $shared = [
@@ -55,6 +66,16 @@ class ProcessStepController extends Controller
             'equifax_inquiries_disputed'    => $data['equifax_inquiries_disputed'] ?? null,
             'previous_credit_score'         => $data['previous_credit_score'] ?? null,
             'credit_score_now'              => $data['credit_score_now'] ?? null,
+            'total_deletions'               => $data['total_deletions'] ?? null,
+            'updated_to_positive'           => $data['updated_to_positive'] ?? null,
+            'updated_to_negative'           => $data['updated_to_negative'] ?? null,
+            'items_added'                   => $data['items_added'] ?? null,
+            'experian_score_before'         => $data['experian_score_before'] ?? null,
+            'experian_score_now'            => $data['experian_score_now'] ?? null,
+            'transunion_score_before'       => $data['transunion_score_before'] ?? null,
+            'transunion_score_now'          => $data['transunion_score_now'] ?? null,
+            'equifax_score_before'          => $data['equifax_score_before'] ?? null,
+            'equifax_score_now'             => $data['equifax_score_now'] ?? null,
         ];
 
         $created = 0;

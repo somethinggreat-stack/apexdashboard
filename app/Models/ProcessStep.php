@@ -15,6 +15,11 @@ class ProcessStep extends Model
         'transunion_accounts_disputed', 'transunion_inquiries_disputed',
         'equifax_accounts_disputed', 'equifax_inquiries_disputed',
         'previous_credit_score', 'credit_score_now',
+        // Round outcome metrics (pull report / record deletions)
+        'total_deletions', 'updated_to_positive', 'updated_to_negative', 'items_added',
+        'experian_score_before', 'experian_score_now',
+        'transunion_score_before', 'transunion_score_now',
+        'equifax_score_before', 'equifax_score_now',
         'created_by_admin_id',
     ];
     protected $casts = [

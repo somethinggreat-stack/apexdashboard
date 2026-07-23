@@ -40,3 +40,41 @@
         @endif
     </div>
 @endif
+
+@php
+    // Round outcome metrics (recorded on pull-report / record-deletions steps).
+    $outcome = array_filter([
+        'Total Deletions'     => $step->total_deletions,
+        'Updated to Positive' => $step->updated_to_positive,
+        'Updated to Negative' => $step->updated_to_negative,
+        'Added'               => $step->items_added,
+    ], fn ($v) => $v !== null);
+
+    $bureauScores = array_filter([
+        'Experian'   => [$step->experian_score_before, $step->experian_score_now],
+        'TransUnion' => [$step->transunion_score_before, $step->transunion_score_now],
+        'Equifax'    => [$step->equifax_score_before, $step->equifax_score_now],
+    ], fn ($p) => $p[0] !== null || $p[1] !== null);
+@endphp
+
+@if ($outcome)
+    <div class="bureau-stats">
+        @foreach ($outcome as $label => $value)
+            <div class="bureau-stat"><strong>{{ $label }}</strong> {{ $value }}</div>
+        @endforeach
+    </div>
+@endif
+
+@if ($bureauScores)
+    <div class="bureau-stats">
+        @foreach ($bureauScores as $label => [$before, $now])
+            <div class="bureau-stat">
+                <strong>{{ $label }}</strong>
+                {{ $before ?? '—' }} → {{ $now ?? '—' }}
+                @if ($before !== null && $now !== null)
+                    ({{ ($now - $before) >= 0 ? '+' : '' }}{{ $now - $before }})
+                @endif
+            </div>
+        @endforeach
+    </div>
+@endif
