@@ -92,6 +92,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('commissions/payout', [Admin\CommissionController::class, 'storePayout'])->name('commissions.payout.store');
             Route::delete('commissions/payout/{id}', [Admin\CommissionController::class, 'destroyPayout'])->whereNumber('id')->name('commissions.payout.destroy');
 
+            // Recycle Bin — deleted business owners + clients, recoverable for 10 days. Super admin only.
+            Route::middleware('admin.super')->group(function () {
+                Route::get('recycle-bin', [Admin\RecycleBinController::class, 'index'])->name('recycle-bin.index');
+                Route::post('recycle-bin/business-owner/{id}/restore', [Admin\RecycleBinController::class, 'restoreClient'])->whereNumber('id')->name('recycle-bin.client.restore');
+                Route::post('recycle-bin/client/{id}/restore', [Admin\RecycleBinController::class, 'restoreEndUser'])->whereNumber('id')->name('recycle-bin.end-user.restore');
+                Route::delete('recycle-bin/business-owner/{id}', [Admin\RecycleBinController::class, 'forceClient'])->whereNumber('id')->name('recycle-bin.client.force');
+                Route::delete('recycle-bin/client/{id}', [Admin\RecycleBinController::class, 'forceEndUser'])->whereNumber('id')->name('recycle-bin.end-user.force');
+            });
+
             // Extra projects — funnels, customer support, ads
             Route::get('extra/{type}', [Admin\ExtraProjectController::class, 'index'])
                 ->whereIn('type', ['funnel', 'support', 'ads'])->name('extra.index');

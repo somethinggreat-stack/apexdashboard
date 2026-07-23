@@ -5,12 +5,13 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class EndUser extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const ROUND_OPTIONS = [
         '1st Round',
@@ -26,6 +27,13 @@ class EndUser extends Model
     protected static function booted(): void
     {
         static::deleting(function (EndUser $user) {
+            // A soft delete (Recycle Bin) must keep everything for a possible
+            // restore — leave the documents and identity files exactly where
+            // they are. Only a permanent purge actually removes the files.
+            if (! $user->isForceDeleting()) {
+                return;
+            }
+
             // Force-delete each document via Eloquent so its own deleting hook
             // (which removes the file from disk) fires. The DB cascade alone
             // would delete the rows but skip Eloquent events, leaving orphan files.
@@ -51,10 +59,12 @@ class EndUser extends Model
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
         'next_round_override',
+        'deleted_by_admin_id', 'deleted_with_owner',
     ];
     protected $casts = [
         'start_date' => 'date',
         'next_round_override' => 'date',
+        'deleted_with_owner' => 'boolean',
         'held_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
@@ -73,6 +83,11 @@ class EndUser extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(Admin::class, 'deleted_by_admin_id');
     }
 
     public function scopeForAdmin($query, $adminId)

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -10,7 +11,7 @@ use Illuminate\Support\Str;
 
 class Client extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'admin_id', 'business_name', 'email', 'password',
@@ -21,6 +22,7 @@ class Client extends Authenticatable
         'intake_api_key', 'intake_external_url', 'intake_security_extra',
         'compensation_model', 'per_round_fee', 'hourly_rate',
         'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
+        'deleted_by_admin_id',
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
@@ -49,15 +51,41 @@ class Client extends Authenticatable
         });
 
         static::deleting(function (Client $client) {
-            // Force-delete end_users via Eloquent so their deleting hooks fire
-            // (which clean up document files and identity uploads). The FK
-            // cascade would otherwise skip Eloquent events.
-            $client->endUsers()->each(fn ($u) => $u->delete());
+            // PERMANENT purge (10-day retention elapsed, or "delete forever").
+            // Now the files really go: force-delete each end user via Eloquent so
+            // its own deleting hook removes document files + identity uploads,
+            // then drop the intake logo.
+            if ($client->isForceDeleting()) {
+                $client->endUsers()->withTrashed()->get()->each(fn ($u) => $u->forceDelete());
 
-            // Clean up the intake logo when the BO is removed.
-            if ($client->intake_logo_path && Storage::disk('public')->exists($client->intake_logo_path)) {
-                Storage::disk('public')->delete($client->intake_logo_path);
+                if ($client->intake_logo_path && Storage::disk('public')->exists($client->intake_logo_path)) {
+                    Storage::disk('public')->delete($client->intake_logo_path);
+                }
+                return;
             }
+
+            // SOFT delete → Recycle Bin. Keep every row and file intact; just
+            // send the owner's clients to the bin alongside it, tagged so a
+            // restore of the owner brings exactly these back (and no others).
+            $client->endUsers()->get()->each(function ($u) use ($client) {
+                $u->forceFill([
+                    'deleted_with_owner'  => true,
+                    'deleted_by_admin_id' => $client->deleted_by_admin_id,
+                ])->save();
+                $u->delete();
+            });
+        });
+
+        // Restoring a business owner brings back the clients that were binned
+        // with it — but not any client the team had deleted on its own earlier.
+        static::restored(function (Client $client) {
+            $client->endUsers()->onlyTrashed()
+                ->where('deleted_with_owner', true)
+                ->get()
+                ->each(function ($u) {
+                    $u->restore();
+                    $u->forceFill(['deleted_with_owner' => false])->save();
+                });
         });
     }
 
@@ -117,6 +145,11 @@ class Client extends Authenticatable
     public function admin()
     {
         return $this->belongsTo(Admin::class);
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(Admin::class, 'deleted_by_admin_id');
     }
 
     public function endUsers()

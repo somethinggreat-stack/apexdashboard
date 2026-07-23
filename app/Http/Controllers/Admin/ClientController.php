@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ClientController extends Controller
 {
@@ -28,7 +29,9 @@ class ClientController extends Controller
     {
         $data = $request->validate([
             'business_name'       => 'required|string|max:255',
-            'email'               => 'required|email|unique:clients,email',
+            // A binned owner still holds its email; ignore soft-deleted rows so
+            // the address frees up for re-use while the old one sits in the bin.
+            'email'               => ['required', 'email', Rule::unique('clients', 'email')->whereNull('deleted_at')],
             'password'            => 'required|string|min:6',
             'phone'               => 'nullable|string|max:30',
             'monthly_fee'         => 'nullable|numeric|min:0',
@@ -93,8 +96,14 @@ class ClientController extends Controller
 
     public function destroy(string $id)
     {
-        $this->scoped()->findOrFail($id)->delete();
-        return redirect()->route('admin.clients.index')->with('status', 'Business owner deleted.');
+        // Soft delete → Recycle Bin. The model's deleting hook sends this
+        // owner's clients to the bin with it; nothing is erased for 10 days.
+        $client = $this->scoped()->findOrFail($id);
+        $client->forceFill(['deleted_by_admin_id' => Auth::guard('admin')->id()])->save();
+        $client->delete();
+
+        return redirect()->route('admin.clients.index')
+            ->with('status', 'Business owner moved to the Recycle Bin. You can restore it there for 10 days.');
     }
 
     private function scoped()

@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Keep the activity log to a rolling 7-day window (clears entries older than 7 days).
 Schedule::command('activity:prune')->dailyAt('03:00');
+
+// Empty the Recycle Bin of anything past its 10-day retention (rows + files).
+Schedule::command('recyclebin:purge')->dailyAt('03:15');

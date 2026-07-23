@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\Message;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class EndUserController extends Controller
@@ -307,12 +308,18 @@ class EndUserController extends Controller
 
     public function destroy(string $id)
     {
-        // The EndUser deleting hook removes its documents and identity files.
+        // Soft delete → Recycle Bin. Documents and files are kept for 10 days
+        // so a super admin can restore the client; only a purge removes them.
         $endUser = $this->scoped()->findOrFail($id);
         $name = $endUser->full_name;
+        $endUser->forceFill([
+            'deleted_by_admin_id' => Auth::guard('admin')->id(),
+            'deleted_with_owner'  => false,
+        ])->save();
         $endUser->delete();
 
-        return redirect()->route('admin.end-users.index')->with('status', "Client {$name} deleted.");
+        return redirect()->route('admin.end-users.index')
+            ->with('status', "Client {$name} moved to the Recycle Bin.");
     }
 
     /* ---------------- New Clients (intake submissions) ---------------- */
