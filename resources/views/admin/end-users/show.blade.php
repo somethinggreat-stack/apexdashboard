@@ -46,6 +46,21 @@
 @endsection
 
 @section('content')
+@if ($endUser->needs_round_closeout)
+    <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:16px; padding:14px 16px;
+                background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626;
+                border-radius:12px; color:#991b1b; font-size:13.5px; line-height:1.55;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; margin-top:1px;">
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/>
+        </svg>
+        <div>
+            <strong>Round {{ $endUser->current_round }} is past its 30 days.</strong>
+            Pull the latest report and record deletions to close out this round —
+            Round {{ $endUser->current_round + 1 }} can't be started until you do.
+        </div>
+    </div>
+@endif
+
 <div class="card">
     <div class="card-header client-header-name">
         <h2>{{ $endUser->full_name }}</h2>
@@ -432,9 +447,13 @@
                 <label>Round</label>
                 <select name="round" id="stepRound" required>
                     @foreach ($rounds as $val => $label)
-                        <option value="{{ $val }}">{{ $label }}</option>
+                        @php $locked = $val > 1 && ! $endUser->roundClosedOut($val - 1); @endphp
+                        <option value="{{ $val }}" @disabled($locked)>
+                            {{ $label }}@if ($locked) — locked until Round {{ $val - 1 }} is closed out @endif
+                        </option>
                     @endforeach
                 </select>
+                <small class="msel-hint">A round unlocks once the previous round's <strong>Pull Latest Report</strong> and <strong>Record Deletions</strong> are logged.</small>
             </div>
             <div class="form-group">
                 <label>Week</label>
@@ -808,6 +827,12 @@
         // are recorded — any round, any week.
         var show = (selected.has('record_deletions') || selected.has('pull_latest_report'));
         w4s2Fields.hidden = !show;
+        // Required only while visible — a hidden required input silently blocks
+        // the whole form from submitting.
+        w4s2Fields.querySelectorAll('input[type="number"]').forEach(function (el) {
+            if (show) { el.setAttribute('required', 'required'); }
+            else      { el.removeAttribute('required'); }
+        });
         if (show) prefillFromLastRound();
     }
 

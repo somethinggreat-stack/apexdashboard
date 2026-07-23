@@ -366,6 +366,33 @@ class EndUser extends Model
         return Carbon::parse($start)->addMonthNoOverflow()->toDateString();
     }
 
+    /**
+     * A round is "closed out" once BOTH week-4 steps are logged for it:
+     * Pull Latest Report and Record Deletions. The next round can't be started
+     * until the previous one is closed out.
+     */
+    public function roundClosedOut(int $round): bool
+    {
+        $needed = ['pull_latest_report', 'record_deletions'];
+
+        $types = $this->relationLoaded('processSteps')
+            ? $this->processSteps->where('round', $round)->pluck('step_type')
+            : $this->processSteps()->where('round', $round)->pluck('step_type');
+
+        return empty(array_diff($needed, $types->unique()->values()->all()));
+    }
+
+    /**
+     * True when the current round has run past its 30 days but the report still
+     * hasn't been pulled / deletions recorded — surfaced as a warning on the file.
+     */
+    public function getNeedsRoundCloseoutAttribute(): bool
+    {
+        $daysLeft = $this->days_left_in_round;
+
+        return $daysLeft !== null && $daysLeft <= 0 && !$this->roundClosedOut($this->current_round);
+    }
+
     /** The label of the round the client is currently on (highest selected). */
     public function getCurrentRoundLabelAttribute(): string
     {

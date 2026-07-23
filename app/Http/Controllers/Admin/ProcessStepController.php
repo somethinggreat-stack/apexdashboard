@@ -24,6 +24,13 @@ class ProcessStepController extends Controller
             $request->merge(['step_types' => [$request->input('step_type')]]);
         }
 
+        // Pulling the report / recording deletions closes out a round, so the
+        // outcome numbers become mandatory (and must be numbers, not text).
+        $closeoutSteps = ['pull_latest_report', 'record_deletions'];
+        $isCloseout = (bool) array_intersect((array) $request->input('step_types', []), $closeoutSteps);
+        $countRule  = $isCloseout ? 'required|integer|min:0'            : 'nullable|integer|min:0';
+        $scoreRule  = $isCloseout ? 'required|integer|min:300|max:850'  : 'nullable|integer|min:300|max:850';
+
         $data = $request->validate([
             'end_user_id'                  => ['required', $endUserRule],
             'round'                        => 'required|integer|between:1,4',
@@ -39,18 +46,34 @@ class ProcessStepController extends Controller
             'equifax_inquiries_disputed'   => 'nullable|integer|min:0',
             'previous_credit_score'        => 'nullable|integer|min:300|max:850',
             'credit_score_now'             => 'nullable|integer|min:300|max:850',
-            // Round outcome metrics — all optional.
-            'total_deletions'              => 'nullable|integer|min:0',
-            'updated_to_positive'          => 'nullable|integer|min:0',
-            'updated_to_negative'          => 'nullable|integer|min:0',
-            'items_added'                  => 'nullable|integer|min:0',
-            'experian_score_before'        => 'nullable|integer|min:300|max:850',
-            'experian_score_now'           => 'nullable|integer|min:300|max:850',
-            'transunion_score_before'      => 'nullable|integer|min:300|max:850',
-            'transunion_score_now'         => 'nullable|integer|min:300|max:850',
-            'equifax_score_before'         => 'nullable|integer|min:300|max:850',
-            'equifax_score_now'            => 'nullable|integer|min:300|max:850',
+            // Round outcome metrics — required when closing out a round.
+            'total_deletions'              => $countRule,
+            'updated_to_positive'          => $countRule,
+            'updated_to_negative'          => $countRule,
+            'items_added'                  => $countRule,
+            'experian_score_before'        => $scoreRule,
+            'experian_score_now'           => $scoreRule,
+            'transunion_score_before'      => $scoreRule,
+            'transunion_score_now'         => $scoreRule,
+            'equifax_score_before'         => $scoreRule,
+            'equifax_score_now'            => $scoreRule,
+        ], [
+            'required' => 'This field is required to close out the round.',
+            'integer'  => 'Numbers only.',
         ]);
+
+        // A round can only be started once the previous one is closed out
+        // (Pull Latest Report + Record Deletions logged for it).
+        if ($data['round'] > 1) {
+            $prev = $data['round'] - 1;
+            $endUser = EndUser::find($data['end_user_id']);
+
+            if ($endUser && !$endUser->roundClosedOut($prev)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['round' => "Round {$prev} isn't finished yet. Log “Pull Latest Report” and “Record Deletions” for Round {$prev} (Week 4) before adding any Round {$data['round']} step."]);
+            }
+        }
 
         $shared = [
             'end_user_id'                   => $data['end_user_id'],
