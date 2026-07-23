@@ -24,12 +24,10 @@ class ProcessStepController extends Controller
             $request->merge(['step_types' => [$request->input('step_type')]]);
         }
 
-        // Pulling the report / recording deletions closes out a round, so the
-        // outcome numbers become mandatory (and must be numbers, not text).
-        $closeoutSteps = ['pull_latest_report', 'record_deletions'];
-        $isCloseout = (bool) array_intersect((array) $request->input('step_types', []), $closeoutSteps);
-        $countRule  = $isCloseout ? 'required|integer|min:0'            : 'nullable|integer|min:0';
-        $scoreRule  = $isCloseout ? 'required|integer|min:300|max:850'  : 'nullable|integer|min:300|max:850';
+        // Round-outcome numbers are always optional — a VA can log a step without
+        // them and fill them in whenever they have the figures.
+        $countRule = 'nullable|integer|min:0';
+        $scoreRule = 'nullable|integer|min:300|max:850';
 
         $data = $request->validate([
             'end_user_id'                  => ['required', $endUserRule],
@@ -58,22 +56,8 @@ class ProcessStepController extends Controller
             'equifax_score_before'         => $scoreRule,
             'equifax_score_now'            => $scoreRule,
         ], [
-            'required' => 'This field is required to close out the round.',
-            'integer'  => 'Numbers only.',
+            'integer' => 'Numbers only.',
         ]);
-
-        // A round can only be started once the previous one is closed out
-        // (Pull Latest Report + Record Deletions logged for it).
-        if ($data['round'] > 1) {
-            $prev = $data['round'] - 1;
-            $endUser = EndUser::find($data['end_user_id']);
-
-            if ($endUser && !$endUser->roundClosedOut($prev)) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['round' => "Round {$prev} isn't finished yet. Log “Pull Latest Report” and “Record Deletions” for Round {$prev} (Week 4) before adding any Round {$data['round']} step."]);
-            }
-        }
 
         $shared = [
             'end_user_id'                   => $data['end_user_id'],

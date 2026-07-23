@@ -55,8 +55,7 @@
         </svg>
         <div>
             <strong>Round {{ $endUser->current_round }} is past its 30 days.</strong>
-            Pull the latest report and record deletions to close out this round —
-            Round {{ $endUser->current_round + 1 }} can't be started until you do.
+            Worth pulling the latest report and recording deletions for this client.
         </div>
     </div>
 @endif
@@ -447,13 +446,9 @@
                 <label>Round</label>
                 <select name="round" id="stepRound" required>
                     @foreach ($rounds as $val => $label)
-                        @php $locked = $val > 1 && ! $endUser->roundClosedOut($val - 1); @endphp
-                        <option value="{{ $val }}" @disabled($locked)>
-                            {{ $label }}@if ($locked) — locked until Round {{ $val - 1 }} is closed out @endif
-                        </option>
+                        <option value="{{ $val }}">{{ $label }}</option>
                     @endforeach
                 </select>
-                <small class="msel-hint">A round unlocks once the previous round's <strong>Pull Latest Report</strong> and <strong>Record Deletions</strong> are logged.</small>
             </div>
             <div class="form-group">
                 <label>Week</label>
@@ -827,11 +822,9 @@
         // are recorded — any round, any week.
         var show = (selected.has('record_deletions') || selected.has('pull_latest_report'));
         w4s2Fields.hidden = !show;
-        // Required only while visible — a hidden required input silently blocks
-        // the whole form from submitting.
+        // Always optional — never block saving a step on these numbers.
         w4s2Fields.querySelectorAll('input[type="number"]').forEach(function (el) {
-            if (show) { el.setAttribute('required', 'required'); }
-            else      { el.removeAttribute('required'); }
+            el.removeAttribute('required');
         });
         if (show) prefillFromLastRound();
     }
