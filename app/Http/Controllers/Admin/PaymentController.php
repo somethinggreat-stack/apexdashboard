@@ -127,7 +127,11 @@ class PaymentController extends Controller
 
         $data = $this->buildPerRoundData($client);
 
-        if (empty($data['unpaidItems'])) {
+        // Complimentary rounds carry $0, so they never change the total — they're
+        // included so the BO can see what was delivered free of charge.
+        $items = array_merge($data['unpaidItems'], $data['freeItems']);
+
+        if (empty($items)) {
             return back()->with('status', 'No unpaid items to invoice — everything is already paid.');
         }
 
@@ -135,7 +139,7 @@ class PaymentController extends Controller
             'client_id'           => $client->id,
             'invoice_number'      => $this->nextInvoiceNumber($client, now()),
             'invoice_date'        => now()->toDateString(),
-            'items'               => $data['unpaidItems'],
+            'items'               => $items,
             'total'               => $data['totalUnpaid'],
             'created_by_admin_id' => Auth::guard('admin')->id(),
         ]);
@@ -448,8 +452,12 @@ class PaymentController extends Controller
         $unpaidItems   = [];
         $unpaidByRound = [1=>0, 2=>0, 3=>0, 4=>0, 5=>0];
         $totalUnpaid   = 0.0;
+        // Rounds done free of charge. They're "paid" at $0 so they never show as
+        // unpaid — but the BO should still see the round was delivered as a
+        // courtesy, so they ride along on the invoice at $0.00.
+        $freeItems     = [];
 
-        $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, &$totalUnpaid) {
+        $rows = $endUsers->map(function ($eu) use ($roundLabelToNum, &$unpaidItems, &$unpaidByRound, &$totalUnpaid, &$freeItems) {
             $euRate = $eu->effectiveRoundFee();
             $paidByRound = $eu->payments->keyBy('round');
 
@@ -478,6 +486,8 @@ class PaymentController extends Controller
                 ];
             }
 
+            $latestRound = !empty($activeRounds) ? max($activeRounds) : 1;
+
             foreach ($activeRounds as $rn) {
                 if (!$paidByRound->has($rn)) {
                     $rnRate = $eu->effectiveRoundFee($rn);
@@ -489,6 +499,21 @@ class PaymentController extends Controller
                     ];
                     $unpaidByRound[$rn]++;
                     $totalUnpaid += $rnRate;
+                    continue;
+                }
+
+                // Done free of charge. Only surface it while it's the client's
+                // latest round — once a later round is worked, that round bills
+                // instead and this courtesy has already been shown.
+                $payment = $paidByRound->get($rn);
+                if ($rn === $latestRound && $payment && $payment->is_free) {
+                    $freeItems[] = [
+                        'name'   => $eu->full_name,
+                        'email'  => $eu->email,
+                        'round'  => $rn,
+                        'amount' => 0.0,
+                        'free'   => true,
+                    ];
                 }
             }
 
@@ -513,6 +538,7 @@ class PaymentController extends Controller
             'totalUnpaid'     => $totalUnpaid,
             'unpaidItems'     => $unpaidItems,
             'unpaidByRound'   => $unpaidByRound,
+            'freeItems'       => $freeItems,
         ];
     }
 

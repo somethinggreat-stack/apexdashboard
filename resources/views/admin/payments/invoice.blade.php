@@ -68,6 +68,14 @@
             border-bottom: 0 !important;
         }
         .inv-line-num { color: #64748b; width: 30px; }
+        /* A round delivered free of charge — listed so the client sees it, but $0 */
+        .inv-free-row td { color: #047857; }
+        .inv-free-tag {
+            display: inline-block; margin-left: 8px; padding: 1px 8px;
+            border-radius: 999px; background: #ecfdf5; color: #047857;
+            border: 1px solid #a7f3d0; font-size: 10.5px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .04em;
+        }
 
         /* ===== FOOTER (totals) ===== */
         .inv-totals { width: 100%; border-collapse: collapse; margin-top: 0; }
@@ -210,6 +218,10 @@
         @php
             $itemsByRound = $allItems->groupBy('round')->sortKeys();
             $rowNum = 0;
+            // Complimentary rounds are listed but carry $0, so the billable
+            // count must exclude them or the subtotal line misreads.
+            $freeCount     = $allItems->filter(fn ($i) => !empty($i['free']))->count();
+            $billableCount = $allItems->count() - $freeCount;
         @endphp
         <table class="inv-table">
             <thead>
@@ -229,12 +241,15 @@
                         <td class="inv-desc-head" colspan="5">{{ $rLabel }} Round Credit Repair — for the following clients:</td>
                     </tr>
                     @foreach ($items as $it)
-                        @php $rowNum++; @endphp
-                        <tr>
+                        @php $rowNum++; $isFree = !empty($it['free']); @endphp
+                        <tr class="{{ $isFree ? 'inv-free-row' : '' }}">
                             <td class="inv-line-num">{{ $rowNum }}.</td>
-                            <td>{{ $it['name'] }}</td>
+                            <td>
+                                {{ $it['name'] }}
+                                @if ($isFree)<span class="inv-free-tag">Complimentary — no charge</span>@endif
+                            </td>
                             <td class="center">1</td>
-                            <td class="right">${{ number_format($it['amount'], 2) }}</td>
+                            <td class="right">{{ $isFree ? 'FREE' : '$' . number_format($it['amount'], 2) }}</td>
                             <td class="right">${{ number_format($it['amount'], 2) }}</td>
                         </tr>
                     @endforeach
@@ -245,9 +260,15 @@
         {{-- ===== TOTALS ===== --}}
         <table class="inv-totals">
             <tr class="subtotal">
-                <td class="label">Subtotal ({{ count($invoice->items) }} {{ count($invoice->items) === 1 ? 'Client' : 'Clients' }})</td>
+                <td class="label">Subtotal ({{ $billableCount }} {{ $billableCount === 1 ? 'Client' : 'Clients' }})</td>
                 <td class="amount">${{ number_format($invoice->total, 2) }}</td>
             </tr>
+            @if ($freeCount > 0)
+                <tr>
+                    <td class="label">Complimentary ({{ $freeCount }} {{ $freeCount === 1 ? 'round' : 'rounds' }} at no charge)</td>
+                    <td class="amount">$0.00</td>
+                </tr>
+            @endif
             <tr>
                 <td class="label">Tax (0%)</td>
                 <td class="amount">$0.00</td>
