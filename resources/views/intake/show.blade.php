@@ -34,7 +34,13 @@
         .head p { margin:0; color:#cbd5e1; font-size:14.5px; }
         .brand-logo { display:block; margin:0 auto 16px; max-height:70px; max-width:230px; width:auto;
             filter:drop-shadow(0 8px 20px rgba(0,0,0,.35)); }
-        @media (max-width:600px){ .head h1.branded { font-size:22px; } }
+        @media (max-width:600px){
+            .head h1.branded { font-size:22px; }
+            .wrap { padding:24px 13px 56px; }
+            /* 16px inputs stop iOS from auto-zooming the whole page on focus. */
+            input, select { font-size:16px; }
+            .row { gap:0; }
+        }
 
         .trust { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:16px 0 4px; }
         .trust span { display:inline-flex; align-items:center; gap:6px; color:#dbeafe; font-size:11.5px; font-weight:600;

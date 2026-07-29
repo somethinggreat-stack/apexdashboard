@@ -200,7 +200,7 @@
     </aside>
     <main class="main">
         <header class="topbar">
-            <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open menu" aria-controls="sidebar">
+            <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" data-drawer-toggle="#sidebar" data-drawer-scrim="#sidebarScrim" aria-label="Open menu" aria-controls="sidebar">
                 <span></span>
             </button>
             @hasSection('topbar-content')
@@ -227,27 +227,8 @@
         </div>
     </main>
 </div>
+<script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/client.js') }}"></script>
-<script>
-(function () {
-    var toggle = document.getElementById('mobileMenuToggle');
-    var sidebar = document.getElementById('sidebar');
-    var scrim = document.getElementById('sidebarScrim');
-    if (!toggle || !sidebar || !scrim) return;
-    function open()  { sidebar.classList.add('open'); scrim.classList.add('open'); }
-    function close() { sidebar.classList.remove('open'); scrim.classList.remove('open'); }
-    toggle.addEventListener('click', function () {
-        sidebar.classList.contains('open') ? close() : open();
-    });
-    scrim.addEventListener('click', close);
-    sidebar.addEventListener('click', function (e) {
-        if (e.target.closest('a')) close();
-    });
-    window.addEventListener('resize', function () {
-        if (window.innerWidth > 900) close();
-    });
-})();
-</script>
 @stack('scripts')
 </body>
 </html>

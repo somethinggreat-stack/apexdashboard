@@ -23,6 +23,9 @@
 <body class="pro-body admin-body">
 <div class="pro-layout">
 
+    {{-- Backdrop behind the off-canvas sidebar on tablet/mobile. --}}
+    <div class="pro-scrim" id="proScrim" aria-hidden="true"></div>
+
     <aside class="pro-sidebar" id="proSidebar">
         <div class="pro-brand">
             <picture>
@@ -217,6 +220,15 @@
     </aside>
 
     <main class="pro-main">
+        {{-- Mobile-only bar: the only visible way to open the drawer once the
+             sidebar goes off-canvas (≤900px). Hidden on desktop via CSS. --}}
+        <div class="pro-mobilebar">
+            <button type="button" class="pro-menu-btn" data-drawer-toggle="#proSidebar" data-drawer-scrim="#proScrim" aria-label="Open menu" aria-controls="proSidebar">
+                <span></span>
+            </button>
+            <span class="pro-mobilebar-brand">Apex Growth</span>
+        </div>
+
         {{-- The white title/top bar was removed. The page header is now the
              motivational banner (below), which also hosts any page controls
              (client search, "Add New Client", back / delete) via its actions
@@ -273,6 +285,7 @@
     <script src="{{ asset('js/walker.js') }}" defer></script>
 @endif
 
+<script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>

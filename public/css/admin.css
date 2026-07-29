@@ -944,6 +944,71 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
     .msel2-opt { padding: 11px 12px; }
 }
 
+/* ==========================================================================
+   RESPONSIVE SYSTEM — shared additions (leads console + BO portal, and
+   inherited by the pro console via @import). Additive only; desktop untouched.
+   ========================================================================== */
+
+/* Lock background scroll while the off-canvas drawer is open (set by
+   responsive-nav.js on <body>). Prevents the page scrolling under the drawer. */
+body.drawer-open { overflow: hidden; }
+
+/* Off-canvas drawer safety: a fixed sidebar parked at translateX(-100%) is only
+   clipped by the viewport, so clip horizontal scroll at the root on the screens
+   where the drawer exists. This is the drawer's containment, not a blanket
+   cover-up — vertical scrolling and in-card horizontal table scroll are intact. */
+@media (max-width: 900px) {
+    html, body { overflow-x: hidden; }
+}
+
+/* Media never bursts its container on small screens. Scoped to content images
+   so icon SVGs with intrinsic sizes are left alone. */
+.content img, .card img, .main img { max-width: 100%; height: auto; }
+
+/* Scrolling-shadow affordance for wide tables — soft edge fades that signal
+   "scroll sideways" and vanish at each end. Pure CSS, no JS. */
+.table-scroll {
+    background:
+        linear-gradient(to right, var(--surface) 30%, rgba(255,255,255,0)) 0 0,
+        linear-gradient(to left,  var(--surface) 30%, rgba(255,255,255,0)) 100% 0,
+        radial-gradient(farthest-side at 0 50%,   rgba(15,23,42,.10), rgba(15,23,42,0)) 0 0,
+        radial-gradient(farthest-side at 100% 50%, rgba(15,23,42,.10), rgba(15,23,42,0)) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+}
+
+/* Modals: prefer dynamic viewport height so the mobile browser's address bar
+   never clips the footer actions; keep the body scrolling independently. */
+@supports (height: 100dvh) {
+    .modal-content { max-height: 90dvh; }
+}
+
+@media (max-width: 600px) {
+    /* 16px inputs stop iOS from auto-zooming when a field is focused. */
+    .form-group input, .form-group select, .form-group textarea,
+    .filter-bar input, .filter-bar select { font-size: 16px; }
+
+    /* Nearly full-screen dialogs on small phones, footer kept in view. */
+    .modal { padding: 0; align-items: flex-end; }
+    .modal-content {
+        width: 100%; max-width: 100%;
+        max-height: 92vh; max-height: 92dvh;
+        border-radius: 16px 16px 0 0;
+    }
+
+    /* Auth card: less inner padding so the form breathes on a 320px phone. */
+    .auth-body { padding: 14px; }
+    .auth-card { padding: 28px 22px; }
+}
+
+/* Touch devices: enforce comfortable ~44px tap targets on small controls. */
+@media (hover: none) {
+    .btn-sm { min-height: 34px; }
+    .mobile-menu-toggle { width: 44px; height: 44px; }
+    .data-table td .btn, .row-actions .btn, .u-actions .btn { min-height: 34px; }
+}
+
 /* Galaxy cursor trail canvas (see public/js/galaxy-trail.js).
    pointer-events:none means it can never intercept a click. */
 #gxCanvas {

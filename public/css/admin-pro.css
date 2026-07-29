@@ -596,7 +596,59 @@ html, body { height: 100%; }
 .pro-content .card-header h2 { color: var(--pro-text); }
 .pro-content .alert { border-radius: 12px; }
 
-/* ------------------------------ scrim / mobile --------------------------- */
+/* ==========================================================================
+   RESPONSIVE SYSTEM — pro console (super admin + VAs)
+   Desktop rules above are untouched; everything here is additive and lives
+   inside media queries. The mobile shell is an off-canvas drawer (not the old
+   "stack the whole sidebar on top" hack), wired by responsive-nav.js.
+   Breakpoints: 1400 / 1100 (fluid trims) · 900 (drawer + tablet) · 600 · 400.
+   ========================================================================== */
+
+/* ---- drawer chrome (hidden on desktop, shown at ≤900) ------------------- */
+.pro-scrim {
+    display: none; position: fixed; inset: 0;
+    background: rgba(9, 12, 34, .55); backdrop-filter: blur(1.5px);
+    z-index: 58;
+}
+.pro-scrim.open { display: block; }
+
+.pro-mobilebar {
+    display: none;
+    position: sticky; top: 0; z-index: 45;
+    align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: var(--pro-card);
+    border-bottom: 1px solid var(--pro-line);
+}
+.pro-mobilebar-brand { font-size: 16px; font-weight: 800; letter-spacing: -.01em; color: var(--pro-text); }
+
+.pro-menu-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; flex-shrink: 0;
+    background: var(--pro-card); border: 1px solid var(--pro-line);
+    border-radius: 11px; cursor: pointer; padding: 0; color: var(--pro-text);
+}
+.pro-menu-btn span, .pro-menu-btn span::before, .pro-menu-btn span::after {
+    display: block; width: 18px; height: 2px; border-radius: 2px;
+    background: currentColor; position: relative;
+}
+.pro-menu-btn span::before, .pro-menu-btn span::after { content: ''; position: absolute; left: 0; }
+.pro-menu-btn span::before { top: -6px; }
+.pro-menu-btn span::after  { top: 6px; }
+
+/* Scrolling-shadow affordance: soft fades at the edges hint that a wide table
+   can be scrolled sideways, and disappear once you reach each end. Pure CSS. */
+.pro-table-scroll {
+    -webkit-overflow-scrolling: touch;
+    background:
+        linear-gradient(to right, var(--pro-card) 30%, rgba(255,255,255,0)) 0 0,
+        linear-gradient(to left,  var(--pro-card) 30%, rgba(255,255,255,0)) 100% 0,
+        radial-gradient(farthest-side at 0 50%,   rgba(15,23,42,.10), rgba(15,23,42,0)) 0 0,
+        radial-gradient(farthest-side at 100% 50%, rgba(15,23,42,.10), rgba(15,23,42,0)) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 44px 100%, 44px 100%, 16px 100%, 16px 100%;
+    background-attachment: local, local, scroll, scroll;
+}
 
 @media (max-width: 1400px) {
     .pro-stats { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -604,22 +656,63 @@ html, body { height: 100%; }
 @media (max-width: 1100px) {
     .pro-topbar-search input { width: 190px; }
 }
+
 @media (max-width: 900px) {
-    /* No menu button, so the sidebar can't hide off-screen — it stacks above
-       the content and scrolls with the page instead. */
-    .pro-sidebar { position: static; width: 100%; height: auto; overflow: visible; }
-    .pro-nav { overflow: visible; }
+    /* Sidebar → off-canvas drawer. It's already position:fixed; we just slide
+       it out of view and let responsive-nav.js toggle .open. */
+    .pro-sidebar {
+        width: var(--pro-side-w); max-width: 86vw;
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+        z-index: 70; box-shadow: 8px 0 34px rgba(9, 12, 34, .34);
+    }
+    .pro-sidebar.open { transform: translateX(0); }
+
+    .pro-mobilebar { display: flex; }
     .pro-main { margin-left: 0; min-height: 0; }
+
     .pro-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
-    .pro-topbar { gap: 12px; padding: 13px 16px; }
-    .pro-topbar-search { display: none; }
-    .pro-heading h1 { font-size: 20px; }
-    .pro-heading p { display: none; }
-    .pro-cta span { display: none; }
-    .pro-cta { padding: 13px; }
     .pro-content { padding: 16px; }
-    .pro-table { min-width: 940px; }
+
+    /* Keep the "Add New Client" label — an unlabeled icon button is a guessing
+       game. Let it wrap instead. */
+    .pro-cta { padding: 12px 16px; }
+
+    /* Tables keep a readable floor and scroll horizontally inside their card
+       (with the edge-shadow affordance above) rather than crushing columns. */
+    .pro-table { min-width: 720px; }
+    .pro-table thead th { padding: 12px 14px; }
+    .pro-table tbody td { padding: 12px 14px; }
+
+    .pro-panel-head { padding: 16px; gap: 10px; }
+    .pro-filters { width: 100%; }
+    .pro-filters .pro-select, .pro-filters .pro-search { flex: 1 1 160px; }
+    .pro-select select, .pro-search input { width: 100%; min-width: 0; }
 }
-@media (max-width: 560px) {
-    .pro-stats { grid-template-columns: 1fr; }
+
+@media (max-width: 600px) {
+    .pro-content { padding: 13px; }
+    .pro-stats { grid-template-columns: 1fr; gap: 12px; }
+
+    /* Full-width search: stack the button under the field so neither is cramped. */
+    .pro-searchbar { flex-wrap: wrap; }
+    .pro-searchbar-field { flex: 1 1 100%; }
+    .pro-searchbar-btn { flex: 1 1 100%; justify-content: center; padding: 12px; }
+
+    /* Row actions wrap to a tidy grid instead of overflowing the cell. */
+    .pro-actions { gap: 5px; }
+    .pro-act { padding: 8px 11px; }
+
+    .pro-foot { justify-content: center; }
+    .motiv-quote { font-size: 15px; }
+}
+
+@media (max-width: 400px) {
+    .pro-content { padding: 11px; }
+    .pro-panel-title h2 { font-size: 16px; }
+}
+
+/* Coarse-pointer (touch) devices: give the sidebar-nav rows a comfier hit area. */
+@media (hover: none) and (max-width: 900px) {
+    .pro-nav a { padding: 11px 12px; }
 }
