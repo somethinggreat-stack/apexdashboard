@@ -1018,6 +1018,93 @@ body.drawer-open { overflow: hidden; }
     .data-table td .btn, .row-actions .btn, .u-actions .btn { min-height: 34px; }
 }
 
+/* ==========================================================================
+   DARK MODE — shared (leads console + components reused inside the pro pages:
+   cards, tables, forms, modals, chat, upload, docs). Activated by
+   <html data-theme="dark"> (set pre-paint in each layout's head). Rules are
+   prefixed with :root[data-theme="dark"] so they out-specify plain-class page
+   styles, including ones defined inline on a page. The dark sidebars are
+   already dark and are left untouched.
+   ========================================================================== */
+:root[data-theme="dark"] {
+    --bg:       #0b0f1c;
+    --surface:  #161b2e;
+    --border:   #272d49;
+    --text:     #e6eaf6;
+    --muted:    #8a94b0;
+    --shadow:   0 1px 3px rgba(0,0,0,.5);
+}
+
+/* Tables */
+:root[data-theme="dark"] .data-table th { background: #12172a; color: #93a0c0; }
+:root[data-theme="dark"] .data-table tbody tr:hover { background: rgba(255,255,255,.035); }
+:root[data-theme="dark"] .data-table tbody tr.row-link:hover { background: rgba(99,102,241,.12); }
+
+/* Buttons / inputs */
+:root[data-theme="dark"] .btn { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .btn:hover { background: rgba(255,255,255,.06); }
+:root[data-theme="dark"] .form-group input,
+:root[data-theme="dark"] .form-group select,
+:root[data-theme="dark"] .form-group textarea,
+:root[data-theme="dark"] .filter-bar input,
+:root[data-theme="dark"] .filter-bar select,
+:root[data-theme="dark"] .inline-update input,
+:root[data-theme="dark"] .inline-update select { background: #10152a; color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .inline-update { background: #12172a; }
+
+/* Panels / modals / misc surfaces */
+:root[data-theme="dark"] .modal-content { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .info-grid > div > div { color: var(--text); }
+:root[data-theme="dark"] .form-section,
+:root[data-theme="dark"] .profile-section-head { border-color: var(--border); }
+:root[data-theme="dark"] .badge { background: #2a3150; color: #cbd5e1; }
+:root[data-theme="dark"] .w4s2-fields,
+:root[data-theme="dark"] .step-docs,
+:root[data-theme="dark"] .bureau-stat { background: #12172a; border-color: var(--border); }
+
+/* Documents + upload */
+:root[data-theme="dark"] .doc-card { background: #12172a; border-color: var(--border); }
+:root[data-theme="dark"] .upcard {
+    background: radial-gradient(120% 100% at 50% 0%, #1a2038 0%, #141a30 60%, #10152a 100%);
+    border-color: #2c3450;
+}
+:root[data-theme="dark"] .upcard-title { color: var(--text); }
+:root[data-theme="dark"] .upcard-icon { background: linear-gradient(180deg, #1e2745 0%, #172038 100%); }
+:root[data-theme="dark"] .dz-item { background: #12172a; border-color: var(--border); }
+:root[data-theme="dark"] .dz-item .dz-name { color: var(--text); }
+
+/* Multi-select step picker */
+:root[data-theme="dark"] .msel2,
+:root[data-theme="dark"] .msel2-opt { background: #12172a; border-color: var(--border); }
+:root[data-theme="dark"] .msel2-search,
+:root[data-theme="dark"] .msel2-btn { background: #10152a; color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .msel2-txt { color: var(--text); }
+:root[data-theme="dark"] .msel2-opt.is-selected { background: rgba(99,102,241,.16); }
+:root[data-theme="dark"] .msel2-box { background: #10152a; border-color: #3a4368; }
+
+/* Chat / messages (base styles live inline on the page; out-specified here) */
+:root[data-theme="dark"] .chat-shell { background: var(--surface); border-color: var(--border); }
+:root[data-theme="dark"] .chat-header { background: #12172a; border-color: var(--border); }
+:root[data-theme="dark"] .chat-scroll { background: #0e1324; }
+:root[data-theme="dark"] .from-client .chat-bubble { background: #1d2440; color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .chat-form { background: var(--surface); border-color: var(--border); }
+:root[data-theme="dark"] .chat-form textarea { background: #10152a; color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .picker-card { background: var(--surface); border-color: var(--border); }
+
+/* ---- Theme toggle button (sits in the always-dark sidebar of both consoles) ---- */
+.theme-toggle-btn {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; padding: 9px 14px; margin: 0; cursor: pointer;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 10px; color: #e6ebf7; font: inherit; font-size: 13.5px; font-weight: 600;
+    transition: background .15s, border-color .15s;
+}
+.theme-toggle-btn:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); }
+.theme-toggle-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+.theme-toggle-btn .ico-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle-btn .ico-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle-btn .ico-sun { display: inline; }
+
 /* Galaxy cursor trail canvas (see public/js/galaxy-trail.js).
    pointer-events:none means it can never intercept a click. */
 #gxCanvas {

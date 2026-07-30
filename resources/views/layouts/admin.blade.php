@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {{-- Set the theme before first paint so there's no flash of the wrong colour. --}}
+    <script>(function(){try{var t=localStorage.getItem('apex-theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     <style>
@@ -227,6 +229,14 @@
                 @endif
             @endisset
         </nav>
+        <div class="sidebar-logout" style="padding-bottom:2px;">
+            <button type="button" class="theme-toggle-btn" data-theme-toggle aria-pressed="false" title="Toggle light / dark theme">
+                <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+                <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2M12 20.5v2M4.2 4.2l1.5 1.5M18.3 18.3l1.5 1.5M1.5 12h2M20.5 12h2M4.2 19.8l1.5-1.5M18.3 5.7l1.5-1.5"/></svg>
+                <span class="theme-toggle-label">Dark mode</span>
+            </button>
+        </div>
+
         <form method="POST" action="{{ route('admin.logout') }}" class="sidebar-logout">
             @csrf
             <button type="submit" class="btn btn-link">Logout</button>
@@ -283,6 +293,7 @@
 @endif
 
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
+<script src="{{ asset('js/theme-toggle.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script>
 /* Make any <tr data-href> fully clickable, while leaving real
