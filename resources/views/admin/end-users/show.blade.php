@@ -1038,30 +1038,66 @@
 
             xhr.onload = function () {
                 var ok = xhr.status >= 200 && xhr.status < 300;
-                rows.forEach(function (r) {
-                    var s = r.querySelector('.dz-state');
-                    var bar = r.querySelector('.dz-bar span');
-                    var ico = r.querySelector('.dz-ico');
-                    if (ok) {
+                if (ok) {
+                    rows.forEach(function (r) {
+                        var s = r.querySelector('.dz-state');
+                        var bar = r.querySelector('.dz-bar span');
+                        var ico = r.querySelector('.dz-ico');
                         s.className = 'dz-state done'; s.textContent = 'Done';
                         if (bar) bar.style.width = '100%';
                         if (ico) { ico.className = 'dz-ico ok'; ico.innerHTML = checkSvg; }
-                    } else {
-                        s.className = 'dz-state error'; s.textContent = 'Failed';
-                        if (ico) { ico.className = 'dz-ico bad'; ico.innerHTML = errSvg; }
-                    }
-                });
-                if (ok) { setTimeout(function () { window.location.reload(); }, 900); }
+                    });
+                    setTimeout(function () { window.location.reload(); }, 900);
+                } else {
+                    markFailed(rows, extractError(xhr));
+                }
             };
             xhr.onerror = function () {
-                rows.forEach(function (r) {
-                    var s = r.querySelector('.dz-state');
-                    var ico = r.querySelector('.dz-ico');
-                    s.className = 'dz-state error'; s.textContent = 'Failed';
-                    if (ico) { ico.className = 'dz-ico bad'; ico.innerHTML = errSvg; }
-                });
+                markFailed(rows, 'The upload was blocked before it reached the server (network, firewall/WAF, or a size limit).');
             };
             xhr.send(fd);
+
+            // Pull the real reason out of the server's response so the row can
+            // show WHY it failed instead of a bare "Failed".
+            function extractError(xhr) {
+                var msg = '';
+                try {
+                    var j = JSON.parse(xhr.responseText);
+                    if (j) {
+                        if (j.errors && typeof j.errors === 'object') {
+                            var parts = [];
+                            Object.keys(j.errors).forEach(function (k) {
+                                parts.push([].concat(j.errors[k]).join(' '));
+                            });
+                            msg = parts.join(' ');
+                        }
+                        if (!msg && j.message && j.message !== 'The given data was invalid.') {
+                            msg = j.message;
+                        }
+                    }
+                } catch (e) { /* non-JSON (HTML error page) — fall through */ }
+                if (!msg) {
+                    if (xhr.status === 413) msg = 'File is too large for the server.';
+                    else if (xhr.status === 419) msg = 'Your session expired — reload the page and sign in again.';
+                    else if (xhr.status === 0) msg = 'No response from the server (connection dropped or blocked).';
+                    else msg = 'Server responded with HTTP ' + (xhr.status || '?') + '.';
+                }
+                return msg;
+            }
+
+            function markFailed(rowEls, message) {
+                rowEls.forEach(function (r) {
+                    var s = r.querySelector('.dz-state');
+                    var ico = r.querySelector('.dz-ico');
+                    var bar = r.querySelector('.dz-bar');
+                    if (s) { s.className = 'dz-state error'; s.textContent = 'Failed'; }
+                    if (ico) { ico.className = 'dz-ico bad'; ico.innerHTML = errSvg; }
+                    if (bar) bar.style.visibility = 'hidden';
+                    var err = r.querySelector('.dz-err');
+                    if (!err) { err = document.createElement('span'); err.className = 'dz-err'; r.appendChild(err); }
+                    err.textContent = message;
+                });
+            }
         }
 
         function escapeHtml(str) {

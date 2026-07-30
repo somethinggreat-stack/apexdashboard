@@ -781,6 +781,15 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
 .dz-item .dz-state.uploading { color: var(--primary); }
 .dz-item .dz-state.done  { color: #16a34a; }
 .dz-item .dz-state.error { color: var(--danger); }
+/* Full-width reason line under a failed upload — the actual server error. */
+.dz-err {
+    flex: 1 1 100%;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--danger);
+    word-break: break-word;
+}
 .dz-bar { height: 5px; background: #e8edf5; border-radius: 3px; overflow: hidden; width: 96px; flex-shrink: 0; }
 .dz-bar span {
     display: block; height: 100%; width: 0;
