@@ -284,7 +284,6 @@
 
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
-<script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>
 /* Make any <tr data-href> fully clickable, while leaving real
    interactive controls (links, buttons, forms, inputs) working. */

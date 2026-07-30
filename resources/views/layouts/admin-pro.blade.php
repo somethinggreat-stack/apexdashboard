@@ -78,20 +78,19 @@
             @endif
 
             @isset($selectedClient)
+                @php $nav = $selectedClient->navCounts(); @endphp
                 @if ($selectedClient->intake_enabled)
-                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
                     <a href="{{ route('admin.new-clients') }}" class="{{ request()->routeIs('admin.new-clients*') ? 'active' : '' }}">
                         <svg class="i-int" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                         New Clients
-                        @if ($pendingIntake > 0)<span class="pro-count">{{ $pendingIntake }}</span>@endif
+                        @if ($nav['pending'] > 0)<span class="pro-count">{{ $nav['pending'] }}</span>@endif
                     </a>
                 @endif
 
-                @php $errorCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
                 <a href="{{ route('admin.errors') }}" class="{{ request()->routeIs('admin.errors') ? 'active' : '' }}">
                     <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
                     New Client Errors
-                    @if ($errorCount > 0)<span class="pro-count">{{ $errorCount }}</span>@endif
+                    @if ($nav['errors'] > 0)<span class="pro-count">{{ $nav['errors'] }}</span>@endif
                 </a>
 
                 <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.index') ? 'active' : '' }}">
@@ -104,25 +103,22 @@
                     Clients
                 </a>
 
-                @php $roundErrCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->where('intake_status', 'round_error')->count(); @endphp
                 <a href="{{ route('admin.round-errors') }}" class="{{ request()->routeIs('admin.round-errors') ? 'active' : '' }}">
                     <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12a9.5 9.5 0 1 0 2.8-6.7"/><polyline points="2.5 4 2.5 8 6.5 8"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="15.5" x2="12" y2="15.5"/></svg>
                     Round Errors
-                    @if ($roundErrCount > 0)<span class="pro-count">{{ $roundErrCount }}</span>@endif
+                    @if ($nav['round_errors'] > 0)<span class="pro-count">{{ $nav['round_errors'] }}</span>@endif
                 </a>
 
-                @php $holdCount = \App\Models\EndUser::forClient($selectedClient->id)->onHold()->count(); @endphp
                 <a href="{{ route('admin.hold') }}" class="{{ request()->routeIs('admin.hold') ? 'active' : '' }}">
                     <svg class="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
                     Hold/Pause
-                    @if ($holdCount > 0)<span class="pro-count">{{ $holdCount }}</span>@endif
+                    @if ($nav['hold'] > 0)<span class="pro-count">{{ $nav['hold'] }}</span>@endif
                 </a>
 
-                @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
                     <svg class="i-web" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     Messages
-                    @if ($adminUnread > 0)<span class="pro-count">{{ $adminUnread }}</span>@endif
+                    @if ($nav['unread'] > 0)<span class="pro-count">{{ $nav['unread'] }}</span>@endif
                 </a>
 
                 @if ($isSuper)
@@ -287,7 +283,6 @@
 
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
-<script src="{{ asset('js/galaxy-trail.js') }}" defer></script>
 <script>
 /* Rows with data-href are clickable, minus the real controls inside them. */
 (function () {

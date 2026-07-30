@@ -20,6 +20,20 @@ class DashboardController extends Controller
             ->orderBy('business_name')
             ->get();
 
+        // Load every client of every business owner in ONE query (with the four
+        // week-step counts) and group them in memory, instead of firing a heavy
+        // 4-subquery SELECT per business owner. Same numbers, far fewer round
+        // trips — the old loop was the dashboard's main slowdown.
+        $eusByClient = EndUser::whereIn('client_id', $clients->pluck('id'))
+            ->withCount([
+                'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+                'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+                'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+                'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+            ])
+            ->get()
+            ->groupBy('client_id');
+
         $attention   = [];
         $sumPending  = 0;   // new intake awaiting review
         $sumIncomplete = 0; // incomplete weekly logs
@@ -28,13 +42,7 @@ class DashboardController extends Controller
         $payPending  = 0.0;
 
         foreach ($clients as $client) {
-            $eus = EndUser::forClient($client->id)
-                ->withCount([
-                    'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
-                    'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
-                    'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
-                    'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
-                ])->get();
+            $eus = $eusByClient->get($client->id, collect());
 
             $pending    = $eus->where('intake_status', 'pending_review')->count();
             $active     = $eus->filter(fn ($e) => $e->intake_status !== 'pending_review');
