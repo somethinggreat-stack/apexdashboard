@@ -17,16 +17,31 @@ document.addEventListener('click', function (e) {
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.tabs').forEach(group => {
         const tabs = group.querySelectorAll('.tab');
+
+        function activate(tab) {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.target;
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === target);
+            });
+        }
+
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const target = tab.dataset.target;
-                document.querySelectorAll('.tab-panel').forEach(panel => {
-                    panel.classList.toggle('active', panel.id === target);
-                });
+                activate(tab);
+                // Remember the open tab in the URL (no scroll, no history spam) so
+                // a reload — e.g. after uploading a document — returns to the same
+                // tab instead of resetting to the first one.
+                if (tab.dataset.target) {
+                    try { history.replaceState(null, '', '#' + tab.dataset.target); } catch (e) {}
+                }
             });
         });
+
+        // On load, honour a #tab-… hash so reloads land on the right tab.
+        const want = (location.hash || '').slice(1);
+        if (want) tabs.forEach(tab => { if (tab.dataset.target === want) activate(tab); });
     });
 
     const chatScroll = document.querySelector('[data-chat-scroll]');

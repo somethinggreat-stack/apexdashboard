@@ -1047,7 +1047,12 @@
                         if (bar) bar.style.width = '100%';
                         if (ico) { ico.className = 'dz-ico ok'; ico.innerHTML = checkSvg; }
                     });
-                    setTimeout(function () { window.location.reload(); }, 900);
+                    // Come back on the All Documents tab so they can upload
+                    // another one right away, instead of resetting to Overview.
+                    setTimeout(function () {
+                        try { history.replaceState(null, '', '#tab-docs'); } catch (e) {}
+                        window.location.reload();
+                    }, 900);
                 } else {
                     markFailed(rows, extractError(xhr));
                 }
