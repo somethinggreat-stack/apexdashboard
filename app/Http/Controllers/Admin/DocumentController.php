@@ -23,7 +23,7 @@ class DocumentController extends Controller
             'process_step_id' => 'nullable|integer',
             'category' => 'required|in:credit_report,dispute_letter_experian,dispute_letter_equifax,dispute_letter_transunion,dispute_letter_innovis,cfpb_complaint_experian,cfpb_complaint_equifax,cfpb_complaint_transunion,cfpb_complaint_innovis,ftc_complaint,bureau_response,escalation_letter,call_recording,call_notes,tracking_receipt,other',
             'description' => 'nullable|string|max:255',
-            'file' => 'required|file|mimes:pdf,jpg,jpeg,png,mp3,wav|max:10240',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png,mp3,wav|max:8192',
         ]);
 
         // Cross-check: process_step (if provided) must belong to the same end_user under selected BO
@@ -92,6 +92,19 @@ class DocumentController extends Controller
             );
         }
 
+        // Inspect PHP's own per-file upload error codes BEFORE validation. A file
+        // over the server's upload_max_filesize fails Laravel validation with a
+        // useless generic "failed to upload"; checking here lets us name the real
+        // cause and the exact limit that was hit.
+        $rawFiles = $request->file('files');
+        if (is_array($rawFiles)) {
+            foreach ($rawFiles as $file) {
+                if ($file && ! $file->isValid()) {
+                    return $this->uploadError($request, $this->uploadErrorMessage($file), 422);
+                }
+            }
+        }
+
         $endUserRule = Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $clientId));
 
         try {
@@ -99,29 +112,19 @@ class DocumentController extends Controller
                 'end_user_id'     => ['required', $endUserRule],
                 'process_step_id' => 'nullable|integer',
                 'files'           => 'required|array|min:1|max:50',
-                'files.*'         => 'file|mimes:pdf,jpg,jpeg,png,mp3,wav,doc,docx,xls,xlsx,csv,txt|max:10240',
+                'files.*'         => 'file|mimes:pdf,jpg,jpeg,png,mp3,wav,doc,docx,xls,xlsx,csv,txt|max:8192',
             ], [
                 'end_user_id.exists' => 'This client no longer exists under the selected business owner.',
                 'files.required'     => 'No files reached the server (they may have been blocked or stripped in transit).',
                 'files.max'          => 'Too many files at once — upload up to 50 at a time.',
                 'files.*.mimes'      => 'Unsupported file type. Allowed: PDF, JPG, PNG, MP3, WAV, DOC(X), XLS(X), CSV, TXT.',
-                'files.*.max'        => 'File is larger than the 10 MB per-file limit.',
+                'files.*.max'        => 'This file is larger than the 8 MB per-file limit.',
+                // Fallback if a PHP upload error slips past the check above.
+                'files.*.uploaded'   => 'This file could not be uploaded — it most likely exceeds the server upload_max_filesize (currently ' . ini_get('upload_max_filesize') . '). Raise it in cPanel → MultiPHP INI Editor.',
                 'files.*.file'       => 'The upload did not arrive as a complete file (blocked or truncated in transit).',
             ]);
         } catch (ValidationException $e) {
             return $this->uploadError($request, implode(' ', array_unique($e->validator->errors()->all())), 422);
-        }
-
-        // Surface PHP's own per-file upload error codes (ini size, partial upload,
-        // missing temp dir, …) instead of a silent failure later.
-        foreach ($request->file('files') as $file) {
-            if (! $file->isValid()) {
-                return $this->uploadError(
-                    $request,
-                    'File "' . $file->getClientOriginalName() . '" could not be uploaded: ' . $file->getErrorMessage(),
-                    422
-                );
-            }
         }
 
         if (!empty($data['process_step_id'])) {
@@ -177,6 +180,32 @@ class DocumentController extends Controller
         }
 
         return back()->with('status', "{$created} document(s) uploaded.");
+    }
+
+    /** A precise, human message for a PHP file-upload error code, incl. limits. */
+    private function uploadErrorMessage(\Illuminate\Http\UploadedFile $file): string
+    {
+        $name = $file->getClientOriginalName();
+
+        return match ($file->getError()) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE =>
+                "\"{$name}\" is larger than the server's per-file upload limit "
+                . '(upload_max_filesize = ' . ini_get('upload_max_filesize')
+                . ', post_max_size = ' . ini_get('post_max_size')
+                . '). Raise these in cPanel → MultiPHP INI Editor.',
+            UPLOAD_ERR_PARTIAL =>
+                "\"{$name}\" only uploaded part-way — the connection dropped mid-upload. Please try again.",
+            UPLOAD_ERR_NO_FILE =>
+                "No file was actually received for \"{$name}\".",
+            UPLOAD_ERR_NO_TMP_DIR =>
+                'The server has no temp folder to receive uploads (UPLOAD_ERR_NO_TMP_DIR) — a hosting configuration issue.',
+            UPLOAD_ERR_CANT_WRITE =>
+                'The server could not write the upload to disk (UPLOAD_ERR_CANT_WRITE) — check disk space and permissions.',
+            UPLOAD_ERR_EXTENSION =>
+                "A PHP extension stopped the upload of \"{$name}\".",
+            default =>
+                "\"{$name}\" could not be uploaded (PHP upload error #" . $file->getError() . ').',
+        };
     }
 
     /** JSON error for the AJAX uploader; a flash-back for a plain form post. */
