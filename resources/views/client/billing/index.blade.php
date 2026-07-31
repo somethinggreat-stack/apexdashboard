@@ -5,7 +5,7 @@
 @section('content')
 <div class="welcome">
     <h2>Billing</h2>
-    <p class="muted">A read-only summary of your invoices and the payments recorded on your account.</p>
+    <p class="muted">A read-only summary of your outstanding balance and the payments recorded on your account.</p>
 </div>
 
 <div class="stats-grid">
@@ -69,27 +69,10 @@
     @endif
 </div>
 
-{{-- Invoices --}}
-<div class="card">
-    <div class="card-header">
-        <h2>Invoices</h2>
-    </div>
-    <div class="table-scroll"><table class="data-table">
-        <thead><tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>&nbsp;</th></tr></thead>
-        <tbody>
-            @forelse ($invoices as $inv)
-                <tr>
-                    <td>{{ $inv->invoice_number }}</td>
-                    <td>{{ $inv->invoice_date?->format('M d, Y') }}</td>
-                    <td>${{ number_format($inv->total, 2) }}</td>
-                    <td><a href="{{ route('client.billing.invoice.show', $inv->id) }}" target="_blank" class="btn btn-sm">View</a></td>
-                </tr>
-            @empty
-                <tr><td colspan="4" class="empty">No invoices yet.</td></tr>
-            @endforelse
-        </tbody>
-    </table></div>
-</div>
+{{-- Invoices list intentionally hidden from the business-owner portal: the
+     running history of every generated invoice made it look like a large
+     accumulated bill. Invoices are still generated and viewable on the admin
+     side; BOs see only their current Outstanding and Payment History. --}}
 
 {{-- Payment history --}}
 <div class="card">
