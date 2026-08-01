@@ -67,6 +67,60 @@ class ClientSelectorController extends Controller
         return view('admin.client-selector.index', compact('clients', 'attention', 'owes'));
     }
 
+    /**
+     * Universal client search for the VA home page: find a client across ALL of
+     * the VA's business owners (name / email / phone) and return JSON so the
+     * results render inline on the Select Business Owner page. Scoped to the
+     * data owner, so a VA never sees clients outside their own accounts.
+     */
+    public function search(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $like    = '%' . $q . '%';
+
+        $rows = EndUser::whereHas('client', fn ($c) => $c->where('admin_id', $ownerId))
+            ->where(function ($w) use ($like) {
+                $w->where('first_name', 'like', $like)
+                  ->orWhere('last_name', 'like', $like)
+                  ->orWhere('email', 'like', $like)
+                  ->orWhere('phone', 'like', $like)
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$like]);
+            })
+            ->with('client:id,business_name')
+            ->orderBy('first_name')
+            ->limit(30)
+            ->get();
+
+        $label = function (EndUser $e) {
+            if ($e->held_at) {
+                return 'On Hold';
+            }
+            return match ($e->intake_status) {
+                'pending_review' => 'New Client',
+                'error'          => 'New Client Error',
+                'round_error'    => 'Round Error',
+                'done'           => 'Done',
+                default          => 'In Progress',
+            };
+        };
+
+        return response()->json([
+            'results' => $rows->map(fn (EndUser $e) => [
+                'id'      => $e->id,
+                'name'    => $e->full_name,
+                'email'   => $e->email,
+                'bo_id'   => $e->client_id,
+                'bo_name' => $e->client?->business_name,
+                'status'  => $label($e),
+            ])->values(),
+        ]);
+    }
+
     public function select(Request $request, string $id)
     {
         $client = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())->findOrFail($id);

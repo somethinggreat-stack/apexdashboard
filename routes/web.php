@@ -138,6 +138,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Business-owner picker — accessible without a selection
         Route::get('select-business-owner', [Admin\ClientSelectorController::class, 'index'])
             ->name('client-selector.index');
+        // Universal client search on the VA home page (JSON; results render inline).
+        Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
+            ->name('client-selector.search');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])
