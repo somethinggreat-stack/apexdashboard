@@ -569,7 +569,10 @@
             <h3>Edit Profile — {{ $endUser->full_name }}</h3>
             <button class="modal-close" onclick="closeModal('editProfileModal')">&times;</button>
         </div>
-        <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" enctype="multipart/form-data">
+        {{-- NOT multipart: this host's WAF mangles native multipart form posts
+             (session cookie is dropped → the save 419s to login). The collage
+             upload moved out; everything else saves as a normal POST. --}}
+        <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}">
             @csrf @method('PUT')
 
             <div class="form-section">
@@ -617,10 +620,11 @@
                     <div class="form-group">
                         <label>Collage</label>
                         @if ($endUser->collage_url)
-                            <div class="muted small"><a href="{{ $endUser->collage_url }}" target="_blank">Current file</a> — uploading replaces it</div>
+                            <div class="muted small"><a href="{{ $endUser->collage_url }}" target="_blank">Current file</a></div>
+                        @else
+                            <div class="muted small">Not uploaded.</div>
                         @endif
-                        <input type="file" name="collage" accept=".pdf,.jpg,.jpeg,.png">
-                        <div class="muted small">A single file (image or PDF) containing Photo ID, Proof of Address and SSN.</div>
+                        <div class="muted small">To add or replace identity files, use the <strong>All Documents</strong> tab (its uploader isn't affected by this).</div>
                     </div>
                     <div class="form-group"></div>
                 </div>
