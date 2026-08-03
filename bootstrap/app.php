@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -70,32 +71,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
-
-            // TEMP diagnostic: why do admin saves get bounced to login? Capture
-            // whether PHP even received the session cookie (this host mangles
-            // multipart requests), whether auth is present, and whether the CSRF
-            // token matches. Logged to storage/logs/laravel-*.log.
-            if (in_array($request->method(), ['POST', 'PUT', 'PATCH'], true)
-                && $request->is('admin/*')
-                && ($e instanceof TokenMismatchException || $status === 419
-                    || $e instanceof AuthenticationException || $status === 401)) {
-                Log::warning('SAVE_DEBUG', [
-                    'exception'               => class_basename($e),
-                    'status'                  => $status,
-                    'path'                    => $request->path(),
-                    'method'                  => $request->method(),
-                    'content_type'            => (string) $request->header('Content-Type'),
-                    'session_cookie_received' => $request->cookies->has(config('session.cookie')),
-                    'session_started'         => $request->hasSession() && $request->session()->isStarted(),
-                    'admin_authed'            => auth('admin')->check(),
-                    'form_token_len'          => strlen((string) $request->input('_token')),
-                    'session_token_len'       => $request->hasSession() ? strlen((string) $request->session()->token()) : 0,
-                    'token_matches'           => ($request->hasSession() && $request->input('_token'))
-                        ? hash_equals((string) $request->session()->token(), (string) $request->input('_token'))
-                        : null,
-                ]);
+            // A failed form validation is NOT a server error. Let Laravel handle
+            // it the normal way: redirect back to the form with the field errors
+            // shown. (Before this, ValidationException isn't an HttpException, so
+            // it fell through as a 500 and bounced the user to login → Select
+            // Business Owner — with no hint that a field was invalid. That was the
+            // "CFPB save silently reverts" bug when a client had a blank address.)
+            if ($e instanceof ValidationException) {
+                return null;
             }
+
+            $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
 
             // Session expired / CSRF token no longer valid.
             if ($e instanceof TokenMismatchException || $status === 419) {

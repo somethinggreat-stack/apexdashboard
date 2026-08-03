@@ -557,10 +557,14 @@ class EndUserController extends Controller
             'email'                       => "$req|email|max:255",
             'phone'                       => "$reqOrNullable|string|max:30",
             'date_of_birth'               => "$reqOrNullable|date|before:today",
-            'current_address'             => "$req|string|max:255",
-            'city'                        => "$req|string|max:120",
-            'state'                       => "$req|string|max:120",
-            'zipcode'                     => "$req|string|max:20",
+            // Address is required at intake, but on an edit these may be blank.
+            // Laravel's ConvertEmptyStringsToNull turns an empty box into null, so
+            // WITHOUT nullable a blank address field fails "must be a string" and
+            // the whole save is rejected (this was the CFPB-save bounce bug).
+            'current_address'             => "$reqOrNullable|string|max:255",
+            'city'                        => "$reqOrNullable|string|max:120",
+            'state'                       => "$reqOrNullable|string|max:120",
+            'zipcode'                     => "$reqOrNullable|string|max:20",
             'ssn'                         => "$reqOrNullable|string|max:32",
             'credit_monitoring_name'      => "$reqOrNullable|string|max:100",
             'credit_monitoring_username'  => "$reqOrNullable|string|max:255",

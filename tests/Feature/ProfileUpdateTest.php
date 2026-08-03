@@ -107,6 +107,29 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('done', $eu->intake_status, 'Status must stay done');
     }
 
+    public function test_cfpb_saves_when_address_fields_are_blank(): void
+    {
+        // The exact production repro: a client (Heather Pearson) with an empty
+        // address. The form posts empty boxes, ConvertEmptyStringsToNull turns
+        // them into null, and WITHOUT nullable the old rules failed
+        // "current address must be a string" — silently bouncing to the picker.
+        [, $va, $bo, $eu] = $this->makeWorld();
+
+        $resp = $this->actingAs($va, 'admin')
+            ->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'current_address' => '', 'city' => '', 'state' => '', 'zipcode' => '',
+                'cfpb_email'      => 'blankaddr@cfpb.com', 'cfpb_password' => 'pw12345',
+            ]));
+
+        fwrite(STDERR, "[blank-address] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
+
+        $resp->assertRedirect(route('admin.end-users.show', $eu->id));
+        $resp->assertSessionHasNoErrors();
+        $eu->refresh();
+        $this->assertSame('blankaddr@cfpb.com', $eu->cfpb_email, 'CFPB must save even with a blank address');
+    }
+
     public function test_super_admin_updates_profile(): void
     {
         [$super, , $bo, $eu] = $this->makeWorld();
