@@ -13,23 +13,25 @@ class EnsureClientSelected
 {
     public function handle(Request $request, Closure $next)
     {
-        $adminId    = Auth::guard('admin')->user()?->dataOwnerId();
-        $selectedId = $request->session()->get('selected_client_id');
+        $adminId = Auth::guard('admin')->user()?->dataOwnerId();
 
-        $client = ($selectedId && $adminId)
-            ? Client::forAdmin($adminId)->find($selectedId)
-            : null;
+        if (!$adminId) {
+            $request->session()->forget('selected_client_id');
+            return redirect()->route('admin.client-selector.index');
+        }
 
-        // Self-heal: if the selected owner is missing or stale but the request
-        // targets a specific client (an end-user route carries its id), recover
-        // the owner from that client — as long as this admin/VA is allowed to see
-        // it. This stops a lost/mismatched session from silently bouncing the user
-        // to the picker and discarding what they just typed (e.g. a profile save).
-        if (!$client && $adminId) {
-            $recovered = $this->recoverOwnerFromRoute($request, $adminId);
-            if ($recovered) {
-                $client = $recovered;
-                $request->session()->put('selected_client_id', $client->id);
+        // For any route that targets a specific client (an end-user route carries
+        // its id), the owner IS that client's owner — resolve it straight from the
+        // record, with NO dependency on the session. This is what makes profile
+        // saves reliable: multipart posts can arrive without the session cookie
+        // (this host strips it), and we still know exactly whose client it is.
+        $client = $this->ownerFromEndUserRoute($request, $adminId);
+
+        // Otherwise fall back to the session-selected owner (list pages, etc.).
+        if (!$client) {
+            $selectedId = $request->session()->get('selected_client_id');
+            if ($selectedId) {
+                $client = Client::forAdmin($adminId)->find($selectedId);
             }
         }
 
@@ -38,18 +40,21 @@ class EnsureClientSelected
             return redirect()->route('admin.client-selector.index');
         }
 
+        // Keep the session in step so the sidebar, badge counts and the rest of
+        // the app follow whichever owner we resolved.
+        $request->session()->put('selected_client_id', $client->id);
         View::share('selectedClient', $client);
 
         return $next($request);
     }
 
     /**
-     * On an end-user route (end-users/{id} and friends) resolve the owner from
-     * the end-user in the URL, but only if it belongs to a client this admin/VA
-     * is authorized for. Returns null for any non-end-user route so those still
-     * fall through to the picker.
+     * Resolve the owner from the end-user in the URL (end-users/{id} and friends),
+     * only if that client belongs to a business owner this admin/VA may access.
+     * Returns null for routes without a specific end-user so they fall back to the
+     * session-selected owner.
      */
-    private function recoverOwnerFromRoute(Request $request, int $adminId): ?Client
+    private function ownerFromEndUserRoute(Request $request, int $adminId): ?Client
     {
         if (!$request->routeIs('admin.end-users.*')) {
             return null;
