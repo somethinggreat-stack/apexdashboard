@@ -61,7 +61,7 @@ class ClientController extends Controller
 
         Client::create($data);
 
-        return redirect()->route('admin.clients.index')->with('status', 'Business owner created.');
+        return redirect()->route('admin.clients.index')->with('confirm', 'Business owner added');
     }
 
     public function edit(string $id)
@@ -91,7 +91,7 @@ class ClientController extends Controller
 
         $client->update($data);
 
-        return redirect()->route('admin.clients.index')->with('status', 'Business owner updated.');
+        return redirect()->route('admin.clients.index')->with('confirm', 'Business owner updated');
     }
 
     public function destroy(string $id)

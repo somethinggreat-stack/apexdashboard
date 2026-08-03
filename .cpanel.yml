@@ -30,6 +30,8 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
-    # NOTE: intentionally NOT flushing sessions on deploy — doing so logged out
-    # anyone mid-edit (e.g. a VA saving a profile), bouncing them to the picker
-    # and losing their input. Sessions persist across deploys.
+    # Log everyone out on every deploy so the whole team logs back in on fresh
+    # code/session state. Runs LAST, after config:cache, so it reads the live
+    # session driver. (The earlier profile-save bounce was a validation bug, not
+    # this — safe to flush on deploy as intended.)
+    - cd $DEPLOYPATH && php artisan sessions:flush 2>&1 || true

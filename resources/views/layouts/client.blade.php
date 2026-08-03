@@ -225,6 +225,9 @@
         @if (session('status'))
             <div class="toast-flash" data-toast="success">{{ session('status') }}</div>
         @endif
+        @if (session('confirm'))
+            <div class="confirm-flash" style="display:none">{{ session('confirm') }}</div>
+        @endif
         @if ($errors->any())
             <div class="alert alert-error">
                 <ul>

@@ -200,7 +200,7 @@ class EndUserController extends Controller
             "New client {$endUser->full_name} has been added. Start working on it."
         );
 
-        return redirect()->route('admin.end-users.show', $endUser)->with('status', 'Client added.');
+        return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
     }
 
     public function show(string $id)
@@ -307,7 +307,7 @@ class EndUserController extends Controller
         // referer is missing — some hosts strip it on multipart posts, and we
         // must not land the user on the homepage or picker after a save.
         return back(302, [], route('admin.end-users.show', $endUser->id))
-            ->with('status', 'Client updated.');
+            ->with('confirm', 'Client updated');
     }
 
     public function destroy(string $id)

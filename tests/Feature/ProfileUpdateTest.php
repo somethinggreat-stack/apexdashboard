@@ -59,7 +59,7 @@ class ProfileUpdateTest extends TestCase
 
         fwrite(STDERR, "\n[with-session] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
 
-        $resp->assertSessionHas('status');
+        $resp->assertSessionHas('confirm', 'Client updated');
         $eu->refresh();
         $this->assertSame('cfpb@test.com', $eu->cfpb_email, 'CFPB email should be saved');
         $this->assertNotEmpty($eu->cfpb_password, 'CFPB password should be saved');
