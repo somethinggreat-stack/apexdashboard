@@ -20,7 +20,7 @@
                 <div class="form-group">
                     <label>Round</label>
                     <select name="round" id="quickLogRound" required>
-                        @for ($r = 1; $r <= 4; $r++)
+                        @for ($r = 1; $r <= 8; $r++)
                             <option value="{{ $r }}">Round {{ $r }}</option>
                         @endfor
                     </select>

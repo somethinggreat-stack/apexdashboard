@@ -94,7 +94,7 @@
         <div class="bulk-action">
             <span>Mark selected as paid for</span>
             <select id="bulk-round-picker">
-                @for ($r = 1; $r <= 5; $r++)
+                @for ($r = 1; $r <= 8; $r++)
                     <option value="{{ $r }}">Round {{ $r }}</option>
                 @endfor
             </select>
@@ -109,11 +109,9 @@
                 <tr>
                     <th class="sel-col">&nbsp;</th>
                     <th>Client</th>
-                    <th class="round-col">Round 1</th>
-                    <th class="round-col">Round 2</th>
-                    <th class="round-col">Round 3</th>
-                    <th class="round-col">Round 4</th>
-                    <th class="round-col">Round 5</th>
+                    @for ($r = 1; $r <= 8; $r++)
+                        <th class="round-col">Round {{ $r }}</th>
+                    @endfor
                     <th class="total-col">Paid</th>
                 </tr>
             </thead>

@@ -19,6 +19,9 @@ class EndUser extends Model
         '3rd Round',
         '4th Round',
         '5th Round',
+        '6th Round',
+        '7th Round',
+        '8th Round',
     ];
 
     /**
@@ -215,8 +218,8 @@ class EndUser extends Model
         $paidByRound = $this->payments->keyBy('round');
 
         $labelToNum = [
-            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3,
-            '4th Round' => 4, '5th Round' => 5,
+            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
+            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
         ];
         $activeRounds = collect($this->rounds ?? [])
             ->map(fn ($label) => $labelToNum[$label] ?? null)

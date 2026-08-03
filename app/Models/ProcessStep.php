@@ -64,7 +64,11 @@ class ProcessStep extends Model
 
     public static function rounds(): array
     {
-        return [1 => 'Round 1', 2 => 'Round 2', 3 => 'Round 3', 4 => 'Round 4'];
+        $out = [];
+        foreach (range(1, 8) as $n) {
+            $out[$n] = "Round {$n}";
+        }
+        return $out;
     }
 
     public static function weeks(): array

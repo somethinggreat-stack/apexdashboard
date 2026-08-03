@@ -90,8 +90,8 @@ class BillingController extends Controller
     private function buildPerRoundOutstanding($client): array
     {
         $roundLabelToNum = [
-            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3,
-            '4th Round' => 4, '5th Round' => 5,
+            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
+            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
         ];
 
         $endUsers = EndUser::forClient($client->id)
@@ -103,7 +103,7 @@ class BillingController extends Controller
         $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
 
         $items   = [];
-        $byRound = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+        $byRound = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0];
         $total   = 0.0;
 
         foreach ($endUsers as $eu) {
