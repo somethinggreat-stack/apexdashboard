@@ -177,6 +177,18 @@
                 <span>Hold/Pause</span>
                 @if ($holdCount > 0)<span class="nav-count nav-count-slate">{{ $holdCount }}</span>@endif
             </a>
+
+            {{-- Custom lists — only for owners with the feature on (Tycon Stan). --}}
+            @if ($bo?->custom_lists_enabled)
+                @foreach (\App\Models\EndUser::CUSTOM_LISTS as $lk => $ll)
+                    @php $lc = \App\Models\EndUser::forClient($bo->id)->customList($lk)->count(); @endphp
+                    <a href="{{ route('client.lists.show', $lk) }}" class="{{ request()->routeIs('client.lists.show') && request()->route('list') === $lk ? 'active' : '' }}">
+                        <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
+                        <span>{{ $ll }}</span>
+                        @if ($lc > 0)<span class="nav-count nav-count-slate">{{ $lc }}</span>@endif
+                    </a>
+                @endforeach
+            @endif
             <a href="{{ route('client.messages.index') }}" class="{{ request()->routeIs('client.messages.*') ? 'active' : '' }}">
                 <svg class="i-web" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 <span>Messages</span>

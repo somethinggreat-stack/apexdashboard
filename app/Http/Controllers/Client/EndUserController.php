@@ -8,6 +8,7 @@ use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class EndUserController extends Controller
 {
@@ -29,6 +30,7 @@ class EndUserController extends Controller
 
         $query = EndUser::forClient($clientId)
             ->notHeld()   // Hold/Pause clients live in their own section
+            ->noCustomList()   // clients tagged into a custom list show only there
             // New Clients (pending_review) and Errors live in their own sections.
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             ->withCount([
@@ -168,6 +170,7 @@ class EndUserController extends Controller
 
         $endUsers = EndUser::forClient($client->id)
             ->notHeld()
+            ->noCustomList()
             ->where('intake_status', 'pending_review')
             ->orderByDesc('intake_submitted_at')
             ->get();
@@ -180,6 +183,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
             ->notHeld()
+            ->noCustomList()
             ->where('intake_status', 'error')
             ->orderByDesc('updated_at')
             ->get();
@@ -192,6 +196,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
             ->onHold()
+            ->noCustomList()
             ->orderByDesc('held_at')
             ->get();
 
@@ -203,6 +208,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
             ->notHeld()
+            ->noCustomList()
             ->roundError()
             ->orderByDesc('updated_at')
             ->get();
@@ -213,6 +219,71 @@ class EndUserController extends Controller
     public function create()
     {
         return view('client.end-users.create');
+    }
+
+    /**
+     * A business owner's custom list (Jumbo / Mr Pierre / Tycoon). Only shown to
+     * owners who have the feature turned on (Tycon Stan). Clients keep their
+     * rounds and everything else exactly as in the normal lists — this is purely
+     * a different grouping.
+     */
+    public function customList(Request $request, string $list)
+    {
+        $bo = Auth::guard('client')->user();
+        abort_unless($bo->custom_lists_enabled && array_key_exists($list, EndUser::CUSTOM_LISTS), 404);
+
+        $query = EndUser::forClient($bo->id)
+            ->customList($list)
+            ->withCount([
+                'processSteps',
+                'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+                'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+                'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+                'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+            ]);
+
+        if ($request->filled('search')) {
+            $term = '%' . $request->search . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('first_name', 'like', $term)
+                    ->orWhere('last_name', 'like', $term)
+                    ->orWhere('email', 'like', $term);
+            });
+        }
+
+        $endUsers = $query->orderBy('first_name')->get();
+
+        return view('client.end-users.index', [
+            'endUsers'  => $endUsers,
+            'bucket'    => 'custom',
+            'listKey'   => $list,
+            'listLabel' => EndUser::CUSTOM_LISTS[$list],
+        ]);
+    }
+
+    /**
+     * Move one of this owner's clients into a custom list, or out of it. Posting
+     * the client's current list toggles them back out (list = "none"). Owner-only,
+     * gated to the feature flag; never affects rounds or work status.
+     */
+    public function moveToList(Request $request, string $id)
+    {
+        $bo = Auth::guard('client')->user();
+        abort_unless($bo->custom_lists_enabled, 404);
+
+        $data = $request->validate([
+            'list' => ['required', Rule::in(array_merge(array_keys(EndUser::CUSTOM_LISTS), ['none']))],
+        ]);
+
+        $endUser = EndUser::forClient($bo->id)->findOrFail($id);
+        $target  = $data['list'] === 'none' ? null : $data['list'];
+        $endUser->update(['custom_list' => $target]);
+
+        $msg = $target === null
+            ? "{$endUser->full_name} removed from the list."
+            : "{$endUser->full_name} moved to " . EndUser::CUSTOM_LISTS[$target] . '.';
+
+        return back()->with('status', $msg);
     }
 
 }

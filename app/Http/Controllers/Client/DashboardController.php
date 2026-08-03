@@ -32,8 +32,10 @@ class DashboardController extends Controller
 
         $stats = [
             'total_end_users' => $endUserIds->count(),
-            'in_progress'     => EndUser::forClient($clientId)->notHeld()->inProgress()->count(),
-            'done'            => EndUser::forClient($clientId)->notHeld()->done()->count(),
+            // Exclude custom-list clients so these tiles match the portal lists
+            // (no-op for owners without custom lists).
+            'in_progress'     => EndUser::forClient($clientId)->notHeld()->noCustomList()->inProgress()->count(),
+            'done'            => EndUser::forClient($clientId)->notHeld()->noCustomList()->done()->count(),
             'errors'          => EndUser::forClient($clientId)->notHeld()->where('intake_status', 'error')->count(),
             'hold'            => EndUser::forClient($clientId)->onHold()->count(),
             'unread_msgs'     => (int) ($client->unreadCountForClient() ?? 0),

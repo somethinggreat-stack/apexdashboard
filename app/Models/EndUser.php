@@ -21,11 +21,32 @@ class EndUser extends Model
         '5th Round',
     ];
 
+    /**
+     * Per-business-owner custom lists (Tycon Stan only for now). key => label.
+     * A client tagged into one of these shows only in that list on the owner's
+     * portal and drops out of the normal buckets there. Admin/VA views ignore it.
+     */
+    public const CUSTOM_LISTS = [
+        'jumbo'     => 'Jumbo',
+        'mr_pierre' => 'Mr Pierre',
+        'tycoon'    => 'Tycoon',
+    ];
+
     /** A round runs 30 days; the "days left" countdown is measured against this. */
     public const ROUND_LENGTH_DAYS = 30;
 
     protected static function booted(): void
     {
+        // A client that gets moved to a real work bucket — its intake_status or
+        // hold state changes — automatically drops out of any business-owner
+        // custom list. Central + invisible: covers every admin/VA move path
+        // without touching those controllers or views.
+        static::updating(function (EndUser $user) {
+            if ($user->custom_list !== null && ($user->isDirty('intake_status') || $user->isDirty('held_at'))) {
+                $user->custom_list = null;
+            }
+        });
+
         static::deleting(function (EndUser $user) {
             // A soft delete (Recycle Bin) must keep everything for a possible
             // restore — leave the documents and identity files exactly where
@@ -58,7 +79,7 @@ class EndUser extends Model
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
-        'next_round_override',
+        'next_round_override', 'custom_list',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
     protected $casts = [
@@ -139,6 +160,18 @@ class EndUser extends Model
     public function scopeNotHeld($query)
     {
         return $query->whereNull('held_at');
+    }
+
+    /** Not in any business-owner custom list (Jumbo / Mr Pierre / Tycoon). */
+    public function scopeNoCustomList($query)
+    {
+        return $query->whereNull('custom_list');
+    }
+
+    /** Clients in a specific business-owner custom list. */
+    public function scopeCustomList($query, string $key)
+    {
+        return $query->where('custom_list', $key);
     }
 
     public function getIsOnHoldAttribute(): bool

@@ -285,6 +285,11 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         // Round Errors — 2nd/3rd round problems the team is fixing (BOs can view only)
         Route::get('round-errors', [Client\EndUserController::class, 'roundErrors'])->name('round-errors');
 
+        // Custom lists (Tycon Stan only) — an owner-side grouping of their clients.
+        Route::get('lists/{list}', [Client\EndUserController::class, 'customList'])
+            ->whereIn('list', array_keys(\App\Models\EndUser::CUSTOM_LISTS))->name('lists.show');
+        Route::post('end-users/{id}/list', [Client\EndUserController::class, 'moveToList'])->name('end-users.list');
+
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');
