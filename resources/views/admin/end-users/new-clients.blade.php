@@ -140,7 +140,9 @@
                                 <button type="button" class="btn btn-sm btn-toerror" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
                             </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
-                                  onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their uploaded documents? This cannot be undone.')">
+                                  data-confirm-delete
+                                  data-confirm-title="Delete this client?"
+                                  data-confirm-message="{{ $eu->full_name }} and all their uploaded documents will be moved to the Recycle Bin. This cannot be undone from here.">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
@@ -181,12 +183,14 @@ function wireCopy(btnId, inputId) {
     btn.addEventListener('click', function () {
         var f = document.getElementById(inputId);
         f.select(); f.setSelectionRange(0, 99999);
+        var after = function () {
+            btn.textContent = 'Copied ✓';
+            setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+            if (window.apexToast) window.apexToast('Copied to clipboard', 'success');
+        };
         try {
-            navigator.clipboard.writeText(f.value).then(function () {
-                btn.textContent = 'Copied ✓';
-                setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
-            });
-        } catch (e) { document.execCommand('copy'); }
+            navigator.clipboard.writeText(f.value).then(after, function () { document.execCommand('copy'); after(); });
+        } catch (e) { document.execCommand('copy'); after(); }
     });
 }
 wireCopy('copyIntake', 'intakeLink');

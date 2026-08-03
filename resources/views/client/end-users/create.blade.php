@@ -34,7 +34,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="form-group"><label>Email Address *</label><input type="email" name="email" value="{{ old('email') }}" required></div>
+            <div class="form-group"><label>Email Address *</label><input type="email" name="email" value="{{ old('email') }}" required data-check-email="{{ route('client.end-users.email-check') }}" autocomplete="off"></div>
         </div>
         <div class="form-row">
             <div class="form-group"><label>Phone Number *</label><input type="text" name="phone" value="{{ old('phone') }}" required></div>

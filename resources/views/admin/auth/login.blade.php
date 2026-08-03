@@ -37,8 +37,10 @@
         /* Informational (session expired / signed out) — not an error */
         .notice {
             background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
-            border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px;
+            border-radius: 10px; padding: 11px 13px; font-size: 13px; margin-bottom: 16px;
+            display: flex; align-items: flex-start; gap: 9px; line-height: 1.45;
         }
+        .notice svg { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 1px; }
         .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
         .field input[type=email], .field input[type=password] {
@@ -74,7 +76,10 @@
             <div class="sub">Sign in to the admin console.</div>
 
             @if (session('status'))
-                <div class="notice">{{ session('status') }}</div>
+                <div class="notice">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>{{ session('status') }}</span>
+                </div>
             @endif
 
             @if ($errors->any())

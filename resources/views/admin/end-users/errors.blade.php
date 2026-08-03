@@ -45,7 +45,9 @@
                                 <button class="btn btn-sm btn-tonew">Move to New Clients</button>
                             </form>
                             <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
-                                  onsubmit="return confirm('Delete {{ addslashes($eu->full_name) }} and all their documents? This cannot be undone.')">
+                                  data-confirm-delete
+                                  data-confirm-title="Delete this client?"
+                                  data-confirm-message="{{ $eu->full_name }} and all their documents will be moved to the Recycle Bin. This cannot be undone from here.">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>

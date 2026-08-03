@@ -246,6 +246,67 @@ class PaymentController extends Controller
     }
 
     /**
+     * One-click "paid in full": mark every UNPAID active round, for every client
+     * of this BO, as paid at each client's effective rate. Used when the BO pays
+     * the whole outstanding balance at once instead of clicking chips one by one.
+     * Only touches rounds a client has actually reached (same rule the unpaid
+     * total uses) and skips anything already paid, so it's safe to click twice.
+     */
+    public function payAllUnpaid(Request $request)
+    {
+        $client = $this->scopedBO();
+
+        $endUsers = EndUser::forClient($client->id)
+            ->clientsList()
+            ->with('payments')
+            ->get();
+        $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
+
+        $roundLabelToNum = [
+            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
+            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
+        ];
+
+        $today   = now()->toDateString();
+        $adminId = Auth::guard('admin')->id();
+        $count   = 0;
+
+        foreach ($endUsers as $eu) {
+            $paidByRound = $eu->payments->keyBy('round');
+
+            $activeRounds = collect($eu->rounds ?? [])
+                ->map(fn ($label) => $roundLabelToNum[$label] ?? null)
+                ->filter()
+                ->values()
+                ->all();
+            if (empty($activeRounds)) {
+                $activeRounds = [1];
+            }
+
+            foreach ($activeRounds as $rn) {
+                if ($paidByRound->has($rn)) {
+                    continue;   // already paid — leave it
+                }
+                ClientPayment::updateOrCreate(
+                    ['end_user_id' => $eu->id, 'round' => $rn],
+                    [
+                        'amount'              => $eu->effectiveRoundFee((int) $rn),
+                        'paid_at'             => $today,
+                        'created_by_admin_id' => $adminId,
+                    ]
+                );
+                $count++;
+            }
+        }
+
+        if ($count === 0) {
+            return back()->with('status', 'Nothing to mark — every reached round is already paid.');
+        }
+
+        return back()->with('confirm', "All balances paid — {$count} round(s) marked across all clients");
+    }
+
+    /**
      * Set (or clear) a single client's custom per-round fee. A blank/empty
      * value resets the client back to the BO's default per_round_fee.
      */

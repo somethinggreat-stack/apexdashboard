@@ -86,13 +86,15 @@ return Application::configure(basePath: dirname(__DIR__))
             // Session expired / CSRF token no longer valid.
             if ($e instanceof TokenMismatchException || $status === 419) {
                 return redirect()->to($login)
-                    ->with('status', 'Your session expired because the page was left open. Please sign in again.');
+                    ->with('status', 'Your session expired (the page was left open too long). Please sign in again — your data is safe.');
             }
 
-            // Not (or no longer) signed in.
+            // Not (or no longer) signed in — covers a normal guest AND everyone
+            // after a deploy, which clears all sessions on purpose. Reassure the
+            // team this is expected, not the old save bug.
             if ($e instanceof AuthenticationException || $status === 401) {
                 return redirect()->to($login)
-                    ->with('status', 'Please sign in to continue.');
+                    ->with('status', 'You’ve been signed out. Please sign in again to continue — nothing was lost.');
             }
 
             // Anything genuinely broken: log it in full, then hand the user a

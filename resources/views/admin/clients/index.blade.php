@@ -33,7 +33,12 @@
                     <td><span class="pill pill-{{ $client->status }}">{{ $client->status }}</span></td>
                     <td>
                         <a href="{{ route('admin.clients.edit', $client) }}" class="btn btn-sm">Edit</a>
-                        <form method="POST" action="{{ route('admin.clients.destroy', $client) }}" style="display:inline" onsubmit="return confirm('Delete {{ $client->business_name }} and ALL of their clients? This cannot be undone.')">
+                        <form method="POST" action="{{ route('admin.clients.destroy', $client) }}" style="display:inline"
+                              data-confirm-delete
+                              data-confirm-title="Delete this business owner?"
+                              data-confirm-message="{{ $client->business_name }} and ALL of their clients will be moved to the Recycle Bin. Type the business name below to confirm."
+                              data-confirm-name="{{ $client->business_name }}"
+                              data-confirm-ok="Delete business owner">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">Delete</button>
                         </form>

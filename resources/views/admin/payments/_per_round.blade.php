@@ -77,6 +77,14 @@
     }
     .inv-copy-btn:hover:not(:disabled) { background: #f1f5f9; }
     .inv-copy-btn:disabled { color: #cbd5e1; cursor: not-allowed; }
+    .pay-all-btn {
+        margin-left: auto; background: linear-gradient(135deg, #34d399, #059669);
+        color: #fff; border: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .2px;
+        padding: 9px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+        box-shadow: 0 6px 16px rgba(5, 150, 105, .28);
+    }
+    .pay-all-btn:hover:not(:disabled) { filter: brightness(1.05); }
+    .pay-all-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
 </style>
 @endpush
 
@@ -100,7 +108,23 @@
             </select>
             <button type="submit" id="bulk-apply" disabled>Apply (each client's rate)</button>
         </div>
+        <button type="submit" form="pay-all-form" class="pay-all-btn"
+                {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}
+                title="Mark every unpaid round for every client as paid, at each client's rate">
+            ✓ Mark ALL unpaid paid
+        </button>
     </div>
+</form>
+
+{{-- Standalone form (kept OUTSIDE #bulk-pay-form so forms never nest). The
+     button above targets it via form="pay-all-form". data-confirm-action shows
+     the centered green confirm before anything is charged. --}}
+<form id="pay-all-form" method="POST" action="{{ route('admin.payments.pay-all') }}"
+      data-confirm-action
+      data-confirm-title="Mark all balances paid?"
+      data-confirm-message="This marks every unpaid round for all clients of {{ $client->business_name }} as paid at each client's rate — ${{ number_format($data['totalUnpaid'], 2) }} across {{ count($data['unpaidItems']) }} item(s). Already-paid rounds are left as-is, and you can still undo any single round afterward."
+      data-confirm-ok="Yes, mark all paid">
+    @csrf
 </form>
 
 {{-- ===== MAIN TABLE ===== --}}

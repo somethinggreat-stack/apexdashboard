@@ -160,6 +160,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 // Per-round payments
                 Route::post('payments', [Admin\PaymentController::class, 'storePayment'])->name('payments.store');
                 Route::post('payments/bulk', [Admin\PaymentController::class, 'bulkStorePayment'])->name('payments.bulk');
+                Route::post('payments/pay-all-unpaid', [Admin\PaymentController::class, 'payAllUnpaid'])->name('payments.pay-all');
                 Route::put('payments/client-rate/{id}', [Admin\PaymentController::class, 'updateEndUserFee'])->name('payments.client-rate');
                 Route::put('payments/round-rate/{id}', [Admin\PaymentController::class, 'updateRoundFee'])->name('payments.round-rate');
                 Route::post('payments/invoice', [Admin\PaymentController::class, 'generateInvoice'])->name('payments.invoice.generate');
@@ -209,6 +210,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/resolve-round-error', [Admin\EndUserController::class, 'resolveRoundError'])->name('end-users.resolve-round-error');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
+            // Live duplicate-email check for the Add Client modal (distinct path so
+            // it never collides with end-users/{id}).
+            Route::get('end-users-email-check', [Admin\EndUserController::class, 'checkEmail'])->name('end-users.email-check');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
             Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->name('end-users.show');
             Route::get('end-users/{id}/status-report', [Admin\EndUserController::class, 'statusReport'])->name('end-users.status-report');
@@ -291,6 +295,8 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::post('end-users/{id}/list', [Client\EndUserController::class, 'moveToList'])->name('end-users.list');
 
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
+        // Live duplicate-email check for the BO's add-client form.
+        Route::get('end-users-email-check', [Client\EndUserController::class, 'checkEmail'])->name('end-users.email-check');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');
         Route::get('end-users/{id}/status-report', [Client\EndUserController::class, 'statusReport'])->name('end-users.status-report');

@@ -270,6 +270,9 @@
         @if (session('confirm'))
             <div class="confirm-flash" style="display:none">{{ session('confirm') }}</div>
         @endif
+        @if (session('confirm_error'))
+            <div class="confirm-error-flash" style="display:none">{{ session('confirm_error') }}</div>
+        @endif
         @if ($errors->any())
             <div class="alert alert-error">
                 <ul>
@@ -299,6 +302,7 @@
 <script src="{{ asset('js/theme-toggle.js') }}"></script>
 <script src="{{ asset('js/toast.js') }}"></script>
 <script src="{{ asset('js/confirm-modal.js') }}"></script>
+<script src="{{ asset('js/interactions.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script>
 /* Make any <tr data-href> fully clickable, while leaving real

@@ -38,7 +38,9 @@
     <div class="page-actions">
         <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary page-action-btn">← All Clients</a>
         <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
-              onsubmit="return confirm('Delete client {{ $endUser->full_name }} and ALL their documents, notes, and process steps? This cannot be undone.')">
+              data-confirm-delete
+              data-confirm-title="Delete this client?"
+              data-confirm-message="{{ $endUser->full_name }} and ALL their documents, notes, and process steps will be moved to the Recycle Bin. This cannot be undone from here.">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-danger page-action-btn">Delete Client</button>
         </form>
@@ -280,7 +282,15 @@
 
         <h4 class="profile-section-head">CFPB</h4>
         <div class="info-grid">
-            <div><label>CFPB Login Email</label><div>{{ $endUser->cfpb_email ?? '—' }}</div></div>
+            <div>
+                <label>CFPB Login Email</label>
+                <div class="password-cell">
+                    <span>{{ $endUser->cfpb_email ?? '—' }}</span>
+                    @if ($endUser->cfpb_email)
+                        <button type="button" class="btn btn-sm" data-copy="{{ $endUser->cfpb_email }}" data-copy-msg="CFPB email copied">Copy</button>
+                    @endif
+                </div>
+            </div>
             <div>
                 <label>CFPB Password</label>
                 <div class="password-cell">
@@ -289,6 +299,7 @@
                     </span>
                     @if ($endUser->cfpb_password)
                         <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
+                        <button type="button" class="btn btn-sm" data-copy="{{ $endUser->cfpb_password }}" data-copy-msg="CFPB password copied">Copy</button>
                     @endif
                 </div>
             </div>
@@ -569,10 +580,10 @@
             <h3>Edit Profile — {{ $endUser->full_name }}</h3>
             <button class="modal-close" onclick="closeModal('editProfileModal')">&times;</button>
         </div>
-        {{-- NOT multipart: this host's WAF mangles native multipart form posts
-             (session cookie is dropped → the save 419s to login). The collage
-             upload moved out; everything else saves as a normal POST. --}}
-        <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}">
+        {{-- Plain (non-multipart) POST: the collage upload moved to the All
+             Documents tab, so this form only carries text fields. data-guard-unsaved
+             warns the VA before closing with pending edits. --}}
+        <form method="POST" action="{{ route('admin.end-users.update', $endUser) }}" data-guard-unsaved>
             @csrf @method('PUT')
 
             <div class="form-section">

@@ -90,6 +90,39 @@ class EndUserController extends Controller
         return view('client.end-users.status-report', compact('endUser'));
     }
 
+    /**
+     * Live duplicate-email check for the BO's add-client form. Scoped to this
+     * business owner's own clients. Returns {exists, name}.
+     */
+    public function checkEmail(Request $request)
+    {
+        $email    = trim((string) $request->query('email', ''));
+        $clientId = Auth::guard('client')->id();
+
+        if ($email === '') {
+            return response()->json(['exists' => false]);
+        }
+
+        $match = EndUser::where('client_id', $clientId)
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
+            ->first();
+
+        return response()->json([
+            'exists' => (bool) $match,
+            'name'   => $match?->full_name,
+        ]);
+    }
+
+    private function emailExistsForBO($clientId, ?string $email): bool
+    {
+        if (!$clientId || !$email) {
+            return false;
+        }
+        return EndUser::where('client_id', $clientId)
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))])
+            ->exists();
+    }
+
     public function store(Request $request)
     {
         $clientId = Auth::guard('client')->id();
@@ -115,6 +148,13 @@ class EndUserController extends Controller
             'ssn_card'                          => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'proof_of_address'                  => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
+
+        // Server-side guard against duplicate clients (mirrors the live check on
+        // the add-client form). Scoped to this business owner's own clients.
+        if ($this->emailExistsForBO($clientId, $data['email'])) {
+            return back()->withInput()
+                ->withErrors(['email' => 'A client with this email already exists in your account.']);
+        }
 
         // Business-owner submissions always land in New Clients for VA review.
         $endUser = EndUser::create([

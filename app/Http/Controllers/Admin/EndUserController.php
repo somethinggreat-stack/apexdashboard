@@ -185,7 +185,16 @@ class EndUserController extends Controller
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request, true);
-        $data['client_id'] = session('selected_client_id');
+        $boId = session('selected_client_id');
+
+        // Server-side guard against duplicate clients (mirrors the live check on
+        // the Add Client form). Scoped to this business owner.
+        if ($this->emailExistsForBO($boId, $data['email'])) {
+            return back()->withInput()
+                ->withErrors(['email' => 'A client with this email already exists for this business owner.']);
+        }
+
+        $data['client_id'] = $boId;
         $data['status'] = 'active';
 
         $endUser = EndUser::create($data);
@@ -201,6 +210,39 @@ class EndUserController extends Controller
         );
 
         return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
+    }
+
+    /**
+     * Live duplicate-email check for the Add Client modal. Scoped to the
+     * currently-selected business owner. Returns {exists, name}.
+     */
+    public function checkEmail(Request $request)
+    {
+        $email = trim((string) $request->query('email', ''));
+        $boId  = session('selected_client_id');
+
+        if ($email === '' || !$boId) {
+            return response()->json(['exists' => false]);
+        }
+
+        $match = EndUser::where('client_id', $boId)
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
+            ->first();
+
+        return response()->json([
+            'exists' => (bool) $match,
+            'name'   => $match?->full_name,
+        ]);
+    }
+
+    private function emailExistsForBO($boId, ?string $email): bool
+    {
+        if (!$boId || !$email) {
+            return false;
+        }
+        return EndUser::where('client_id', $boId)
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))])
+            ->exists();
     }
 
     public function show(string $id)

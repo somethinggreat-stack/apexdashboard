@@ -228,6 +228,9 @@
         @if (session('confirm'))
             <div class="confirm-flash" style="display:none">{{ session('confirm') }}</div>
         @endif
+        @if (session('confirm_error'))
+            <div class="confirm-error-flash" style="display:none">{{ session('confirm_error') }}</div>
+        @endif
         @if ($errors->any())
             <div class="alert alert-error">
                 <ul>
@@ -244,6 +247,8 @@
 </div>
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/toast.js') }}"></script>
+<script src="{{ asset('js/confirm-modal.js') }}"></script>
+<script src="{{ asset('js/interactions.js') }}"></script>
 <script src="{{ asset('js/client.js') }}"></script>
 @stack('scripts')
 </body>
