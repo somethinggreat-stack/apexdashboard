@@ -131,7 +131,11 @@
                             <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             <button type="button" class="rate-pill {{ $row['custom_fee'] ? 'rate-pill-custom' : '' }}"
                                     title="{{ $row['custom_fee'] ? 'Custom rate — click to change' : 'Default rate — click to set a custom rate' }}"
-                                    onclick="openRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ json_encode($row['custom_fee'] ? (float) $euRate : null) }}, {{ json_encode((float) $data['rate']) }})">
+                                    data-rate-edit
+                                    data-eu="{{ $eu->id }}"
+                                    data-name="{{ $eu->full_name }}"
+                                    data-custom="{{ $row['custom_fee'] ? (float) $euRate : '' }}"
+                                    data-default="{{ (float) $data['rate'] }}">
                                 ${{ $euRateLabel }}/rd
                                 @if ($row['custom_fee'])<span class="rate-tag">custom</span>@endif
                             </button>
@@ -143,7 +147,12 @@
                                     @php $isFreePaid = (bool) ($cell['payment']->is_free ?? false); @endphp
                                     <button type="button" class="chip {{ $isFreePaid ? 'chip-free-paid' : 'chip-paid' }}"
                                             title="{{ $isFreePaid ? 'Marked free/test on '.optional($cell['payment']->paid_at)->format('M j, Y').' — not billed, no commission' : 'Paid '.optional($cell['payment']->paid_at)->format('M j, Y').' · $'.number_format($cell['payment']->amount, 2) }}"
-                                            onclick="openPayEdit({{ $cell['payment']->id }}, {{ json_encode((float) $cell['payment']->amount) }}, '{{ optional($cell['payment']->paid_at)->toDateString() }}', '{{ addslashes($cell['payment']->method ?? '') }}', '{{ addslashes($cell['payment']->notes ?? '') }}')">
+                                            data-pay-edit
+                                            data-id="{{ $cell['payment']->id }}"
+                                            data-amount="{{ (float) $cell['payment']->amount }}"
+                                            data-paid="{{ optional($cell['payment']->paid_at)->toDateString() }}"
+                                            data-method="{{ $cell['payment']->method ?? '' }}"
+                                            data-notes="{{ $cell['payment']->notes ?? '' }}">
                                         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                         {{ $isFreePaid ? 'Free' : optional($cell['payment']->paid_at)->format('M j') }}
                                     </button>
@@ -162,7 +171,12 @@
                                                 Free
                                             </button>
                                             <button type="button" class="chip-mini chip-edit" title="Edit Round {{ $r }} rate for {{ $eu->full_name }}"
-                                                    onclick="openRoundRateEdit({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $r }}, {{ json_encode($cell['custom'] ? (float) $cellRate : null) }}, {{ json_encode((float) $data['rate']) }})">
+                                                    data-round-rate-edit
+                                                    data-eu="{{ $eu->id }}"
+                                                    data-name="{{ $eu->full_name }}"
+                                                    data-round="{{ $r }}"
+                                                    data-custom="{{ $cell['custom'] ? (float) $cellRate : '' }}"
+                                                    data-default="{{ (float) $data['rate'] }}">
                                                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                             </button>
                                         </div>
@@ -543,5 +557,19 @@ window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
     };
     openModal('payEditModal');
 };
+
+/* Chip edit popups via event delegation + data attributes. Robust against
+   client names / payment notes containing quotes or line breaks — an inline
+   onclick would break on those and the chip would stop responding. */
+document.addEventListener('click', function (e) {
+    var b;
+    if ((b = e.target.closest('[data-pay-edit]'))) {
+        window.openPayEdit(b.dataset.id, parseFloat(b.dataset.amount), b.dataset.paid || '', b.dataset.method || '', b.dataset.notes || '');
+    } else if ((b = e.target.closest('[data-rate-edit]'))) {
+        window.openRateEdit(b.dataset.eu, b.dataset.name, b.dataset.custom === '' ? null : parseFloat(b.dataset.custom), parseFloat(b.dataset.default));
+    } else if ((b = e.target.closest('[data-round-rate-edit]'))) {
+        window.openRoundRateEdit(b.dataset.eu, b.dataset.name, b.dataset.round, b.dataset.custom === '' ? null : parseFloat(b.dataset.custom), parseFloat(b.dataset.default));
+    }
+});
 </script>
 @endpush
