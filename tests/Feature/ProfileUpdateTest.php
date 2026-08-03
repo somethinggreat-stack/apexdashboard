@@ -1,0 +1,126 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Admin;
+use App\Models\Client;
+use App\Models\EndUser;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ProfileUpdateTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function makeWorld(): array
+    {
+        $super = new Admin(['email' => 'super@test.com', 'password' => 'secret', 'full_name' => 'Super']);
+        $super->role = 'super';
+        $super->save();
+
+        $va = new Admin(['email' => 'va@test.com', 'password' => 'secret', 'full_name' => 'Mujeeb']);
+        $va->role = 'va';
+        $va->parent_admin_id = $super->id;
+        $va->save();
+
+        $bo = Client::create([
+            'admin_id' => $super->id, 'business_name' => 'Test BO', 'email' => 'bo@test.com',
+            'password' => 'secret', 'monthly_fee' => 149, 'status' => 'active',
+            'compensation_model' => 'per_round',
+        ]);
+
+        $eu = EndUser::create([
+            'client_id' => $bo->id, 'first_name' => 'John', 'last_name' => 'Doe', 'suffix' => 'None',
+            'email' => 'john@test.com', 'current_address' => '1 St', 'city' => 'Town',
+            'state' => 'ST', 'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-01-01',
+        ]);
+
+        return [$super, $va, $bo, $eu];
+    }
+
+    private function payload(array $override = []): array
+    {
+        return array_merge([
+            'first_name' => 'John', 'last_name' => 'Doe', 'suffix' => 'None', 'email' => 'john@test.com',
+            'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST', 'zipcode' => '12345',
+            'start_date' => '2026-01-01', 'status' => 'active',
+        ], $override);
+    }
+
+    public function test_va_updates_cfpb_with_selected_owner(): void
+    {
+        [, $va, $bo, $eu] = $this->makeWorld();
+
+        $resp = $this->actingAs($va, 'admin')
+            ->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'cfpb_email' => 'cfpb@test.com', 'cfpb_password' => 'newsecret',
+            ]));
+
+        fwrite(STDERR, "\n[with-session] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
+
+        $resp->assertSessionHas('status');
+        $eu->refresh();
+        $this->assertSame('cfpb@test.com', $eu->cfpb_email, 'CFPB email should be saved');
+        $this->assertNotEmpty($eu->cfpb_password, 'CFPB password should be saved');
+    }
+
+    public function test_va_update_self_heals_when_owner_missing_from_session(): void
+    {
+        [, $va, , $eu] = $this->makeWorld();
+
+        // No selected_client_id in session at all — the reported failure case.
+        $resp = $this->actingAs($va, 'admin')
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'cfpb_email' => 'heal@test.com',
+            ]));
+
+        fwrite(STDERR, "[no-session] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
+
+        // The exact reported bug: it must NOT bounce to the business-owner picker.
+        $resp->assertRedirect(route('admin.end-users.show', $eu->id));
+        $this->assertStringNotContainsString('select-business-owner', $resp->headers->get('Location') ?? '');
+
+        $eu->refresh();
+        $this->assertSame('heal@test.com', $eu->cfpb_email, 'Self-heal should let the save go through');
+    }
+
+    public function test_done_client_cfpb_save_does_not_bounce_to_picker(): void
+    {
+        // Mirrors the video exactly: a COMPLETED (done) client, VA edits CFPB,
+        // and the multipart save arrives with no session (host stripped it).
+        [, $va, , $eu] = $this->makeWorld();
+        $eu->update(['intake_status' => 'done', 'rounds' => ['1st Round', '2nd Round']]);
+
+        $resp = $this->actingAs($va, 'admin')
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'cfpb_email'    => 'done.client@cfpb.com',
+                'cfpb_password' => 'donepass123',
+            ]));
+
+        fwrite(STDERR, "[done-client] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
+
+        $resp->assertRedirect(route('admin.end-users.show', $eu->id));
+        $eu->refresh();
+        $this->assertSame('done.client@cfpb.com', $eu->cfpb_email, 'Done-client CFPB email must save');
+        $this->assertNotEmpty($eu->cfpb_password, 'Done-client CFPB password must save');
+        $this->assertSame('done', $eu->intake_status, 'Status must stay done');
+    }
+
+    public function test_super_admin_updates_profile(): void
+    {
+        [$super, , $bo, $eu] = $this->makeWorld();
+
+        $resp = $this->actingAs($super, 'admin')
+            ->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'phone' => '555-1234', 'cfpb_email' => 'super@cfpb.com',
+            ]));
+
+        fwrite(STDERR, "[super] status=" . $resp->status() . " redirect=" . ($resp->headers->get('Location') ?? 'none') . "\n");
+
+        $eu->refresh();
+        $this->assertSame('555-1234', $eu->phone);
+        $this->assertSame('super@cfpb.com', $eu->cfpb_email);
+    }
+}

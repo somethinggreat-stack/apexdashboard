@@ -303,7 +303,11 @@ class EndUserController extends Controller
 
         $endUser->update($data);
 
-        return back()->with('status', 'Client updated.');
+        // Fall back to the client's own page (never the site root) if the
+        // referer is missing — some hosts strip it on multipart posts, and we
+        // must not land the user on the homepage or picker after a save.
+        return back(302, [], route('admin.end-users.show', $endUser->id))
+            ->with('status', 'Client updated.');
     }
 
     public function destroy(string $id)
