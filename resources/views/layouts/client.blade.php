@@ -223,7 +223,7 @@
             <div class="user-chip">{{ Auth::guard('client')->user()?->business_name }}</div>
         </header>
         @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
+            <div class="toast-flash" data-toast="success">{{ session('status') }}</div>
         @endif
         @if ($errors->any())
             <div class="alert alert-error">
@@ -240,6 +240,7 @@
     </main>
 </div>
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
+<script src="{{ asset('js/toast.js') }}"></script>
 <script src="{{ asset('js/client.js') }}"></script>
 @stack('scripts')
 </body>

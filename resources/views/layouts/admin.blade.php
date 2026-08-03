@@ -265,7 +265,7 @@
             </div>
         </header>
         @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
+            <div class="toast-flash" data-toast="success">{{ session('status') }}</div>
         @endif
         @if ($errors->any())
             <div class="alert alert-error">
@@ -294,6 +294,7 @@
 
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/theme-toggle.js') }}"></script>
+<script src="{{ asset('js/toast.js') }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script>
 /* Make any <tr data-href> fully clickable, while leaving real

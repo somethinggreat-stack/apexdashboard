@@ -30,5 +30,6 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
-    # Log everyone out on deploy so the team logs back in fresh
-    - cd $DEPLOYPATH && php artisan sessions:flush 2>&1 || true
+    # NOTE: intentionally NOT flushing sessions on deploy — doing so logged out
+    # anyone mid-edit (e.g. a VA saving a profile), bouncing them to the picker
+    # and losing their input. Sessions persist across deploys.

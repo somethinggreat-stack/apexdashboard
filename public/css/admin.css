@@ -958,6 +958,43 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
    inherited by the pro console via @import). Additive only; desktop untouched.
    ========================================================================== */
 
+/* ---- Success / error toasts (see public/js/toast.js) ---- */
+.toast-flash { display: none; }
+.toast-container {
+    position: fixed; top: 20px; right: 20px; z-index: 3000;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.toast {
+    display: flex; align-items: center; gap: 12px;
+    min-width: 260px; max-width: 380px; padding: 13px 15px;
+    border-radius: 13px; pointer-events: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: 0 12px 34px rgba(15, 23, 42, .18);
+    color: var(--text); font-size: 14px; font-weight: 600;
+    transform: translateX(120%); opacity: 0;
+    transition: transform .32s cubic-bezier(.4, 0, .2, 1), opacity .32s;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast-ico {
+    width: 30px; height: 30px; flex: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; color: #fff;
+}
+.toast-success .toast-ico { background: linear-gradient(135deg, #34d399, #059669); }
+.toast-error   .toast-ico { background: linear-gradient(135deg, #f87171, #dc2626); }
+.toast-msg { flex: 1; line-height: 1.35; }
+.toast-close {
+    flex: none; background: none; border: 0; cursor: pointer;
+    color: var(--muted); font-size: 20px; line-height: 1; padding: 0 2px;
+}
+.toast-close:hover { color: var(--text); }
+@media (max-width: 600px) {
+    .toast-container { top: 12px; right: 12px; left: 12px; }
+    .toast { min-width: 0; max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .toast { transition: opacity .2s; transform: none; }
+}
+
 /* Lock background scroll while the off-canvas drawer is open (set by
    responsive-nav.js on <body>). Prevents the page scrolling under the drawer. */
 body.drawer-open { overflow: hidden; }

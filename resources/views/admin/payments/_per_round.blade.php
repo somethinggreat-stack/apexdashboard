@@ -101,9 +101,13 @@
             <button type="submit" id="bulk-apply" disabled>Apply (each client's rate)</button>
         </div>
     </div>
+</form>
 
-    {{-- ===== MAIN TABLE ===== --}}
-    <div class="pay-matrix">
+{{-- ===== MAIN TABLE ===== --}}
+{{-- Table is intentionally OUTSIDE #bulk-pay-form so the per-chip mark-paid
+     forms are not nested inside another form (which browsers drop, breaking the
+     chips). Row checkboxes stay tied to the bulk form via the form="" attribute. --}}
+<div class="pay-matrix">
         <table>
             <thead>
                 <tr>
@@ -120,7 +124,7 @@
                     @php $eu = $row['end_user']; @endphp
                     <tr>
                         <td class="sel-col">
-                            <input type="checkbox" name="end_user_ids[]" value="{{ $eu->id }}" class="row-check">
+                            <input type="checkbox" name="end_user_ids[]" value="{{ $eu->id }}" class="row-check" form="bulk-pay-form">
                         </td>
                         @php $euRate = $row['rate']; $euRateLabel = rtrim(rtrim(number_format($euRate, 2), '0'), '.'); @endphp
                         <td class="pay-client">
@@ -174,7 +178,6 @@
             </tbody>
         </table>
     </div>
-</form>
 
 <p class="muted" style="margin: 14px 4px 0; font-size: 12px;">
     Tip: Click any <strong>$</strong> chip to mark that round paid instantly, or the little
@@ -428,7 +431,9 @@
 (function () {
     var form = document.getElementById('bulk-pay-form');
     var selectAll = document.getElementById('bulk-select-all');
-    var checks = form.querySelectorAll('.row-check');
+    // Checkboxes live in the table (outside the form, tied via form="") so query
+    // them from the document, not the form element.
+    var checks = document.querySelectorAll('.row-check');
     var count = document.getElementById('bulk-count');
     var apply = document.getElementById('bulk-apply');
     var roundPicker = document.getElementById('bulk-round-picker');
@@ -458,7 +463,7 @@
     // Confirm bulk action
     form.addEventListener('submit', function (e) {
         if (apply.disabled) { e.preventDefault(); return; }
-        var n = form.querySelectorAll('.row-check:checked').length;
+        var n = document.querySelectorAll('.row-check:checked').length;
         var round = roundPicker.value;
         if (!confirm('Mark ' + n + ' client(s) paid for Round ' + round + '?')) {
             e.preventDefault();
