@@ -91,21 +91,22 @@ class EndUserController extends Controller
     }
 
     /**
-     * Live duplicate-email check for the BO's add-client form. Scoped to this
-     * business owner's own clients. Returns {exists, name}.
+     * Live duplicate check (email / SSN) for the BO's add-client form. Scoped to
+     * this business owner's own clients. Returns {exists, name}.
      */
-    public function checkEmail(Request $request)
+    public function checkDuplicate(Request $request)
     {
-        $email    = trim((string) $request->query('email', ''));
+        $field    = $request->query('field');
+        $value    = trim((string) $request->query('value', ''));
         $clientId = Auth::guard('client')->id();
 
-        if ($email === '') {
+        if ($value === '' || !in_array($field, ['email', 'ssn'], true)) {
             return response()->json(['exists' => false]);
         }
 
-        $match = EndUser::where('client_id', $clientId)
-            ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
-            ->first();
+        $match = $field === 'email'
+            ? $this->matchByEmail($clientId, $value)
+            : $this->matchBySsn($clientId, $value);
 
         return response()->json([
             'exists' => (bool) $match,
@@ -113,14 +114,33 @@ class EndUserController extends Controller
         ]);
     }
 
-    private function emailExistsForBO($clientId, ?string $email): bool
+    private function matchByEmail($clientId, string $email): ?EndUser
     {
-        if (!$clientId || !$email) {
-            return false;
-        }
         return EndUser::where('client_id', $clientId)
             ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))])
-            ->exists();
+            ->first();
+    }
+
+    /** SSNs are compared by digits only, so 243-41-9724 matches 243419724. */
+    private function matchBySsn($clientId, string $ssn): ?EndUser
+    {
+        $digits = preg_replace('/\D+/', '', $ssn);
+        if ($digits === '') {
+            return null;
+        }
+        return EndUser::where('client_id', $clientId)
+            ->get(['id', 'first_name', 'last_name', 'suffix', 'ssn'])
+            ->first(fn ($eu) => preg_replace('/\D+/', '', (string) $eu->ssn) === $digits);
+    }
+
+    private function emailExistsForBO($clientId, ?string $email): bool
+    {
+        return $clientId && $email ? (bool) $this->matchByEmail($clientId, $email) : false;
+    }
+
+    private function ssnExistsForBO($clientId, ?string $ssn): bool
+    {
+        return $clientId && $ssn ? (bool) $this->matchBySsn($clientId, $ssn) : false;
     }
 
     public function store(Request $request)
@@ -134,7 +154,7 @@ class EndUserController extends Controller
             'email'                             => 'required|email|max:255',
             'phone'                             => 'required|string|max:30',
             'date_of_birth'                     => 'required|date|before:today',
-            'ssn'                               => 'required|string|max:32',
+            'ssn'                               => 'required|regex:/^\d{9}$/',
             'current_address'                   => 'required|string|max:255',
             'city'                              => 'required|string|max:120',
             'state'                             => 'required|string|max:120',
@@ -154,6 +174,10 @@ class EndUserController extends Controller
         if ($this->emailExistsForBO($clientId, $data['email'])) {
             return back()->withInput()
                 ->withErrors(['email' => 'A client with this email already exists in your account.']);
+        }
+        if (!empty($data['ssn']) && $this->ssnExistsForBO($clientId, $data['ssn'])) {
+            return back()->withInput()
+                ->withErrors(['ssn' => 'A client with this SSN already exists in your account.']);
         }
 
         // Business-owner submissions always land in New Clients for VA review.

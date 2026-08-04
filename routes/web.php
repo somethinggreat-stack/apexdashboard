@@ -210,9 +210,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/resolve-round-error', [Admin\EndUserController::class, 'resolveRoundError'])->name('end-users.resolve-round-error');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
-            // Live duplicate-email check for the Add Client modal (distinct path so
-            // it never collides with end-users/{id}).
-            Route::get('end-users-email-check', [Admin\EndUserController::class, 'checkEmail'])->name('end-users.email-check');
+            // Live duplicate check (email / SSN) for the Add Client modal (distinct
+            // path so it never collides with end-users/{id}).
+            Route::get('end-users-dup-check', [Admin\EndUserController::class, 'checkDuplicate'])->name('end-users.dup-check');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
             Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->name('end-users.show');
             Route::get('end-users/{id}/status-report', [Admin\EndUserController::class, 'statusReport'])->name('end-users.status-report');
@@ -295,8 +295,8 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::post('end-users/{id}/list', [Client\EndUserController::class, 'moveToList'])->name('end-users.list');
 
         Route::get('end-users/create', [Client\EndUserController::class, 'create'])->name('end-users.create');
-        // Live duplicate-email check for the BO's add-client form.
-        Route::get('end-users-email-check', [Client\EndUserController::class, 'checkEmail'])->name('end-users.email-check');
+        // Live duplicate check (email / SSN) for the BO's add-client form.
+        Route::get('end-users-dup-check', [Client\EndUserController::class, 'checkDuplicate'])->name('end-users.dup-check');
         Route::post('end-users', [Client\EndUserController::class, 'store'])->name('end-users.store');
         Route::get('end-users/{id}', [Client\EndUserController::class, 'show'])->name('end-users.show');
         Route::get('end-users/{id}/status-report', [Client\EndUserController::class, 'statusReport'])->name('end-users.status-report');

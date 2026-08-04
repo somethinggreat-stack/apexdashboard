@@ -193,6 +193,10 @@ class EndUserController extends Controller
             return back()->withInput()
                 ->withErrors(['email' => 'A client with this email already exists for this business owner.']);
         }
+        if (!empty($data['ssn']) && $this->ssnExistsForBO($boId, $data['ssn'])) {
+            return back()->withInput()
+                ->withErrors(['ssn' => 'A client with this SSN already exists for this business owner.']);
+        }
 
         $data['client_id'] = $boId;
         $data['status'] = 'active';
@@ -213,21 +217,22 @@ class EndUserController extends Controller
     }
 
     /**
-     * Live duplicate-email check for the Add Client modal. Scoped to the
-     * currently-selected business owner. Returns {exists, name}.
+     * Live duplicate check for the Add Client modal — email or SSN. Scoped to
+     * the currently-selected business owner. Returns {exists, name}.
      */
-    public function checkEmail(Request $request)
+    public function checkDuplicate(Request $request)
     {
-        $email = trim((string) $request->query('email', ''));
+        $field = $request->query('field');
+        $value = trim((string) $request->query('value', ''));
         $boId  = session('selected_client_id');
 
-        if ($email === '' || !$boId) {
+        if ($value === '' || !$boId || !in_array($field, ['email', 'ssn'], true)) {
             return response()->json(['exists' => false]);
         }
 
-        $match = EndUser::where('client_id', $boId)
-            ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
-            ->first();
+        $match = $field === 'email'
+            ? $this->matchByEmail($boId, $value)
+            : $this->matchBySsn($boId, $value);
 
         return response()->json([
             'exists' => (bool) $match,
@@ -235,14 +240,33 @@ class EndUserController extends Controller
         ]);
     }
 
-    private function emailExistsForBO($boId, ?string $email): bool
+    private function matchByEmail($boId, string $email): ?EndUser
     {
-        if (!$boId || !$email) {
-            return false;
-        }
         return EndUser::where('client_id', $boId)
             ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))])
-            ->exists();
+            ->first();
+    }
+
+    /** SSNs are compared by digits only, so 243-41-9724 matches 243419724. */
+    private function matchBySsn($boId, string $ssn): ?EndUser
+    {
+        $digits = preg_replace('/\D+/', '', $ssn);
+        if ($digits === '') {
+            return null;
+        }
+        return EndUser::where('client_id', $boId)
+            ->get(['id', 'first_name', 'last_name', 'suffix', 'ssn'])
+            ->first(fn ($eu) => preg_replace('/\D+/', '', (string) $eu->ssn) === $digits);
+    }
+
+    private function emailExistsForBO($boId, ?string $email): bool
+    {
+        return $boId && $email ? (bool) $this->matchByEmail($boId, $email) : false;
+    }
+
+    private function ssnExistsForBO($boId, ?string $ssn): bool
+    {
+        return $boId && $ssn ? (bool) $this->matchBySsn($boId, $ssn) : false;
     }
 
     public function show(string $id)
@@ -607,7 +631,8 @@ class EndUserController extends Controller
             'city'                        => "$reqOrNullable|string|max:120",
             'state'                       => "$reqOrNullable|string|max:120",
             'zipcode'                     => "$reqOrNullable|string|max:20",
-            'ssn'                         => "$reqOrNullable|string|max:32",
+            // Exactly 9 digits, no dashes/spaces (the form strips non-digits).
+            'ssn'                         => "$reqOrNullable|regex:/^\\d{9}$/",
             'credit_monitoring_name'      => "$reqOrNullable|string|max:100",
             'credit_monitoring_username'  => "$reqOrNullable|string|max:255",
             'credit_monitoring_password'  => "$reqOrNullable|string|max:255",

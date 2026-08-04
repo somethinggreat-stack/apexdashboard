@@ -139,7 +139,7 @@
                     <div class="form-group">
                         <label>Email Address *</label>
                         <input type="email" name="email" value="{{ old('email') }}" required maxlength="255"
-                               data-check-email="{{ route('admin.end-users.email-check') }}" autocomplete="off">
+                               data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="email" autocomplete="off">
                         @error('email')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
@@ -157,7 +157,8 @@
                     </div>
                     <div class="form-group">
                         <label>Social Security Number *</label>
-                        <input type="text" name="ssn" value="{{ old('ssn') }}" required placeholder="XXX-XX-XXXX" autocomplete="off" maxlength="32">
+                        <input type="text" name="ssn" value="{{ old('ssn') }}" required placeholder="9 digits, no dashes" autocomplete="off"
+                               data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="ssn" data-dup-digits="9">
                         @error('ssn')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
                 </div>

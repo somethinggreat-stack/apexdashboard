@@ -34,7 +34,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="form-group"><label>Email Address *</label><input type="email" name="email" value="{{ old('email') }}" required data-check-email="{{ route('client.end-users.email-check') }}" autocomplete="off"></div>
+            <div class="form-group"><label>Email Address *</label><input type="email" name="email" value="{{ old('email') }}" required data-dup-check="{{ route('client.end-users.dup-check') }}" data-dup-field="email" autocomplete="off"></div>
         </div>
         <div class="form-row">
             <div class="form-group"><label>Phone Number *</label><input type="text" name="phone" value="{{ old('phone') }}" required></div>
@@ -42,7 +42,8 @@
         </div>
         <div class="form-group" style="max-width:320px;">
             <label>Social Security Number *</label>
-            <input type="text" name="ssn" placeholder="XXX-XX-XXXX" required>
+            <input type="text" name="ssn" placeholder="9 digits, no dashes" required
+                   data-dup-check="{{ route('client.end-users.dup-check') }}" data-dup-field="ssn" data-dup-digits="9">
         </div>
 
         <h3 class="nc-section">Current Address</h3>

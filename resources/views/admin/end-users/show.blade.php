@@ -609,7 +609,7 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" value="{{ old('date_of_birth', $endUser->date_of_birth?->toDateString()) }}"></div>
-                    <div class="form-group"><label>SSN <span class="muted">(leave blank to keep current)</span></label><input type="text" name="ssn" placeholder="XXX-XX-XXXX" autocomplete="off"></div>
+                    <div class="form-group"><label>SSN <span class="muted">(leave blank to keep current)</span></label><input type="text" name="ssn" placeholder="9 digits, no dashes" autocomplete="off" data-dup-digits="9"></div>
                 </div>
             </div>
 

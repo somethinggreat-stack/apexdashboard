@@ -28,11 +28,11 @@ class ClientGuardsTest extends TestCase
         return [$super, $bo];
     }
 
-    private function makeEndUser(Client $bo, string $email, array $rounds = ['1st Round']): EndUser
+    private function makeEndUser(Client $bo, string $email, array $rounds = ['1st Round'], ?string $ssn = null): EndUser
     {
         return EndUser::create([
             'client_id' => $bo->id, 'first_name' => 'Jane', 'last_name' => 'Roe', 'suffix' => 'None',
-            'email' => $email, 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
+            'email' => $email, 'ssn' => $ssn, 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
             'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-01-01',
             'intake_status' => 'done', 'rounds' => $rounds,
         ]);
@@ -43,7 +43,7 @@ class ClientGuardsTest extends TestCase
         return array_merge([
             'first_name' => 'New', 'last_name' => 'Client', 'suffix' => 'None',
             'email' => 'new@test.com', 'phone' => '555-0000', 'date_of_birth' => '1990-01-01',
-            'ssn' => '111-11-1111', 'current_address' => '2 Rd', 'city' => 'Town',
+            'ssn' => '111111111', 'current_address' => '2 Rd', 'city' => 'Town',
             'state' => 'ST', 'zipcode' => '99999', 'start_date' => '2026-02-01',
             'credit_monitoring_name' => 'MyScoreIQ', 'credit_monitoring_username' => 'user1',
             'credit_monitoring_password' => 'pass1', 'credit_monitoring_security_answer' => 'blue',
@@ -82,12 +82,53 @@ class ClientGuardsTest extends TestCase
         $this->makeEndUser($bo, 'known@test.com');
 
         $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
-            ->getJson('/admin/end-users-email-check?email=known@test.com')
+            ->getJson('/admin/end-users-dup-check?field=email&value=known@test.com')
             ->assertJson(['exists' => true]);
 
         $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
-            ->getJson('/admin/end-users-email-check?email=nobody@test.com')
+            ->getJson('/admin/end-users-dup-check?field=email&value=nobody@test.com')
             ->assertJson(['exists' => false]);
+    }
+
+    public function test_ssn_check_matches_regardless_of_dashes(): void
+    {
+        [$super, $bo] = $this->world();
+        // Stored WITH dashes (legacy format); a plain-digit query must still match.
+        $this->makeEndUser($bo, 'known@test.com', ['1st Round'], '243-41-9724');
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->getJson('/admin/end-users-dup-check?field=ssn&value=243419724')
+            ->assertJson(['exists' => true]);
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->getJson('/admin/end-users-dup-check?field=ssn&value=000000000')
+            ->assertJson(['exists' => false]);
+    }
+
+    public function test_duplicate_ssn_is_rejected_on_add(): void
+    {
+        [$super, $bo] = $this->world();
+        $this->makeEndUser($bo, 'first@test.com', ['1st Round'], '243419724');
+
+        $resp = $this->actingAs($super, 'admin')
+            ->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/end-users', $this->addPayload(['email' => 'second@test.com', 'ssn' => '243419724']));
+
+        $resp->assertSessionHasErrors('ssn');
+        $this->assertSame(1, EndUser::where('client_id', $bo->id)->count());
+    }
+
+    public function test_ssn_must_be_nine_digits(): void
+    {
+        [$super, $bo] = $this->world();
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/end-users', $this->addPayload(['ssn' => '12345']))
+            ->assertSessionHasErrors('ssn');
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/end-users', $this->addPayload(['ssn' => '123-45-6789']))
+            ->assertSessionHasErrors('ssn');   // dashes are not digits
     }
 
     public function test_pay_all_unpaid_marks_every_active_round(): void
