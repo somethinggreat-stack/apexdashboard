@@ -203,7 +203,7 @@
             <div><label>Email Address</label><div>{{ $endUser->email }}</div></div>
             <div><label>Phone Number</label><div>{{ $endUser->phone ?? '—' }}</div></div>
             <div><label>Date of Birth</label><div>{{ $endUser->date_of_birth?->format('M d, Y') ?? '—' }}</div></div>
-            <div><label>SSN</label><div>{{ $endUser->ssn ?? '—' }}</div></div>
+            <div><label>SSN</label><div>{{ $endUser->formatted_ssn ?? '—' }}</div></div>
         </div>
 
         <h4 class="profile-section-head">Current Address</h4>

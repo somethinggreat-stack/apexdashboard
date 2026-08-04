@@ -301,6 +301,23 @@ class EndUser extends Model
         return '***-**-' . substr($digits, -4);
     }
 
+    /**
+     * SSN shown as XXX-XX-XXXX regardless of how it's stored — new records hold
+     * 9 plain digits, older ones may already have dashes. Anything that isn't a
+     * clean 9-digit value is returned untouched.
+     */
+    public function getFormattedSsnAttribute(): ?string
+    {
+        if (!$this->ssn) {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', (string) $this->ssn);
+        if (strlen($digits) !== 9) {
+            return $this->ssn;
+        }
+        return substr($digits, 0, 3) . '-' . substr($digits, 3, 2) . '-' . substr($digits, 5);
+    }
+
     public function getDaysActiveAttribute()
     {
         return (int) Carbon::parse($this->start_date)->diffInDays(now()) + 1;

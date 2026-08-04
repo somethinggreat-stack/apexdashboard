@@ -118,6 +118,19 @@ class ClientGuardsTest extends TestCase
         $this->assertSame(1, EndUser::where('client_id', $bo->id)->count());
     }
 
+    public function test_ssn_is_displayed_formatted_regardless_of_storage(): void
+    {
+        [, $bo] = $this->world();
+
+        $plain  = $this->makeEndUser($bo, 'p@test.com', ['1st Round'], '243419724');
+        $dashed = $this->makeEndUser($bo, 'd@test.com', ['1st Round'], '111-22-3333');
+        $none   = $this->makeEndUser($bo, 'n@test.com', ['1st Round'], null);
+
+        $this->assertSame('243-41-9724', $plain->formatted_ssn);
+        $this->assertSame('111-22-3333', $dashed->formatted_ssn);
+        $this->assertNull($none->formatted_ssn);
+    }
+
     public function test_ssn_must_be_nine_digits(): void
     {
         [$super, $bo] = $this->world();
