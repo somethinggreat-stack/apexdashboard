@@ -265,6 +265,13 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::match(['get', 'post'], 'logout', [Client\AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [Client\DashboardController::class, 'index'])->name('dashboard');
 
+        // New Leads — the business owner's own lead tracker (not visible to admins/VAs).
+        Route::get('leads', [Client\LeadController::class, 'index'])->name('leads.index');
+        Route::post('leads', [Client\LeadController::class, 'store'])->name('leads.store');
+        Route::get('leads/{id}', [Client\LeadController::class, 'show'])->name('leads.show')->whereNumber('id');
+        Route::put('leads/{id}', [Client\LeadController::class, 'update'])->name('leads.update')->whereNumber('id');
+        Route::delete('leads/{id}', [Client\LeadController::class, 'destroy'])->name('leads.destroy')->whereNumber('id');
+
         Route::get('messages', [Client\MessageController::class, 'index'])->name('messages.index');
         Route::post('messages', [Client\MessageController::class, 'store'])->name('messages.store');
 

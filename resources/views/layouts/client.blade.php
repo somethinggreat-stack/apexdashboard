@@ -233,6 +233,10 @@
                 <svg class="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
                 <span>Dashboard</span>
             </a>
+            <a href="{{ route('client.leads.index') }}" class="{{ request()->routeIs('client.leads.*') ? 'active' : '' }}">
+                <svg class="i-int" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                <span>New Leads</span>
+            </a>
             @php $bo = Auth::guard('client')->user(); @endphp
             @if ($bo?->intake_enabled)
                 @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
