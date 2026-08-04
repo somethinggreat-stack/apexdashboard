@@ -10,13 +10,16 @@
 
 @section('title', $title)
 
+@unless ($isCustom)
+@section('topbar-action')
+    <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
+@endsection
+@endunless
+
 @section('content')
 <div class="card">
     <div class="card-header">
         <h2>{{ $title }}</h2>
-        @unless ($isCustom)
-            <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
-        @endunless
     </div>
     <p class="muted" style="margin:-4px 0 14px; font-size:13px;">
         @if ($isCustom)

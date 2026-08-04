@@ -2,11 +2,14 @@
 
 @section('title', 'New Clients')
 
+@section('topbar-action')
+    <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
+@endsection
+
 @section('content')
 <div class="card" style="margin-bottom:18px;">
     <div class="card-header">
         <h2 style="margin:0;">New Clients</h2>
-        <a href="{{ route('client.end-users.create') }}" class="btn btn-primary">+ Add New Client</a>
     </div>
     <p class="muted" style="margin:8px 0 0; font-size:13px;">
         New client submissions appear here for our team to review — or add one yourself.

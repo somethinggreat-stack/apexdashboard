@@ -120,6 +120,80 @@
         .pill-active { background:#d1fae5 !important; color:#065f46 !important; }
         .btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; border:0 !important; }
         .btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af) !important; }
+
+        /* ---------- Motivational hero banner (mirrors the admin console) ---------- */
+        .motiv-hero {
+            position: relative; overflow: hidden;
+            margin: -24px -32px 22px; border-radius: 0 0 22px 0;
+            background:
+                linear-gradient(115deg, rgba(12,17,48,.94) 0%, rgba(20,26,62,.84) 45%, rgba(27,19,80,.70) 100%),
+                #12163a url("{{ asset('Images/heroimage.png') }}") center/cover no-repeat;
+            box-shadow: 0 12px 30px rgba(15,23,42,.18);
+        }
+        .motiv-hero-body {
+            position: relative; z-index: 1;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 20px; padding: 15px 34px 14px; flex-wrap: wrap; row-gap: 10px;
+        }
+        .motiv-hero-text { min-width: 0; flex: 1 1 240px; }
+        .motiv-quote {
+            display: block; max-width: 720px; font-size: 20px; line-height: 1.3; font-weight: 600;
+            font-style: italic; letter-spacing: -.01em; color: #eef2ff;
+            text-shadow: 0 2px 14px rgba(0,0,0,.3); word-break: break-word;
+        }
+        .motiv-hype { flex: none; order: 2; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .motiv-anim { width: 74px; height: 74px; filter: drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
+        .motiv-anim svg { width: 100% !important; height: 100% !important; }
+        .motiv-tag {
+            font-size: 10.5px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
+            color: #c7d0f5; text-shadow: 0 2px 10px rgba(0,0,0,.35);
+        }
+        .motiv-actions { order: 3; flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .motiv-actions form { margin: 0; }
+        .motiv-actions .page-actions { display: flex; align-items: center; gap: 10px; margin: 0; }
+        .motiv-actions .btn,
+        .motiv-actions .page-action-btn {
+            display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+            padding: 9px 15px; border-radius: 10px; border: 1px solid transparent;
+            font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer;
+        }
+        .motiv-actions .btn-primary {
+            background: linear-gradient(135deg, #38bdf8, #2563eb) !important; color: #fff !important;
+            box-shadow: 0 8px 20px rgba(37,99,235,.42);
+        }
+        .motiv-actions .btn-secondary { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.3); }
+        .motiv-actions .btn-secondary:hover { background: rgba(255,255,255,.22); }
+        .motiv-actions .btn-danger { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
+
+        /* Mobile-only hamburger bar (sidebar is off-canvas ≤900px). */
+        .client-mobilebar {
+            display: none; position: sticky; top: 0; z-index: 45;
+            align-items: center; gap: 12px; padding: 10px 14px;
+            margin: -16px -16px 12px;   /* break out to the screen edges on mobile */
+            background: #fff; border-bottom: 1px solid #e6ebf2;
+        }
+        .client-mobilebar-brand { font-size: 16px; font-weight: 800; color: #0f172a; }
+        .client-menu-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 42px; height: 42px; flex-shrink: 0;
+            background: #fff; border: 1px solid #e6ebf2; border-radius: 11px; cursor: pointer; padding: 0; color: #0f172a;
+        }
+        .client-menu-btn span, .client-menu-btn span::before, .client-menu-btn span::after {
+            display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; position: relative;
+        }
+        .client-menu-btn span::before, .client-menu-btn span::after { content: ''; position: absolute; left: 0; }
+        .client-menu-btn span::before { top: -6px; }
+        .client-menu-btn span::after  { top: 6px; }
+
+        @media (max-width: 1200px) { .motiv-anim { width: 64px; height: 64px; } }
+        @media (max-width: 900px) {
+            .client-mobilebar { display: flex; }
+            .motiv-hero { margin: 0 0 16px; border-radius: 16px; }
+            .motiv-hero-body { padding: 15px 18px; }
+            .motiv-quote { font-size: 16.5px; }
+            .motiv-hype { display: none; }
+            .motiv-actions { order: 3; width: 100%; }
+        }
     </style>
     @stack('head')
 </head>
@@ -211,17 +285,19 @@
         </form>
     </aside>
     <main class="main">
-        <header class="topbar">
-            <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" data-drawer-toggle="#sidebar" data-drawer-scrim="#sidebarScrim" aria-label="Open menu" aria-controls="sidebar">
+        {{-- Mobile-only bar: the only visible way to open the drawer once the
+             sidebar goes off-canvas (≤900px). Hidden on desktop via CSS. --}}
+        <div class="client-mobilebar">
+            <button type="button" class="client-menu-btn" data-drawer-toggle="#sidebar" data-drawer-scrim="#sidebarScrim" aria-label="Open menu" aria-controls="sidebar">
                 <span></span>
             </button>
-            @hasSection('topbar-content')
-                @yield('topbar-content')
-            @else
-                <h1 class="page-title">@yield('title', 'Dashboard')</h1>
-            @endif
-            <div class="user-chip">{{ Auth::guard('client')->user()?->business_name }}</div>
-        </header>
+            <span class="client-mobilebar-brand">{{ Auth::guard('client')->user()?->business_name ?? 'Apex Growth' }}</span>
+        </div>
+
+        {{-- Motivational banner header — the business-owner counterpart of the
+             admin console's hero (quote + buttons or the "Lead by example" lottie). --}}
+        @include('client.partials.motivation-hero')
+
         @if (session('status'))
             <div class="toast-flash" data-toast="success">{{ session('status') }}</div>
         @endif
