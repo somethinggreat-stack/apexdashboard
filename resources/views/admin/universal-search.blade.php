@@ -29,7 +29,6 @@
 
 @push('head')
 <style>
-    .usearch-card { max-width: 860px; }
     .usearch-head { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
     .usearch-ico { width:44px; height:44px; flex:none; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(135deg,#6366f1,#4f46e5); box-shadow:0 8px 18px rgba(79,70,229,.28); }
     .usearch-ico svg { width:22px; height:22px; }
