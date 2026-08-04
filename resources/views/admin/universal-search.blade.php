@@ -55,9 +55,14 @@
     }
     .ures-item:hover { border-color:#4f46e5; transform:translateY(-1px); box-shadow:0 8px 18px rgba(15,23,42,.08); }
     .ures-av { width:38px; height:38px; flex:none; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#4338ca); }
-    .ures-body { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+    .ures-body { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1; }
     .ures-name { font-weight:700; font-size:14.5px; color:var(--text); }
-    .ures-meta { font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ures-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); min-width:0; }
+    /* Business owner the client belongs to — a clearly-labelled chip. */
+    .ures-bo { display:inline-flex; align-items:center; gap:5px; flex:none; font-weight:700; color:#4338ca; background:#eef2ff; padding:3px 10px; border-radius:999px; }
+    .ures-bo svg { width:12px; height:12px; }
+    :root[data-theme="dark"] .ures-bo { background:rgba(99,102,241,.16); color:#c7d2fe; }
+    .ures-email { color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
     .ures-pill { flex:none; font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:4px 10px; border-radius:999px; background:#eef2ff; color:#4338ca; }
     .ures-open { flex:none; font-size:13px; font-weight:700; color:#4f46e5; white-space:nowrap; }
     .usearch-hint { padding:16px; text-align:center; font-size:13.5px; color:var(--muted); }
@@ -112,7 +117,13 @@
                 +   '<span class="ures-av">' + esc(initials(r.name)) + '</span>'
                 +   '<span class="ures-body">'
                 +     '<span class="ures-name">' + esc(r.name) + '</span>'
-                +     '<span class="ures-meta">' + esc(r.bo_name) + (r.email ? ' &middot; ' + esc(r.email) : '') + '</span>'
+                +     '<span class="ures-meta">'
+                +       '<span class="ures-bo" title="Business owner">'
+                +         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/></svg>'
+                +         esc(r.bo_name || '—')
+                +       '</span>'
+                +       (r.email ? '<span class="ures-email">' + esc(r.email) + '</span>' : '')
+                +     '</span>'
                 +   '</span>'
                 +   '<span class="ures-pill">' + esc(r.status) + '</span>'
                 +   '<span class="ures-open">Open &rarr;</span>'
