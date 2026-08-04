@@ -146,6 +146,13 @@
                     Business Owners
                 </a>
 
+                @if (Auth::guard('admin')->user()?->isVa())
+                <a href="{{ route('admin.universal-search') }}" class="{{ request()->routeIs('admin.universal-search') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+                    Universal Search
+                </a>
+                @endif
+
                 @if ($isSuper)
                 <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">
                     <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>

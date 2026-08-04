@@ -82,27 +82,6 @@
     @endif
 </div>
 
-{{-- Universal Search — VAs only. Find a client across every business owner and
-     open them straight from the results, without picking the owner first. --}}
-@if ($isVa)
-<div class="card usearch-card">
-    <div class="usearch-head">
-        <span class="usearch-ico">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-        </span>
-        <div>
-            <h2>Universal Search</h2>
-            <p class="usearch-sub">A universal search bar to search a client across all business owners.</p>
-        </div>
-    </div>
-    <div class="usearch-bar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-        <input type="text" id="uSearch" autocomplete="off" placeholder="Search any client by name, email or phone…">
-    </div>
-    <div id="uSearchResults" class="usearch-results" aria-live="polite"></div>
-</div>
-@endif
-
 @if (!empty($attention))
     <div class="card na-card">
         <div class="na-head">
@@ -328,40 +307,6 @@
 
     .dempty { padding:16px; text-align:center; font-size:13px; color:#94a3b8; }
 
-    /* ---------- Universal Search (VAs) ---------- */
-    .usearch-card { margin-top:18px; }
-    .usearch-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
-    .usearch-ico { width:40px; height:40px; flex:none; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(135deg,#6366f1,#4f46e5); box-shadow:0 8px 18px rgba(79,70,229,.28); }
-    .usearch-ico svg { width:20px; height:20px; }
-    .usearch-head h2 { margin:0; font-size:19px; font-weight:800; color:var(--text); letter-spacing:-.01em; }
-    .usearch-sub { margin:3px 0 0; font-size:13px; color:var(--muted); }
-    .usearch-bar { position:relative; display:flex; align-items:center; }
-    .usearch-bar > svg { position:absolute; left:16px; width:19px; height:19px; color:var(--muted); pointer-events:none; }
-    .usearch-bar input {
-        width:100%; padding:14px 16px 14px 46px; font:inherit; font-size:15px;
-        color:var(--text); background:var(--surface); border:1px solid var(--border);
-        border-radius:13px; box-shadow:0 1px 2px rgba(15,23,42,.04);
-    }
-    .usearch-bar input:focus { outline:none; border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.14); }
-    .usearch-results { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
-    .usearch-results:empty { display:none; }
-    .ures-form { margin:0; }
-    .ures-item {
-        width:100%; text-align:left; cursor:pointer;
-        display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px;
-        background:var(--surface); border:1px solid var(--border);
-        transition:border-color .12s, transform .1s, box-shadow .12s;
-    }
-    .ures-item:hover { border-color:#4f46e5; transform:translateY(-1px); box-shadow:0 8px 18px rgba(15,23,42,.08); }
-    .ures-av { width:36px; height:36px; flex:none; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#4338ca); }
-    .ures-body { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
-    .ures-name { font-weight:700; font-size:14px; color:var(--text); }
-    .ures-meta { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ures-pill { flex:none; font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:4px 10px; border-radius:999px; background:#eef2ff; color:#4338ca; }
-    .ures-open { flex:none; font-size:13px; font-weight:700; color:#4f46e5; white-space:nowrap; }
-    .usearch-hint { padding:14px; text-align:center; font-size:13px; color:var(--muted); }
-    @media (max-width:600px){ .ures-meta { max-width:150px; } .ures-open { display:none; } }
-
     /* Subtle page tint */
     .content {
         background:
@@ -373,68 +318,6 @@
 
 @push('scripts')
 <script>
-/* Universal Search (VA home): live-search clients across all business owners and
-   render results inline. Each result posts to the owner-selector with a
-   redirect straight to that client's profile. */
-(function () {
-    var input = document.getElementById('uSearch');
-    var box   = document.getElementById('uSearchResults');
-    if (!input || !box) return;
-
-    var searchUrl  = @json(route('admin.client-selector.search'));
-    var selectBase = @json(url('/admin/select-business-owner'));
-    var showBase   = @json(url('/admin/end-users'));
-    var csrf       = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-    var timer, controller;
-
-    function esc(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-            return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-        });
-    }
-    function initials(name) {
-        return (name || '?').split(/\s+/).filter(Boolean).slice(0, 2)
-            .map(function (p) { return p.charAt(0).toUpperCase(); }).join('');
-    }
-
-    function render(results, q) {
-        if (!results.length) {
-            box.innerHTML = '<div class="usearch-hint">No clients match &ldquo;' + esc(q) + '&rdquo;.</div>';
-            return;
-        }
-        box.innerHTML = results.map(function (r) {
-            return '<form method="POST" action="' + selectBase + '/' + r.bo_id + '" class="ures-form">'
-                + '<input type="hidden" name="_token" value="' + esc(csrf) + '">'
-                + '<input type="hidden" name="redirect_to" value="' + showBase + '/' + r.id + '">'
-                + '<button type="submit" class="ures-item">'
-                +   '<span class="ures-av">' + esc(initials(r.name)) + '</span>'
-                +   '<span class="ures-body">'
-                +     '<span class="ures-name">' + esc(r.name) + '</span>'
-                +     '<span class="ures-meta">' + esc(r.bo_name) + (r.email ? ' &middot; ' + esc(r.email) : '') + '</span>'
-                +   '</span>'
-                +   '<span class="ures-pill">' + esc(r.status) + '</span>'
-                +   '<span class="ures-open">Open &rarr;</span>'
-                + '</button></form>';
-        }).join('');
-    }
-
-    function run() {
-        var q = input.value.trim();
-        if (q.length < 2) { box.innerHTML = ''; return; }
-        if (controller) controller.abort();
-        controller = new AbortController();
-        fetch(searchUrl + '?q=' + encodeURIComponent(q), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            signal: controller.signal
-        })
-            .then(function (r) { return r.json(); })
-            .then(function (d) { render(d.results || [], q); })
-            .catch(function () { /* aborted or network — ignore */ });
-    }
-
-    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 220); });
-})();
-
 window.filterOwes = function (value) {
     var shown = 0;
     document.querySelectorAll('#owesGrid .owes-form').forEach(function (f) {

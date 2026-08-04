@@ -68,6 +68,15 @@ class ClientSelectorController extends Controller
     }
 
     /**
+     * Universal Search — its own dedicated page (a VA sidebar item). The page
+     * calls search() below for live results.
+     */
+    public function universalSearch()
+    {
+        return view('admin.universal-search');
+    }
+
+    /**
      * Universal client search for the VA home page: find a client across ALL of
      * the VA's business owners (name / email / phone) and return JSON so the
      * results render inline on the Select Business Owner page. Scoped to the
