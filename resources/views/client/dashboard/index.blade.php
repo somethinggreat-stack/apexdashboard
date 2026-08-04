@@ -2,12 +2,13 @@
 
 @section('title', 'Dashboard')
 
-@section('content')
-<div class="welcome">
-    <h2>Welcome back, {{ $client->business_name }}</h2>
-    <p class="muted">Live monitoring of your VA's credit repair work.</p>
-</div>
+{{-- Personal greeting in the banner (in place of the rotating quote) — dashboard only. --}}
+@section('hero-welcome')
+    <span class="motiv-welcome-greet">Welcome back, {{ $client->business_name }}</span>
+    <span class="motiv-welcome-sub">Live monitoring of your VA's credit repair work.</span>
+@endsection
 
+@section('content')
 <div class="stats-grid dash-tiles">
     <a href="{{ route('client.end-users.index') }}" class="stat-card tile-link tone-indigo">
         <div class="stat-label">In Progress</div>

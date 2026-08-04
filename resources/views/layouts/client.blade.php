@@ -141,6 +141,15 @@
             font-style: italic; letter-spacing: -.01em; color: #eef2ff;
             text-shadow: 0 2px 14px rgba(0,0,0,.3); word-break: break-word;
         }
+        /* Dashboard-only personal greeting (in place of the quote). */
+        .motiv-welcome-greet {
+            display: block; font-size: 24px; font-weight: 800; letter-spacing: -.01em;
+            color: #fff; line-height: 1.15; text-shadow: 0 2px 14px rgba(0,0,0,.35);
+        }
+        .motiv-welcome-sub {
+            display: block; margin-top: 5px; font-size: 13.5px; color: #c7d0f5;
+            text-shadow: 0 2px 10px rgba(0,0,0,.3);
+        }
         .motiv-hype { flex: none; order: 2; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .motiv-anim { width: 74px; height: 74px; filter: drop-shadow(0 8px 22px rgba(0,0,0,.35)); }
         .motiv-anim svg { width: 100% !important; height: 100% !important; }
@@ -157,13 +166,21 @@
             padding: 9px 15px; border-radius: 10px; border: 1px solid transparent;
             font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer;
         }
+        /* Primary CTA — deliberately bright so it lifts off the dark banner
+           (a soft light ring + glow keeps it from blending in). */
         .motiv-actions .btn-primary {
-            background: linear-gradient(135deg, #38bdf8, #2563eb) !important; color: #fff !important;
-            box-shadow: 0 8px 20px rgba(37,99,235,.42);
+            background: linear-gradient(135deg, #22d3ee, #0284c7) !important; color: #fff !important;
+            padding: 11px 18px; font-weight: 800;
+            box-shadow: 0 10px 26px rgba(2,132,199,.55), inset 0 0 0 1px rgba(255,255,255,.22);
+            transition: filter .15s, transform .1s;
         }
-        .motiv-actions .btn-secondary { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.3); }
-        .motiv-actions .btn-secondary:hover { background: rgba(255,255,255,.22); }
-        .motiv-actions .btn-danger { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
+        .motiv-actions .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .motiv-actions .btn-secondary {
+            background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.35);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+        }
+        .motiv-actions .btn-secondary:hover { background: rgba(255,255,255,.26); }
+        .motiv-actions .btn-danger { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; box-shadow: 0 8px 20px rgba(220,38,38,.4); }
 
         /* Mobile-only hamburger bar (sidebar is off-canvas ≤900px). */
         .client-mobilebar {
