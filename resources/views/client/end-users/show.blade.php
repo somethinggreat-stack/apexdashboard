@@ -266,8 +266,10 @@
         <h3>Comments</h3>
         @forelse ($endUser->notes as $note)
             <div class="note-item">
+                {{-- Never expose which admin/VA authored a comment to the business
+                     owner — show a generic team label only. --}}
                 <div class="note-meta">
-                    <strong>{{ $note->createdBy?->full_name ?? 'VA' }}</strong>
+                    <strong>Apex Growth Team</strong>
                     <span class="muted">· {{ $note->created_at?->format('M d, Y H:i') }}</span>
                 </div>
                 <div class="note-body">{{ $note->note_text }}</div>
