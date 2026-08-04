@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,
         ]);
 
+        // Defense-in-depth security response headers on every request.
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         // Server-to-server intake API (key-authenticated) — not a browser form.
         // Server-to-server intake endpoints are key-authenticated, not session-based.
         // 'partner-intake' is the same endpoint off the /api prefix (WAF workaround).
