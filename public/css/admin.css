@@ -1161,8 +1161,9 @@ body.drawer-open { overflow: hidden; }
     z-index: 2147482000; pointer-events: none; user-select: none;
     will-change: transform;
 }
-/* Tilt the rocket so it points along the bottom-left → top-right flight path. */
-#fatmanWalker .fw-art { width: 100%; height: 100%; transform: rotate(42deg); }
+/* Tilt him so he faces UP-right, along the bottom-left → top-right flight path
+   (negative = counter-clockwise, i.e. head up and nose toward the top-right). */
+#fatmanWalker .fw-art { width: 100%; height: 100%; transform: rotate(-42deg); }
 #fatmanWalker .fw-art svg { display: block; }
 @media (max-width: 1200px) { #fatmanWalker { width: 340px; height: 340px; } }
 @media (max-width: 640px)  { #fatmanWalker { width: 220px; height: 220px; } }
