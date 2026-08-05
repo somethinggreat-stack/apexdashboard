@@ -112,6 +112,13 @@
     .cm-payout label.grow { flex:1 1 220px; }
     .cm-payout input { padding:9px 12px; border:1px solid #d7dee8; border-radius:9px; font-size:13.5px; background:#fff; color:#0f172a; }
     .cm-payout input:focus { outline:none; border-color:var(--pro-indigo); }
+
+    /* Dark mode */
+    :root[data-theme="dark"] .cm-stat { background: var(--pro-card); border-color: var(--pro-line); }
+    :root[data-theme="dark"] .cm-lbl { color: var(--pro-muted); }
+    :root[data-theme="dark"] .cm-total td { background: rgba(255,255,255,.03); border-top-color: var(--pro-line); }
+    :root[data-theme="dark"] .cm-payout label { color: var(--pro-muted); }
+    :root[data-theme="dark"] .cm-payout input { background:#10152a; border-color: var(--pro-line); color: var(--pro-text); }
 </style>
 @endpush
 @endsection

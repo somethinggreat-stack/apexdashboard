@@ -313,6 +313,46 @@
             radial-gradient(1000px circle at 100% -12%, #e9f1ff 0%, transparent 40%),
             radial-gradient(900px circle at 0% 120%, #e9faf2 0%, transparent 42%);
     }
+
+    /* ===== Dark mode ===== (only overrides — light theme above is untouched) */
+    :root[data-theme="dark"] .content { background: var(--pro-bg); }
+    :root[data-theme="dark"] .sbo-head h2,
+    :root[data-theme="dark"] .na-head h2,
+    :root[data-theme="dark"] .picker-card-name,
+    :root[data-theme="dark"] .na-bo { color: var(--pro-text); }
+    :root[data-theme="dark"] .sbo-sub,
+    :root[data-theme="dark"] .na-sub,
+    :root[data-theme="dark"] .picker-card-meta,
+    :root[data-theme="dark"] .na-colhead,
+    :root[data-theme="dark"] .owes-name,
+    :root[data-theme="dark"] .owes-sub,
+    :root[data-theme="dark"] .dempty,
+    :root[data-theme="dark"] .ot-lbl { color: var(--pro-muted); }
+    :root[data-theme="dark"] .ot-val { color: var(--pro-text); }
+
+    /* card-like surfaces */
+    :root[data-theme="dark"] .picker-card,
+    :root[data-theme="dark"] .owes-item,
+    :root[data-theme="dark"] .owes-total,
+    :root[data-theme="dark"] .na-btn-soft {
+        background: var(--pro-card) !important; border-color: var(--pro-line) !important;
+    }
+    :root[data-theme="dark"] .na-btn-soft { color: var(--pro-text); }
+    :root[data-theme="dark"] .na-btn-soft:hover { background: rgba(255,255,255,.05); }
+    :root[data-theme="dark"] .picker-card:hover,
+    :root[data-theme="dark"] .owes-item:hover { border-color: var(--pro-indigo) !important; }
+    :root[data-theme="dark"] .na-colhead { border-bottom-color: var(--pro-line); }
+    :root[data-theme="dark"] .na-row { border-bottom-color: var(--pro-line); }
+    :root[data-theme="dark"] .owes-filter select { background: var(--pro-card); color: var(--pro-text); border-color: var(--pro-line); }
+
+    /* status pills + badges: translucent tints instead of bright light fills */
+    :root[data-theme="dark"] .pc-active { background: rgba(16,185,129,.18); color:#6ee7b7; }
+    :root[data-theme="dark"] .pc-paused { background: rgba(245,158,11,.18); color:#fcd34d; }
+    :root[data-theme="dark"] .pc-inactive,
+    :root[data-theme="dark"] .pc-archived { background: rgba(148,163,184,.16); color:#cbd5e1; }
+    :root[data-theme="dark"] .nab-blue  { background: rgba(59,130,246,.20); color:#93c5fd; }
+    :root[data-theme="dark"] .nab-amber { background: rgba(245,158,11,.20); color:#fcd34d; }
+    :root[data-theme="dark"] .nab-red   { background: rgba(239,68,68,.20);  color:#fca5a5; }
 </style>
 @endpush
 

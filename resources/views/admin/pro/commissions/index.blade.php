@@ -59,6 +59,7 @@
     .cm-row { cursor:pointer; transition:background .12s; }
     .cm-row:hover { background:#f8fafc; }
     .pro-act { font-weight:700; color:var(--pro-indigo); text-decoration:none; white-space:nowrap; }
+    :root[data-theme="dark"] .cm-row:hover { background: rgba(255,255,255,.03); }
 </style>
 @endpush
 @push('scripts')
