@@ -100,6 +100,25 @@ class CommissionTest extends TestCase
         $this->actingAs($this->super, 'admin')->get("/admin/commissions/{$otherReferrer->id}")->assertNotFound();
     }
 
+    public function test_referrer_never_counts_a_bo_from_another_org(): void
+    {
+        $chantal = $this->bo('Chantal', ['is_commission_referrer' => true]);
+
+        // A BO in a DIFFERENT org that (somehow) points at this referrer must not leak in.
+        $other = new Admin(['email' => 'o2@t.com', 'password' => 'secret', 'full_name' => 'Other']);
+        $other->role = 'super';
+        $other->save();
+        $foreign = Client::create([
+            'admin_id' => $other->id, 'business_name' => 'Foreign BO', 'email' => 'fbo@t.com',
+            'password' => 'secret', 'monthly_fee' => 149, 'status' => 'active',
+            'compensation_model' => 'per_round', 'referrer_id' => $chantal->id,
+        ]);
+        $this->realPayment($foreign, 1);
+
+        $summary = CommissionSummary::forReferrer($chantal);
+        $this->assertSame(0.0, $summary['earned'], 'Cross-org referred BO must never count');
+    }
+
     public function test_payout_records_against_the_referrer_and_reduces_outstanding(): void
     {
         $chantal = $this->bo('Chantal', ['is_commission_referrer' => true]);

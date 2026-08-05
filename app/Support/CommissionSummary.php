@@ -25,6 +25,7 @@ class CommissionSummary
     public static function forReferrer(Client $referrer): array
     {
         $referredBos = Client::where('referrer_id', $referrer->id)
+            ->where('admin_id', $referrer->admin_id)   // same org only (defense in depth)
             ->orderBy('business_name')
             ->get();
 
@@ -63,7 +64,9 @@ class CommissionSummary
             ->orderBy('business_name')
             ->get()
             ->map(function ($referrer) {
-                $referredBos = Client::where('referrer_id', $referrer->id)->get();
+                $referredBos = Client::where('referrer_id', $referrer->id)
+                    ->where('admin_id', $referrer->admin_id)   // same org only
+                    ->get();
                 $payments = $referredBos->sum(
                     fn ($bo) => ClientPayment::forClient($bo->id)->where('is_free', false)->count()
                 );
