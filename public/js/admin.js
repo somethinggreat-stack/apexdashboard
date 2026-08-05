@@ -50,14 +50,3 @@ document.addEventListener('DOMContentLoaded', function () {
 
 window.openModal = openModal;
 window.closeModal = closeModal;
-
-/* "Referred by" boxes on the Add/Edit Business Owner form are single-choice:
-   ticking one referrer unticks the others (one referrer per business owner). */
-document.addEventListener('change', function (e) {
-    var el = e.target;
-    if (el && el.classList && el.classList.contains('ref-check') && el.checked) {
-        document.querySelectorAll('input.ref-check[name="' + el.name + '"]').forEach(function (other) {
-            if (other !== el) other.checked = false;
-        });
-    }
-});
