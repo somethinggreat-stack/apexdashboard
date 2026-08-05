@@ -9,16 +9,17 @@ use Illuminate\Support\Facades\Auth;
 class CommissionController extends Controller
 {
     /**
-     * Chantal's own referral commission, read-only, inside her portal. Only a BO
-     * flagged is_commission_referrer can reach this. Figures are the exact same
-     * live-derived numbers the admin sees (shared CommissionSummary).
+     * A referrer's own referral commission, read-only, inside their portal. Only
+     * a business owner flagged is_commission_referrer can reach this, and they
+     * only ever see their OWN figures (the exact same live-derived numbers the
+     * admin sees for them, via the shared CommissionSummary).
      */
     public function index()
     {
         $bo = Auth::guard('client')->user();
         abort_unless($bo->is_commission_referrer, 404);
 
-        $summary = CommissionSummary::forOwner($bo->admin_id);
+        $summary = CommissionSummary::forReferrer($bo);
 
         return view('client.commissions.index', compact('summary', 'bo'));
     }

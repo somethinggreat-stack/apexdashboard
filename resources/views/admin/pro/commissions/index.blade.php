@@ -11,82 +11,43 @@
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#a78bfa,#7c3aed);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </span>
-            <h2>{{ $summary['name'] }} — Commission</h2>
+            <h2>Commissions</h2>
         </div>
     </div>
 
-    <p style="margin:0; padding:0 22px 4px; font-size:13px; color:var(--pro-muted);">
-        {{ $summary['name'] }} earns {{ $money($summary['rate']) }} for every real client payment under the business owners she referred.
-        Test/free payments don't count. Mark an owner as referred with the checkbox on the Add/Edit Business Owner form.
+    <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
+        Referrers earn $5.00 for every real client payment under the business owners they referred. Test/free payments don't count.
+        Open a referrer to see the breakdown and record payouts. Make a business owner a referrer with the “Commission referrer” box on their form.
     </p>
 
-    <div class="cm-stats">
-        <div class="cm-stat"><span class="cm-lbl">Total Earned</span><span class="cm-val" style="color:#4338ca;">{{ $money($summary['earned']) }}</span></div>
-        <div class="cm-stat"><span class="cm-lbl">Paid Out</span><span class="cm-val" style="color:#047857;">{{ $money($summary['paid']) }}</span></div>
-        <div class="cm-stat"><span class="cm-lbl">Outstanding</span><span class="cm-val" style="color:#b45309;">{{ $money($summary['outstanding']) }}</span></div>
-    </div>
-
     <div class="pro-table-scroll">
         <table class="pro-table">
             <thead>
-                <tr><th>Business Owner</th><th>Client Payments</th><th>Per Payment</th><th>Earned</th></tr>
+                <tr>
+                    <th>Referrer</th>
+                    <th>Referred BOs</th>
+                    <th>Client Payments</th>
+                    <th>Earned</th>
+                    <th>Paid</th>
+                    <th>Outstanding</th>
+                    <th></th>
+                </tr>
             </thead>
             <tbody>
-                @forelse ($summary['lines'] as $line)
-                    <tr>
-                        <td><strong>{{ $line['bo']->business_name }}</strong></td>
-                        <td>{{ $line['payments'] }}</td>
-                        <td>{{ $money($line['rate']) }}</td>
-                        <td><strong>{{ $money($line['earned']) }}</strong></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="4" class="empty">No referred business owners yet. Tick “Referred by Chantal” on a business owner to include them.</td></tr>
-                @endforelse
-                @if ($summary['lines']->isNotEmpty())
-                    <tr class="cm-total">
-                        <td>Total</td>
-                        <td>{{ $summary['lines']->sum('payments') }}</td>
-                        <td>—</td>
-                        <td>{{ $money($summary['earned']) }}</td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-    </div>
-
-    <div class="cm-payout-box">
-        <h3>Record a payout to {{ $summary['name'] }}</h3>
-        <form method="POST" action="{{ route('admin.commissions.payout.store') }}" class="cm-payout">
-            @csrf
-            <label>Amount <input type="number" step="0.01" min="0.01" name="amount" placeholder="0.00" required></label>
-            <label>Paid on <input type="date" name="paid_at" value="{{ now()->toDateString() }}" required></label>
-            <label class="grow">Note <input type="text" name="note" placeholder="e.g. paid via Zelle for June"></label>
-            <button type="submit" class="pro-cta">Record Payout</button>
-        </form>
-    </div>
-
-    <div class="pro-table-scroll">
-        <table class="pro-table">
-            <thead>
-                <tr><th>Paid On</th><th>Amount</th><th>Note</th><th>Recorded By</th><th></th></tr>
-            </thead>
-            <tbody>
-                @forelse ($summary['payouts'] as $p)
-                    <tr>
-                        <td>{{ $p->paid_at?->format('M j, Y') }}</td>
-                        <td><strong>{{ $money($p->amount) }}</strong></td>
-                        <td>{{ $p->note ?: '—' }}</td>
-                        <td class="muted">{{ $p->createdBy?->full_name ?? '—' }}</td>
-                        <td>
-                            <form method="POST" action="{{ route('admin.commissions.payout.destroy', $p->id) }}"
-                                  onsubmit="return confirm('Delete this payout record?')">
-                                @csrf @method('DELETE')
-                                <button class="pro-act del">Delete</button>
-                            </form>
+                @forelse ($referrers as $row)
+                    <tr class="cm-row" data-href="{{ route('admin.commissions.show', $row['referrer']->id) }}">
+                        <td><strong>{{ $row['referrer']->business_name }}</strong></td>
+                        <td>{{ $row['referred_count'] }}</td>
+                        <td>{{ $row['payments'] }}</td>
+                        <td><strong style="color:#4338ca;">{{ $money($row['earned']) }}</strong></td>
+                        <td style="color:#047857;">{{ $money($row['paid']) }}</td>
+                        <td style="color:#b45309;">{{ $money($row['outstanding']) }}</td>
+                        <td style="text-align:right;">
+                            <a href="{{ route('admin.commissions.show', $row['referrer']->id) }}" class="pro-act">Open →</a>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">No payouts recorded yet.</td></tr>
+                    <tr><td colspan="7" class="empty">No commission referrers yet. Tick “Commission referrer” on a business owner's Add/Edit form.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -95,18 +56,20 @@
 
 @push('head')
 <style>
-    .cm-stats { display:flex; flex-wrap:wrap; gap:14px; padding:4px 22px 14px; }
-    .cm-stat { flex:1 1 160px; background:#fff; border:1px solid #eef1f6; border-radius:14px; padding:14px 16px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
-    .cm-lbl { display:block; font-size:12px; font-weight:600; color:#64748b; }
-    .cm-val { display:block; font-size:24px; font-weight:800; margin-top:4px; letter-spacing:-.5px; }
-    .cm-total td { font-weight:800; background:#f8fafc; border-top:2px solid #e2e8f0; }
-    .cm-payout-box { padding:14px 22px 4px; }
-    .cm-payout-box h3 { margin:0 0 10px; font-size:15px; }
-    .cm-payout { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
-    .cm-payout label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#64748b; }
-    .cm-payout label.grow { flex:1 1 220px; }
-    .cm-payout input { padding:9px 12px; border:1px solid #d7dee8; border-radius:9px; font-size:13.5px; background:#fff; color:#0f172a; }
-    .cm-payout input:focus { outline:none; border-color:var(--pro-indigo); }
+    .cm-row { cursor:pointer; transition:background .12s; }
+    .cm-row:hover { background:#f8fafc; }
+    .pro-act { font-weight:700; color:var(--pro-indigo); text-decoration:none; white-space:nowrap; }
 </style>
+@endpush
+@push('scripts')
+<script>
+/* Whole referrer row is clickable (but real links inside still work). */
+document.querySelectorAll('.cm-row[data-href]').forEach(function (tr) {
+    tr.addEventListener('click', function (e) {
+        if (e.target.closest('a,button,form')) return;
+        window.location = tr.getAttribute('data-href');
+    });
+});
+</script>
 @endpush
 @endsection

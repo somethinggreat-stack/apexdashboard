@@ -27,12 +27,7 @@
             <input type="number" step="0.01" name="monthly_fee" value="{{ old('monthly_fee', '149.00') }}">
         </div>
 
-        <div class="form-group">
-            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
-                <input type="checkbox" name="referred_by_chantal" value="1" style="width:18px; height:18px;" {{ old('referred_by_chantal') ? 'checked' : '' }}>
-                <span>Referred by Chantal <span class="muted" style="font-weight:400;">— she earns $5 for each client payment of this business owner</span></span>
-            </label>
-        </div>
+        @include('admin.clients._referral-fields')
 
         <div class="form-section" style="margin-top:24px; padding:16px 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
             <h4 style="margin-top:0;">Payment Arrangement *</h4>

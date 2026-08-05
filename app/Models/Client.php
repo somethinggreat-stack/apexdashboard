@@ -16,7 +16,7 @@ class Client extends Authenticatable
     protected $fillable = [
         'admin_id', 'business_name', 'email', 'password',
         'phone', 'monthly_fee', 'status', 'custom_lists_enabled',
-        'referred_by_chantal', 'is_commission_referrer',
+        'referred_by_chantal', 'is_commission_referrer', 'referrer_id',
         'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
         'intake_monitoring_provider', 'intake_monitoring_enroll_url',
         'intake_api_key', 'intake_external_url', 'intake_security_extra',
@@ -38,6 +38,24 @@ class Client extends Authenticatable
         'pay_cycle_anchor'     => 'date',
         'weekly_hours_target'  => 'integer',
     ];
+
+    /** The referrer (another business owner) who referred this business owner. */
+    public function referrer()
+    {
+        return $this->belongsTo(Client::class, 'referrer_id');
+    }
+
+    /** Business owners this one referred (only meaningful for a referrer). */
+    public function referredBusinessOwners()
+    {
+        return $this->hasMany(Client::class, 'referrer_id');
+    }
+
+    /** Business owners flagged as commission referrers. */
+    public function scopeReferrers($query)
+    {
+        return $query->where('is_commission_referrer', true);
+    }
 
     protected static function booted(): void
     {

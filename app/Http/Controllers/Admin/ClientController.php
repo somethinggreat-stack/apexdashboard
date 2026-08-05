@@ -17,12 +17,12 @@ class ClientController extends Controller
             ->orderBy('business_name')
             ->get();
 
-        return view('admin.clients.index', compact('clients'));
+        return view('admin.clients.index', ['clients' => $clients, 'referrers' => $this->referrers()]);
     }
 
     public function create()
     {
-        return view('admin.clients.create');
+        return view('admin.clients.create', ['referrers' => $this->referrers()]);
     }
 
     public function store(Request $request)
@@ -43,9 +43,10 @@ class ClientController extends Controller
             'pay_cycle_anchor'    => 'nullable|date',
         ]);
 
-        $data['admin_id']            = Auth::guard('admin')->id();
-        $data['monthly_fee']         = $data['monthly_fee'] ?? 149.00;
-        $data['referred_by_chantal'] = $request->boolean('referred_by_chantal');
+        $data['admin_id']               = Auth::guard('admin')->id();
+        $data['monthly_fee']            = $data['monthly_fee'] ?? 149.00;
+        $data['is_commission_referrer'] = $request->boolean('is_commission_referrer');
+        $data['referrer_id']            = $this->validReferrerId($request->input('referrer_id'));
 
         // Clear irrelevant fields for the chosen model so we don't store mixed config.
         if ($data['compensation_model'] === 'per_round') {
@@ -67,7 +68,7 @@ class ClientController extends Controller
     public function edit(string $id)
     {
         $client = $this->scoped()->findOrFail($id);
-        return view('admin.clients.edit', compact('client'));
+        return view('admin.clients.edit', ['client' => $client, 'referrers' => $this->referrers()]);
     }
 
     public function update(Request $request, string $id)
@@ -87,7 +88,8 @@ class ClientController extends Controller
             unset($data['password']);
         }
 
-        $data['referred_by_chantal'] = $request->boolean('referred_by_chantal');
+        $data['is_commission_referrer'] = $request->boolean('is_commission_referrer');
+        $data['referrer_id']            = $this->validReferrerId($request->input('referrer_id'), $client->id);
 
         $client->update($data);
 
@@ -110,4 +112,32 @@ class ClientController extends Controller
     {
         return Client::forAdmin(Auth::guard('admin')->id());
     }
+
+    /** Business owners in this org flagged as commission referrers. */
+    private function referrers()
+    {
+        return Client::forAdmin(Auth::guard('admin')->id())
+            ->referrers()
+            ->orderBy('business_name')
+            ->get();
+    }
+
+    /**
+     * Validate a submitted referrer id: it must be a referrer in this org, and
+     * (on edit) not the business owner itself. Returns the id or null.
+     */
+    private function validReferrerId($value, ?int $excludeId = null): ?int
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $query = Client::forAdmin(Auth::guard('admin')->id())->referrers()->whereKey($value);
+        if ($excludeId) {
+            $query->whereKeyNot($excludeId);
+        }
+
+        return $query->exists() ? (int) $value : null;
+    }
 }
+

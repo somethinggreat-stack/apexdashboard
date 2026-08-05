@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\CommissionPayout;
 use App\Support\CommissionSummary;
 use Illuminate\Http\Request;
@@ -10,23 +11,30 @@ use Illuminate\Support\Facades\Auth;
 
 class CommissionController extends Controller
 {
-    private const REFERRER = CommissionSummary::REFERRER;
-
-    /**
-     * Commission overview for Chantal. Earned is derived live from real client
-     * payments (test/free ones excluded): for each referred BO, (# of real
-     * payments) × $5. Payouts are tracked separately.
-     */
+    /** List of all referrers in this organisation; each opens a detail view. */
     public function index()
     {
-        $summary = CommissionSummary::forOwner(Auth::guard('admin')->user()->dataOwnerId());
+        $referrers = CommissionSummary::referrersForOwner(
+            Auth::guard('admin')->user()->dataOwnerId()
+        );
 
-        return view($this->adminView('admin.commissions.index'), compact('summary'));
+        return view($this->adminView('admin.commissions.index'), compact('referrers'));
     }
 
-    /** Record money paid out to Chantal. */
-    public function storePayout(Request $request)
+    /** Detailed commission view for one referrer. */
+    public function show(string $id)
     {
+        $referrer = $this->referrer($id);
+        $summary  = CommissionSummary::forReferrer($referrer);
+
+        return view($this->adminView('admin.commissions.show'), compact('summary'));
+    }
+
+    /** Record money paid out to a referrer. */
+    public function storePayout(Request $request, string $id)
+    {
+        $referrer = $this->referrer($id);
+
         $data = $request->validate([
             'amount'  => 'required|numeric|min:0.01|max:1000000',
             'paid_at' => 'required|date',
@@ -34,20 +42,34 @@ class CommissionController extends Controller
         ]);
 
         CommissionPayout::create([
-            'referrer_name'       => self::REFERRER,
+            'referrer_id'         => $referrer->id,
+            'referrer_name'       => $referrer->business_name,
             'amount'              => $data['amount'],
             'paid_at'             => $data['paid_at'],
             'note'                => $data['note'] ?? null,
             'created_by_admin_id' => Auth::guard('admin')->id(),
         ]);
 
-        return back()->with('status', 'Payout to ' . self::REFERRER . ' recorded.');
+        return back()->with('status', 'Payout to ' . $referrer->business_name . ' recorded.');
     }
 
     public function destroyPayout(string $id)
     {
-        CommissionPayout::findOrFail($id)->delete();
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+
+        // Only payouts belonging to a referrer this admin owns.
+        $payout = CommissionPayout::whereHas('referrer', fn ($q) => $q->where('admin_id', $ownerId))
+            ->findOrFail($id);
+        $payout->delete();
 
         return back()->with('status', 'Payout deleted.');
+    }
+
+    /** Resolve a referrer scoped to this admin's organisation, or 404. */
+    private function referrer(string $id): Client
+    {
+        return Client::where('admin_id', Auth::guard('admin')->user()->dataOwnerId())
+            ->referrers()
+            ->findOrFail($id);
     }
 }

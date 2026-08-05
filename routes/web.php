@@ -87,9 +87,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
-            // Chantal's referral commissions — earned per real client payment of her referred BOs
+            // Referral commissions — each referrer earns per real client payment of their referred BOs
             Route::get('commissions', [Admin\CommissionController::class, 'index'])->name('commissions.index');
-            Route::post('commissions/payout', [Admin\CommissionController::class, 'storePayout'])->name('commissions.payout.store');
+            Route::get('commissions/{id}', [Admin\CommissionController::class, 'show'])->whereNumber('id')->name('commissions.show');
+            Route::post('commissions/{id}/payout', [Admin\CommissionController::class, 'storePayout'])->whereNumber('id')->name('commissions.payout.store');
             Route::delete('commissions/payout/{id}', [Admin\CommissionController::class, 'destroyPayout'])->whereNumber('id')->name('commissions.payout.destroy');
 
             // Recycle Bin — deleted business owners + clients, recoverable for 10 days. Super admin only.
