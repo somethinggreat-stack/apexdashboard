@@ -21,7 +21,7 @@
         <div class="api-field">
             <label>API Endpoint</label>
             <div class="api-row">
-                <input type="text" value="{{ url('/api/intake') }}" readonly onclick="this.select();">
+                <input type="text" value="{{ url('/partner-intake') }}" readonly onclick="this.select();">
             </div>
         </div>
         <div class="api-field">
@@ -72,7 +72,7 @@
         </div>
         <div class="api-field">
             <label>API Endpoint <span class="muted">(POST · multipart/form-data)</span></label>
-            <div class="api-row"><input type="text" value="{{ url('/api/intake') }}" readonly onclick="this.select();"></div>
+            <div class="api-row"><input type="text" value="{{ url('/partner-intake') }}" readonly onclick="this.select();"></div>
         </div>
         @if ($client->intake_api_key)
             <div class="api-field">
