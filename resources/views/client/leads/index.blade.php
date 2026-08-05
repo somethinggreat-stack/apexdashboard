@@ -102,8 +102,9 @@
 @push('head')
 <style>
     .lead-status { padding:5px 10px; border-radius:999px; border:1px solid #e2e8f0; font-size:12.5px; font-weight:700; cursor:pointer; background:#fff; }
-    .lead-status--new        { color:#1d4ed8; background:#eff6ff; border-color:#bfdbfe; }
-    .lead-status--contacted  { color:#4338ca; background:#eef2ff; border-color:#c7d2fe; }
+    .lead-status--new          { color:#1d4ed8; background:#eff6ff; border-color:#bfdbfe; }
+    .lead-status--message_sent { color:#0369a1; background:#e0f2fe; border-color:#bae6fd; }
+    .lead-status--contacted    { color:#4338ca; background:#eef2ff; border-color:#c7d2fe; }
     .lead-status--interested { color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
     .lead-status--follow_up  { color:#b45309; background:#fffbeb; border-color:#fde68a; }
     .lead-status--converted  { color:#065f46; background:#d1fae5; border-color:#6ee7b7; }

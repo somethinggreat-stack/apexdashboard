@@ -11,6 +11,7 @@ class BusinessLead extends Model
     /** Lead pipeline statuses (key => label). */
     public const STATUSES = [
         'new'          => 'New',
+        'message_sent' => 'Message Sent',
         'contacted'    => 'Contacted',
         'interested'   => 'Interested',
         'follow_up'    => 'Follow-Up',
