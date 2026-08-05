@@ -85,6 +85,12 @@
         .pay-stats, .pay-settings-grid { grid-template-columns: 1fr; }
         .pay-payout-row { grid-template-columns: 1fr 1fr; }
     }
+:root[data-theme="dark"] .pay-stat-card,:root[data-theme="dark"] .pay-settings-card,:root[data-theme="dark"] .pay-block{background:var(--pro-card);border-color:var(--pro-line);}
+:root[data-theme="dark"] .pay-stat-label,:root[data-theme="dark"] .pay-stat-sub,:root[data-theme="dark"] .pay-empty,:root[data-theme="dark"] .pay-settings-grid label{color:var(--pro-muted);}
+:root[data-theme="dark"] .pay-stat-value,:root[data-theme="dark"] .pay-block-title,:root[data-theme="dark"] .pay-matrix tbody td.pay-client{color:var(--pro-text);}
+:root[data-theme="dark"] .pay-matrix thead th,:root[data-theme="dark"] .pay-time-table thead th{background:rgba(255,255,255,.04);color:var(--pro-muted);}
+:root[data-theme="dark"] .pay-matrix th,:root[data-theme="dark"] .pay-matrix td,:root[data-theme="dark"] .pay-time-table th,:root[data-theme="dark"] .pay-time-table td{border-color:var(--pro-line);}
+:root[data-theme="dark"] .pay-settings-grid input,:root[data-theme="dark"] .pay-settings-grid select{background:#10152a;border-color:var(--pro-line);color:var(--pro-text);}
 </style>
 @endpush
 

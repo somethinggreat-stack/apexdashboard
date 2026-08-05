@@ -130,6 +130,7 @@
     }
     .log-filter input { min-width:220px; }
     .log-filter input:focus, .log-filter select:focus { outline:none; border-color:#2563eb; }
+    :root[data-theme="dark"] .log-filter input, :root[data-theme="dark"] .log-filter select { background:#10152a; border-color:var(--pro-line); color:var(--pro-text); }
 </style>
 @endpush
 

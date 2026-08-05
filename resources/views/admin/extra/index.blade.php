@@ -193,6 +193,10 @@
     .ept-label { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#64748b; }
     .ept-val { font-size:20px; font-weight:800; color:#0f172a; }
     .ep-total.ept-amber .ept-val { color:#b45309; }
+:root[data-theme="dark"] .ep-total{background:rgba(255,255,255,.04);border-color:var(--pro-line);}
+:root[data-theme="dark"] .ept-label{color:var(--pro-muted);}
+:root[data-theme="dark"] .ept-val{color:var(--pro-text);}
+:root[data-theme="dark"] .ep-notes{color:var(--pro-text-soft);}
 </style>
 @endpush
 

@@ -179,6 +179,10 @@
     opacity:0; transition:opacity 0.25s, transform 0.25s; z-index:300; pointer-events:none;
 }
 .chat-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+:root[data-theme="dark"] .chat-shell,:root[data-theme="dark"] .chat-header,:root[data-theme="dark"] .chat-scroll,:root[data-theme="dark"] .from-admin .chat-bubble,:root[data-theme="dark"] .chat-form,:root[data-theme="dark"] .chat-form textarea,:root[data-theme="dark"] .note-modal-card,:root[data-theme="dark"] .note-modal-card textarea{background:var(--pro-card);border-color:var(--pro-line);color:var(--pro-text);}
+:root[data-theme="dark"] .from-client .chat-bubble{background:rgba(37,99,235,.24);color:#e6eeff;}
+:root[data-theme="dark"] .chat-header-text span{color:var(--pro-text);}
+:root[data-theme="dark"] .chat-meta,:root[data-theme="dark"] .chat-select-count,:root[data-theme="dark"] .chat-empty,:root[data-theme="dark"] .note-modal-card .muted{color:var(--pro-muted);}
 </style>
 @endpush
 

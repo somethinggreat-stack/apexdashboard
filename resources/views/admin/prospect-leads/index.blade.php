@@ -257,6 +257,9 @@
     .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .row-actions form { display:inline; margin:0; }
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
+:root[data-theme="dark"] .lead-stat{background:var(--pro-card);border-color:var(--pro-line);}
+:root[data-theme="dark"] .lead-stat-num{color:var(--pro-text);}
+:root[data-theme="dark"] .lead-stat-label{color:var(--pro-muted);}
 </style>
 @endpush
 
