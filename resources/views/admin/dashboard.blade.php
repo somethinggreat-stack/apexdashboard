@@ -259,6 +259,35 @@
     .ab-blue{ background:#e0f2fe; color:#0369a1; } .ab-amber{ background:#fef3c7; color:#b45309; } .ab-red{ background:#fee2e2; color:#dc2626; }
     .att-act { margin:0; justify-self:end; }
 
+    /* ===== Dark mode ===== (dark-only overrides; light theme above is untouched) */
+    :root[data-theme="dark"] .dstat,
+    :root[data-theme="dark"] .dcard,
+    :root[data-theme="dark"] .bo-card,
+    :root[data-theme="dark"] .dbtn-ghost,
+    :root[data-theme="dark"] .dbtn-soft { background: var(--pro-card); border-color: var(--pro-line); }
+    :root[data-theme="dark"] .dstat-label,
+    :root[data-theme="dark"] .dstat-sub,
+    :root[data-theme="dark"] .dcard-sub,
+    :root[data-theme="dark"] .bo-meta,
+    :root[data-theme="dark"] .dempty,
+    :root[data-theme="dark"] .att-colhead { color: var(--pro-muted); }
+    :root[data-theme="dark"] .dcard-head h2,
+    :root[data-theme="dark"] .bo-name,
+    :root[data-theme="dark"] .att-bo,
+    :root[data-theme="dark"] .dbtn-soft { color: var(--pro-text); }
+    :root[data-theme="dark"] .dchip { background: rgba(255,255,255,.06); color: var(--pro-text-soft); }
+    :root[data-theme="dark"] .dsearch { background:#10152a; border-color: var(--pro-line); color: var(--pro-text); }
+    :root[data-theme="dark"] .dbtn-ghost:hover,
+    :root[data-theme="dark"] .dbtn-soft:hover { background: rgba(255,255,255,.05); }
+    :root[data-theme="dark"] .bo-card:hover { border-color: var(--pro-indigo); }
+    :root[data-theme="dark"] .att-colhead { border-bottom-color: var(--pro-line); }
+    :root[data-theme="dark"] .att-row { border-bottom-color: var(--pro-line); }
+    /* colored tint chips -> translucent in dark */
+    :root[data-theme="dark"] .bo-pill.pill-inactive,
+    :root[data-theme="dark"] .bo-pill.pill-paused { background: rgba(148,163,184,.16); color:#cbd5e1; }
+    :root[data-theme="dark"] .ab-blue  { background: rgba(59,130,246,.20); color:#93c5fd; }
+    :root[data-theme="dark"] .ab-amber { background: rgba(245,158,11,.20); color:#fcd34d; }
+    :root[data-theme="dark"] .ab-red   { background: rgba(239,68,68,.20);  color:#fca5a5; }
 </style>
 @endpush
 
