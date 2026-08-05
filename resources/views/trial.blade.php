@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/Images/logo.png">
+    <link rel="apple-touch-icon" href="/Images/logo.png">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="Try Apex on 5 test clients first. We run the full credit repair fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation, response monitoring, and Week 4 reporting — and you only pay once results are in. No upfront commitment." />

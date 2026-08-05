@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/Images/logo.png">
+    <link rel="apple-touch-icon" href="/Images/logo.png">
     <meta charset="UTF-8">
     <title>Status Report — {{ $endUser->full_name }}</title>
     <style>
