@@ -146,4 +146,49 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('555-1234', $eu->phone);
         $this->assertSame('super@cfpb.com', $eu->cfpb_email);
     }
+
+    public function test_reached_round_numbers_tracks_rounds_array(): void
+    {
+        [, , , $eu] = $this->makeWorld();
+
+        $eu->update(['rounds' => ['1st Round', '2nd Round', '3rd Round']]);
+        $this->assertSame([1, 2, 3], $eu->reachedRoundNumbers());
+
+        $eu->update(['rounds' => []]);
+        $this->assertSame([1], $eu->reachedRoundNumbers(), 'always at least round 1');
+    }
+
+    public function test_per_round_cfpb_saves_and_blank_password_keeps_existing(): void
+    {
+        [, $va, $bo, $eu] = $this->makeWorld();
+        $eu->update(['rounds' => ['1st Round', '2nd Round']]);
+
+        // Save round 1 + 2 credentials.
+        $this->actingAs($va, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'cfpb_rounds' => [
+                    1 => ['email' => 'r1@cfpb.com', 'password' => 'pw1'],
+                    2 => ['email' => 'r2@cfpb.com', 'password' => 'pw2'],
+                ],
+            ]))->assertSessionHasNoErrors();
+
+        $eu->refresh();
+        $this->assertSame('r1@cfpb.com', $eu->cfpbForRound(1)['email']);
+        $this->assertSame('pw1', $eu->cfpbForRound(1)['password']);
+        $this->assertSame('pw2', $eu->cfpbForRound(2)['password']);
+
+        // Change round 1 email, leave its password blank -> keeps pw1.
+        $this->actingAs($va, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'cfpb_rounds' => [
+                    1 => ['email' => 'r1new@cfpb.com', 'password' => ''],
+                    2 => ['email' => 'r2@cfpb.com', 'password' => ''],
+                ],
+            ]))->assertSessionHasNoErrors();
+
+        $eu->refresh();
+        $this->assertSame('r1new@cfpb.com', $eu->cfpbForRound(1)['email']);
+        $this->assertSame('pw1', $eu->cfpbForRound(1)['password'], 'blank password keeps the existing one');
+        $this->assertSame('pw2', $eu->cfpbForRound(2)['password']);
+    }
 }

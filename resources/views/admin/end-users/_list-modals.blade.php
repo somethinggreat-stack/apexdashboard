@@ -234,7 +234,7 @@
             </div>
 
             <div class="form-section">
-                <h4>CFPB <span class="muted">(optional)</span></h4>
+                <h4>Universal CFPB Logins <span class="muted">(optional)</span></h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label>CFPB Login Email</label>

@@ -342,6 +342,30 @@ class EndUserController extends Controller
             unset($data['ssn']);
         }
 
+        // Per-round CFPB credentials (cfpb_rounds[<round>][email|password]). A
+        // blank password for a round keeps that round's existing one, mirroring
+        // the universal CFPB field. Merged into the encrypted map.
+        unset($data['cfpb_rounds']);
+        if ($request->has('cfpb_rounds')) {
+            $existing = $endUser->cfpb_round_credentials ?? [];
+            $merged   = [];
+            foreach ((array) $request->input('cfpb_rounds', []) as $round => $vals) {
+                $r = (int) $round;
+                if ($r < 1 || $r > 8) {
+                    continue;
+                }
+                $key      = (string) $r;
+                $email    = trim((string) ($vals['email'] ?? ''));
+                $pwIn     = (string) ($vals['password'] ?? '');
+                $password = $pwIn !== '' ? $pwIn : ($existing[$key]['password'] ?? null);
+
+                if ($email !== '' || (string) $password !== '') {
+                    $merged[$key] = ['email' => $email !== '' ? $email : null, 'password' => $password];
+                }
+            }
+            $data['cfpb_round_credentials'] = $merged ?: null;
+        }
+
         // Rounds only persist when the submitting form includes the rounds section
         // (hidden `rounds_present` flag). This lets the inline status-only form leave
         // existing rounds untouched, while allowing the edit modal to clear them.
@@ -639,6 +663,10 @@ class EndUserController extends Controller
             'credit_monitoring_security_answer' => "$reqOrNullable|string|max:255",
             'cfpb_email'                  => 'nullable|email|max:255',
             'cfpb_password'               => 'nullable|string|max:255',
+            // Per-round CFPB credentials (only from the edit modal).
+            'cfpb_rounds'                 => 'sometimes|array',
+            'cfpb_rounds.*.email'         => 'nullable|email|max:255',
+            'cfpb_rounds.*.password'      => 'nullable|string|max:255',
             'start_date'                  => "$req|date",
             // Inline date edits from the Clients list (both optional).
             'round_started'               => 'sometimes|nullable|date',

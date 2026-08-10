@@ -78,7 +78,7 @@ class EndUser extends Model
         'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path', 'collage_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer', 'credit_monitoring_security_question', 'credit_monitoring_pin',
-        'cfpb_email', 'cfpb_password',
+        'cfpb_email', 'cfpb_password', 'cfpb_round_credentials',
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
@@ -101,8 +101,41 @@ class EndUser extends Model
         'credit_monitoring_security_answer' => 'encrypted',
         'credit_monitoring_pin' => 'encrypted',
         'cfpb_password' => 'encrypted',
+        'cfpb_round_credentials' => 'encrypted:array',
     ];
-    protected $hidden = ['ssn', 'credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin', 'cfpb_password'];
+    protected $hidden = ['ssn', 'credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin', 'cfpb_password', 'cfpb_round_credentials'];
+
+    /**
+     * Round numbers this client has reached (from the `rounds` array), sorted
+     * ascending. Drives which per-round CFPB credential boxes appear — a new
+     * round's box shows once the client is moved into that round. Always at
+     * least round 1.
+     */
+    public function reachedRoundNumbers(): array
+    {
+        $map  = array_flip(self::ROUND_OPTIONS);   // '1st Round' => 0
+        $nums = collect($this->rounds ?? [])
+            ->map(fn ($label) => isset($map[$label]) ? $map[$label] + 1 : null)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return $nums ?: [1];
+    }
+
+    /** CFPB credentials stored for one round: ['email' => ?, 'password' => ?]. */
+    public function cfpbForRound(int $round): array
+    {
+        $creds = $this->cfpb_round_credentials ?? [];
+        $r = $creds[(string) $round] ?? ($creds[$round] ?? []);
+
+        return [
+            'email'    => $r['email'] ?? null,
+            'password' => $r['password'] ?? null,
+        ];
+    }
 
     public function client()
     {

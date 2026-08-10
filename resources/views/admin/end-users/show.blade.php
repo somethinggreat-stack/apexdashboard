@@ -280,7 +280,7 @@
             @endif
         </div>
 
-        <h4 class="profile-section-head">CFPB</h4>
+        <h4 class="profile-section-head">Universal CFPB Logins</h4>
         <div class="info-grid">
             <div>
                 <label>CFPB Login Email</label>
@@ -304,6 +304,37 @@
                 </div>
             </div>
         </div>
+
+        {{-- Per-round CFPB credentials — shown for each round the client has reached. --}}
+        @foreach ($endUser->reachedRoundNumbers() as $rn)
+            @php $rc = $endUser->cfpbForRound($rn); @endphp
+            @if ($rc['email'] || $rc['password'])
+                <h4 class="profile-section-head">{{ \App\Models\EndUser::ROUND_OPTIONS[$rn - 1] ?? ($rn.'th Round') }} CFPB Credentials</h4>
+                <div class="info-grid">
+                    <div>
+                        <label>CFPB Login Email</label>
+                        <div class="password-cell">
+                            <span>{{ $rc['email'] ?? '—' }}</span>
+                            @if ($rc['email'])
+                                <button type="button" class="btn btn-sm" data-copy="{{ $rc['email'] }}" data-copy-msg="CFPB email copied">Copy</button>
+                            @endif
+                        </div>
+                    </div>
+                    <div>
+                        <label>CFPB Password</label>
+                        <div class="password-cell">
+                            <span class="password-mask" data-secret="{{ $rc['password'] }}">
+                                @if ($rc['password']) ••••••••• @else — @endif
+                            </span>
+                            @if ($rc['password'])
+                                <button type="button" class="btn btn-sm" onclick="togglePassword(this)">Show</button>
+                                <button type="button" class="btn btn-sm" data-copy="{{ $rc['password'] }}" data-copy-msg="CFPB password copied">Copy</button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endforeach
     </div>
 </div>
 
@@ -654,12 +685,25 @@
             </div>
 
             <div class="form-section">
-                <h4>CFPB</h4>
+                <h4>Universal CFPB Logins <span class="muted">(optional)</span></h4>
                 <div class="form-row">
                     <div class="form-group"><label>CFPB Login Email</label><input type="email" name="cfpb_email" value="{{ old('cfpb_email', $endUser->cfpb_email) }}" autocomplete="off"></div>
                     <div class="form-group"><label>CFPB Password <span class="muted">(leave blank to keep current)</span></label><input type="text" name="cfpb_password" autocomplete="off"></div>
                 </div>
             </div>
+
+            {{-- Per-round CFPB credentials — one block per round the client has
+                 reached (the box appears once they're moved into that round). --}}
+            @foreach ($endUser->reachedRoundNumbers() as $rn)
+                @php $rc = $endUser->cfpbForRound($rn); @endphp
+                <div class="form-section">
+                    <h4>{{ \App\Models\EndUser::ROUND_OPTIONS[$rn - 1] ?? ($rn.'th Round') }} CFPB Credentials <span class="muted">(optional)</span></h4>
+                    <div class="form-row">
+                        <div class="form-group"><label>CFPB Login Email</label><input type="email" name="cfpb_rounds[{{ $rn }}][email]" value="{{ old('cfpb_rounds.'.$rn.'.email', $rc['email']) }}" autocomplete="off"></div>
+                        <div class="form-group"><label>CFPB Password <span class="muted">(leave blank to keep current)</span></label><input type="text" name="cfpb_rounds[{{ $rn }}][password]" autocomplete="off"></div>
+                    </div>
+                </div>
+            @endforeach
 
             <div class="form-section">
                 <h4>Status</h4>
