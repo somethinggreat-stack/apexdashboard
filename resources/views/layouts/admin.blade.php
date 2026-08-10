@@ -11,6 +11,7 @@
     <script>(function(){try{var t=localStorage.getItem('apex-theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/galaxy.css') }}">
     <style>
         /* Logout — proper button, clean red hover */
         .sidebar-logout { padding:10px 16px !important; }
@@ -105,6 +106,7 @@
     @stack('head')
 </head>
 <body class="admin-body">
+<div class="sky" aria-hidden="true"></div>
 <div class="layout">
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="sidebar">
