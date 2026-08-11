@@ -65,10 +65,10 @@
         </p>
         <form method="POST" id="resolveForm" action="">
             @csrf @method('PUT')
-            <div class="form-group"><label>Service Name</label><input type="text" name="credit_monitoring_name" id="rf_name" maxlength="100"></div>
-            <div class="form-group"><label>Username / Login Email</label><input type="text" name="credit_monitoring_username" id="rf_username" maxlength="255" autocomplete="off"></div>
+            <div class="form-group"><label>Service Name <span class="muted">(optional)</span></label><input type="text" name="credit_monitoring_name" id="rf_name" maxlength="100"></div>
+            <div class="form-group"><label>Username / Login Email <span class="muted">(optional)</span></label><input type="text" name="credit_monitoring_username" id="rf_username" maxlength="255" autocomplete="off"></div>
             <div class="form-group"><label>Password <span class="muted">(leave blank to keep current)</span></label><input type="text" name="credit_monitoring_password" autocomplete="off"></div>
-            <div class="form-group"><label>Security Question</label><input type="text" name="credit_monitoring_security_question" id="rf_question" maxlength="255"></div>
+            <div class="form-group"><label>Security Question <span class="muted">(leave blank to keep current)</span></label><input type="text" name="credit_monitoring_security_question" id="rf_question" maxlength="255"></div>
             <div class="form-group"><label>Security Answer <span class="muted">(leave blank to keep current)</span></label><input type="text" name="credit_monitoring_security_answer" autocomplete="off"></div>
             <div class="form-group"><label>PIN <span class="muted">(4 digits — leave blank to keep current)</span></label><input type="text" name="credit_monitoring_pin" inputmode="numeric" maxlength="4" autocomplete="off"></div>
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">

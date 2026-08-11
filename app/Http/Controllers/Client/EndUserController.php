@@ -313,10 +313,14 @@ class EndUserController extends Controller
             'credit_monitoring_pin'             => 'nullable|digits:4',
         ]);
 
-        // Blank secret = keep the existing one (same pattern as the VA edit form).
-        foreach (['credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin'] as $secret) {
-            if (($data[$secret] ?? null) === null || $data[$secret] === '') {
-                unset($data[$secret]);
+        // Every field is optional — blank means "keep whatever's already on file".
+        $keepIfBlank = [
+            'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_security_question',
+            'credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin',
+        ];
+        foreach ($keepIfBlank as $field) {
+            if (($data[$field] ?? null) === null || $data[$field] === '') {
+                unset($data[$field]);
             }
         }
 
