@@ -134,7 +134,7 @@ class Client extends Authenticatable
             return ['done' => $done, 'pending' => 0.0];
         }
 
-        $endUsers = EndUser::forClient($this->id)->clientsList()->with('payments')->get();
+        $endUsers = EndUser::forClient($this->id)->billableList()->with('payments')->get();
         $endUsers->each(fn ($eu) => $eu->setRelation('client', $this));
 
         $done    = (float) ClientPayment::forClient($this->id)->sum('amount');

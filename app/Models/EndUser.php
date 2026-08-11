@@ -169,6 +169,19 @@ class EndUser extends Model
             ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']));
     }
 
+    /**
+     * Billable clients for payments/billing — everything ClientsList covers PLUS
+     * Round Errors. A round-error client has already completed at least their 1st
+     * round, so the rounds they've reached must still be collectible; only New
+     * Clients (pending_review) and New Client Errors (error) — who have finished
+     * no round — are excluded. Per-round logic still bills only reached rounds.
+     */
+    public function scopeBillableList($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('intake_status')
+            ->orWhereNotIn('intake_status', ['pending_review', 'error']));
+    }
+
     /** "In Progress" — actively worked clients (not new, not error, not done). */
     public function scopeInProgress($query)
     {

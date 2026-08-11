@@ -257,7 +257,7 @@ class PaymentController extends Controller
         $client = $this->scopedBO();
 
         $endUsers = EndUser::forClient($client->id)
-            ->clientsList()
+            ->billableList()
             ->with('payments')
             ->get();
         $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
@@ -496,7 +496,7 @@ class PaymentController extends Controller
     private function buildPerRoundData(Client $client): array
     {
         $endUsers = EndUser::forClient($client->id)
-            ->clientsList()   // only real Clients — not New Clients / Errors
+            ->billableList()   // real Clients + Round Errors — bill rounds already done
             ->with('payments')
             ->orderBy('first_name')
             ->get();

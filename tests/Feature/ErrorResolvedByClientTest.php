@@ -166,4 +166,51 @@ class ErrorResolvedByClientTest extends TestCase
             ->get('/admin/errors-resolved-by-client')
             ->assertOk()->assertSee('Rex Err')->assertSee('olduser');
     }
+
+    public function test_round_error_client_still_appears_in_payments(): void
+    {
+        [$super, $bo] = $this->world();
+        $eu = $this->roundError($bo, 'billme@test.com');   // round_error, reached 1st + 2nd
+
+        // They dropped out of Round Errors' billing exclusion — Payments still lists them
+        // so their already-completed rounds can be collected.
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->get('/admin/payments')
+            ->assertOk()->assertSee('Rex Err');
+    }
+
+    public function test_pay_all_unpaid_bills_reached_rounds_of_round_error_client(): void
+    {
+        [$super, $bo] = $this->world();
+        $eu = $this->roundError($bo, 'billme@test.com');   // rounds: 1st + 2nd
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/payments/pay-all-unpaid')
+            ->assertSessionHas('confirm');
+
+        // Both reached rounds must be billed even though the client sits in Round Errors.
+        $this->assertSame(2, \App\Models\ClientPayment::where('end_user_id', $eu->id)->count());
+    }
+
+    public function test_new_client_and_new_client_error_stay_out_of_payments(): void
+    {
+        [$super, $bo] = $this->world();
+
+        EndUser::create([
+            'client_id' => $bo->id, 'first_name' => 'Newby', 'last_name' => 'Pending', 'suffix' => 'None',
+            'email' => 'newby@test.com', 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
+            'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-01-01',
+            'intake_status' => 'pending_review', 'rounds' => ['1st Round'],
+        ]);
+        EndUser::create([
+            'client_id' => $bo->id, 'first_name' => 'Errol', 'last_name' => 'Intake', 'suffix' => 'None',
+            'email' => 'errol@test.com', 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
+            'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-01-01',
+            'intake_status' => 'error', 'rounds' => ['1st Round'],
+        ]);
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->get('/admin/payments')
+            ->assertOk()->assertDontSee('Newby Pending')->assertDontSee('Errol Intake');
+    }
 }
