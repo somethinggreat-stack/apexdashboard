@@ -263,11 +263,17 @@
                 <svg class="i-adm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <span>Done Clients</span>
             </a>
-            @php $roundErrCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'round_error')->count(); @endphp
+            @php $roundErrCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->roundErrorPending()->count(); @endphp
             <a href="{{ route('client.round-errors') }}" class="{{ request()->routeIs('client.round-errors') ? 'active' : '' }}">
                 <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12a9.5 9.5 0 1 0 2.8-6.7"/><polyline points="2.5 4 2.5 8 6.5 8"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="15.5" x2="12" y2="15.5"/></svg>
                 <span>Round Errors</span>
                 @if ($roundErrCount > 0)<span class="nav-count">{{ $roundErrCount }}</span>@endif
+            </a>
+            @php $resolvedByYouCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->roundErrorResolvedByClient()->count(); @endphp
+            <a href="{{ route('client.errors-resolved') }}" class="{{ request()->routeIs('client.errors-resolved') ? 'active' : '' }}">
+                <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Errors Resolved by You</span>
+                @if ($resolvedByYouCount > 0)<span class="nav-count nav-count-slate">{{ $resolvedByYouCount }}</span>@endif
             </a>
             @php $holdCount = \App\Models\EndUser::forClient($bo->id)->onHold()->count(); @endphp
             <a href="{{ route('client.hold') }}" class="{{ request()->routeIs('client.hold') ? 'active' : '' }}">

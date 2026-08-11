@@ -453,11 +453,23 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
             ->notHeld()
-            ->roundError()
+            ->roundErrorPending()
             ->orderByDesc('updated_at')
             ->get();
 
         return view($this->adminView('admin.end-users.round-errors'), compact('endUsers'));
+    }
+
+    /** Round Errors the business owner has resolved — awaiting VA processing. */
+    public function errorsResolvedByClient()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->notHeld()
+            ->roundErrorResolvedByClient()
+            ->orderByDesc('error_resolved_by_client_at')
+            ->get();
+
+        return view($this->adminView('admin.end-users.errors-resolved'), compact('endUsers'));
     }
 
     /** Move a Clients-list client into Round Errors with a type + reason. */
@@ -473,6 +485,8 @@ class EndUserController extends Controller
             'intake_status'      => 'round_error',
             'error_type'         => $data['error_type'],
             'intake_review_note' => $data['reason'] ?? null,
+            // Fresh error starts as pending (business owner hasn't resolved it).
+            'error_resolved_by_client_at' => null,
         ]);
 
         return redirect()->back()
@@ -487,6 +501,7 @@ class EndUserController extends Controller
             'intake_status'      => 'done',
             'error_type'         => null,
             'intake_review_note' => null,
+            'error_resolved_by_client_at' => null,
         ]);
 
         return redirect()->back()

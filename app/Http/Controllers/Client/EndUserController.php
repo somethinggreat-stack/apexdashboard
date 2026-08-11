@@ -273,11 +273,58 @@ class EndUserController extends Controller
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
             ->notHeld()
             ->noCustomList()
-            ->roundError()
+            ->roundErrorPending()
             ->orderByDesc('updated_at')
             ->get();
 
         return view('client.end-users.round-errors', compact('endUsers'));
+    }
+
+    /** Round Errors this owner has already resolved — read-only, awaiting the team. */
+    public function errorsResolved()
+    {
+        $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->notHeld()
+            ->noCustomList()
+            ->roundErrorResolvedByClient()
+            ->orderByDesc('error_resolved_by_client_at')
+            ->get();
+
+        return view('client.end-users.errors-resolved', compact('endUsers'));
+    }
+
+    /**
+     * Business owner resolves a Round Error by fixing the credit-monitoring login.
+     * Only their own client, only one still in a pending round error, and only the
+     * credit-monitoring fields — then it moves to "Errors Resolved by You".
+     */
+    public function resolveRoundError(Request $request, string $id)
+    {
+        $endUser = EndUser::forClient(Auth::guard('client')->id())
+            ->roundErrorPending()
+            ->findOrFail($id);
+
+        $data = $request->validate([
+            'credit_monitoring_name'            => 'nullable|string|max:100',
+            'credit_monitoring_username'        => 'nullable|string|max:255',
+            'credit_monitoring_password'        => 'nullable|string|max:255',
+            'credit_monitoring_security_question' => 'nullable|string|max:255',
+            'credit_monitoring_security_answer' => 'nullable|string|max:255',
+            'credit_monitoring_pin'             => 'nullable|digits:4',
+        ]);
+
+        // Blank secret = keep the existing one (same pattern as the VA edit form).
+        foreach (['credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin'] as $secret) {
+            if (($data[$secret] ?? null) === null || $data[$secret] === '') {
+                unset($data[$secret]);
+            }
+        }
+
+        $data['error_resolved_by_client_at'] = now();
+        $endUser->update($data);
+
+        return redirect()->route('client.errors-resolved')
+            ->with('confirm', 'Error resolved — sent to our team');
     }
 
     public function create()

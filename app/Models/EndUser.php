@@ -82,6 +82,7 @@ class EndUser extends Model
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
+        'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
@@ -96,6 +97,7 @@ class EndUser extends Model
         'rounds' => 'array',
         'round_dates' => 'array',
         'intake_submitted_at' => 'datetime',
+        'error_resolved_by_client_at' => 'datetime',
         'ssn' => 'encrypted',
         'credit_monitoring_password' => 'encrypted',
         'credit_monitoring_security_answer' => 'encrypted',
@@ -184,6 +186,20 @@ class EndUser extends Model
     public function scopeRoundError($query)
     {
         return $query->where('intake_status', 'round_error');
+    }
+
+    /** Round Errors still awaiting a fix (the business owner hasn't resolved). */
+    public function scopeRoundErrorPending($query)
+    {
+        return $query->where('intake_status', 'round_error')
+            ->whereNull('error_resolved_by_client_at');
+    }
+
+    /** Round Errors the business owner has resolved (awaiting the VA to process). */
+    public function scopeRoundErrorResolvedByClient($query)
+    {
+        return $query->where('intake_status', 'round_error')
+            ->whereNotNull('error_resolved_by_client_at');
     }
 
     /** On Hold / Pause — parked out of the normal buckets. */

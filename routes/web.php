@@ -210,6 +210,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/resume', [Admin\EndUserController::class, 'resume'])->name('end-users.resume');
             // Round Errors — 2nd/3rd round import problems, moved from the Clients list
             Route::get('round-errors', [Admin\EndUserController::class, 'roundErrors'])->name('round-errors');
+            Route::get('errors-resolved-by-client', [Admin\EndUserController::class, 'errorsResolvedByClient'])->name('errors-resolved');
             Route::post('end-users/{id}/to-round-error', [Admin\EndUserController::class, 'moveToRoundError'])->name('end-users.to-round-error');
             Route::post('end-users/{id}/resolve-round-error', [Admin\EndUserController::class, 'resolveRoundError'])->name('end-users.resolve-round-error');
 
@@ -299,6 +300,8 @@ Route::prefix('business-owner')->name('client.')->group(function () {
 
         // Round Errors — 2nd/3rd round problems the team is fixing (BOs can view only)
         Route::get('round-errors', [Client\EndUserController::class, 'roundErrors'])->name('round-errors');
+        Route::put('round-errors/{id}/resolve', [Client\EndUserController::class, 'resolveRoundError'])->name('round-errors.resolve')->whereNumber('id');
+        Route::get('errors-resolved', [Client\EndUserController::class, 'errorsResolved'])->name('errors-resolved');
 
         // Custom lists (Tycon Stan only) — an owner-side grouping of their clients.
         Route::get('lists/{list}', [Client\EndUserController::class, 'customList'])
