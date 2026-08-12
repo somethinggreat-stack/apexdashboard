@@ -388,6 +388,44 @@ class EndUserController extends Controller
             unset($data['rounds']);
         }
 
+        // Overview "Rounds & Schedule" editor: set which rounds are reached AND
+        // each round's individual start date in one submit. 1st Round's date is
+        // the client start_date; later rounds live in round_dates[label]. Dates
+        // for rounds that are no longer selected are kept so history is not lost.
+        if ($request->has('round_schedule_present')) {
+            $newRounds = array_values(array_intersect(EndUser::ROUND_OPTIONS, (array) $request->input('rounds', [])));
+            $data['rounds'] = $newRounds ?: null;
+
+            $inputDates = (array) $request->input('round_start_dates', []);
+            $dates = $endUser->round_dates ?? [];
+
+            foreach (EndUser::ROUND_OPTIONS as $label) {
+                $raw = trim((string) ($inputDates[$label] ?? ''));
+                $iso = null;
+                if ($raw !== '') {
+                    try { $iso = \Carbon\Carbon::parse($raw)->toDateString(); } catch (\Throwable $e) { $iso = null; }
+                }
+
+                if ($label === '1st Round') {
+                    if (in_array($label, $newRounds, true) && $iso) {
+                        $data['start_date'] = $iso;
+                    }
+                    continue;
+                }
+
+                if (in_array($label, $newRounds, true)) {
+                    if ($iso) {
+                        $dates[$label] = $iso;              // explicit date wins
+                    } elseif (empty($dates[$label])) {
+                        $dates[$label] = now()->toDateString(); // reached but undated → stamp today
+                    }
+                }
+                // Rounds left unchecked keep any existing date (history preserved).
+            }
+
+            $data['round_dates'] = $dates ?: null;
+        }
+
         $files = $this->handleFileUploads($request, $endUser);
         $data = array_merge($data, $files);
 

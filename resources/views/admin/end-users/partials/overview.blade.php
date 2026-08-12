@@ -233,6 +233,61 @@
         </div>
     </div>
 
+    {{-- ============ ROUNDS & SCHEDULE ============ --}}
+    @php
+        $ovTimeline = $endUser->round_timeline;
+        $ovDaysLeft = $endUser->days_left_in_round;
+    @endphp
+    <div class="ov-block ov-rounds-block">
+        <div class="ov-block-head">
+            <div class="ov-block-title">
+                <div class="ov-block-icon ov-icon-teal-soft">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                </div>
+                <div>
+                    <div class="ov-block-h">Rounds &amp; Schedule</div>
+                    <div class="ov-block-sub">Every round reached, when each started, and what's next</div>
+                </div>
+            </div>
+            @if ($canEdit)
+                <button class="ov-btn-primary" onclick="openModal('roundScheduleModal')">Edit Rounds &amp; Dates</button>
+            @endif
+        </div>
+
+        <div class="ov-rounds-strip">
+            @forelse ($ovTimeline as $ovLabel => $ovDate)
+                <div class="ov-round-item">
+                    <div class="ov-round-badge">{{ \Illuminate\Support\Str::before($ovLabel, ' Round') }}</div>
+                    <div class="ov-round-meta">
+                        <div class="ov-round-name">{{ $ovLabel }}</div>
+                        <div class="ov-round-date">{{ $ovDate ? 'Started ' . \Carbon\Carbon::parse($ovDate)->format('M j, Y') : 'Date not set' }}</div>
+                    </div>
+                </div>
+            @empty
+                <div class="ov-round-item">
+                    <div class="ov-round-badge">1st</div>
+                    <div class="ov-round-meta">
+                        <div class="ov-round-name">1st Round</div>
+                        <div class="ov-round-date">{{ $endUser->start_date ? 'Started ' . $endUser->start_date->format('M j, Y') : 'Not started' }}</div>
+                    </div>
+                </div>
+            @endforelse
+        </div>
+
+        <div class="ov-rounds-foot">
+            <div class="ov-rounds-foot-item">
+                <span class="ov-rounds-foot-label">Next Round Date</span>
+                <span class="ov-rounds-foot-val">{{ $endUser->next_round_date ? \Carbon\Carbon::parse($endUser->next_round_date)->format('M j, Y') : '—' }}</span>
+                @if ($endUser->next_round_override)<span class="ov-rounds-tag">manually set</span>@endif
+            </div>
+            <div class="ov-rounds-foot-item">
+                <span class="ov-rounds-foot-label">Days Left in Round</span>
+                <span class="ov-rounds-foot-val {{ $ovDaysLeft !== null && $ovDaysLeft < 0 ? 'is-over' : ($ovDaysLeft !== null && $ovDaysLeft <= 3 ? 'is-soon' : '') }}">{{ $ovDaysLeft === null ? '—' : $ovDaysLeft }}</span>
+                @if ($endUser->round_end_date)<span class="ov-rounds-tag">ends {{ \Carbon\Carbon::parse($endUser->round_end_date)->format('M j, Y') }}</span>@endif
+            </div>
+        </div>
+    </div>
+
     {{-- ============ MAIN 2-COLUMN AREA ============ --}}
     <div class="ov-main">
         <div class="ov-col-left">
@@ -450,6 +505,56 @@
     </div>
 
 </div>
+
+@if ($canEdit)
+{{-- ============ EDIT ROUNDS & DATES MODAL (VA only) ============ --}}
+<div id="roundScheduleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Rounds &amp; Dates</h3>
+            <button type="button" class="modal-close" onclick="closeModal('roundScheduleModal')">&times;</button>
+        </div>
+        <p class="muted" style="margin:0 0 14px; font-size:13px;">
+            Check each round the client has reached and set the date it started. The <strong>1st Round</strong> date is
+            the client's start date. Leave <strong>Next Round Date</strong> blank to auto-calculate (one month after the
+            current round's start).
+        </p>
+        <form method="POST" action="{{ route($rPrefix . '.update', $endUser) }}">
+            @csrf @method('PUT')
+            <input type="hidden" name="round_schedule_present" value="1">
+
+            <div class="rs-grid">
+                @foreach (\App\Models\EndUser::ROUND_OPTIONS as $rsLabel)
+                    @php
+                        $rsReached = in_array($rsLabel, $endUser->rounds ?? [], true);
+                        $rsDate    = $endUser->roundStartedAt($rsLabel);
+                    @endphp
+                    <div class="rs-row">
+                        <label class="rs-check">
+                            <input type="checkbox" name="rounds[]" value="{{ $rsLabel }}" {{ $rsReached ? 'checked' : '' }} onchange="rsToggle(this)">
+                            <span>{{ $rsLabel }}</span>
+                        </label>
+                        <input type="date" class="rs-date" name="round_start_dates[{{ $rsLabel }}]"
+                               value="{{ $rsDate ? \Carbon\Carbon::parse($rsDate)->format('Y-m-d') : '' }}"
+                               {{ $rsReached ? '' : 'disabled' }}>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="rs-next">
+                <label>Next Round Date <span class="muted">(leave blank to auto-calculate)</span></label>
+                <input type="date" name="next_round_override"
+                       value="{{ $endUser->next_round_override ? \Carbon\Carbon::parse($endUser->next_round_override)->format('Y-m-d') : '' }}">
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('roundScheduleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Rounds &amp; Dates</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 @push('head')
 <style>
@@ -730,6 +835,50 @@
 
     #tab-overview .ov-empty { font-size: 13px; color: #94a3b8; padding: 12px 0; }
 
+    /* Rounds & Schedule block */
+    #tab-overview .ov-icon-teal-soft { background: #ecfeff; color: #0d9488; }
+    #tab-overview .ov-rounds-block { margin-bottom: 20px; }
+    #tab-overview .ov-rounds-strip { display: flex; flex-wrap: wrap; gap: 12px; }
+    #tab-overview .ov-round-item {
+        display: flex; align-items: center; gap: 12px;
+        flex: 1 1 180px; min-width: 180px;
+        background: #f8fafc; border: 1px solid #eef0f4; border-radius: 12px;
+        padding: 12px 14px;
+    }
+    #tab-overview .ov-round-badge {
+        width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+        background: linear-gradient(135deg,#ccfbf1,#a7f3d0); color: #0d766e;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: 800; letter-spacing: -.5px;
+    }
+    #tab-overview .ov-round-name { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+    #tab-overview .ov-round-date { font-size: 12px; color: #64748b; margin-top: 2px; }
+    #tab-overview .ov-rounds-foot {
+        display: flex; flex-wrap: wrap; gap: 28px;
+        margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1f5f9;
+    }
+    #tab-overview .ov-rounds-foot-item { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    #tab-overview .ov-rounds-foot-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #64748b; }
+    #tab-overview .ov-rounds-foot-val { font-size: 18px; font-weight: 700; color: #0f172a; }
+    #tab-overview .ov-rounds-foot-val.is-over { color: #dc2626; }
+    #tab-overview .ov-rounds-foot-val.is-soon { color: #d97706; }
+    #tab-overview .ov-rounds-tag {
+        font-size: 10.5px; font-weight: 600; color: #64748b;
+        background: #eef2f7; padding: 2px 8px; border-radius: 999px; align-self: center;
+    }
+
+    /* Edit Rounds & Dates modal (unscoped — modal renders outside #tab-overview) */
+    #roundScheduleModal .rs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+    #roundScheduleModal .rs-row { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+    #roundScheduleModal .rs-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: #0f172a; cursor: pointer; white-space: nowrap; }
+    #roundScheduleModal .rs-check input { width: 16px; height: 16px; }
+    #roundScheduleModal .rs-date { padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 12.5px; }
+    #roundScheduleModal .rs-date:disabled { background: #f8fafc; color: #cbd5e1; }
+    #roundScheduleModal .rs-next { margin-top: 14px; }
+    #roundScheduleModal .rs-next label { display: block; font-size: 12.5px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
+    #roundScheduleModal .rs-next input { padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+    @media (max-width: 560px) { #roundScheduleModal .rs-grid { grid-template-columns: 1fr; } }
+
     /* Responsive */
     @media (max-width: 1280px) {
         #tab-overview .ov-stats { grid-template-columns: repeat(2, 1fr); }
@@ -749,3 +898,25 @@
     }
 </style>
 @endpush
+
+@if ($canEdit)
+@push('scripts')
+<script>
+// Enable/disable a round's date input as its checkbox toggles; prefill today
+// when a round is newly checked so it isn't left blank.
+window.rsToggle = function (cb) {
+    var row = cb.closest('.rs-row');
+    if (!row) return;
+    var input = row.querySelector('.rs-date');
+    if (!input) return;
+    input.disabled = !cb.checked;
+    if (cb.checked && !input.value) {
+        var t = new Date();
+        input.value = t.getFullYear() + '-' +
+            String(t.getMonth() + 1).padStart(2, '0') + '-' +
+            String(t.getDate()).padStart(2, '0');
+    }
+};
+</script>
+@endpush
+@endif

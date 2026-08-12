@@ -191,4 +191,49 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('pw1', $eu->cfpbForRound(1)['password'], 'blank password keeps the existing one');
         $this->assertSame('pw2', $eu->cfpbForRound(2)['password']);
     }
+
+    public function test_round_schedule_editor_sets_rounds_and_per_round_dates(): void
+    {
+        [, $va, $bo, $eu] = $this->makeWorld();
+
+        $this->actingAs($va, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'round_schedule_present' => '1',
+                'rounds' => ['1st Round', '2nd Round', '3rd Round'],
+                'round_start_dates' => [
+                    '1st Round' => '2026-06-17',
+                    '2nd Round' => '2026-07-04',
+                    '3rd Round' => '2026-08-06',
+                ],
+                'next_round_override' => '2026-09-06',
+            ]))->assertSessionHasNoErrors();
+
+        $eu->refresh();
+        $this->assertSame(['1st Round', '2nd Round', '3rd Round'], $eu->rounds);
+        // 1st round date is the client start_date.
+        $this->assertSame('2026-06-17', $eu->start_date->toDateString());
+        // Later rounds live in round_dates.
+        $this->assertSame('2026-07-04', $eu->round_dates['2nd Round']);
+        $this->assertSame('2026-08-06', $eu->round_dates['3rd Round']);
+        // Manual next-round override wins.
+        $this->assertSame('2026-09-06', \Carbon\Carbon::parse($eu->next_round_date)->toDateString());
+    }
+
+    public function test_round_schedule_blank_next_round_reverts_to_auto(): void
+    {
+        [, $va, $bo, $eu] = $this->makeWorld();
+
+        $this->actingAs($va, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload([
+                'round_schedule_present' => '1',
+                'rounds' => ['1st Round'],
+                'round_start_dates' => ['1st Round' => '2026-06-01'],
+                'next_round_override' => '',
+            ]))->assertSessionHasNoErrors();
+
+        $eu->refresh();
+        $this->assertNull($eu->next_round_override, 'blank clears the override');
+        // Auto = one month after the 1st-round start.
+        $this->assertSame('2026-07-01', \Carbon\Carbon::parse($eu->next_round_date)->toDateString());
+    }
 }
