@@ -18,7 +18,16 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // Default is 'file', NOT 'database'. On this shared host MySQL has a low
+    // max_connections, and database-backed sessions made EVERY request
+    // (including bot/scanner traffic) open a DB connection just to read the
+    // session — which exhausted connections and 500'd the whole site with
+    // "SQLSTATE[08004] [1040] Too many connections". File sessions keep the DB
+    // free for real work. We hard-coerce 'database' -> 'file' so a stale
+    // SESSION_DRIVER=database in .env can never take the site down again.
+    'driver' => env('SESSION_DRIVER', 'file') === 'database'
+        ? 'file'
+        : env('SESSION_DRIVER', 'file'),
 
     /*
     |--------------------------------------------------------------------------
