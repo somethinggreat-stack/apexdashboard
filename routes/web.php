@@ -44,9 +44,32 @@ Route::get('__diag/{token}', function (string $token) {
         }
     }
 
+    // Disk space — a full disk is what makes MySQL throw "Too many connections".
+    $fmt = fn ($b) => is_numeric($b) ? round($b / 1073741824, 2) . ' GB' : $b;
+    foreach (['/' => '/', 'storage' => storage_path()] as $label => $path) {
+        try {
+            $free = @disk_free_space($path);
+            $total = @disk_total_space($path);
+            $r["disk_free:$label"] = $free !== false
+                ? $fmt($free) . ' free of ' . $fmt($total) .
+                  ($total ? ' (' . round(100 - ($free / $total * 100)) . '% used)' : '')
+                : 'unavailable';
+        } catch (\Throwable $e) {
+            $r["disk_free:$label"] = 'ERR: ' . $e->getMessage();
+        }
+    }
+
     $tail = '';
     try {
         $files = glob(storage_path('logs') . '/*.log') ?: [];
+        // Report the biggest log files — the likely disk hogs during an outage.
+        $sizes = [];
+        foreach ($files as $f) {
+            $sizes[basename($f)] = round((@filesize($f) ?: 0) / 1048576, 1) . ' MB';
+        }
+        arsort($sizes);
+        $r['log_files_by_size'] = array_slice($sizes, 0, 8, true);
+
         usort($files, fn ($a, $b) => filemtime($b) <=> filemtime($a));
         if ($files) {
             $r['latest_log'] = basename($files[0]);
