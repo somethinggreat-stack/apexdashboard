@@ -40,11 +40,13 @@
         .sidebar-nav a {
             display:flex; align-items:center; gap:12px;
             margin:2px 12px; padding:9px 13px; border-radius:10px;
-            color:#bcc5dd !important; font-size:15px; font-weight:500; line-height:1.2;
-            text-decoration:none; white-space:nowrap; position:relative;
+            color:#bcc5dd !important; font-size:15px; font-weight:500; line-height:1.25;
+            text-decoration:none; white-space:normal; position:relative;
             transition: background .14s, color .14s;
         }
         .sidebar-nav a svg { width:21px; height:21px; flex-shrink:0; }
+        /* label takes the room it needs and wraps if long; never shoves the count out */
+        .sidebar-nav a > span:not(.nav-count) { flex:1 1 auto; min-width:0; }
         .sidebar-nav a:hover { background: rgba(255,255,255,.055) !important; color:#e6ebf7 !important; }
         .sidebar-nav a.active {
             background: linear-gradient(135deg, #4f46e5, #4c3fd8) !important;
@@ -65,7 +67,8 @@
 
         /* count pill, pushed to the far right of the row */
         .sidebar-nav .nav-count {
-            margin-left:auto; min-width:20px; padding:2px 6px; border-radius:999px;
+            margin-left:auto; flex-shrink:0; align-self:center;
+            min-width:20px; padding:2px 6px; border-radius:999px;
             background:#ef4444; color:#fff; font-size:10px; font-weight:700; text-align:center; line-height:1.4;
         }
         .sidebar-nav .nav-count-slate { background:#64748b; }
