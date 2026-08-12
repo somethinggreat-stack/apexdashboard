@@ -22,8 +22,8 @@
     {{-- Set the theme before first paint so there's no flash of the wrong colour. --}}
     <script>(function(){try{var t=localStorage.getItem('apex-theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
-    <link rel="stylesheet" href="{{ asset('css/admin-pro.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/galaxy.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/admin-pro.css') }}?v={{ @filemtime(public_path('css/admin-pro.css')) ?: '1' }}">
+    <link rel="stylesheet" href="{{ asset('css/galaxy.css') }}?v={{ @filemtime(public_path('css/galaxy.css')) ?: '1' }}">
     @stack('head')
 </head>
 <body class="pro-body admin-body">
