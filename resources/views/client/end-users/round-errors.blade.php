@@ -10,7 +10,7 @@
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 Clients past their 1st round that hit a login/billing problem. Many of these you can fix yourself —
                 click <strong>Resolve Error</strong> and update the credit-monitoring login. Once saved it moves to
-                <strong>Errors Resolved by You</strong> and our team takes it from there.
+                <strong>Errors Resolved by You for Next Round</strong> and our team takes it from there.
             </p>
         </div>
     </div>

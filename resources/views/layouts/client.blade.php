@@ -252,11 +252,17 @@
                     @if ($pendingIntake > 0)<span class="nav-count">{{ $pendingIntake }}</span>@endif
                 </a>
             @endif
-            @php $errorCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'error')->count(); @endphp
+            @php $errorCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->newError()->count(); @endphp
             <a href="{{ route('client.errors') }}" class="{{ request()->routeIs('client.errors') ? 'active' : '' }}">
                 <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
                 <span>New Client Errors</span>
                 @if ($errorCount > 0)<span class="nav-count">{{ $errorCount }}</span>@endif
+            </a>
+            @php $newErrorsResolvedCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->newErrorResolvedByClient()->count(); @endphp
+            <a href="{{ route('client.errors-resolved-new') }}" class="{{ request()->routeIs('client.errors-resolved-new') ? 'active' : '' }}">
+                <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Errors Resolved by You for New Clients</span>
+                @if ($newErrorsResolvedCount > 0)<span class="nav-count nav-count-slate">{{ $newErrorsResolvedCount }}</span>@endif
             </a>
             <a href="{{ route('client.end-users.index') }}" class="{{ request()->routeIs('client.end-users.*') ? 'active' : '' }}">
                 <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -275,7 +281,7 @@
             @php $resolvedByYouCount = \App\Models\EndUser::forClient($bo->id)->notHeld()->roundErrorResolvedByClient()->count(); @endphp
             <a href="{{ route('client.errors-resolved') }}" class="{{ request()->routeIs('client.errors-resolved') ? 'active' : '' }}">
                 <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                <span>Errors Resolved by You</span>
+                <span>Errors Resolved by You for Next Round</span>
                 @if ($resolvedByYouCount > 0)<span class="nav-count nav-count-slate">{{ $resolvedByYouCount }}</span>@endif
             </a>
             @php $holdCount = \App\Models\EndUser::forClient($bo->id)->onHold()->count(); @endphp

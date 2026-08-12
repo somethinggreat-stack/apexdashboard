@@ -47,6 +47,19 @@ class ErrorResolvedByClientTest extends TestCase
         ]);
     }
 
+    private function newError(Client $bo, string $email = 'ne@test.com'): EndUser
+    {
+        return EndUser::create([
+            'client_id' => $bo->id, 'first_name' => 'Nora', 'last_name' => 'New', 'suffix' => 'None',
+            'email' => $email, 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
+            'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-01-01',
+            'intake_status' => 'error', 'intake_review_note' => 'security question needed', 'rounds' => ['1st Round'],
+            'credit_monitoring_name' => 'MyScoreIQ', 'credit_monitoring_username' => 'olduser',
+            'credit_monitoring_password' => 'oldpass', 'credit_monitoring_security_answer' => 'oldans',
+            'credit_monitoring_pin' => '1111',
+        ]);
+    }
+
     public function test_bo_resolve_sets_flag_and_updates_login(): void
     {
         [, $bo] = $this->world();
@@ -212,5 +225,116 @@ class ErrorResolvedByClientTest extends TestCase
         $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
             ->get('/admin/payments')
             ->assertOk()->assertDontSee('Newby Pending')->assertDontSee('Errol Intake');
+    }
+
+    /* ============ New Client Errors — resolved by BO ============ */
+
+    public function test_bo_resolve_new_error_sets_flag_and_updates_login(): void
+    {
+        [, $bo] = $this->world();
+        $eu = $this->newError($bo);
+
+        $resp = $this->actingAs($bo, 'client')->put("/business-owner/errors/{$eu->id}/resolve", [
+            'credit_monitoring_name' => 'IdentityIQ',
+            'credit_monitoring_username' => 'newuser',
+            'credit_monitoring_password' => 'newpass',
+            'credit_monitoring_security_question' => 'City?',
+            'credit_monitoring_security_answer' => 'newans',
+            'credit_monitoring_pin' => '2222',
+        ]);
+
+        $resp->assertRedirect(route('client.errors-resolved-new'));
+        $resp->assertSessionHas('confirm');
+
+        $eu->refresh();
+        $this->assertNotNull($eu->error_resolved_by_client_at);
+        $this->assertSame('IdentityIQ', $eu->credit_monitoring_name);
+        $this->assertSame('newpass', $eu->credit_monitoring_password);
+        $this->assertSame('2222', $eu->credit_monitoring_pin);
+        // Still an 'error' — only the flag moves it between lists.
+        $this->assertSame('error', $eu->intake_status);
+    }
+
+    public function test_new_error_blank_secret_keeps_existing_value(): void
+    {
+        [, $bo] = $this->world();
+        $eu = $this->newError($bo);
+
+        $this->actingAs($bo, 'client')->put("/business-owner/errors/{$eu->id}/resolve", [
+            'credit_monitoring_username' => 'newuser',
+            'credit_monitoring_password' => '',
+            'credit_monitoring_pin' => '',
+        ])->assertSessionHasNoErrors();
+
+        $eu->refresh();
+        $this->assertSame('oldpass', $eu->credit_monitoring_password);
+        $this->assertSame('1111', $eu->credit_monitoring_pin);
+    }
+
+    public function test_bo_cannot_resolve_another_owners_new_error(): void
+    {
+        [, $bo, $other] = $this->world();
+        $eu = $this->newError($other, 'other-new@test.com');
+
+        $this->actingAs($bo, 'client')
+            ->put("/business-owner/errors/{$eu->id}/resolve", ['credit_monitoring_username' => 'hijack'])
+            ->assertNotFound();
+
+        $eu->refresh();
+        $this->assertNull($eu->error_resolved_by_client_at);
+    }
+
+    public function test_bo_cannot_resolve_already_resolved_new_error(): void
+    {
+        [, $bo] = $this->world();
+        $eu = $this->newError($bo);
+        $eu->update(['error_resolved_by_client_at' => now()]);
+
+        $this->actingAs($bo, 'client')
+            ->put("/business-owner/errors/{$eu->id}/resolve", ['credit_monitoring_username' => 'again'])
+            ->assertNotFound();
+    }
+
+    public function test_new_error_lists_split_pending_and_resolved(): void
+    {
+        [, $bo] = $this->world();
+        $pending  = $this->newError($bo, 'pending-new@test.com');
+        $resolved = $this->newError($bo, 'resolved-new@test.com');
+        $resolved->update(['error_resolved_by_client_at' => now()]);
+
+        $this->assertSame(1, EndUser::forClient($bo->id)->newError()->count());
+        $this->assertSame(1, EndUser::forClient($bo->id)->newErrorResolvedByClient()->count());
+
+        $this->actingAs($bo, 'client')->get('/business-owner/errors')
+            ->assertOk()->assertSee('pending-new@test.com')->assertDontSee('resolved-new@test.com');
+
+        $this->actingAs($bo, 'client')->get('/business-owner/errors-resolved-new')
+            ->assertOk()->assertSee('resolved-new@test.com')->assertDontSee('pending-new@test.com');
+    }
+
+    public function test_va_approve_clears_flag_and_moves_new_error_to_in_progress(): void
+    {
+        [$super, $bo] = $this->world();
+        $eu = $this->newError($bo);
+        $eu->update(['error_resolved_by_client_at' => now()]);
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post("/admin/new-clients/{$eu->id}/approve")
+            ->assertRedirect();
+
+        $eu->refresh();
+        $this->assertNull($eu->error_resolved_by_client_at, 'Flag cleared after VA processes');
+        $this->assertSame('approved', $eu->intake_status);
+    }
+
+    public function test_va_new_error_resolved_list_shows_resolved_client(): void
+    {
+        [$super, $bo] = $this->world();
+        $eu = $this->newError($bo, 'shown-new@test.com');
+        $eu->update(['error_resolved_by_client_at' => now()]);
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->get('/admin/errors-resolved-new-clients')
+            ->assertOk()->assertSee('Nora New')->assertSee('olduser');
     }
 }

@@ -215,6 +215,20 @@ class EndUser extends Model
             ->whereNotNull('error_resolved_by_client_at');
     }
 
+    /** New Client Errors still awaiting a fix (the business owner hasn't resolved). */
+    public function scopeNewError($query)
+    {
+        return $query->where('intake_status', 'error')
+            ->whereNull('error_resolved_by_client_at');
+    }
+
+    /** New Client Errors the business owner has resolved (awaiting the VA to process). */
+    public function scopeNewErrorResolvedByClient($query)
+    {
+        return $query->where('intake_status', 'error')
+            ->whereNotNull('error_resolved_by_client_at');
+    }
+
     /** On Hold / Pause — parked out of the normal buckets. */
     public function scopeOnHold($query)
     {

@@ -143,8 +143,8 @@ html, body { height: 100%; }
     display: flex; align-items: center; gap: 12px;
     padding: 8.5px 12px; border-radius: 10px;
     color: #bcc5dd; text-decoration: none;
-    font-size: 16px; font-weight: 500; line-height: 1.2;
-    white-space: nowrap;              /* never wrap to a second line */
+    font-size: 16px; font-weight: 500; line-height: 1.25;
+    white-space: normal;              /* long labels wrap instead of overflowing */
     transition: background .14s, color .14s;
 }
 .pro-nav a svg { width: 22px; height: 22px; flex-shrink: 0; }
@@ -175,7 +175,8 @@ html, body { height: 100%; }
     margin: 7px 12px; background: rgba(255,255,255,.09);
 }
 .pro-nav .pro-count {
-    margin-left: auto; min-width: 20px; padding: 2px 6px;
+    margin-left: auto; flex-shrink: 0; align-self: center;
+    min-width: 20px; padding: 2px 6px;
     border-radius: 999px; background: #ef4444; color: #fff;
     font-size: 10px; font-weight: 700; text-align: center; line-height: 1.4;
 }

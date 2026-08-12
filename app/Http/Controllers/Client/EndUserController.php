@@ -242,17 +242,68 @@ class EndUserController extends Controller
         return view('client.end-users.new-clients', ['endUsers' => $endUsers, 'client' => $client]);
     }
 
-    /** Clients pulled out with an error the VA needs to fix — view only for the BO. */
+    /** New Client Errors still pending — the BO can resolve the login themselves. */
     public function errors()
     {
         $endUsers = EndUser::forClient(Auth::guard('client')->id())
             ->notHeld()
             ->noCustomList()
-            ->where('intake_status', 'error')
+            ->newError()
             ->orderByDesc('updated_at')
             ->get();
 
         return view('client.end-users.errors', compact('endUsers'));
+    }
+
+    /** New Client Errors this owner has already resolved — read-only, awaiting the team. */
+    public function errorsResolvedNew()
+    {
+        $endUsers = EndUser::forClient(Auth::guard('client')->id())
+            ->notHeld()
+            ->noCustomList()
+            ->newErrorResolvedByClient()
+            ->orderByDesc('error_resolved_by_client_at')
+            ->get();
+
+        return view('client.end-users.errors-resolved-new', compact('endUsers'));
+    }
+
+    /**
+     * Business owner resolves a New Client Error by fixing the credit-monitoring
+     * login — only their own client, only one still pending, and only the
+     * credit-monitoring fields — then it moves to "Errors Resolved by You for New Clients".
+     */
+    public function resolveNewError(Request $request, string $id)
+    {
+        $endUser = EndUser::forClient(Auth::guard('client')->id())
+            ->newError()
+            ->findOrFail($id);
+
+        $data = $request->validate([
+            'credit_monitoring_name'              => 'nullable|string|max:100',
+            'credit_monitoring_username'          => 'nullable|string|max:255',
+            'credit_monitoring_password'          => 'nullable|string|max:255',
+            'credit_monitoring_security_question' => 'nullable|string|max:255',
+            'credit_monitoring_security_answer'   => 'nullable|string|max:255',
+            'credit_monitoring_pin'               => 'nullable|digits:4',
+        ]);
+
+        // Every field is optional — blank means "keep whatever's already on file".
+        $keepIfBlank = [
+            'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_security_question',
+            'credit_monitoring_password', 'credit_monitoring_security_answer', 'credit_monitoring_pin',
+        ];
+        foreach ($keepIfBlank as $field) {
+            if (($data[$field] ?? null) === null || $data[$field] === '') {
+                unset($data[$field]);
+            }
+        }
+
+        $data['error_resolved_by_client_at'] = now();
+        $endUser->update($data);
+
+        return redirect()->route('client.errors-resolved-new')
+            ->with('confirm', 'Error resolved — sent to our team');
     }
 
     /** Hold / Pause — the BO's clients the team has parked. View only for the BO. */

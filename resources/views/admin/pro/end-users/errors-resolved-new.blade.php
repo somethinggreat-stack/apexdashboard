@@ -1,7 +1,7 @@
 @extends('layouts.admin-pro')
 
-@section('title', 'Errors Resolved by BO for Next Round')
-@section('subtitle', 'Round errors the business owner fixed — updated login is ready, process and send back to Clients.')
+@section('title', 'Errors Resolved by BO for New Clients')
+@section('subtitle', 'New-client errors the business owner fixed — updated login is ready, process and send back to In Progress.')
 
 @section('content')
 <div class="pro-panel">
@@ -10,14 +10,14 @@
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#34d399,#059669);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </span>
-            <h2>Errors Resolved by BO for Next Round</h2>
+            <h2>Errors Resolved by BO for New Clients</h2>
             <span class="pro-panel-count" style="background:#dcfce7; color:#166534;">{{ $endUsers->count() }}</span>
         </div>
     </div>
 
     <p style="margin:0; padding:0 22px 4px; font-size:13px; color:var(--pro-muted);">
-        The business owner updated the credit-monitoring login for these clients. Use the credentials below to finish
-        the round, then <strong>Resolve → Clients</strong> to send them back into the Clients list.
+        The business owner updated the credit-monitoring login for these new clients. Use the credentials below to
+        continue setup, then <strong>Move to In Progress</strong> to put them back into the working list.
     </p>
 
     <div class="pro-table-scroll">
@@ -25,8 +25,7 @@
             <thead>
                 <tr>
                     <th>Client Name</th>
-                    <th>Round</th>
-                    <th>Error Type</th>
+                    <th>Error</th>
                     <th>Resolved On</th>
                     <th>Updated Login (from Business Owner)</th>
                     <th>Actions</th>
@@ -43,8 +42,7 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
-                        <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
-                        <td><span class="re-type">{{ $eu->error_type ?: '—' }}</span></td>
+                        <td><span class="re-type">{{ $eu->intake_review_note ?: '—' }}</span></td>
                         <td>
                             <span class="re-resolved-at">
                                 {{ $eu->error_resolved_by_client_at ? $eu->error_resolved_by_client_at->format('M j, Y g:ia') : '—' }}
@@ -82,10 +80,10 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
-                                <form method="POST" action="{{ route('admin.end-users.resolve-round-error', $eu->id) }}"
-                                      onsubmit="return confirm(@js('Mark ' . $eu->full_name . ' processed and move them back to the Clients list?'))">
+                                <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
+                                      onsubmit="return confirm(@js('Move ' . $eu->full_name . ' back to In Progress?'))">
                                     @csrf
-                                    <button class="pro-act done">Resolve → Clients</button>
+                                    <button class="pro-act done">Move to In Progress</button>
                                 </form>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
@@ -97,7 +95,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="empty">Nothing here yet. When a business owner resolves a round error, it lands here.</td></tr>
+                    <tr><td colspan="5" class="empty">Nothing here yet. When a business owner resolves a new-client error, it lands here.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -106,7 +104,7 @@
 
 @push('head')
 <style>
-    .re-type { display:inline-block; padding:3px 10px; border-radius:999px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:12.5px; font-weight:600; }
+    .re-type { display:inline-block; padding:3px 10px; border-radius:999px; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-size:12.5px; font-weight:600; }
     .re-resolved-at { display:inline-block; padding:3px 10px; border-radius:999px; background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:12.5px; font-weight:600; white-space:nowrap; }
     .re-creds { display:grid; gap:3px; min-width:240px; }
     .re-creds > div { display:flex; align-items:center; gap:8px; font-size:12.5px; }

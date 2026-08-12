@@ -194,6 +194,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->middleware('admin.super')->name('new-clients.regenerate');
             Route::post('new-clients/api-key', [Admin\EndUserController::class, 'regenerateApiKey'])->middleware('admin.super')->name('new-clients.api-key');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
+            Route::get('errors-resolved-new-clients', [Admin\EndUserController::class, 'errorsResolvedNewClients'])->name('errors-resolved-new');
             // The main Clients list (1st round done; remaining rounds worked here)
             Route::get('client-list', [Admin\EndUserController::class, 'activeClients'])->name('client-list');
             // Bulk credential exports (CSV) — super admin only, never VAs
@@ -288,6 +289,8 @@ Route::prefix('business-owner')->name('client.')->group(function () {
 
         // Errors — clients the VA pulled out to fix (BOs can view only)
         Route::get('errors', [Client\EndUserController::class, 'errors'])->name('errors');
+        Route::put('errors/{id}/resolve', [Client\EndUserController::class, 'resolveNewError'])->name('errors.resolve')->whereNumber('id');
+        Route::get('errors-resolved-new', [Client\EndUserController::class, 'errorsResolvedNew'])->name('errors-resolved-new');
 
         // In Progress — verified clients whose 1st round isn't done yet
         Route::get('end-users', [Client\EndUserController::class, 'index'])->name('end-users.index');

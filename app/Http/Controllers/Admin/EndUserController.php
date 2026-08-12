@@ -436,16 +436,28 @@ class EndUserController extends Controller
         return view($this->adminView('admin.end-users.new-clients'), ['endUsers' => $endUsers, 'client' => $client]);
     }
 
-    /** Error clients — moved out of Clients with a VA-entered error to fix. */
+    /** New Client Errors still awaiting a fix (business owner hasn't resolved). */
     public function errors()
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
             ->notHeld()
-            ->where('intake_status', 'error')
+            ->newError()
             ->orderByDesc('updated_at')
             ->get();
 
         return view($this->adminView('admin.end-users.errors'), compact('endUsers'));
+    }
+
+    /** New Client Errors the business owner has resolved — awaiting VA processing. */
+    public function errorsResolvedNewClients()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->notHeld()
+            ->newErrorResolvedByClient()
+            ->orderByDesc('error_resolved_by_client_at')
+            ->get();
+
+        return view($this->adminView('admin.end-users.errors-resolved-new'), compact('endUsers'));
     }
 
     /** Round Errors — clients past round 1 pulled out with an import problem. */
@@ -545,7 +557,11 @@ class EndUserController extends Controller
 
         // Move to In Progress. The round clock does NOT start here — it starts
         // when the client is moved into the Clients list (see moveToDone).
-        $endUser->update(['intake_status' => 'approved', 'intake_review_note' => null]);
+        $endUser->update([
+            'intake_status'               => 'approved',
+            'intake_review_note'          => null,
+            'error_resolved_by_client_at' => null,
+        ]);
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} moved to In Progress.");
@@ -561,9 +577,10 @@ class EndUserController extends Controller
         $endUser = $this->scoped()->findOrFail($id);
 
         $endUser->update([
-            'intake_status'      => 'done',
-            'intake_review_note' => null,
-            'start_date'         => now()->toDateString(),
+            'intake_status'               => 'done',
+            'intake_review_note'          => null,
+            'start_date'                  => now()->toDateString(),
+            'error_resolved_by_client_at' => null,
         ]);
 
         return redirect()->back()
@@ -574,7 +591,11 @@ class EndUserController extends Controller
     public function moveToNewClients(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['intake_status' => 'pending_review', 'intake_review_note' => null]);
+        $endUser->update([
+            'intake_status'               => 'pending_review',
+            'intake_review_note'          => null,
+            'error_resolved_by_client_at' => null,
+        ]);
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} moved to New Clients.");
@@ -587,8 +608,10 @@ class EndUserController extends Controller
         $note = trim((string) $request->input('note', ''));
 
         $endUser->update([
-            'intake_status'      => 'error',
-            'intake_review_note' => $note !== '' ? $note : null,
+            'intake_status'               => 'error',
+            'intake_review_note'          => $note !== '' ? $note : null,
+            // Fresh error starts as pending (business owner hasn't resolved it).
+            'error_resolved_by_client_at' => null,
         ]);
 
         return redirect()->route('admin.errors')

@@ -196,14 +196,15 @@ class Client extends Authenticatable
      * clients are excluded by EndUser's global scope. Unread messages stay a
      * separate small count (different table).
      *
-     * @return array{pending:int, errors:int, round_errors:int, hold:int, unread:int}
+     * @return array{pending:int, errors:int, new_errors_resolved:int, round_errors:int, resolved_by_client:int, hold:int, unread:int}
      */
     public function navCounts(): array
     {
         $row = EndUser::where('client_id', $this->id)
             ->selectRaw(
                 "SUM(CASE WHEN held_at IS NULL AND intake_status = 'pending_review' THEN 1 ELSE 0 END) AS pending,
-                 SUM(CASE WHEN held_at IS NULL AND intake_status = 'error'          THEN 1 ELSE 0 END) AS errors,
+                 SUM(CASE WHEN held_at IS NULL AND intake_status = 'error' AND error_resolved_by_client_at IS NULL     THEN 1 ELSE 0 END) AS errors,
+                 SUM(CASE WHEN held_at IS NULL AND intake_status = 'error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS new_errors_resolved,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NULL     THEN 1 ELSE 0 END) AS round_errors,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS resolved_by_client,
                  SUM(CASE WHEN held_at IS NOT NULL                                   THEN 1 ELSE 0 END) AS hold"
@@ -211,12 +212,13 @@ class Client extends Authenticatable
             ->first();
 
         return [
-            'pending'            => (int) ($row->pending ?? 0),
-            'errors'             => (int) ($row->errors ?? 0),
-            'round_errors'       => (int) ($row->round_errors ?? 0),
-            'resolved_by_client' => (int) ($row->resolved_by_client ?? 0),
-            'hold'               => (int) ($row->hold ?? 0),
-            'unread'             => $this->unreadCountForAdmin(),
+            'pending'             => (int) ($row->pending ?? 0),
+            'errors'              => (int) ($row->errors ?? 0),
+            'new_errors_resolved' => (int) ($row->new_errors_resolved ?? 0),
+            'round_errors'        => (int) ($row->round_errors ?? 0),
+            'resolved_by_client'  => (int) ($row->resolved_by_client ?? 0),
+            'hold'                => (int) ($row->hold ?? 0),
+            'unread'              => $this->unreadCountForAdmin(),
         ];
     }
 
