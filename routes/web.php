@@ -10,6 +10,70 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
+| TEMP diagnostics — token-guarded, bypasses session so it answers even when
+| the session/DB layer is what's failing. REMOVE once the 500 is resolved.
+|--------------------------------------------------------------------------
+*/
+Route::get('__diag/{token}', function (string $token) {
+    if (! hash_equals('apex-diag-2026-8f3k9x', $token)) {
+        abort(404);
+    }
+
+    $r = [
+        'php'            => PHP_VERSION,
+        'laravel'        => app()->version(),
+        'env'            => app()->environment(),
+        'app_debug'      => config('app.debug'),
+        'session_driver' => config('session.driver'),
+        'session_table'  => config('session.table'),
+        'cache_store'    => config('cache.default'),
+    ];
+
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $r['db'] = 'OK (' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName() . ')';
+    } catch (\Throwable $e) {
+        $r['db'] = 'FAIL: ' . $e->getMessage();
+    }
+
+    foreach (['sessions', 'admins', 'clients', 'end_users'] as $t) {
+        try {
+            $r["table:$t"] = \Illuminate\Support\Facades\Schema::hasTable($t) ? 'exists' : 'MISSING';
+        } catch (\Throwable $e) {
+            $r["table:$t"] = 'ERR: ' . $e->getMessage();
+        }
+    }
+
+    $tail = '';
+    try {
+        $files = glob(storage_path('logs') . '/*.log') ?: [];
+        usort($files, fn ($a, $b) => filemtime($b) <=> filemtime($a));
+        if ($files) {
+            $r['latest_log'] = basename($files[0]);
+            $lines = file($files[0], FILE_IGNORE_NEW_LINES) ?: [];
+            $tail  = implode("\n", array_slice($lines, -80));
+        } else {
+            $r['latest_log'] = 'none';
+        }
+    } catch (\Throwable $e) {
+        $tail = 'log read error: ' . $e->getMessage();
+    }
+
+    return response(
+        "DIAG\n" . json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) .
+        "\n\n=== LATEST LOG TAIL ===\n" . $tail,
+        200,
+        ['Content-Type' => 'text/plain; charset=utf-8']
+    );
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+    \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+]);
+
+/*
+|--------------------------------------------------------------------------
 | Public Marketing Site
 |--------------------------------------------------------------------------
 */
