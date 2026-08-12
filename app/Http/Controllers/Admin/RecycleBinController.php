@@ -85,6 +85,38 @@ class RecycleBinController extends Controller
         return back()->with('status', "Client {$name} permanently deleted.");
     }
 
+    /**
+     * Empty the whole bin — permanently delete every trashed business owner and
+     * every individually-deleted client for this admin, along with all their
+     * files. Irreversible. Used to reclaim storage in one click.
+     */
+    public function emptyAll()
+    {
+        $ownerId = $this->ownerId();
+
+        // Loose clients first (owners' forceDelete removes their own binned clients).
+        $clients = EndUser::onlyTrashed()
+            ->where('deleted_with_owner', false)
+            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
+            ->get();
+
+        $owners = Client::onlyTrashed()->forAdmin($ownerId)->get();
+
+        $count = 0;
+        foreach ($clients as $u) {
+            $u->forceDelete();
+            $count++;
+        }
+        foreach ($owners as $o) {
+            $o->forceDelete();   // rows + all files, plus its binned clients
+            $count++;
+        }
+
+        return back()->with('status', $count > 0
+            ? "Recycle bin emptied — {$count} record(s) permanently deleted."
+            : 'Recycle bin was already empty.');
+    }
+
     private function ownerId(): int
     {
         return Auth::guard('admin')->user()->dataOwnerId();

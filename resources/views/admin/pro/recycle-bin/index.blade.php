@@ -13,13 +13,21 @@
 @endphp
 
 <div class="pro-panel" style="margin-bottom:18px;">
-    <div class="pro-panel-head">
+    <div class="pro-panel-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div class="pro-panel-title">
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#fb7185,#e11d48);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
             </span>
             <h2>Recycle Bin</h2>
         </div>
+        @if ($owners->count() || $clients->count())
+            <form method="POST" action="{{ route('admin.recycle-bin.empty') }}" id="rbEmptyForm" style="margin:0;">
+                @csrf @method('DELETE')
+                <button type="button" class="pro-act del rb-empty-all" onclick="rbConfirmEmpty()">
+                    Empty Recycle Bin ({{ $owners->count() + $clients->count() }})
+                </button>
+            </form>
+        @endif
     </div>
 
     <p style="margin:0; padding:0 22px 8px; font-size:13px; color:var(--pro-muted);">
@@ -118,8 +126,24 @@
     .pro-act:hover { border-color:#94a3b8; }
     .pro-act.del { border-color:#fecaca; color:#b91c1c; }
     .pro-act.del:hover { background:#fef2f2; border-color:#f87171; }
+    .rb-empty-all { background:#e11d48; color:#fff; border-color:#e11d48; font-weight:700; }
+    .rb-empty-all:hover { background:#be123c; border-color:#be123c; color:#fff; }
 :root[data-theme="dark"] .rb-sub{color:var(--pro-muted);}
 :root[data-theme="dark"] .rb-mid{background:var(--pro-card);border-color:var(--pro-line);color:var(--pro-text);}
 </style>
+@endpush
+@push('scripts')
+<script>
+function rbConfirmEmpty() {
+    var msg = 'This PERMANENTLY deletes EVERYTHING in the recycle bin — all deleted '
+        + 'business owners and clients, plus every document. This cannot be undone.\n\n'
+        + 'Type DELETE to confirm:';
+    var ans = window.prompt(msg);
+    if (ans !== null && ans.trim().toUpperCase() === 'DELETE') {
+        document.getElementById('rbEmptyForm').submit();
+    }
+}
+window.rbConfirmEmpty = rbConfirmEmpty;
+</script>
 @endpush
 @endsection

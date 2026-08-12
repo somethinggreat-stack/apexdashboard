@@ -10,93 +10,6 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| TEMP diagnostics — token-guarded, bypasses session so it answers even when
-| the session/DB layer is what's failing. REMOVE once the 500 is resolved.
-|--------------------------------------------------------------------------
-*/
-Route::get('__diag/{token}', function (string $token) {
-    if (! hash_equals('apex-diag-2026-8f3k9x', $token)) {
-        abort(404);
-    }
-
-    $r = [
-        'php'            => PHP_VERSION,
-        'laravel'        => app()->version(),
-        'env'            => app()->environment(),
-        'app_debug'      => config('app.debug'),
-        'session_driver' => config('session.driver'),
-        'session_table'  => config('session.table'),
-        'cache_store'    => config('cache.default'),
-    ];
-
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        $r['db'] = 'OK (' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName() . ')';
-    } catch (\Throwable $e) {
-        $r['db'] = 'FAIL: ' . $e->getMessage();
-    }
-
-    foreach (['sessions', 'admins', 'clients', 'end_users'] as $t) {
-        try {
-            $r["table:$t"] = \Illuminate\Support\Facades\Schema::hasTable($t) ? 'exists' : 'MISSING';
-        } catch (\Throwable $e) {
-            $r["table:$t"] = 'ERR: ' . $e->getMessage();
-        }
-    }
-
-    // Disk space — a full disk is what makes MySQL throw "Too many connections".
-    $fmt = fn ($b) => is_numeric($b) ? round($b / 1073741824, 2) . ' GB' : $b;
-    foreach (['/' => '/', 'storage' => storage_path()] as $label => $path) {
-        try {
-            $free = @disk_free_space($path);
-            $total = @disk_total_space($path);
-            $r["disk_free:$label"] = $free !== false
-                ? $fmt($free) . ' free of ' . $fmt($total) .
-                  ($total ? ' (' . round(100 - ($free / $total * 100)) . '% used)' : '')
-                : 'unavailable';
-        } catch (\Throwable $e) {
-            $r["disk_free:$label"] = 'ERR: ' . $e->getMessage();
-        }
-    }
-
-    $tail = '';
-    try {
-        $files = glob(storage_path('logs') . '/*.log') ?: [];
-        // Report the biggest log files — the likely disk hogs during an outage.
-        $sizes = [];
-        foreach ($files as $f) {
-            $sizes[basename($f)] = round((@filesize($f) ?: 0) / 1048576, 1) . ' MB';
-        }
-        arsort($sizes);
-        $r['log_files_by_size'] = array_slice($sizes, 0, 8, true);
-
-        usort($files, fn ($a, $b) => filemtime($b) <=> filemtime($a));
-        if ($files) {
-            $r['latest_log'] = basename($files[0]);
-            $lines = file($files[0], FILE_IGNORE_NEW_LINES) ?: [];
-            $tail  = implode("\n", array_slice($lines, -80));
-        } else {
-            $r['latest_log'] = 'none';
-        }
-    } catch (\Throwable $e) {
-        $tail = 'log read error: ' . $e->getMessage();
-    }
-
-    return response(
-        "DIAG\n" . json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) .
-        "\n\n=== LATEST LOG TAIL ===\n" . $tail,
-        200,
-        ['Content-Type' => 'text/plain; charset=utf-8']
-    );
-})->withoutMiddleware([
-    \Illuminate\Session\Middleware\StartSession::class,
-    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
-    \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-]);
-
-/*
-|--------------------------------------------------------------------------
 | Public Marketing Site
 |--------------------------------------------------------------------------
 */
@@ -183,6 +96,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Recycle Bin — deleted business owners + clients, recoverable for 10 days. Super admin only.
             Route::middleware('admin.super')->group(function () {
                 Route::get('recycle-bin', [Admin\RecycleBinController::class, 'index'])->name('recycle-bin.index');
+                Route::delete('recycle-bin/empty', [Admin\RecycleBinController::class, 'emptyAll'])->name('recycle-bin.empty');
                 Route::post('recycle-bin/business-owner/{id}/restore', [Admin\RecycleBinController::class, 'restoreClient'])->whereNumber('id')->name('recycle-bin.client.restore');
                 Route::post('recycle-bin/client/{id}/restore', [Admin\RecycleBinController::class, 'restoreEndUser'])->whereNumber('id')->name('recycle-bin.end-user.restore');
                 Route::delete('recycle-bin/business-owner/{id}', [Admin\RecycleBinController::class, 'forceClient'])->whereNumber('id')->name('recycle-bin.client.force');
