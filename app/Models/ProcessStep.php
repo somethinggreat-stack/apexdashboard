@@ -80,21 +80,21 @@ class ProcessStep extends Model
     {
         return [
             1 => [
-                'ex_tu_eq_letters_generated' => 'Step 1: EX, TU, EQ Letter Generated',
-                'phone_call_disputes' => 'Step 2: Phone Call Disputes (EX & TU)',
-                'ftc_and_freezes' => 'Step 3: FTC + Freezes (All Small Bureaus)',
-                'cfpb_3b_and_innovis' => 'Step 4: CFPB (All 3B) & Innovis',
-                'experian_upload' => 'Step 5: Experian Upload',
+                'ex_tu_eq_letters_generated' => 'EX, TU, EQ Letter Generated',
+                'phone_call_disputes' => 'Phone Call Disputes (EX & TU)',
+                'ftc_and_freezes' => 'FTC + Freezes (All Small Bureaus)',
+                'cfpb_3b_and_innovis' => 'CFPB (All 3B) & Innovis',
+                'experian_upload' => 'Experian Upload',
             ],
             2 => [
-                'tu_ex_call_followups' => 'Step 1: TransUnion & Experian Call Follow-Ups',
+                'tu_ex_call_followups' => 'TransUnion & Experian Call Follow-Ups',
             ],
             3 => [
-                'aggressive_bureau_followup' => 'Step 1: Call Bureaus Follow-Up Aggressively',
+                'aggressive_bureau_followup' => 'Call Bureaus Follow-Up Aggressively',
             ],
             4 => [
-                'pull_latest_report' => 'Step 1: Pull Latest Report',
-                'record_deletions' => 'Step 2: Record Deletions / Update Deletions',
+                'pull_latest_report' => 'Pull Latest Report',
+                'record_deletions' => 'Record Deletions / Update Deletions',
             ],
         ];
     }

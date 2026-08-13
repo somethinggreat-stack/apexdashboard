@@ -321,7 +321,7 @@
                                     {{ $item['num'] }}
                                 @endif
                             </div>
-                            <div class="ov-tl-label">Step {{ $item['num'] }}: {{ $item['label'] }}</div>
+                            <div class="ov-tl-label">{{ $item['label'] }}</div>
                             <div class="ov-tl-pill ov-tl-pill-{{ $item['state'] }}">
                                 @switch($item['state'])
                                     @case('completed') Completed @break
