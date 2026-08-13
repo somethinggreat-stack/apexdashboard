@@ -31,10 +31,6 @@
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Monthly Fee ($)</label>
-                <input type="number" step="0.01" name="monthly_fee" value="{{ old('monthly_fee', $client->monthly_fee) }}" required>
-            </div>
-            <div class="form-group">
                 <label>Status</label>
                 <select name="status">
                     <option value="active"   @selected(old('status', $client->status) === 'active')>Active</option>

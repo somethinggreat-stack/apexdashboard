@@ -45,7 +45,8 @@ class ClientController extends Controller
         ]);
 
         $data['admin_id']               = Auth::guard('admin')->id();
-        $data['monthly_fee']            = $data['monthly_fee'] ?? 149.00;
+        // No dashboard subscription fee — owners are billed per round only.
+        $data['monthly_fee']            = $data['monthly_fee'] ?? 0;
         $data['is_commission_referrer'] = $request->boolean('is_commission_referrer');
         $data['referrer_id']            = $this->validReferrerId($request->input('referrer_id'));
 
@@ -81,7 +82,6 @@ class ClientController extends Controller
             'email'                 => 'required|email|unique:clients,email,' . $client->id,
             'password'              => 'nullable|string|min:6',
             'phone'                 => 'nullable|string|max:30',
-            'monthly_fee'           => 'required|numeric|min:0',
             'status'                => 'required|in:active,inactive',
             'round_cycle_days'      => 'required|in:20,30',
         ]);

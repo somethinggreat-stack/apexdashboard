@@ -23,11 +23,6 @@
             <input type="text" name="phone" value="{{ old('phone') }}">
         </div>
         <div class="form-group">
-            <label>Monthly Fee ($)</label>
-            <input type="number" step="0.01" name="monthly_fee" value="{{ old('monthly_fee', '149.00') }}">
-        </div>
-
-        <div class="form-group">
             <label>Round Timeline *</label>
             <select name="round_cycle_days" required>
                 <option value="30" @selected(old('round_cycle_days', '30') == 30)>30-Day Rounds (standard)</option>

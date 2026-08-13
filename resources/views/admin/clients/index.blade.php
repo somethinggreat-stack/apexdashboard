@@ -15,8 +15,6 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Clients</th>
-                <th>Monthly Fee</th>
-                <th>Monthly Revenue</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -28,8 +26,6 @@
                     <td>{{ $client->email }}</td>
                     <td>{{ $client->phone ?? '—' }}</td>
                     <td>{{ $client->end_users_count }}</td>
-                    <td>${{ number_format($client->monthly_fee, 2) }}</td>
-                    <td>${{ number_format($client->monthly_revenue, 2) }}</td>
                     <td><span class="pill pill-{{ $client->status }}">{{ $client->status }}</span></td>
                     <td>
                         <a href="{{ route('admin.clients.edit', $client) }}" class="btn btn-sm">Edit</a>
@@ -76,8 +72,12 @@
                 <input type="text" name="phone" value="{{ old('phone') }}">
             </div>
             <div class="form-group">
-                <label>Monthly Fee ($)</label>
-                <input type="number" step="0.01" name="monthly_fee" value="{{ old('monthly_fee', '149.00') }}">
+                <label>Round Timeline *</label>
+                <select name="round_cycle_days" required>
+                    <option value="30" @selected(old('round_cycle_days', '30') == 30)>30-Day Rounds (standard)</option>
+                    <option value="20" @selected(old('round_cycle_days') == 20)>20-Day Rounds (accelerated)</option>
+                </select>
+                <small class="muted" style="display:block; margin-top:4px;">How long each dispute round runs for this owner's clients. All the same steps, paced to fit the window — drives next-round dates, days-left and step reminders.</small>
             </div>
 
             @include('admin.clients._referral-fields')
