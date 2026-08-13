@@ -41,7 +41,7 @@
                             <button type="button"
                                     class="pill pill-incomplete inline-action"
                                     title="{{ $eu->incomplete_reason }} — click to log"
-                                    onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $eu->missing_week ?? 1 }}, {{ $eu->current_round }})">
+                                    onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $eu->missing_week ?? 1 }}, {{ $eu->current_round }}, {{ $eu->roundCycleDays() }})">
                                 Incomplete · log
                             </button>
                         @endif

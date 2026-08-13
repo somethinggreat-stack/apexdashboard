@@ -71,13 +71,50 @@ class ProcessStep extends Model
         return $out;
     }
 
-    public static function weeks(): array
+    /** Week labels for a cycle: 30-day → 4 weeks, 20-day → 3 weeks. */
+    public static function weeks(int $cycleDays = 30): array
     {
-        return [1 => 'Week 1', 2 => 'Week 2', 3 => 'Week 3', 4 => 'Week 4'];
+        $out = [];
+        foreach (range(1, self::weekCount($cycleDays)) as $w) {
+            $out[$w] = "Week {$w}";
+        }
+        return $out;
     }
 
-    public static function stepTypesByWeek(): array
+    /** Number of process weeks in a round for the given cycle. */
+    public static function weekCount(int $cycleDays = 30): int
     {
+        return $cycleDays <= 20 ? 3 : 4;
+    }
+
+    /**
+     * The same nine steps, grouped into weeks — but the grouping compresses for
+     * short cycles. A 30-day round runs 4 weeks (front-loaded week 1); a 20-day
+     * round runs 3 weeks: all disputing work in weeks 1–2, then week 3 is the
+     * aggressive follow-ups + pull report + record deletions closeout.
+     */
+    public static function stepTypesByWeek(int $cycleDays = 30): array
+    {
+        if ($cycleDays <= 20) {
+            return [
+                1 => [
+                    'ex_tu_eq_letters_generated' => 'EX, TU, EQ Letter Generated',
+                    'phone_call_disputes' => 'Phone Call Disputes (EX & TU)',
+                    'ftc_and_freezes' => 'FTC + Freezes (All Small Bureaus)',
+                ],
+                2 => [
+                    'cfpb_3b_and_innovis' => 'CFPB (All 3B) & Innovis',
+                    'experian_upload' => 'Experian Upload',
+                    'tu_ex_call_followups' => 'TransUnion & Experian Call Follow-Ups',
+                ],
+                3 => [
+                    'aggressive_bureau_followup' => 'Call Bureaus Follow-Up Aggressively',
+                    'pull_latest_report' => 'Pull Latest Report',
+                    'record_deletions' => 'Record Deletions / Update Deletions',
+                ],
+            ];
+        }
+
         return [
             1 => [
                 'ex_tu_eq_letters_generated' => 'EX, TU, EQ Letter Generated',
@@ -101,7 +138,8 @@ class ProcessStep extends Model
 
     public static function allStepTypes(): array
     {
-        return array_merge(...array_values(self::stepTypesByWeek()));
+        // All nine step types (from the 30-day grouping, which contains them all).
+        return array_merge(...array_values(self::stepTypesByWeek(30)));
     }
 
     public static function stepTypeLabel(?string $key): ?string

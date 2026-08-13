@@ -401,22 +401,26 @@ class EndUser extends Model
 
     /**
      * Returns the first missing-week number based on days_active, or null if
-     * the client is on track. Each phase becomes due one "week length" apart,
-     * where a week length is the owner's cycle ÷ 4:
-     *   30-day cycle (wk=7): due days 1 / 8 / 15 / 22
-     *   20-day cycle (wk=5): due days 1 / 6 / 11 / 16
+     * the client is on track. Phases become due one "week length" apart, where
+     * a week length is the owner's cycle ÷ its number of weeks:
+     *   30-day cycle → 4 weeks (wk=7): due days 1 / 8 / 15 / 22
+     *   20-day cycle → 3 weeks (wk=6): due days 1 / 7 / 13
      * (Earlier weeks are also checked, so a client past the window with no
      *  Week 1 step still shows "Week 1 not logged".)
      */
     public function getMissingWeekAttribute(): ?int
     {
-        $days = $this->days_active;
-        $wk   = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 5 (1/6/11/16)
+        $days    = $this->days_active;
+        $wk      = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 6 (1/7/13)
+        $count   = $this->roundWeekCount();    // 30-day → 4 weeks, 20-day → 3 weeks
 
-        if ($days >= 1             && (int) ($this->week1_count ?? 0) === 0) return 1;
-        if ($days >= $wk + 1       && (int) ($this->week2_count ?? 0) === 0) return 2;
-        if ($days >= (2 * $wk) + 1 && (int) ($this->week3_count ?? 0) === 0) return 3;
-        if ($days >= (3 * $wk) + 1 && (int) ($this->week4_count ?? 0) === 0) return 4;
+        for ($w = 1; $w <= $count; $w++) {
+            $dueDay   = (($w - 1) * $wk) + 1;
+            $logged   = (int) ($this->{"week{$w}_count"} ?? 0);
+            if ($days >= $dueDay && $logged === 0) {
+                return $w;
+            }
+        }
         return null;
     }
 
@@ -502,10 +506,16 @@ class EndUser extends Model
         return $this->client?->roundCycleDays() ?? self::ROUND_LENGTH_DAYS;
     }
 
-    /** Length (days) of one of the four process-week phases for this cycle. */
+    /** Number of process-week phases in a round for this client's cycle (30→4, 20→3). */
+    public function roundWeekCount(): int
+    {
+        return \App\Models\ProcessStep::weekCount($this->roundCycleDays());
+    }
+
+    /** Length (days) of one process-week phase for this cycle (30→7, 20→6). */
     public function roundWeekLength(): int
     {
-        return max(1, intdiv($this->roundCycleDays(), 4));   // 30→7, 20→5
+        return max(1, intdiv($this->roundCycleDays(), $this->roundWeekCount()));
     }
 
     /**

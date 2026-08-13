@@ -186,7 +186,7 @@
                                     @if ($eu->is_incomplete)
                                         <button type="button" class="pro-flag"
                                                 title="{{ $eu->incomplete_reason }} — click to log"
-                                                onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $eu->missing_week ?? 1 }}, {{ $eu->current_round }})">
+                                                onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $eu->missing_week ?? 1 }}, {{ $eu->current_round }}, {{ $eu->roundCycleDays() }})">
                                             Incomplete · log
                                         </button>
                                     @endif

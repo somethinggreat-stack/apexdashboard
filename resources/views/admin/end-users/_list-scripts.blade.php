@@ -6,11 +6,20 @@
 @php
     $statusOptions = ['active','paused','graduated','cancelled'];
     $roundOptions  = App\Models\EndUser::ROUND_OPTIONS;
+    // Canonical first step per week, keyed by round cycle (30-day = 4 weeks,
+    // 20-day = 3 weeks). Used to pre-fill the quick-log step type.
     $weekStepCanonical = [
-        1 => 'ex_tu_eq_letters_generated',
-        2 => 'tu_ex_call_followups',
-        3 => 'aggressive_bureau_followup',
-        4 => 'pull_latest_report',
+        30 => [
+            1 => 'ex_tu_eq_letters_generated',
+            2 => 'tu_ex_call_followups',
+            3 => 'aggressive_bureau_followup',
+            4 => 'pull_latest_report',
+        ],
+        20 => [
+            1 => 'ex_tu_eq_letters_generated',
+            2 => 'cfpb_3b_and_innovis',
+            3 => 'aggressive_bureau_followup',
+        ],
     ];
 @endphp
 
@@ -106,16 +115,30 @@
     });
 
     /* --------- quick-log modal --------- */
-    window.openQuickLog = function (euId, name, missingWeek, currentRound) {
+    window.openQuickLog = function (euId, name, missingWeek, currentRound, cycleDays) {
+        cycleDays = (parseInt(cycleDays, 10) === 20) ? 20 : 30;
+        var weekCount = (cycleDays === 20) ? 3 : 4;               // 20-day → 3 weeks
+        var stepsMap  = WEEK_STEPS[cycleDays] || WEEK_STEPS[30];
+
         document.getElementById('quickLogEndUserId').value = euId;
         document.getElementById('quickLogName').textContent = name;
         var weekSel = document.getElementById('quickLogWeek');
         var roundSel = document.getElementById('quickLogRound');
         var typeIn  = document.getElementById('quickLogStepType');
+
+        // Rebuild the Week options to match this client's cycle (3 or 4 weeks).
+        weekSel.innerHTML = '';
+        for (var w = 1; w <= weekCount; w++) {
+            var o = document.createElement('option');
+            o.value = w; o.textContent = 'Week ' + w;
+            weekSel.appendChild(o);
+        }
+
+        missingWeek = Math.min(parseInt(missingWeek, 10) || 1, weekCount);
         weekSel.value = missingWeek;
         roundSel.value = Math.max(1, currentRound || 1);
-        typeIn.value = WEEK_STEPS[missingWeek] || 'ex_tu_eq_letters_generated';
-        weekSel.onchange = function () { typeIn.value = WEEK_STEPS[weekSel.value] || ''; };
+        typeIn.value = stepsMap[missingWeek] || 'ex_tu_eq_letters_generated';
+        weekSel.onchange = function () { typeIn.value = stepsMap[weekSel.value] || ''; };
         openModal('quickLogModal');
     };
 

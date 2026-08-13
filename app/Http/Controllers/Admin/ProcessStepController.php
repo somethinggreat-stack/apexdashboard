@@ -15,7 +15,11 @@ class ProcessStepController extends Controller
     {
         $clientId = session('selected_client_id');
         $week = $request->integer('week');
-        $allowedSteps = array_keys(ProcessStep::stepTypesByWeek()[$week] ?? []);
+        // The owner's round cycle decides how many weeks a round has and which
+        // steps belong to each (20-day → 3 weeks, 30-day → 4).
+        $cycle        = (int) (\App\Models\Client::find($clientId)?->roundCycleDays() ?? 30);
+        $weekCount    = ProcessStep::weekCount($cycle);
+        $allowedSteps = array_keys(ProcessStep::stepTypesByWeek($cycle)[$week] ?? []);
 
         $endUserRule = Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $clientId));
 
@@ -32,7 +36,7 @@ class ProcessStepController extends Controller
         $data = $request->validate([
             'end_user_id'                  => ['required', $endUserRule],
             'round'                        => 'required|integer|between:1,8',
-            'week'                         => 'required|integer|between:1,4',
+            'week'                         => "required|integer|between:1,{$weekCount}",
             'step_types'                   => 'required|array|min:1',
             'step_types.*'                 => ['string', Rule::in($allowedSteps ?: array_keys(ProcessStep::allStepTypes()))],
             'step_date'                    => 'required|date',
@@ -166,8 +170,10 @@ class ProcessStepController extends Controller
     {
         $required = $creating ? 'required' : 'sometimes|required';
         $week = $request->integer('week');
-        $allowedSteps = array_keys(ProcessStep::stepTypesByWeek()[$week] ?? []);
         $clientId = session('selected_client_id');
+        $cycle        = (int) (\App\Models\Client::find($clientId)?->roundCycleDays() ?? 30);
+        $weekCount    = ProcessStep::weekCount($cycle);
+        $allowedSteps = array_keys(ProcessStep::stepTypesByWeek($cycle)[$week] ?? []);
 
         // end_user_id must belong to the currently selected business owner
         $endUserRule = Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $clientId));
@@ -175,7 +181,7 @@ class ProcessStepController extends Controller
         return $request->validate([
             'end_user_id' => $creating ? ['required', $endUserRule] : ['sometimes', $endUserRule],
             'round' => "$required|integer|between:1,8",
-            'week' => "$required|integer|between:1,4",
+            'week' => "$required|integer|between:1,{$weekCount}",
             'step_type' => [$creating ? 'required' : 'sometimes', 'string', Rule::in($allowedSteps ?: array_keys(ProcessStep::allStepTypes()))],
             'step_date' => "$required|date",
             'experian_accounts_disputed' => 'nullable|integer|min:0',

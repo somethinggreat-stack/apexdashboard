@@ -12,7 +12,7 @@
     $currentRoundNum   = max(1, (int) ($stepsByRound->keys()->max() ?? 1));
     $currentRoundSteps = $stepsByRound->get($currentRoundNum, collect());
 
-    $stepTypesByWeek    = ProcessStep::stepTypesByWeek();
+    $stepTypesByWeek    = ProcessStep::stepTypesByWeek($endUser->roundCycleDays());
     $totalStepsPerRound = collect($stepTypesByWeek)->sum(fn ($w) => count($w));
 
     $currentRoundCompleted = $currentRoundSteps->count();
@@ -58,16 +58,20 @@
     // withCount (the controller's show() doesn't add it). This makes
     // is_incomplete reliable for the overview regardless of how endUser
     // was loaded.
+    $weekCount  = $endUser->roundWeekCount();   // 30-day → 4 weeks, 20-day → 3
     $weekCounts = [];
-    for ($w = 1; $w <= 4; $w++) {
+    for ($w = 1; $w <= $weekCount; $w++) {
         $weekCounts[$w] = $allSteps->where('week', $w)->count();
     }
     $daysActive = $endUser->days_active;
     $missingWeek = null;
-    if ($daysActive >= 1                 && $weekCounts[1] === 0) $missingWeek = 1;
-    elseif ($daysActive >= $weekLen + 1       && $weekCounts[2] === 0) $missingWeek = 2;
-    elseif ($daysActive >= (2 * $weekLen) + 1 && $weekCounts[3] === 0) $missingWeek = 3;
-    elseif ($daysActive >= (3 * $weekLen) + 1 && $weekCounts[4] === 0) $missingWeek = 4;
+    for ($w = 1; $w <= $weekCount; $w++) {
+        $dueDay = (($w - 1) * $weekLen) + 1;
+        if ($daysActive >= $dueDay && ($weekCounts[$w] ?? 0) === 0) {
+            $missingWeek = $w;
+            break;
+        }
+    }
     $isOnTrack    = $missingWeek === null;
     $statusCaption = $isOnTrack ? 'On Track' : "Week {$missingWeek} due";
     $statusMessage = $isOnTrack

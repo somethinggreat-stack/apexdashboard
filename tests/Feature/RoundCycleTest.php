@@ -68,9 +68,34 @@ class RoundCycleTest extends TestCase
     {
         $eu = $this->client($this->bo(20));
         $this->assertSame(20, $eu->roundCycleDays());
-        $this->assertSame(5, $eu->roundWeekLength());
+        $this->assertSame(3, $eu->roundWeekCount());            // 20-day → 3 weeks
+        $this->assertSame(6, $eu->roundWeekLength());           // intdiv(20, 3)
         $this->assertSame('2026-06-21', $eu->round_end_date);   // 2026-06-01 + 20
         $this->assertSame('2026-06-21', $eu->next_round_date);
+    }
+
+    public function test_step_structure_compresses_for_20_day(): void
+    {
+        $thirty = \App\Models\ProcessStep::stepTypesByWeek(30);
+        $twenty = \App\Models\ProcessStep::stepTypesByWeek(20);
+
+        $this->assertCount(4, $thirty, '30-day → 4 weeks');
+        $this->assertCount(3, $twenty, '20-day → 3 weeks');
+
+        // Same nine steps overall, just regrouped.
+        $this->assertSame(
+            array_keys(array_merge(...array_values($thirty))),
+            array_keys(array_merge(...array_values($twenty))),
+        );
+
+        // 20-day week 3 is the closeout: aggressive follow-up, pull report, deletions.
+        $this->assertSame(
+            ['aggressive_bureau_followup', 'pull_latest_report', 'record_deletions'],
+            array_keys($twenty[3]),
+        );
+        // All disputing steps land in weeks 1–2.
+        $this->assertCount(3, $twenty[1]);
+        $this->assertCount(3, $twenty[2]);
     }
 
     public function test_flipping_owner_reprices_existing_clients(): void
@@ -87,24 +112,49 @@ class RoundCycleTest extends TestCase
 
     public function test_missing_week_thresholds_scale_with_cycle(): void
     {
-        // A client 6 days in with no steps: on a 30-day cycle only Week 1 is due;
-        // on a 20-day cycle (week length 5) Week 2 is already due too.
-        $eu30 = $this->client($this->bo(30), now()->subDays(5)->toDateString()); // day 6
-        $eu20 = $this->client($this->bo(20), now()->subDays(5)->toDateString());
+        // A client on day 7: 30-day Week 2 isn't due until day 8, but 20-day
+        // Week 2 (week length 6) is due on day 7.
+        $eu30 = $this->client($this->bo(30), now()->subDays(6)->toDateString()); // day 7
+        $eu20 = $this->client($this->bo(20), now()->subDays(6)->toDateString());
 
-        // No steps logged → week counts are 0.
         foreach (['week1_count', 'week2_count', 'week3_count', 'week4_count'] as $c) {
             $eu30->setAttribute($c, 0);
             $eu20->setAttribute($c, 0);
         }
 
-        $this->assertSame(1, $eu30->missing_week, '30-day: day 6 → Week 1 due');
-        $this->assertSame(1, $eu20->missing_week, '20-day: Week 1 still first missing');
+        $this->assertSame(1, $eu30->missing_week, '30-day: Week 1 first missing');
+        $this->assertSame(1, $eu20->missing_week, '20-day: Week 1 first missing');
 
-        // Give both a Week 1 step so the next gap shows.
-        foreach (['week1_count'] as $c) { $eu30->setAttribute($c, 1); $eu20->setAttribute($c, 1); }
-        $this->assertNull($eu30->missing_week, '30-day: day 6 with Week 1 done → on track');
-        $this->assertSame(2, $eu20->missing_week, '20-day: day 6 ≥ 6 → Week 2 now due');
+        // Log Week 1 for both, then the difference shows.
+        $eu30->setAttribute('week1_count', 1);
+        $eu20->setAttribute('week1_count', 1);
+        $this->assertNull($eu30->missing_week, '30-day: day 7 < 8 → on track');
+        $this->assertSame(2, $eu20->missing_week, '20-day: day 7 ≥ 7 → Week 2 due');
+    }
+
+    public function test_20_day_client_accepts_week3_closeout_step(): void
+    {
+        $super = $this->superAdmin();
+        $bo = $this->bo(20);
+        $eu = $this->client($bo);
+
+        // Week 3 closeout step is valid for a 20-day client...
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/process-steps', [
+                'end_user_id' => $eu->id, 'round' => 1, 'week' => 3,
+                'step_types' => ['record_deletions'], 'step_date' => '2026-06-18',
+            ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('process_steps', [
+            'end_user_id' => $eu->id, 'week' => 3, 'step_type' => 'record_deletions',
+        ]);
+
+        // ...but week 4 does not exist on a 20-day cycle.
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
+            ->post('/admin/process-steps', [
+                'end_user_id' => $eu->id, 'round' => 1, 'week' => 4,
+                'step_types' => ['record_deletions'], 'step_date' => '2026-06-18',
+            ])->assertSessionHasErrors('week');
     }
 
     public function test_add_business_owner_persists_cycle(): void
