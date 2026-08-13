@@ -593,6 +593,13 @@ img { max-width: 100%; display: block; }
   line-height: 1;
 }
 .trust-item .num .plus { color: var(--gold-deep);  }
+/* Lead stat — the under-15-days result claim */
+.trust-item.is-lead .num {
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 60%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.trust-item.is-lead .label { color: var(--gold); font-weight: 600; }
 .trust-item .label {
   font-size: 11px;
   letter-spacing: 0.15em;
@@ -2343,13 +2350,17 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
         <span class="word" style="animation-delay: 1.1s"><em>Run The&nbsp;Fulfillment.</em></span>
       </h1>
       <p class="hero-sub">
-        Apex Growth Solutions is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — so your credit repair business can scale without drowning in manual work.
+        Apex Growth Solutions is the backend credit repair fulfillment partner for credit repair businesses. We handle dispute letter prep, bureau follow-up calls, CFPB and FTC complaint documentation, Innovis disputes, small bureau freeze support, response monitoring, and weekly client status reports — driving real results in under 15 days, so your credit repair business can scale without drowning in manual work.
       </p>
       <div class="hero-cta">
         <a href="/trial" class="btn btn-gold"><span>Try 5 Test Clients</span> <span class="arrow">→</span></a>
         <a href="/contact" class="btn btn-ghost"><span>Book A Fulfillment Call</span></a>
       </div>
       <div class="trust-row">
+        <div class="trust-item is-lead">
+          <span class="num">Under 15 Days</span>
+          <span class="label">To First Results</span>
+        </div>
         <div class="trust-item">
           <span class="num">72 Hrs</span>
           <span class="label">To Launch First Round</span>

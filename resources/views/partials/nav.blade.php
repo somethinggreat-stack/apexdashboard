@@ -156,7 +156,39 @@
   .nav .btn-primary span:not(.arrow) { display: none; }
   .nav .btn-primary { padding: 10px 14px; }
 }
+
+/* Sitewide results ribbon — sits above the sticky nav on every page */
+.apex-ribbon {
+  background: linear-gradient(90deg, #0B1B3B 0%, #1A6FC4 50%, #0B1B3B 100%);
+  color: #EAF2FB;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  line-height: 1.3;
+  text-align: center;
+}
+.apex-ribbon strong { color: #7CC0FF; font-weight: 800; }
+.apex-ribbon .apex-ribbon-spark { color: #FFD76A; }
+.apex-ribbon .apex-ribbon-sep { opacity: 0.4; }
+@media (max-width: 640px) {
+  .apex-ribbon { font-size: 11.5px; padding: 7px 12px; gap: 8px; }
+  .apex-ribbon .apex-ribbon-extra,
+  .apex-ribbon .apex-ribbon-sep { display: none; }
+}
 </style>
+
+<div class="apex-ribbon">
+  <span class="apex-ribbon-spark">⚡</span>
+  <span>Real client results in <strong>under 15 days</strong></span>
+  <span class="apex-ribbon-sep">•</span>
+  <span class="apex-ribbon-extra">First dispute round launched within 72 hours</span>
+</div>
 
 <nav class="nav" id="nav">
   <div class="nav-inner">

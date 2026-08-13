@@ -929,7 +929,7 @@ footer {
   <div class="section-inner reveal">
     <div class="section-eyebrow">BUSINESS RESULTS</div>
     <h1 class="section-headline">Real client files. Real <em>fulfillment wins.</em></h1>
-    <p class="section-sub">Below: outcomes from the credit repair businesses we run fulfillment for. Letters sent, bureau calls made, CFPB filings prepared, and items deleted &mdash; across thousands of client files. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
+    <p class="section-sub">Real client movement in <strong>under 15 days</strong> is what we build toward on every file. Below: outcomes from the credit repair businesses we run fulfillment for. Letters sent, bureau calls made, CFPB filings prepared, and items deleted &mdash; across thousands of client files. Results vary. We do not guarantee removal of accurate or verifiable information.</p>
   </div>
 </section>
 

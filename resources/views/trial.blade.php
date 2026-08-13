@@ -867,6 +867,7 @@ footer {
       <a href="/contact" class="btn-ghost"><span>Book A Fulfillment Call</span></a>
     </div>
     <div class="hero-trust">
+      <span>Results In Under 15 Days</span>
       <span>$0 Upfront</span>
       <span>No Contract</span>
       <span>Pay After Results</span>
