@@ -22,7 +22,7 @@
         'other' => 'Other',
     ];
     $rounds = App\Models\ProcessStep::rounds();
-    $weeks = App\Models\ProcessStep::weeks();
+    $weeks = App\Models\ProcessStep::weeks($endUser->roundCycleDays());
     $stepTypesByWeek = App\Models\ProcessStep::stepTypesByWeek($endUser->roundCycleDays());
     $documentsByCategory = $endUser->documents->groupBy('category');
     $identityDocs = collect([
