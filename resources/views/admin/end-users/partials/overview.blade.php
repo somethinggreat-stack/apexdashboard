@@ -48,8 +48,10 @@
     }
     if (!$nextAction) $nextAction = 'Round complete';
 
+    $cycleDays = $endUser->roundCycleDays();          // 20 or 30, from the business owner
+    $weekLen   = $endUser->roundWeekLength();         // cycleDays ÷ 4 (7 or 5)
     $estCompletion = $endUser->start_date
-        ? $endUser->start_date->copy()->addDays(28 * $currentRoundNum)->format('M d, Y')
+        ? $endUser->start_date->copy()->addDays($cycleDays * $currentRoundNum)->format('M d, Y')
         : '—';
 
     // Compute the week-by-week schedule locally so we don't depend on
@@ -62,10 +64,10 @@
     }
     $daysActive = $endUser->days_active;
     $missingWeek = null;
-    if ($daysActive >= 1  && $weekCounts[1] === 0) $missingWeek = 1;
-    elseif ($daysActive >= 8  && $weekCounts[2] === 0) $missingWeek = 2;
-    elseif ($daysActive >= 15 && $weekCounts[3] === 0) $missingWeek = 3;
-    elseif ($daysActive >= 22 && $weekCounts[4] === 0) $missingWeek = 4;
+    if ($daysActive >= 1                 && $weekCounts[1] === 0) $missingWeek = 1;
+    elseif ($daysActive >= $weekLen + 1       && $weekCounts[2] === 0) $missingWeek = 2;
+    elseif ($daysActive >= (2 * $weekLen) + 1 && $weekCounts[3] === 0) $missingWeek = 3;
+    elseif ($daysActive >= (3 * $weekLen) + 1 && $weekCounts[4] === 0) $missingWeek = 4;
     $isOnTrack    = $missingWeek === null;
     $statusCaption = $isOnTrack ? 'On Track' : "Week {$missingWeek} due";
     $statusMessage = $isOnTrack

@@ -31,6 +31,7 @@ class EndUserController extends Controller
         $query = EndUser::forClient($clientId)
             ->notHeld()   // Hold/Pause clients live in their own section
             ->noCustomList()   // clients tagged into a custom list show only there
+            ->with('client')   // round-cycle length for the date accessors
             // New Clients (pending_review) and Errors live in their own sections.
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             ->withCount([

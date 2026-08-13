@@ -36,8 +36,9 @@ class EndUserController extends Controller
             ->notHeld()
             ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
             // progress % is derived from the step log — eager load it so the
-            // accessor doesn't fire a query per row
-            ->with('processSteps:id,end_user_id,round,step_type')
+            // accessor doesn't fire a query per row; client carries the round
+            // cycle length the date accessors read.
+            ->with(['client', 'processSteps:id,end_user_id,round,step_type'])
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -503,6 +504,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
             ->notHeld()
+            ->with('client')          // round-cycle length for the date accessors
             ->roundErrorPending()
             ->orderByDesc('updated_at')
             ->get();

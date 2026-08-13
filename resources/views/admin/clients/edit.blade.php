@@ -41,6 +41,14 @@
                     <option value="inactive" @selected(old('status', $client->status) === 'inactive')>Inactive</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>Round Timeline</label>
+                <select name="round_cycle_days">
+                    <option value="30" @selected(old('round_cycle_days', $client->round_cycle_days ?? 30) == 30)>30-Day Rounds (standard)</option>
+                    <option value="20" @selected(old('round_cycle_days', $client->round_cycle_days ?? 30) == 20)>20-Day Rounds (accelerated)</option>
+                </select>
+                <small class="muted" style="display:block; margin-top:4px;">Applies to all of this owner's clients — next-round dates, days-left and step reminders adjust immediately.</small>
+            </div>
             @include('admin.clients._referral-fields', ['refClient' => $client])
         </div>
 

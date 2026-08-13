@@ -41,6 +41,7 @@ class ClientController extends Controller
             'weekly_hours_target' => 'nullable|integer|min:0|max:168',
             'pay_cycle'           => 'nullable|in:biweekly,monthly',
             'pay_cycle_anchor'    => 'nullable|date',
+            'round_cycle_days'    => 'required|in:20,30',
         ]);
 
         $data['admin_id']               = Auth::guard('admin')->id();
@@ -82,6 +83,7 @@ class ClientController extends Controller
             'phone'                 => 'nullable|string|max:30',
             'monthly_fee'           => 'required|numeric|min:0',
             'status'                => 'required|in:active,inactive',
+            'round_cycle_days'      => 'required|in:20,30',
         ]);
 
         if (empty($data['password'])) {

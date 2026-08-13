@@ -22,6 +22,7 @@ class Client extends Authenticatable
         'intake_api_key', 'intake_external_url', 'intake_security_extra',
         'compensation_model', 'per_round_fee', 'hourly_rate',
         'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
+        'round_cycle_days',
         'deleted_by_admin_id',
     ];
     protected $hidden = ['password', 'remember_token'];
@@ -37,7 +38,18 @@ class Client extends Authenticatable
         'hourly_rate'          => 'decimal:2',
         'pay_cycle_anchor'     => 'date',
         'weekly_hours_target'  => 'integer',
+        'round_cycle_days'     => 'integer',
     ];
+
+    /** Allowed round-cycle lengths (days) a business owner can run on. */
+    public const ROUND_CYCLE_OPTIONS = [20, 30];
+
+    /** This owner's round-cycle length in days (20 or 30); defaults to 30. */
+    public function roundCycleDays(): int
+    {
+        $c = (int) ($this->round_cycle_days ?? 0);
+        return in_array($c, self::ROUND_CYCLE_OPTIONS, true) ? $c : 30;
+    }
 
     /** The referrer (another business owner) who referred this business owner. */
     public function referrer()

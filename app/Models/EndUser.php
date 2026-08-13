@@ -400,23 +400,23 @@ class EndUser extends Model
     }
 
     /**
-     * Returns the first missing-week number based on days_active,
-     * or null if the client is on track. Rules:
-     *   day  1–7   → must have a Week 1 step
-     *   day  8–14  → must have a Week 2 step
-     *   day 15–21  → must have a Week 3 step
-     *   day 22+    → must have a Week 4 step
-     * (Earlier weeks are also checked, so a client at day 30 with
-     *  no Week 1 step shows "Week 1 not logged".)
+     * Returns the first missing-week number based on days_active, or null if
+     * the client is on track. Each phase becomes due one "week length" apart,
+     * where a week length is the owner's cycle ÷ 4:
+     *   30-day cycle (wk=7): due days 1 / 8 / 15 / 22
+     *   20-day cycle (wk=5): due days 1 / 6 / 11 / 16
+     * (Earlier weeks are also checked, so a client past the window with no
+     *  Week 1 step still shows "Week 1 not logged".)
      */
     public function getMissingWeekAttribute(): ?int
     {
         $days = $this->days_active;
+        $wk   = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 5 (1/6/11/16)
 
-        if ($days >= 1  && (int) ($this->week1_count ?? 0) === 0) return 1;
-        if ($days >= 8  && (int) ($this->week2_count ?? 0) === 0) return 2;
-        if ($days >= 15 && (int) ($this->week3_count ?? 0) === 0) return 3;
-        if ($days >= 22 && (int) ($this->week4_count ?? 0) === 0) return 4;
+        if ($days >= 1             && (int) ($this->week1_count ?? 0) === 0) return 1;
+        if ($days >= $wk + 1       && (int) ($this->week2_count ?? 0) === 0) return 2;
+        if ($days >= (2 * $wk) + 1 && (int) ($this->week3_count ?? 0) === 0) return 3;
+        if ($days >= (3 * $wk) + 1 && (int) ($this->week4_count ?? 0) === 0) return 4;
         return null;
     }
 
@@ -492,10 +492,25 @@ class EndUser extends Model
     }
 
     /**
-     * The date the next round is due to start — one calendar month after the
-     * current round's start date (e.g. 1st round Jun 23 → Jul 23; once the
-     * 2nd round starts Jul 23 → Aug 23). No-overflow so end-of-month dates
-     * clamp to the last day of the shorter month.
+     * Round-cycle length (days) for this client — inherited live from their
+     * business owner (20 or 30). Every round date and week pace derives from it,
+     * so flipping the owner instantly re-adjusts all of their clients. Falls
+     * back to the 30-day default when no owner/value is present.
+     */
+    public function roundCycleDays(): int
+    {
+        return $this->client?->roundCycleDays() ?? self::ROUND_LENGTH_DAYS;
+    }
+
+    /** Length (days) of one of the four process-week phases for this cycle. */
+    public function roundWeekLength(): int
+    {
+        return max(1, intdiv($this->roundCycleDays(), 4));   // 30→7, 20→5
+    }
+
+    /**
+     * The date the next round is due to start — exactly one round cycle after
+     * the current round's start date (20 or 30 days depending on the owner).
      */
     public function getNextRoundDateAttribute(): ?string
     {
@@ -507,7 +522,7 @@ class EndUser extends Model
         if (!$start) {
             return null;
         }
-        return Carbon::parse($start)->addMonthNoOverflow()->toDateString();
+        return Carbon::parse($start)->startOfDay()->addDays($this->roundCycleDays())->toDateString();
     }
 
     /**
@@ -550,20 +565,20 @@ class EndUser extends Model
         return $highest;
     }
 
-    /** The date the current 30-day round is due to end. */
+    /** The date the current round is due to end (start + the owner's cycle). */
     public function getRoundEndDateAttribute(): ?string
     {
         $start = $this->current_round_start_date;
         if (!$start) {
             return null;
         }
-        return Carbon::parse($start)->startOfDay()->addDays(self::ROUND_LENGTH_DAYS)->toDateString();
+        return Carbon::parse($start)->startOfDay()->addDays($this->roundCycleDays())->toDateString();
     }
 
     /**
-     * Days remaining in the current round. Counts down from ROUND_LENGTH_DAYS
-     * on the round's start date and goes negative once the round is overdue
-     * (e.g. -1, -2 …). Resets when a new round is started.
+     * Days remaining in the current round. Counts down from the owner's cycle
+     * length (20 or 30) on the round's start date and goes negative once the
+     * round is overdue (e.g. -1, -2 …). Resets when a new round is started.
      */
     public function getDaysLeftInRoundAttribute(): ?int
     {
@@ -571,7 +586,7 @@ class EndUser extends Model
         if (!$start) {
             return null;
         }
-        $roundEnd = Carbon::parse($start)->startOfDay()->addDays(self::ROUND_LENGTH_DAYS);
+        $roundEnd = Carbon::parse($start)->startOfDay()->addDays($this->roundCycleDays());
         return (int) now()->startOfDay()->diffInDays($roundEnd, false);
     }
 

@@ -27,6 +27,15 @@
             <input type="number" step="0.01" name="monthly_fee" value="{{ old('monthly_fee', '149.00') }}">
         </div>
 
+        <div class="form-group">
+            <label>Round Timeline *</label>
+            <select name="round_cycle_days" required>
+                <option value="30" @selected(old('round_cycle_days', '30') == 30)>30-Day Rounds (standard)</option>
+                <option value="20" @selected(old('round_cycle_days') == 20)>20-Day Rounds (accelerated)</option>
+            </select>
+            <small class="muted" style="display:block; margin-top:4px;">How long each dispute round runs for this owner's clients. All the same steps, paced to fit the window. Drives next-round dates, days-left and step reminders.</small>
+        </div>
+
         @include('admin.clients._referral-fields')
 
         <div class="form-section" style="margin-top:24px; padding:16px 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
