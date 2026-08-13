@@ -189,7 +189,21 @@
     <div class="card">
         <h3>Process Timeline</h3>
         <div class="timeline">
-            @forelse ($endUser->processSteps as $step)
+            @php
+                // Show the timeline in true process order: Round → Week → step
+                // sequence within that week (not the order rows were logged in).
+                $stepSeq = [];
+                foreach ($stepTypesByWeek as $wk => $types) {
+                    $i = 0;
+                    foreach (array_keys($types) as $t) {
+                        $stepSeq[$wk . '|' . $t] = $i++;
+                    }
+                }
+                $orderedSteps = $endUser->processSteps
+                    ->sortBy(fn ($s) => ($s->round * 10000) + ($s->week * 100) + ($stepSeq[$s->week . '|' . $s->step_type] ?? 99))
+                    ->values();
+            @endphp
+            @forelse ($orderedSteps as $step)
                 <div class="timeline-item">
                     <div class="timeline-marker">R{{ $step->round }}·W{{ $step->week }}</div>
                     <div class="timeline-body">

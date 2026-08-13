@@ -345,7 +345,21 @@
             <button class="btn btn-primary" onclick="openModal('addStepModal')">+ Add Process Step</button>
         </div>
         <div class="timeline">
-            @forelse ($endUser->processSteps as $step)
+            @php
+                // Show the timeline in true process order: Round → Week → step
+                // sequence within that week (not the order rows were logged in).
+                $stepSeq = [];
+                foreach ($stepTypesByWeek as $wk => $types) {
+                    $i = 0;
+                    foreach (array_keys($types) as $t) {
+                        $stepSeq[$wk . '|' . $t] = $i++;
+                    }
+                }
+                $orderedSteps = $endUser->processSteps
+                    ->sortBy(fn ($s) => ($s->round * 10000) + ($s->week * 100) + ($stepSeq[$s->week . '|' . $s->step_type] ?? 99))
+                    ->values();
+            @endphp
+            @forelse ($orderedSteps as $step)
                 <div class="timeline-item">
                     <div class="timeline-marker">R{{ $step->round }}·W{{ $step->week }}</div>
                     <div class="timeline-body">
@@ -516,7 +530,7 @@
                 <div id="stepMselInputs"></div>
                 <small class="msel-hint" id="stepMselHint">Pick one or more. Each becomes its own timeline entry for the chosen round &amp; week.</small>
             </div>
-            <div class="form-group"><label>Date</label><input type="date" name="step_date" value="{{ now()->toDateString() }}" required></div>
+            <div class="form-group"><label>Date</label><input type="date" name="step_date" id="stepDateInput" value="{{ now()->timezone('America/New_York')->toDateString() }}" required></div>
             <div id="w4s2-fields" class="w4s2-fields" hidden>
                 <div class="bureau-block">
                     <h4>Round Results</h4>
@@ -809,6 +823,23 @@
     const stepTypesByWeek = @json($stepTypesByWeek);
     const existingCombos = @json($endUser->processSteps->map(fn ($s) => $s->round . '-' . $s->week . '-' . $s->step_type)->values());
     const existingSet = new Set(existingCombos);
+
+    /* Stamp the step Date with "today" in US Eastern every time the Add Step
+       modal opens — so each step dates to when it was actually marked, not the
+       stale page-load date and not UTC's next-day rollover. VA can still change
+       it for back-dated entries. */
+    (function () {
+        function estToday() {
+            return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+        }
+        function stampStepDate() {
+            var inp = document.getElementById('stepDateInput');
+            if (inp) inp.value = estToday();
+        }
+        document.querySelectorAll('[onclick*="addStepModal"]').forEach(function (btn) {
+            btn.addEventListener('click', stampStepDate);
+        });
+    })();
 
     @php
         $pastStepsByKey = $endUser->processSteps
