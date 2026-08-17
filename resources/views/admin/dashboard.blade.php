@@ -73,6 +73,33 @@
         <div class="dstat-val">{{ $onTrackRate }}%</div>
         <div class="dstat-sub">Clients not overdue</div>
     </div>
+
+    {{-- ===== Third row: business-owner growth ===== --}}
+    <div class="dstat ds-indigo">
+        <div class="dstat-top"><span class="dstat-label">Total Business Owners</span><span class="dstat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></div>
+        <div class="dstat-val">{{ number_format($ownerStats['total']) }}</div>
+        <div class="dstat-sub">All owners on record</div>
+    </div>
+    <div class="dstat ds-green">
+        <div class="dstat-top"><span class="dstat-label">Owners New This Month</span><span class="dstat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/><line x1="12" y1="13" x2="12" y2="17"/><line x1="10" y1="15" x2="14" y2="15"/></svg></span></div>
+        <div class="dstat-val">{{ number_format($ownerStats['newThisMonth']) }}</div>
+        <div class="dstat-sub">Joined in {{ $ownerStats['thisMonthName'] }}</div>
+    </div>
+    <div class="dstat ds-amber">
+        <div class="dstat-top"><span class="dstat-label">Owners New Last Month</span><span class="dstat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg></span></div>
+        <div class="dstat-val">{{ number_format($ownerStats['newLastMonth']) }}</div>
+        <div class="dstat-sub">Joined in {{ $ownerStats['lastMonthName'] }}</div>
+    </div>
+    <div class="dstat ds-blue">
+        <div class="dstat-top"><span class="dstat-label">Owners New This Year</span><span class="dstat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg></span></div>
+        <div class="dstat-val">{{ number_format($ownerStats['newThisYear']) }}</div>
+        <div class="dstat-sub">Joined in {{ $ownerStats['yearName'] }}</div>
+    </div>
+    <div class="dstat ds-violet">
+        <div class="dstat-top"><span class="dstat-label">Avg Clients / Owner</span><span class="dstat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></div>
+        <div class="dstat-val">{{ $ownerStats['avgClients'] }}</div>
+        <div class="dstat-sub">Clients per business owner</div>
+    </div>
 </div>
 
 {{-- ===================== BO Overview + Needs Attention ===================== --}}
