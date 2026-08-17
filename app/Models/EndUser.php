@@ -81,7 +81,7 @@ class EndUser extends Model
         'cfpb_email', 'cfpb_password', 'cfpb_round_credentials',
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
         'per_round_fee', 'per_round_fees',
-        'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type',
+        'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
         'deleted_by_admin_id', 'deleted_with_owner',

@@ -258,6 +258,29 @@
 </div>
 
 {{-- Move a Clients-list client to Round Errors (asks for a type + reason) --}}
+{{-- Reason prompt for Hold/Pause and Move to New Clients --}}
+<div id="moveReasonModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="moveReasonTitle">Reason</h3>
+            <button class="modal-close" onclick="closeModal('moveReasonModal')">&times;</button>
+        </div>
+        <form method="POST" id="moveReasonForm" action="">
+            @csrf
+            <p class="muted" id="moveReasonWho" style="margin:0 0 12px; font-size:13px;"></p>
+            <div class="form-group">
+                <label>Reason *</label>
+                <textarea name="reason" id="moveReasonText" rows="3" maxlength="1000" required
+                          placeholder="Why is this client being moved? (shown on the list)"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('moveReasonModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="moveReasonSubmit">Move</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="roundErrorModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">

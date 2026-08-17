@@ -119,6 +119,7 @@
                     <th>Client Name</th>
                     <th>Email</th>
                     <th>Phone</th>
+                    <th>Reason</th>
                     <th>Submitted</th>
                     <th>Actions</th>
                 </tr>
@@ -141,6 +142,7 @@
                         </td>
                         <td>{{ $eu->email }}</td>
                         <td>{{ $eu->phone ?: '—' }}</td>
+                        <td><span class="move-reason">{{ $eu->move_reason ?: '—' }}</span></td>
                         <td>{{ $eu->intake_submitted_at?->format('M j, Y g:ia') ?: '—' }}</td>
                         <td>
                             <div class="pro-actions">
@@ -172,7 +174,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">No new intake submissions yet.</td></tr>
+                    <tr><td colspan="6" class="empty">No new intake submissions yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

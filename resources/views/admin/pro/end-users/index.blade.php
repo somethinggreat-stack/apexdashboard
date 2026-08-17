@@ -282,15 +282,11 @@
                                     </form>
                                 @endif
 
-                                <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}">
-                                    @csrf
-                                    <button class="pro-act move">Move to New Clients</button>
-                                </form>
+                                <button type="button" class="pro-act move"
+                                        onclick="openMoveReason({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', 'new-clients')">Move to New Clients</button>
 
-                                <form method="POST" action="{{ route('admin.end-users.hold', $eu->id) }}">
-                                    @csrf
-                                    <button class="pro-act hold">Hold/Pause</button>
-                                </form>
+                                <button type="button" class="pro-act hold"
+                                        onclick="openMoveReason({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', 'hold')">Hold/Pause</button>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
                                       onsubmit="return confirm(@js('Delete client ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">

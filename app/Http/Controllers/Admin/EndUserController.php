@@ -572,10 +572,14 @@ class EndUserController extends Controller
     }
 
     /** Put a client on hold — hides them from their bucket until resumed. */
-    public function hold(string $id)
+    public function hold(Request $request, string $id)
     {
+        $reason = trim((string) $request->input('reason', ''));
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['held_at' => now()]);
+        $endUser->update([
+            'held_at'     => now(),
+            'move_reason' => $reason !== '' ? $reason : null,
+        ]);
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} placed on Hold/Pause.");
@@ -585,7 +589,7 @@ class EndUserController extends Controller
     public function resume(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);
-        $endUser->update(['held_at' => null]);
+        $endUser->update(['held_at' => null, 'move_reason' => null]);
 
         return redirect()->back()
             ->with('status', "{$endUser->full_name} resumed.");
@@ -600,6 +604,7 @@ class EndUserController extends Controller
         $endUser->update([
             'intake_status'               => 'approved',
             'intake_review_note'          => null,
+            'move_reason'                 => null,
             'error_resolved_by_client_at' => null,
         ]);
 
@@ -619,6 +624,7 @@ class EndUserController extends Controller
         $endUser->update([
             'intake_status'               => 'done',
             'intake_review_note'          => null,
+            'move_reason'                 => null,
             'start_date'                  => now()->toDateString(),
             'error_resolved_by_client_at' => null,
         ]);
@@ -627,13 +633,15 @@ class EndUserController extends Controller
             ->with('status', "{$endUser->full_name} moved to Clients — round clock started.");
     }
 
-    /** Move a client back into the New Clients (pending review) list — one click, no prompt. */
-    public function moveToNewClients(string $id)
+    /** Move a client back into the New Clients (pending review) list, with a reason. */
+    public function moveToNewClients(Request $request, string $id)
     {
+        $reason = trim((string) $request->input('reason', ''));
         $endUser = $this->scoped()->findOrFail($id);
         $endUser->update([
             'intake_status'               => 'pending_review',
             'intake_review_note'          => null,
+            'move_reason'                 => $reason !== '' ? $reason : null,
             'error_resolved_by_client_at' => null,
         ]);
 

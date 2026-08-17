@@ -194,6 +194,20 @@
     inlineDateEdit('.inline-edit-round-started', 'round_started');
     inlineDateEdit('.inline-edit-next', 'next_round_override');
 
+    /* --------- Hold/Pause or Move to New Clients, with a reason --------- */
+    window.openMoveReason = function (euId, name, kind) {
+        var form = document.getElementById('moveReasonForm');
+        if (!form) return;
+        form.reset();
+        var isHold = kind === 'hold';
+        form.action = updateUrlTpl.replace('__ID__', euId) + (isHold ? '/hold' : '/to-new-clients');
+        document.getElementById('moveReasonTitle').textContent = isHold ? 'Hold / Pause' : 'Move to New Clients';
+        document.getElementById('moveReasonWho').textContent =
+            (isHold ? 'Pausing ' : 'Moving ') + name + (isHold ? ' — why?' : ' back to New Clients — why?');
+        document.getElementById('moveReasonSubmit').textContent = isHold ? 'Hold / Pause' : 'Move to New Clients';
+        openModal('moveReasonModal');
+    };
+
     /* --------- move a Clients-list client to Round Errors (type + reason) --------- */
     window.openRoundError = function (euId, name) {
         var form = document.getElementById('roundErrorForm');

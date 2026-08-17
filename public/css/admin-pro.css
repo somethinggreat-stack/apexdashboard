@@ -760,3 +760,7 @@ html, body { height: 100%; }
 :root[data-theme="dark"] .pro-pill.cancelled { background: rgba(239,68,68,.18);  color: #fca5a5; }
 :root[data-theme="dark"] .pro-panel-count        { background: rgba(99,102,241,.20); color: #c7d2fe; }
 :root[data-theme="dark"] .pro-panel-count.danger { background: rgba(239,68,68,.20);  color: #fca5a5; }
+
+/* Reason cell on Hold/Pause + New Clients lists */
+.move-reason { display: inline-block; max-width: 320px; color: #64748b; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }
+:root[data-theme="dark"] .move-reason { color: var(--pro-muted); }

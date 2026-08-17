@@ -28,6 +28,7 @@
                     <th>Held Since</th>
                     <th>Email</th>
                     <th>Phone</th>
+                    <th>Reason</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -45,6 +46,7 @@
                         <td>{{ $eu->held_at?->format('M j, Y g:ia') ?: '—' }}</td>
                         <td>{{ $eu->email }}</td>
                         <td>{{ $eu->phone ?: '—' }}</td>
+                        <td><span class="move-reason">{{ $eu->move_reason ?: '—' }}</span></td>
                         <td>
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
@@ -63,7 +65,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">No clients on hold.</td></tr>
+                    <tr><td colspan="6" class="empty">No clients on hold.</td></tr>
                 @endforelse
             </tbody>
         </table>
