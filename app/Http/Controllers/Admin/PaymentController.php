@@ -550,13 +550,18 @@ class PaymentController extends Controller
             $latestRound = !empty($activeRounds) ? max($activeRounds) : 1;
 
             foreach ($activeRounds as $rn) {
+                // The date this client's round began (1st = start_date, later
+                // rounds = their stamped round_dates entry) — shown on the invoice.
+                $roundStarted = $eu->roundStartedAt(array_search($rn, $roundLabelToNum, true) ?: '');
+
                 if (!$paidByRound->has($rn)) {
                     $rnRate = $eu->effectiveRoundFee($rn);
                     $unpaidItems[] = [
-                        'name'   => $eu->full_name,
-                        'email'  => $eu->email,
-                        'round'  => $rn,
-                        'amount' => $rnRate,
+                        'name'          => $eu->full_name,
+                        'email'         => $eu->email,
+                        'round'         => $rn,
+                        'round_started' => $roundStarted,
+                        'amount'        => $rnRate,
                     ];
                     $unpaidByRound[$rn]++;
                     $totalUnpaid += $rnRate;
@@ -569,11 +574,12 @@ class PaymentController extends Controller
                 $payment = $paidByRound->get($rn);
                 if ($rn === $latestRound && $payment && $payment->is_free) {
                     $freeItems[] = [
-                        'name'   => $eu->full_name,
-                        'email'  => $eu->email,
-                        'round'  => $rn,
-                        'amount' => 0.0,
-                        'free'   => true,
+                        'name'          => $eu->full_name,
+                        'email'         => $eu->email,
+                        'round'         => $rn,
+                        'round_started' => $roundStarted,
+                        'amount'        => 0.0,
+                        'free'          => true,
                     ];
                 }
             }

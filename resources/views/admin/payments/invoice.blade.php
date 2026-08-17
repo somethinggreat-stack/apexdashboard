@@ -71,6 +71,11 @@
             border-bottom: 0 !important;
         }
         .inv-line-num { color: #64748b; width: 30px; }
+        /* Per-line round start date */
+        .inv-round-started {
+            display: block; margin-top: 2px; font-size: 11px; color: #64748b; font-weight: 500;
+        }
+
         /* A round delivered free of charge — listed so the client sees it, but $0 */
         .inv-free-row td { color: #047857; }
         .inv-free-tag {
@@ -249,6 +254,9 @@
                             <td class="inv-line-num">{{ $rowNum }}.</td>
                             <td>
                                 {{ $it['name'] }}
+                                @if (!empty($it['round_started']))
+                                    <span class="inv-round-started">{{ $rLabel }} round started {{ \Carbon\Carbon::parse($it['round_started'])->format('M j, Y') }}</span>
+                                @endif
                                 @if ($isFree)<span class="inv-free-tag">Complimentary — no charge</span>@endif
                             </td>
                             <td class="center">1</td>
