@@ -68,16 +68,27 @@ class DailyTaskTest extends TestCase
         $oldListed = $this->eu('Old Listed', 'done', 'ol@test.com');
         EndUser::where('id', $oldListed->id)->update(['listed_at' => now()->subHours(13)]);
 
+        // Recent step but a NON-counted type (follow-up/closeout) → hidden.
+        $followup = $this->eu('Followup Only', 'approved', 'f@test.com');
+        ProcessStep::create([
+            'end_user_id' => $followup->id, 'round' => 1, 'week' => 4,
+            'step_type' => 'record_deletions', 'step_date' => '2026-06-02',
+            'created_by_admin_id' => $this->super->id,
+        ]);
+
         $resp = $this->actingAs($this->super, 'admin')->get('/admin/daily-task')->assertOk();
 
         $resp->assertSee('Alin');            // business owner block
         $resp->assertSee('Recent Worked');   // via process step
         $resp->assertSee('Umair');           // the VA who logged it
+        $resp->assertSee('EX, TU, EQ Letter Generated'); // what was marked
         $resp->assertSee('Newly Listed');    // via listed_at
         $resp->assertSee('New to Clients');
 
         $resp->assertDontSee('Old Worked');
         $resp->assertDontSee('Old Listed');
+        $resp->assertDontSee('Followup Only');       // non-counted step type → excluded
+        $resp->assertDontSee('Phone Call Disputes'); // the old step's label must not leak
     }
 
     public function test_only_super_admin_can_open_daily_task(): void

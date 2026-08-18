@@ -55,9 +55,14 @@
         <ul class="dt-clients">
             @foreach ($g['clients'] as $c)
                 <li>
-                    <span class="dt-name">{{ $c['name'] }}</span>
-                    @if ($c['listed'])<span class="dt-tag dt-tag-new">New to Clients</span>@endif
-                    @if (!empty($c['vas']))<span class="dt-tag dt-tag-va">{{ implode(', ', array_keys($c['vas'])) }}</span>@endif
+                    <div class="dt-row-top">
+                        <span class="dt-name">{{ $c['name'] }}</span>
+                        @if ($c['listed'])<span class="dt-tag dt-tag-new">New to Clients</span>@endif
+                        @if (!empty($c['vas']))<span class="dt-tag dt-tag-va">{{ implode(', ', array_keys($c['vas'])) }}</span>@endif
+                    </div>
+                    @if (!empty($c['tasks']))
+                        <div class="dt-tasks">{{ implode('  ·  ', array_keys($c['tasks'])) }}</div>
+                    @endif
                 </li>
             @endforeach
         </ul>
@@ -80,11 +85,12 @@
     .dt-btn-primary:hover { background:#4338ca; border-color:#4338ca; }
     .dt-clients { list-style:none; margin:0; padding:6px 22px 16px; }
     .dt-clients li {
-        display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-        padding:8px 0; border-bottom:1px solid var(--pro-line-soft);
+        padding:9px 0; border-bottom:1px solid var(--pro-line-soft);
     }
     .dt-clients li:last-child { border-bottom:0; }
+    .dt-row-top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .dt-name { font-size:14px; font-weight:600; color:var(--pro-text); }
+    .dt-tasks { font-size:12px; color:var(--pro-muted); margin-top:3px; }
     .dt-tag { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; }
     .dt-tag-new { background:#dcfce7; color:#166534; }
     .dt-tag-va  { background:#eef2ff; color:#4338ca; letter-spacing:.02em; }

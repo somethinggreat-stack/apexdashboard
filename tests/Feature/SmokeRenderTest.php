@@ -108,6 +108,7 @@ class SmokeRenderTest extends TestCase
                 '/admin/clients',
                 '/admin/select-business-owner',
                 '/admin/universal-search',
+                '/admin/daily-task',
                 '/admin/recycle-bin',
                 '/admin/new-clients',
                 '/admin/end-users',                     // In Progress list
