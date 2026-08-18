@@ -91,7 +91,7 @@ class DailyTaskTest extends TestCase
         $resp->assertDontSee('Phone Call Disputes'); // the old step's label must not leak
     }
 
-    public function test_only_super_admin_can_open_daily_task(): void
+    public function test_super_and_va_can_open_daily_task_but_leads_cannot(): void
     {
         $this->seedWorld();
 
@@ -100,7 +100,13 @@ class DailyTaskTest extends TestCase
         $va->parent_admin_id = $this->super->id;
         $va->save();
 
-        $this->actingAs($va, 'admin')->get('/admin/daily-task')->assertStatus(403);
+        $leads = new Admin(['email' => 'leads@test.com', 'password' => 'secret', 'full_name' => 'Leads']);
+        $leads->role = 'leads';
+        $leads->parent_admin_id = $this->super->id;
+        $leads->save();
+
         $this->actingAs($this->super, 'admin')->get('/admin/daily-task')->assertOk();
+        $this->actingAs($va, 'admin')->get('/admin/daily-task')->assertOk();
+        $this->actingAs($leads, 'admin')->get('/admin/daily-task')->assertStatus(403);
     }
 }
