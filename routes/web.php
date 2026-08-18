@@ -77,6 +77,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Main super-admin dashboard — cross-business-owner overview
             Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
+            // Daily Task — last-12h work per business owner (copy/paste report)
+            Route::get('daily-task', [Admin\DailyTaskController::class, 'index'])->name('daily-task');
+
             // Leads (from public website forms)
             Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');
             Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');

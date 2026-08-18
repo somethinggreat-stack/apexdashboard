@@ -50,6 +50,14 @@ class EndUser extends Model
             }
         });
 
+        // Stamp when a client enters the Clients (Done) list — from any path
+        // (moved to Clients, or added straight in). Powers the Daily Task report.
+        static::saving(function (EndUser $user) {
+            if ($user->isDirty('intake_status') && $user->intake_status === 'done') {
+                $user->listed_at = now();
+            }
+        });
+
         static::deleting(function (EndUser $user) {
             // A soft delete (Recycle Bin) must keep everything for a possible
             // restore — leave the documents and identity files exactly where
@@ -79,7 +87,7 @@ class EndUser extends Model
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer', 'credit_monitoring_security_question', 'credit_monitoring_pin',
         'cfpb_email', 'cfpb_password', 'cfpb_round_credentials',
-        'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date',
+        'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date', 'listed_at',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
@@ -91,6 +99,7 @@ class EndUser extends Model
         'next_round_override' => 'date',
         'deleted_with_owner' => 'boolean',
         'held_at' => 'datetime',
+        'listed_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
         'per_round_fees' => 'array',
