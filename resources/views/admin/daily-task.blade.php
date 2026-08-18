@@ -30,14 +30,56 @@
             <span class="pro-panel-count" style="background:#e0e7ff; color:#4338ca;">{{ count($groups) }} owners · {{ $clientCount }} clients</span>
         </div>
         @if (!empty($groups))
-            <button type="button" class="dt-btn dt-btn-primary" data-copy-el="dtCopyAll">Copy All</button>
+            <button type="button" class="dt-btn dt-btn-primary" data-copy-el="dtCopyAll">📋 Copy All (WhatsApp)</button>
         @endif
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
-        Clients with a process step logged, or newly added to the Clients list, in the last {{ $windowHours }} hours.
+        Clients whose round was started (Week 1 step logged), or newly added to the Clients list, in the last {{ $windowHours }} hours.
         Generated {{ $generatedAt->timezone('America/New_York')->format('M j, Y g:i A') }} ET.
     </p>
 </div>
+
+@php
+    $ownersWorked = count($groups);
+    $newToClients = collect($groups)->sum(fn ($g) => collect($g['clients'])->where('listed', true)->count());
+    $ownerCounts  = collect($groups)
+        ->map(fn ($g) => ['name' => $g['name'], 'count' => count($g['clients'])])
+        ->sortByDesc('count')->values();
+@endphp
+
+{{-- Summary boxes --}}
+<div class="dt-stats">
+    <div class="dt-stat">
+        <div class="dt-stat-label">Total Clients Done Today</div>
+        <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
+        <div class="dt-stat-sub">Across all owners · last {{ $windowHours }}h</div>
+    </div>
+    <div class="dt-stat">
+        <div class="dt-stat-label">Business Owners Worked</div>
+        <div class="dt-stat-val">{{ number_format($ownersWorked) }}</div>
+        <div class="dt-stat-sub">Owners with activity today</div>
+    </div>
+    <div class="dt-stat">
+        <div class="dt-stat-label">New to Clients List</div>
+        <div class="dt-stat-val">{{ number_format($newToClients) }}</div>
+        <div class="dt-stat-sub">Newly added in the window</div>
+    </div>
+</div>
+
+{{-- Per-owner breakdown: who got how many clients done --}}
+@if ($ownerCounts->isNotEmpty())
+    <div class="pro-panel" style="margin-bottom:16px; padding:14px 18px;">
+        <div class="dt-strip-label">Clients done per business owner</div>
+        <div class="dt-owner-strip">
+            @foreach ($ownerCounts as $oc)
+                <span class="dt-owner-pill">
+                    <span class="dt-owner-pill-name">{{ $oc['name'] }}</span>
+                    <span class="dt-owner-pill-count">{{ $oc['count'] }}</span>
+                </span>
+            @endforeach
+        </div>
+    </div>
+@endif
 
 <textarea id="dtCopyAll" class="dt-hidden">{{ $copyAll }}</textarea>
 
@@ -76,6 +118,19 @@
 @push('head')
 <style>
     .dt-hidden { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+    /* Summary stat boxes */
+    .dt-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+    .dt-stat { background:var(--pro-card); border:1px solid var(--pro-line); border-radius:14px; padding:16px 18px; box-shadow:var(--pro-shadow-sm); }
+    .dt-stat-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--pro-muted); }
+    .dt-stat-val { font-size:30px; font-weight:800; color:var(--pro-text); line-height:1.1; margin-top:4px; letter-spacing:-.5px; }
+    .dt-stat-sub { font-size:11.5px; color:var(--pro-muted); margin-top:2px; }
+    @media (max-width:900px){ .dt-stats { grid-template-columns:1fr; } }
+    /* Per-owner breakdown strip */
+    .dt-strip-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--pro-muted); margin-bottom:10px; }
+    .dt-owner-strip { display:flex; flex-wrap:wrap; gap:8px; }
+    .dt-owner-pill { display:inline-flex; align-items:center; gap:8px; background:var(--pro-line-soft); border:1px solid var(--pro-line); border-radius:999px; padding:5px 6px 5px 13px; font-size:13px; }
+    .dt-owner-pill-name { font-weight:600; color:var(--pro-text); }
+    .dt-owner-pill-count { background:#4f46e5; color:#fff; font-weight:700; font-size:12px; min-width:22px; text-align:center; border-radius:999px; padding:1px 7px; }
     .dt-btn {
         border:1px solid var(--pro-line); background:#fff; color:var(--pro-text);
         border-radius:8px; padding:6px 14px; font-size:12.5px; font-weight:600; cursor:pointer;
