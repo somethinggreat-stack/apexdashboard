@@ -82,8 +82,9 @@ class ClientController extends Controller
             'email'                 => 'required|email|unique:clients,email,' . $client->id,
             'password'              => 'nullable|string|min:6',
             'phone'                 => 'nullable|string|max:30',
-            'status'                => 'required|in:active,inactive',
-            'round_cycle_days'      => 'required|in:20,30',
+            'status'                 => 'required|in:active,inactive',
+            'round_cycle_days'       => 'required|in:20,30',
+            'access_revoked_message' => 'nullable|string|max:500',
         ]);
 
         if (empty($data['password'])) {
@@ -91,6 +92,7 @@ class ClientController extends Controller
         }
 
         $data['is_commission_referrer'] = $request->boolean('is_commission_referrer');
+        $data['access_revoked']         = $request->boolean('access_revoked');
         $data['referrer_id']            = $this->validReferrerId($request->input('referrer_id'), $client->id);
 
         $client->update($data);

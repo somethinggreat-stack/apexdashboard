@@ -265,7 +265,7 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         Route::post('login', [Client\AuthController::class, 'login']);
     });
 
-    Route::middleware('auth:client')->group(function () {
+    Route::middleware(['auth:client', 'client.active'])->group(function () {
         Route::match(['get', 'post'], 'logout', [Client\AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [Client\DashboardController::class, 'index'])->name('dashboard');
 

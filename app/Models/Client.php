@@ -16,6 +16,7 @@ class Client extends Authenticatable
     protected $fillable = [
         'admin_id', 'business_name', 'email', 'password',
         'phone', 'monthly_fee', 'status', 'custom_lists_enabled',
+        'access_revoked', 'access_revoked_message',
         'referred_by_chantal', 'is_commission_referrer', 'referrer_id',
         'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
         'intake_monitoring_provider', 'intake_monitoring_enroll_url',
@@ -34,6 +35,7 @@ class Client extends Authenticatable
         'referred_by_chantal'  => 'boolean',
         'is_commission_referrer' => 'boolean',
         'custom_lists_enabled' => 'boolean',
+        'access_revoked'       => 'boolean',
         'per_round_fee'        => 'decimal:2',
         'hourly_rate'          => 'decimal:2',
         'pay_cycle_anchor'     => 'date',

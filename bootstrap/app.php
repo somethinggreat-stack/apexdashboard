@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'client.selected' => \App\Http\Middleware\EnsureClientSelected::class,
+            'client.active'   => \App\Http\Middleware\EnsureClientActive::class,
             'admin.super'     => \App\Http\Middleware\RoleSuper::class,
             'admin.leads'     => \App\Http\Middleware\RoleLeads::class,
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,

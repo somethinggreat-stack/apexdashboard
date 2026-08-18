@@ -34,6 +34,25 @@ class AuthController extends Controller
 
         if (Auth::guard('client')->attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::clear($key);
+            $client = Auth::guard('client')->user();
+
+            // Non-payment wall: valid credentials, but access is revoked — do not
+            // establish a session; show them what they owe instead.
+            if ($client->access_revoked) {
+                $outstanding = 0.0;
+                try {
+                    $outstanding = (float) ($client->paymentTotals()['pending'] ?? 0);
+                } catch (\Throwable $e) {
+                    $outstanding = 0.0;
+                }
+                Auth::guard('client')->logout();
+
+                return response()->view('client.access-revoked', [
+                    'client'      => $client,
+                    'outstanding' => $outstanding,
+                ], 403);
+            }
+
             $request->session()->regenerate();
             return redirect()->intended(route('client.dashboard'));
         }
