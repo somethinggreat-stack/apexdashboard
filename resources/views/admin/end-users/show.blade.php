@@ -82,10 +82,24 @@
                 </span>
             </div>
         </div>
-        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
+        <div>
+            <label>Round</label>
+            <div>
+                <span class="round-hero-edit" onclick="openModal('roundScheduleModal')" role="button" tabindex="0" title="Manage rounds — start the next round or fix dates">
+                    {{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}
+                    <span class="rhe-pencil" aria-hidden="true">✎</span>
+                </span>
+            </div>
+        </div>
     </div>
     @push('head')
     <style>
+        /* Round field in the header — click to open the round editor */
+        .round-hero-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:1px 5px; margin:-1px -5px; transition:background .15s; }
+        .round-hero-edit:hover { background:#eef2ff; }
+        .rhe-pencil { opacity:0; font-size:11px; color:#4f46e5; transition:opacity .15s; }
+        .round-hero-edit:hover .rhe-pencil { opacity:1; }
+
         /* Comments tab — pulse amber→red when the client has comments */
         .tab.tab-has-notes { color:#b45309 !important; font-weight:800; animation: notesPulse 1.25s ease-in-out infinite; }
         .tab.tab-has-notes.active { color:#b91c1c !important; }

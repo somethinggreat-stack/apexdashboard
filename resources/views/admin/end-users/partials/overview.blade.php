@@ -521,41 +521,50 @@
             <button type="button" class="modal-close" onclick="closeModal('roundScheduleModal')">&times;</button>
         </div>
         <p class="muted" style="margin:0 0 14px; font-size:13px;">
-            Check each round the client has reached and set the date it started. The <strong>1st Round</strong> date is
-            the client's start date. Leave <strong>Next Round Date</strong> blank to auto-calculate (one month after the
-            current round's start).
+            Toggle each round the client has reached and set when it started. Hit
+            <strong>Start Next Round</strong> to advance them in one click.
         </p>
         <form method="POST" action="{{ route($rPrefix . '.update', $endUser) }}">
             @csrf @method('PUT')
             <input type="hidden" name="round_schedule_present" value="1">
 
-            <div class="rs-grid">
+            <button type="button" class="rm-next-btn" onclick="rmStartNextRound()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                Start Next Round
+            </button>
+
+            <div class="rm-list">
                 @foreach (\App\Models\EndUser::ROUND_OPTIONS as $rsLabel)
                     @php
                         $rsReached = in_array($rsLabel, $endUser->rounds ?? [], true);
                         $rsDate    = $endUser->roundStartedAt($rsLabel);
+                        $isCurrent = $rsReached && $rsLabel === $endUser->current_round_label;
                     @endphp
-                    <div class="rs-row">
-                        <label class="rs-check">
-                            <input type="checkbox" name="rounds[]" value="{{ $rsLabel }}" {{ $rsReached ? 'checked' : '' }} onchange="rsToggle(this)">
-                            <span>{{ $rsLabel }}</span>
+                    <div class="rm-row {{ $rsReached ? 'is-on' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
+                        <label class="rm-toggle" title="{{ $rsReached ? 'Reached' : 'Not started' }}">
+                            <input type="checkbox" name="rounds[]" value="{{ $rsLabel }}" {{ $rsReached ? 'checked' : '' }} onchange="rmToggle(this)">
+                            <span class="rm-switch"></span>
                         </label>
-                        <input type="date" class="rs-date" name="round_start_dates[{{ $rsLabel }}]"
+                        <div class="rm-name">
+                            {{ $rsLabel }}
+                            <span class="rm-current-tag">Current</span>
+                        </div>
+                        <input type="date" class="rm-date" name="round_start_dates[{{ $rsLabel }}]"
                                value="{{ $rsDate ? \Carbon\Carbon::parse($rsDate)->format('Y-m-d') : '' }}"
                                {{ $rsReached ? '' : 'disabled' }}>
                     </div>
                 @endforeach
             </div>
 
-            <div class="rs-next">
-                <label>Next Round Date <span class="muted">(leave blank to auto-calculate)</span></label>
+            <div class="rm-next-date">
+                <label>Next Round Date <span class="muted">(blank = auto: one cycle after the current round)</span></label>
                 <input type="date" name="next_round_override"
                        value="{{ $endUser->next_round_override ? \Carbon\Carbon::parse($endUser->next_round_override)->format('Y-m-d') : '' }}">
             </div>
 
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+            <div class="rm-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('roundScheduleModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Rounds &amp; Dates</button>
+                <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>
     </div>
@@ -873,17 +882,48 @@
         background: #eef2f7; padding: 2px 8px; border-radius: 999px; align-self: center;
     }
 
-    /* Edit Rounds & Dates modal (unscoped — modal renders outside #tab-overview) */
-    #roundScheduleModal .rs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
-    #roundScheduleModal .rs-row { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
-    #roundScheduleModal .rs-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: #0f172a; cursor: pointer; white-space: nowrap; }
-    #roundScheduleModal .rs-check input { width: 16px; height: 16px; }
-    #roundScheduleModal .rs-date { padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 12.5px; }
-    #roundScheduleModal .rs-date:disabled { background: #f8fafc; color: #cbd5e1; }
-    #roundScheduleModal .rs-next { margin-top: 14px; }
-    #roundScheduleModal .rs-next label { display: block; font-size: 12.5px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
-    #roundScheduleModal .rs-next input { padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
-    @media (max-width: 560px) { #roundScheduleModal .rs-grid { grid-template-columns: 1fr; } }
+    /* ===== Manage Rounds modal (unscoped — renders outside #tab-overview) ===== */
+    #roundScheduleModal .rm-next-btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+        padding: 11px 14px; margin-bottom: 14px; cursor: pointer;
+        background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff; border: 0;
+        border-radius: 11px; font-size: 14px; font-weight: 700;
+        box-shadow: 0 6px 18px rgba(79,70,229,.28); transition: filter .15s, transform .15s;
+    }
+    #roundScheduleModal .rm-next-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    #roundScheduleModal .rm-next-btn svg { width: 18px; height: 18px; }
+    #roundScheduleModal .rm-next-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: default; transform: none; }
+
+    #roundScheduleModal .rm-list { display: flex; flex-direction: column; gap: 8px; }
+    #roundScheduleModal .rm-row {
+        display: flex; align-items: center; gap: 14px;
+        padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 12px;
+        background: #f8fafc; transition: background .15s, border-color .15s;
+    }
+    #roundScheduleModal .rm-row.is-on { background: #fff; border-color: #c7d2fe; }
+    #roundScheduleModal .rm-row.is-current { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5 inset; }
+    #roundScheduleModal .rm-name { flex: 1; font-size: 14px; font-weight: 700; color: #0f172a; }
+    #roundScheduleModal .rm-row:not(.is-on) .rm-name { color: #94a3b8; font-weight: 600; }
+    #roundScheduleModal .rm-current-tag {
+        display: none; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+        background: #eef2ff; color: #4338ca; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle;
+    }
+    #roundScheduleModal .rm-row.is-current .rm-current-tag { display: inline-block; }
+
+    /* toggle switch */
+    #roundScheduleModal .rm-toggle { position: relative; display: inline-block; width: 40px; height: 23px; flex: none; cursor: pointer; }
+    #roundScheduleModal .rm-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+    #roundScheduleModal .rm-switch { position: absolute; inset: 0; background: #cbd5e1; border-radius: 999px; transition: background .18s; }
+    #roundScheduleModal .rm-switch::before { content: ""; position: absolute; height: 17px; width: 17px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+    #roundScheduleModal .rm-toggle input:checked + .rm-switch { background: #4f46e5; }
+    #roundScheduleModal .rm-toggle input:checked + .rm-switch::before { transform: translateX(17px); }
+
+    #roundScheduleModal .rm-date { padding: 7px 9px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; font-family: inherit; }
+    #roundScheduleModal .rm-date:disabled { background: #f1f5f9; color: #cbd5e1; }
+    #roundScheduleModal .rm-next-date { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9; }
+    #roundScheduleModal .rm-next-date label { display: block; font-size: 12.5px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
+    #roundScheduleModal .rm-next-date input { padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; }
+    #roundScheduleModal .rm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 
     /* Responsive */
     @media (max-width: 1280px) {
@@ -908,19 +948,42 @@
 @if ($canEdit)
 @push('scripts')
 <script>
-// Enable/disable a round's date input as its checkbox toggles; prefill today
-// when a round is newly checked so it isn't left blank.
-window.rsToggle = function (cb) {
-    var row = cb.closest('.rs-row');
+function rmEstToday() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+}
+
+// Toggle a round on/off — enable its date (prefilled to today ET) and repaint the row.
+window.rmToggle = function (cb) {
+    var row = cb.closest('.rm-row');
     if (!row) return;
-    var input = row.querySelector('.rs-date');
-    if (!input) return;
-    input.disabled = !cb.checked;
-    if (cb.checked && !input.value) {
-        var t = new Date();
-        input.value = t.getFullYear() + '-' +
-            String(t.getMonth() + 1).padStart(2, '0') + '-' +
-            String(t.getDate()).padStart(2, '0');
+    var input = row.querySelector('.rm-date');
+    row.classList.toggle('is-on', cb.checked);
+    if (input) {
+        input.disabled = !cb.checked;
+        if (cb.checked && !input.value) input.value = rmEstToday();
+    }
+    rmRepaintCurrent();
+};
+
+// Highlight the highest reached round as "Current".
+function rmRepaintCurrent() {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#roundScheduleModal .rm-row'));
+    var lastOn = -1;
+    rows.forEach(function (r, i) { if (r.querySelector('input[type=checkbox]').checked) lastOn = i; });
+    rows.forEach(function (r, i) { r.classList.toggle('is-current', i === lastOn); });
+}
+
+// One-click: turn on the next not-yet-reached round, dated today ET.
+window.rmStartNextRound = function () {
+    var rows = document.querySelectorAll('#roundScheduleModal .rm-row');
+    for (var i = 0; i < rows.length; i++) {
+        var cb = rows[i].querySelector('input[type=checkbox]');
+        if (!cb.checked) {
+            cb.checked = true;
+            rmToggle(cb);
+            rows[i].scrollIntoView({ block: 'nearest' });
+            break;
+        }
     }
 };
 </script>
