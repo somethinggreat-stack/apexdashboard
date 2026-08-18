@@ -101,10 +101,10 @@ class ProcessStep extends Model
                     'ex_tu_eq_letters_generated' => 'EX, TU, EQ Letter Generated',
                     'phone_call_disputes' => 'Phone Call Disputes (EX & TU)',
                     'ftc_and_freezes' => 'FTC + Freezes (All Small Bureaus)',
-                ],
-                2 => [
                     'cfpb_3b_and_innovis' => 'CFPB (All 3B) & Innovis',
                     'experian_upload' => 'Experian Upload',
+                ],
+                2 => [
                     'tu_ex_call_followups' => 'TransUnion & Experian Call Follow-Ups',
                 ],
                 3 => [

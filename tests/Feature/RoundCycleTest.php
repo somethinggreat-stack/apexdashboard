@@ -93,9 +93,13 @@ class RoundCycleTest extends TestCase
             ['aggressive_bureau_followup', 'pull_latest_report', 'record_deletions'],
             array_keys($twenty[3]),
         );
-        // All disputing steps land in weeks 1–2.
-        $this->assertCount(3, $twenty[1]);
-        $this->assertCount(3, $twenty[2]);
+        // Week 1 holds the full initial dispute wave (same five as 30-day),
+        // week 2 is the follow-up. CFPB/Experian are NOT in week 2.
+        $this->assertCount(5, $twenty[1]);
+        $this->assertArrayHasKey('cfpb_3b_and_innovis', $twenty[1]);
+        $this->assertArrayHasKey('experian_upload', $twenty[1]);
+        $this->assertSame(['tu_ex_call_followups'], array_keys($twenty[2]));
+        $this->assertSame(array_keys($thirty[1]), array_keys($twenty[1]), 'week 1 identical across cycles');
     }
 
     public function test_flipping_owner_reprices_existing_clients(): void

@@ -68,11 +68,11 @@ class DailyTaskTest extends TestCase
         $oldListed = $this->eu('Old Listed', 'done', 'ol@test.com');
         EndUser::where('id', $oldListed->id)->update(['listed_at' => now()->subHours(13)]);
 
-        // Recent step but a NON-counted type (follow-up/closeout) → hidden.
-        $followup = $this->eu('Followup Only', 'approved', 'f@test.com');
+        // Recent step but NOT week 1 (a later-week CFPB, like the reported bug) → hidden.
+        $laterWeek = $this->eu('Later Week Only', 'approved', 'f@test.com');
         ProcessStep::create([
-            'end_user_id' => $followup->id, 'round' => 1, 'week' => 4,
-            'step_type' => 'record_deletions', 'step_date' => '2026-06-02',
+            'end_user_id' => $laterWeek->id, 'round' => 1, 'week' => 2,
+            'step_type' => 'cfpb_3b_and_innovis', 'step_date' => '2026-06-02',
             'created_by_admin_id' => $this->super->id,
         ]);
 
@@ -87,7 +87,7 @@ class DailyTaskTest extends TestCase
 
         $resp->assertDontSee('Old Worked');
         $resp->assertDontSee('Old Listed');
-        $resp->assertDontSee('Followup Only');       // non-counted step type → excluded
+        $resp->assertDontSee('Later Week Only');     // week 2 step → excluded (only week 1 counts)
         $resp->assertDontSee('Phone Call Disputes'); // the old step's label must not leak
     }
 

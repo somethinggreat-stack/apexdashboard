@@ -18,19 +18,6 @@ class DailyTaskController extends Controller
 {
     private const WINDOW_HOURS = 12;
 
-    /**
-     * Only these step types (the initial dispute wave) count as "task done" on
-     * the daily report. Follow-up calls, aggressive follow-up, pull report and
-     * record deletions do NOT put a client on the list.
-     */
-    private const COUNTED_STEP_TYPES = [
-        'ex_tu_eq_letters_generated',
-        'phone_call_disputes',
-        'ftc_and_freezes',
-        'cfpb_3b_and_innovis',
-        'experian_upload',
-    ];
-
     public function index()
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
@@ -59,10 +46,11 @@ class DailyTaskController extends Controller
             unset($row);
         };
 
-        // 1) Initial-wave process steps logged in the window (real created_at, not
-        //    the entered date). Only the five counted step types qualify.
+        // 1) Week-1 process steps logged in the window (real created_at, not the
+        //    entered date). Week 1 of any round = that round was started — the only
+        //    thing that counts as a daily task. Follow-up / closeout weeks don't.
         ProcessStep::where('created_at', '>=', $cutoff)
-            ->whereIn('step_type', self::COUNTED_STEP_TYPES)
+            ->where('week', 1)
             ->with(['endUser.client', 'createdBy'])
             ->get()
             ->each(function (ProcessStep $step) use ($ownerId, $addClient) {
