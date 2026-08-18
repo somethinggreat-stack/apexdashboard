@@ -39,6 +39,25 @@
     </p>
 </div>
 
+{{-- WhatsApp message — visible, ready to send --}}
+@if (!empty($groups))
+<div class="pro-panel" style="margin-bottom:16px; padding:16px 18px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span class="pro-panel-chip" style="width:30px; height:30px; background:linear-gradient(140deg,#25d366,#128c7e);">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.05L2 22l5.1-1.34A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.13l-.29-.17-3.03.79.81-2.95-.19-.3A8 8 0 1 1 12 20zm4.5-5.6c-.25-.12-1.47-.72-1.7-.8-.23-.09-.4-.13-.56.12s-.64.8-.79.97-.29.18-.54.06a6.5 6.5 0 0 1-1.92-1.18 7.16 7.16 0 0 1-1.32-1.65c-.14-.24 0-.37.11-.49s.25-.29.37-.44.17-.25.25-.42a.46.46 0 0 0 0-.43c-.06-.12-.56-1.34-.76-1.84s-.4-.42-.56-.42h-.48a.92.92 0 0 0-.67.31 2.8 2.8 0 0 0-.87 2.08 4.86 4.86 0 0 0 1.02 2.58 11.14 11.14 0 0 0 4.27 3.77c.6.26 1.06.41 1.42.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18s.21-1.08.15-1.18-.23-.18-.48-.3z"/></svg>
+            </span>
+            <div>
+                <h2 style="font-size:15px; margin:0;">WhatsApp Message — Ready to Send</h2>
+                <div style="font-size:11.5px; color:var(--pro-muted);">Owner names + clients only. Copy and paste straight into WhatsApp.</div>
+            </div>
+        </div>
+        <button type="button" class="dt-btn dt-btn-wa" data-copy-el="dtWaMsg">📋 Copy Message</button>
+    </div>
+    <textarea id="dtWaMsg" class="dt-wa-text" readonly onclick="this.select()">{{ $copyAll }}</textarea>
+</div>
+@endif
+
 @php
     $ownersWorked = count($groups);
     $newToClients = collect($groups)->sum(fn ($g) => collect($g['clients'])->where('listed', true)->count());
@@ -138,6 +157,17 @@
     .dt-btn:hover { border-color:#94a3b8; }
     .dt-btn-primary { background:#4f46e5; border-color:#4f46e5; color:#fff; }
     .dt-btn-primary:hover { background:#4338ca; border-color:#4338ca; }
+    .dt-btn-wa { background:#25d366; border-color:#25d366; color:#0b2e13; font-weight:700; }
+    .dt-btn-wa:hover { background:#1eb457; border-color:#1eb457; }
+    /* Visible WhatsApp message box */
+    .dt-wa-text {
+        width:100%; min-height:220px; max-height:460px; box-sizing:border-box;
+        padding:14px 16px; border:1px solid var(--pro-line); border-radius:12px;
+        background:var(--pro-line-soft); color:var(--pro-text);
+        font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+        font-size:13.5px; line-height:1.6; white-space:pre; overflow:auto; resize:vertical;
+    }
+    .dt-wa-text:focus { outline:none; border-color:#25d366; box-shadow:0 0 0 2px rgba(37,211,102,.2); }
     .dt-clients { list-style:none; margin:0; padding:6px 22px 16px; }
     .dt-clients li {
         padding:9px 0; border-bottom:1px solid var(--pro-line-soft);
@@ -163,9 +193,9 @@ document.querySelectorAll('[data-copy-el]').forEach(function (btn) {
             setTimeout(function () { btn.textContent = old; }, 1500);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done, function () { el.select(); document.execCommand('copy'); done(); });
+            navigator.clipboard.writeText(text).then(done, function () { el.focus(); el.select(); document.execCommand('copy'); done(); });
         } else {
-            el.style.position = 'static'; el.select(); document.execCommand('copy'); el.style.position = 'absolute'; done();
+            el.focus(); el.select(); document.execCommand('copy'); done();
         }
     });
 });
