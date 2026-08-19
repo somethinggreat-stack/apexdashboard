@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * When a VA enters/updates a client's CFPB login (universal or per-round) and
- * who did it — powers the CFPB Logins daily report (last-12h, per owner).
+ * who did it — powers the CFPB Logins daily report (last-24h, per owner).
  */
 return new class extends Migration
 {

@@ -83,14 +83,36 @@ class CfpbLoginTest extends TestCase
             ->assertOk()->assertDontSee('No Cfpb');
     }
 
-    public function test_old_cfpb_is_hidden_after_12h(): void
+    public function test_per_round_cfpb_stamps_and_shows(): void
     {
         $this->seedWorld();
-        $eu = $this->eu('Old Cfpb', 'o@test.com');
-        $eu->forceFill(['cfpb_logged_at' => now()->subHours(13), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+        $eu = $this->eu('Round Cfpb', 'r@test.com');
+        $eu->forceFill(['rounds' => ['1st Round', '2nd Round']])->save();
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->bo->id])
+            ->put("/admin/end-users/{$eu->id}", $this->payload($eu, [
+                'cfpb_rounds' => [2 => ['email' => 'r2@cfpb.com', 'password' => 'round2pw']],
+            ]))->assertSessionHasNoErrors();
+
+        $this->assertNotNull($eu->refresh()->cfpb_logged_at);
 
         $this->actingAs($this->super, 'admin')->get('/admin/cfpb-logins')
-            ->assertOk()->assertDontSee('Old Cfpb');
+            ->assertOk()->assertSee('Round Cfpb');
+    }
+
+    public function test_window_is_24h(): void
+    {
+        $this->seedWorld();
+        $recent = $this->eu('Recent Cfpb', 'rc@test.com');
+        $recent->forceFill(['cfpb_logged_at' => now()->subHours(20), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+
+        $old = $this->eu('Old Cfpb', 'o@test.com');
+        $old->forceFill(['cfpb_logged_at' => now()->subHours(25), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+
+        $this->actingAs($this->super, 'admin')->get('/admin/cfpb-logins')
+            ->assertOk()
+            ->assertSee('Recent Cfpb')   // 20h ago → inside 24h window
+            ->assertDontSee('Old Cfpb'); // 25h ago → outside
     }
 
     public function test_super_and_va_can_open_but_leads_cannot(): void
