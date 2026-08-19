@@ -34,7 +34,7 @@
         @endif
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
-        Clients whose round was started (Week 1 step logged), or newly added to the Clients list, in the last {{ $windowHours }} hours.
+        Clients a VA started a round for — a Round-N Week&nbsp;1 step logged — in the last {{ $windowHours }} hours.
         Generated {{ $generatedAt->timezone('America/New_York')->format('M j, Y g:i A') }} ET.
     </p>
 </div>
@@ -60,7 +60,6 @@
 
 @php
     $ownersWorked = count($groups);
-    $newToClients = collect($groups)->sum(fn ($g) => collect($g['clients'])->where('listed', true)->count());
     $ownerCounts  = collect($groups)
         ->map(fn ($g) => ['name' => $g['name'], 'count' => count($g['clients'])])
         ->sortByDesc('count')->values();
@@ -85,10 +84,10 @@
     <div class="dt-stat dt-accent-indigo">
         <div class="dt-stat-top">
             <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-            <span class="dt-stat-label">Total Clients Done Today</span>
+            <span class="dt-stat-label">Clients Worked</span>
         </div>
         <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
-        <div class="dt-stat-sub">Across all owners · last {{ $windowHours }}h</div>
+        <div class="dt-stat-sub">Rounds started · last {{ $windowHours }}h</div>
     </div>
     <div class="dt-stat dt-accent-green">
         <div class="dt-stat-top">
@@ -100,18 +99,18 @@
     </div>
     <div class="dt-stat dt-accent-amber">
         <div class="dt-stat-top">
-            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span>
-            <span class="dt-stat-label">New to Clients List</span>
+            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <span class="dt-stat-label">Process Steps Logged</span>
         </div>
-        <div class="dt-stat-val">{{ number_format($newToClients) }}</div>
-        <div class="dt-stat-sub">Newly added in the window</div>
+        <div class="dt-stat-val">{{ number_format($stepCount) }}</div>
+        <div class="dt-stat-sub">Week-1 steps in the window</div>
     </div>
 </div>
 
 {{-- Per-owner breakdown: who got how many clients done --}}
 @if ($ownerCounts->isNotEmpty())
     <div class="pro-panel" style="margin-bottom:16px; padding:14px 18px;">
-        <div class="dt-strip-label">Clients done per business owner</div>
+        <div class="dt-strip-label">Clients worked per business owner</div>
         <div class="dt-owner-strip">
             @foreach ($ownerCounts as $idx => $oc)
                 <span class="dt-owner-pill {{ $idx === 0 ? 'is-top' : '' }}">
@@ -143,13 +142,12 @@
         <ul class="dt-clients">
             @foreach ($g['clients'] as $c)
                 <li>
-                    <span class="dt-check {{ $c['listed'] ? 'is-new' : '' }}">
+                    <span class="dt-check">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </span>
                     <div class="dt-client-main">
                         <div class="dt-row-top">
                             <span class="dt-name">{{ $c['name'] }}</span>
-                            @if ($c['listed'])<span class="dt-tag dt-tag-new">New to Clients</span>@endif
                             @if (!empty($c['vas']))<span class="dt-tag dt-tag-va">{{ implode(', ', array_keys($c['vas'])) }}</span>@endif
                         </div>
                         @if (!empty($c['tasks']))

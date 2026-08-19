@@ -43,28 +43,28 @@ class DailyTaskTest extends TestCase
     {
         $this->seedWorld();
 
-        // Recent process step → client + VA appear.
+        // A VA who marks a Week-1 step in the window → the client + this VA appear.
+        $va = new Admin(['email' => 'bea@test.com', 'password' => 'secret', 'full_name' => 'Bea']);
+        $va->role = 'va';
+        $va->parent_admin_id = $this->super->id;
+        $va->save();
+
+        // Recent Week-1 step, marked by a VA → client + VA + step appear.
         $worked = $this->eu('Recent Worked', 'approved', 'w@test.com');
         ProcessStep::create([
             'end_user_id' => $worked->id, 'round' => 1, 'week' => 1,
             'step_type' => 'ex_tu_eq_letters_generated', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $this->super->id,
+            'created_by_admin_id' => $va->id,
         ]);
 
-        // Newly listed in Clients (created as done → listed_at stamped now).
-        // Its Week-1 step is OLD (13h ago) so loop 1 skips it — the listed path
-        // itself must still surface the VA + step for this row.
-        $listedVa = new Admin(['email' => 'bea@test.com', 'password' => 'secret', 'full_name' => 'Bea']);
-        $listedVa->role = 'va';
-        $listedVa->parent_admin_id = $this->super->id;
-        $listedVa->save();
-
-        $listed = $this->eu('Newly Listed', 'done', 'l@test.com');
+        // Moved to Clients/Done in the window, but its only Week-1 step is OLD
+        // (13h ago). Being listed is NOT work → must NOT appear.
+        $listed = $this->eu('Merely Listed', 'done', 'l@test.com');
         $this->assertNotNull($listed->fresh()->listed_at);
         $listedStep = ProcessStep::create([
             'end_user_id' => $listed->id, 'round' => 1, 'week' => 1,
             'step_type' => 'ftc_and_freezes', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $listedVa->id,
+            'created_by_admin_id' => $this->super->id,
         ]);
         ProcessStep::where('id', $listedStep->id)->update(['created_at' => now()->subHours(13)]);
 
@@ -77,10 +77,6 @@ class DailyTaskTest extends TestCase
         ]);
         ProcessStep::where('id', $oldStep->id)->update(['created_at' => now()->subHours(13)]);
 
-        // Old listing (13h ago) → hidden.
-        $oldListed = $this->eu('Old Listed', 'done', 'ol@test.com');
-        EndUser::where('id', $oldListed->id)->update(['listed_at' => now()->subHours(13)]);
-
         // Recent step but NOT week 1 (a later-week CFPB, like the reported bug) → hidden.
         $laterWeek = $this->eu('Later Week Only', 'approved', 'f@test.com');
         ProcessStep::create([
@@ -92,18 +88,15 @@ class DailyTaskTest extends TestCase
         $resp = $this->actingAs($this->super, 'admin')->get('/admin/daily-task')->assertOk();
 
         $resp->assertSee('Alin');            // business owner block
-        $resp->assertSee('Recent Worked');   // via process step
-        $resp->assertSee('Umair');           // the VA who logged it
+        $resp->assertSee('Recent Worked');   // via in-window Week-1 step
+        $resp->assertSee('Bea');             // the VA who logged it
         $resp->assertSee('EX, TU, EQ Letter Generated'); // what was marked
-        $resp->assertSee('Newly Listed');    // via listed_at
-        $resp->assertSee('New to Clients');
-        $resp->assertSee('Bea');             // VA attached to the listed row
-        $resp->assertSee('FTC + Freezes (All Small Bureaus)'); // its Week-1 step
 
+        $resp->assertDontSee('Merely Listed'); // moved to Done, no in-window step → excluded
         $resp->assertDontSee('Old Worked');
-        $resp->assertDontSee('Old Listed');
         $resp->assertDontSee('Later Week Only');     // week 2 step → excluded (only week 1 counts)
         $resp->assertDontSee('Phone Call Disputes'); // the old step's label must not leak
+        $resp->assertDontSee('New to Clients');      // the listed concept is gone
     }
 
     public function test_super_and_va_can_open_daily_task_but_leads_cannot(): void
