@@ -1,10 +1,9 @@
 @extends($adminLayout ?? 'layouts.admin-pro')
 
-@section('title', 'Daily Task')
-@section('subtitle', "Everything worked on in the last {$windowHours} hours — grouped by business owner.")
+@section('title', 'CFPB Logins')
+@section('subtitle', "CFPB logins entered in the last {$windowHours} hours — grouped by business owner.")
 
 @php
-    // WhatsApp-style copy text: OWNER (caps) then client names, dashed separator.
     $sep = str_repeat('—', 26);
     $buildText = function ($group) use ($sep) {
         $t = strtoupper($group['name']) . "\n";
@@ -17,24 +16,42 @@
     foreach ($groups as $g) {
         $copyAll .= $buildText($g) . "\n";
     }
+
+    $ownerCounts = collect($groups)
+        ->map(fn ($g) => ['name' => $g['name'], 'count' => count($g['clients'])])
+        ->sortByDesc('count')->values();
+
+    $grads = [
+        'linear-gradient(135deg,#6366f1,#4338ca)','linear-gradient(135deg,#10b981,#059669)',
+        'linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#ec4899,#be185d)',
+        'linear-gradient(135deg,#06b6d4,#0891b2)','linear-gradient(135deg,#8b5cf6,#6d28d9)',
+        'linear-gradient(135deg,#f43f5e,#be123c)','linear-gradient(135deg,#14b8a6,#0f766e)',
+    ];
+    $gradFor  = fn ($name) => $grads[abs(crc32($name)) % count($grads)];
+    $initials = function ($name) {
+        $p = preg_split('/\s+/', trim($name));
+        $a = mb_substr($p[0] ?? '', 0, 1);
+        $b = count($p) > 1 ? mb_substr(end($p), 0, 1) : mb_substr($p[0] ?? '', 1, 1);
+        return mb_strtoupper($a . $b);
+    };
 @endphp
 
 @section('content')
 <div class="pro-panel" style="margin-bottom:16px;">
     <div class="pro-panel-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div class="pro-panel-title">
-            <span class="pro-panel-chip" style="background:linear-gradient(140deg,#34d399,#059669);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span class="pro-panel-chip" style="background:linear-gradient(140deg,#2dd4bf,#0d9488);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </span>
-            <h2>Daily Task</h2>
-            <span class="pro-panel-count" style="background:#e0e7ff; color:#4338ca;">{{ count($groups) }} owners · {{ $clientCount }} clients</span>
+            <h2>CFPB Logins</h2>
+            <span class="pro-panel-count" style="background:#ccfbf1; color:#0f766e;">{{ count($groups) }} owners · {{ $clientCount }} clients</span>
         </div>
         @if (!empty($groups))
             <button type="button" class="dt-btn dt-btn-primary" data-copy-el="dtCopyAll">📋 Copy All (WhatsApp)</button>
         @endif
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
-        Clients whose round was started (Week 1 step logged), or newly added to the Clients list, in the last {{ $windowHours }} hours.
+        Clients that had a CFPB login (universal or per-round) entered or updated in the last {{ $windowHours }} hours.
         Generated {{ $generatedAt->timezone('America/New_York')->format('M j, Y g:i A') }} ET.
     </p>
 </div>
@@ -58,60 +75,38 @@
 </div>
 @endif
 
-@php
-    $ownersWorked = count($groups);
-    $newToClients = collect($groups)->sum(fn ($g) => collect($g['clients'])->where('listed', true)->count());
-    $ownerCounts  = collect($groups)
-        ->map(fn ($g) => ['name' => $g['name'], 'count' => count($g['clients'])])
-        ->sortByDesc('count')->values();
-
-    $grads = [
-        'linear-gradient(135deg,#6366f1,#4338ca)','linear-gradient(135deg,#10b981,#059669)',
-        'linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#ec4899,#be185d)',
-        'linear-gradient(135deg,#06b6d4,#0891b2)','linear-gradient(135deg,#8b5cf6,#6d28d9)',
-        'linear-gradient(135deg,#f43f5e,#be123c)','linear-gradient(135deg,#14b8a6,#0f766e)',
-    ];
-    $gradFor  = fn ($name) => $grads[abs(crc32($name)) % count($grads)];
-    $initials = function ($name) {
-        $p = preg_split('/\s+/', trim($name));
-        $a = mb_substr($p[0] ?? '', 0, 1);
-        $b = count($p) > 1 ? mb_substr(end($p), 0, 1) : mb_substr($p[0] ?? '', 1, 1);
-        return mb_strtoupper($a . $b);
-    };
-@endphp
-
-{{-- Summary boxes --}}
+{{-- Summary box --}}
 <div class="dt-stats">
-    <div class="dt-stat dt-accent-indigo">
+    <div class="dt-stat dt-accent-teal">
         <div class="dt-stat-top">
-            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-            <span class="dt-stat-label">Total Clients Done Today</span>
+            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <span class="dt-stat-label">CFPB Logins Added</span>
         </div>
         <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
         <div class="dt-stat-sub">Across all owners · last {{ $windowHours }}h</div>
     </div>
-    <div class="dt-stat dt-accent-green">
+    <div class="dt-stat dt-accent-indigo">
         <div class="dt-stat-top">
             <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/></svg></span>
-            <span class="dt-stat-label">Business Owners Worked</span>
+            <span class="dt-stat-label">Business Owners Covered</span>
         </div>
-        <div class="dt-stat-val">{{ number_format($ownersWorked) }}</div>
-        <div class="dt-stat-sub">Owners with activity today</div>
+        <div class="dt-stat-val">{{ number_format(count($groups)) }}</div>
+        <div class="dt-stat-sub">Owners with CFPB activity</div>
     </div>
-    <div class="dt-stat dt-accent-amber">
+    <div class="dt-stat dt-accent-green">
         <div class="dt-stat-top">
-            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span>
-            <span class="dt-stat-label">New to Clients List</span>
+            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <span class="dt-stat-label">Ready for Filing</span>
         </div>
-        <div class="dt-stat-val">{{ number_format($newToClients) }}</div>
-        <div class="dt-stat-sub">Newly added in the window</div>
+        <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
+        <div class="dt-stat-sub">Logins entered this window</div>
     </div>
 </div>
 
-{{-- Per-owner breakdown: who got how many clients done --}}
+{{-- Per-owner breakdown --}}
 @if ($ownerCounts->isNotEmpty())
     <div class="pro-panel" style="margin-bottom:16px; padding:14px 18px;">
-        <div class="dt-strip-label">Clients done per business owner</div>
+        <div class="dt-strip-label">CFPB logins added per business owner</div>
         <div class="dt-owner-strip">
             @foreach ($ownerCounts as $idx => $oc)
                 <span class="dt-owner-pill {{ $idx === 0 ? 'is-top' : '' }}">
@@ -133,7 +128,7 @@
                 <span class="dt-avatar" style="background:{{ $gradFor($g['name']) }};">{{ $initials($g['name']) }}</span>
                 <div>
                     <div class="dt-owner-name">{{ $g['name'] }}</div>
-                    <div class="dt-owner-sub">{{ count($g['clients']) }} {{ count($g['clients']) === 1 ? 'client' : 'clients' }} worked</div>
+                    <div class="dt-owner-sub">{{ count($g['clients']) }} CFPB {{ count($g['clients']) === 1 ? 'login' : 'logins' }} added</div>
                 </div>
             </div>
             <button type="button" class="dt-btn" data-copy-el="dtBO{{ $boId }}">📋 Copy</button>
@@ -143,18 +138,14 @@
         <ul class="dt-clients">
             @foreach ($g['clients'] as $c)
                 <li>
-                    <span class="dt-check {{ $c['listed'] ? 'is-new' : '' }}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span class="dt-check is-cfpb">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </span>
                     <div class="dt-client-main">
                         <div class="dt-row-top">
                             <span class="dt-name">{{ $c['name'] }}</span>
-                            @if ($c['listed'])<span class="dt-tag dt-tag-new">New to Clients</span>@endif
                             @if (!empty($c['vas']))<span class="dt-tag dt-tag-va">{{ implode(', ', array_keys($c['vas'])) }}</span>@endif
                         </div>
-                        @if (!empty($c['tasks']))
-                            <div class="dt-tasks">{{ implode('  ·  ', array_keys($c['tasks'])) }}</div>
-                        @endif
                     </div>
                 </li>
             @endforeach
@@ -162,7 +153,7 @@
     </div>
 @empty
     <div class="pro-panel" style="padding:40px 22px; text-align:center; color:var(--pro-muted);">
-        No client work logged in the last {{ $windowHours }} hours.
+        No CFPB logins added in the last {{ $windowHours }} hours.
     </div>
 @endforelse
 

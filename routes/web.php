@@ -146,6 +146,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('universal-search');
         // Daily Task — last-12h work per business owner (super admin + VAs)
         Route::get('daily-task', [Admin\DailyTaskController::class, 'index'])->name('daily-task');
+        // CFPB Logins — last-12h CFPB logins entered per business owner
+        Route::get('cfpb-logins', [Admin\CfpbLoginController::class, 'index'])->name('cfpb-logins');
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])

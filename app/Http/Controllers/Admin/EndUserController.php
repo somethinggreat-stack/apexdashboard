@@ -367,6 +367,33 @@ class EndUserController extends Controller
             $data['cfpb_round_credentials'] = $merged ?: null;
         }
 
+        // Record when a CFPB login is entered or changed (universal or per-round)
+        // and who did it — powers the CFPB Logins daily report. Detected from the
+        // raw input because the fields are encrypted (isDirty() can't tell). A
+        // password typed in, or a new/changed email, counts; an unchanged profile
+        // save does not, so plain edits don't falsely flag CFPB work.
+        $cfpbChanged = false;
+        $newEmail = trim((string) $request->input('cfpb_email', ''));
+        if ($newEmail !== '' && $newEmail !== trim((string) ($endUser->cfpb_email ?? ''))) {
+            $cfpbChanged = true;
+        }
+        if (trim((string) $request->input('cfpb_password', '')) !== '') {
+            $cfpbChanged = true;
+        }
+        if (! $cfpbChanged && $request->has('cfpb_rounds')) {
+            $existingRounds = $endUser->cfpb_round_credentials ?? [];
+            foreach ((array) $request->input('cfpb_rounds', []) as $round => $vals) {
+                if (trim((string) ($vals['password'] ?? '')) !== '') { $cfpbChanged = true; break; }
+                $rEmail   = trim((string) ($vals['email'] ?? ''));
+                $oldEmail = trim((string) ($existingRounds[(string) (int) $round]['email'] ?? ''));
+                if ($rEmail !== '' && $rEmail !== $oldEmail) { $cfpbChanged = true; break; }
+            }
+        }
+        if ($cfpbChanged) {
+            $data['cfpb_logged_at']          = now();
+            $data['cfpb_logged_by_admin_id'] = Auth::guard('admin')->id();
+        }
+
         // Rounds only persist when the submitting form includes the rounds section
         // (hidden `rounds_present` flag). This lets the inline status-only form leave
         // existing rounds untouched, while allowing the edit modal to clear them.

@@ -86,7 +86,7 @@ class EndUser extends Model
         'ssn', 'ssn_picture_path', 'photo_id_path', 'proof_of_address_path', 'collage_path',
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer', 'credit_monitoring_security_question', 'credit_monitoring_pin',
-        'cfpb_email', 'cfpb_password', 'cfpb_round_credentials',
+        'cfpb_email', 'cfpb_password', 'cfpb_round_credentials', 'cfpb_logged_at', 'cfpb_logged_by_admin_id',
         'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date', 'listed_at',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
@@ -100,6 +100,7 @@ class EndUser extends Model
         'deleted_with_owner' => 'boolean',
         'held_at' => 'datetime',
         'listed_at' => 'datetime',
+        'cfpb_logged_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
         'per_round_fees' => 'array',
@@ -156,6 +157,12 @@ class EndUser extends Model
     public function deletedBy()
     {
         return $this->belongsTo(Admin::class, 'deleted_by_admin_id');
+    }
+
+    /** The admin/VA who last entered this client's CFPB login. */
+    public function cfpbLoggedBy()
+    {
+        return $this->belongsTo(Admin::class, 'cfpb_logged_by_admin_id');
     }
 
     public function scopeForAdmin($query, $adminId)
