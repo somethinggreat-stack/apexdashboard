@@ -52,8 +52,21 @@ class DailyTaskTest extends TestCase
         ]);
 
         // Newly listed in Clients (created as done → listed_at stamped now).
+        // Its Week-1 step is OLD (13h ago) so loop 1 skips it — the listed path
+        // itself must still surface the VA + step for this row.
+        $listedVa = new Admin(['email' => 'bea@test.com', 'password' => 'secret', 'full_name' => 'Bea']);
+        $listedVa->role = 'va';
+        $listedVa->parent_admin_id = $this->super->id;
+        $listedVa->save();
+
         $listed = $this->eu('Newly Listed', 'done', 'l@test.com');
         $this->assertNotNull($listed->fresh()->listed_at);
+        $listedStep = ProcessStep::create([
+            'end_user_id' => $listed->id, 'round' => 1, 'week' => 1,
+            'step_type' => 'ftc_and_freezes', 'step_date' => '2026-06-02',
+            'created_by_admin_id' => $listedVa->id,
+        ]);
+        ProcessStep::where('id', $listedStep->id)->update(['created_at' => now()->subHours(13)]);
 
         // Old step (13h ago) → hidden.
         $old = $this->eu('Old Worked', 'approved', 'o@test.com');
@@ -84,6 +97,8 @@ class DailyTaskTest extends TestCase
         $resp->assertSee('EX, TU, EQ Letter Generated'); // what was marked
         $resp->assertSee('Newly Listed');    // via listed_at
         $resp->assertSee('New to Clients');
+        $resp->assertSee('Bea');             // VA attached to the listed row
+        $resp->assertSee('FTC + Freezes (All Small Bureaus)'); // its Week-1 step
 
         $resp->assertDontSee('Old Worked');
         $resp->assertDontSee('Old Listed');

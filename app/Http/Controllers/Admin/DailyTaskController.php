@@ -46,6 +46,12 @@ class DailyTaskController extends Controller
             unset($row);
         };
 
+        // Ordinal-prefixed step label, e.g. "4th · CFPB (All 3B) & Innovis".
+        $taskLabel = function (ProcessStep $step) {
+            $roundLabel = \App\Models\EndUser::ROUND_OPTIONS[$step->round - 1] ?? "Round {$step->round}";
+            return \Illuminate\Support\Str::before($roundLabel, ' Round') . ' · ' . $step->step_type_label;
+        };
+
         // 1) Week-1 process steps logged in the window (real created_at, not the
         //    entered date). Week 1 of any round = that round was started — the only
         //    thing that counts as a daily task. Follow-up / closeout weeks don't.
@@ -53,22 +59,33 @@ class DailyTaskController extends Controller
             ->where('week', 1)
             ->with(['endUser.client', 'createdBy'])
             ->get()
-            ->each(function (ProcessStep $step) use ($ownerId, $addClient) {
+            ->each(function (ProcessStep $step) use ($ownerId, $addClient, $taskLabel) {
                 $eu = $step->endUser;
                 if (!$eu || !$eu->client || $eu->client->admin_id !== $ownerId) {
                     return;
                 }
-                $roundLabel = \App\Models\EndUser::ROUND_OPTIONS[$step->round - 1] ?? "Round {$step->round}";
-                $task = \Illuminate\Support\Str::before($roundLabel, ' Round') . ' · ' . $step->step_type_label;
-                $addClient($eu, $step->createdBy?->full_name, false, $task);
+                $addClient($eu, $step->createdBy?->full_name, false, $taskLabel($step));
             });
 
-        // 2) Clients newly added to the Clients (Done) list in the window.
+        // 2) Clients newly added to the Clients (Done) list in the window. Attach
+        //    the VA(s) and Week-1 steps of their latest round so these rows carry
+        //    the same "who did it + what was done" detail as the worked rows.
         EndUser::where('listed_at', '>=', $cutoff)
             ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
-            ->with('client')
+            ->with(['client', 'processSteps.createdBy'])
             ->get()
-            ->each(fn (EndUser $eu) => $addClient($eu, null, true, null));
+            ->each(function (EndUser $eu) use ($addClient, $taskLabel) {
+                $addClient($eu, null, true, null);
+
+                $latestRound = $eu->processSteps->max('round');
+                if ($latestRound === null) {
+                    return;
+                }
+                $eu->processSteps
+                    ->where('round', $latestRound)
+                    ->where('week', 1)
+                    ->each(fn (ProcessStep $step) => $addClient($eu, $step->createdBy?->full_name, true, $taskLabel($step)));
+            });
 
         // Sort owners by name, clients by name.
         uasort($groups, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
