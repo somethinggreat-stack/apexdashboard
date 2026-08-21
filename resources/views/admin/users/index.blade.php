@@ -99,7 +99,7 @@
 <div id="addUserModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Add User (VA)</h3>
+            <h3>Add User</h3>
             <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
         </div>
         <form method="POST" action="{{ route('admin.users.store') }}">
@@ -107,6 +107,13 @@
             <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" value="{{ old('full_name') }}" required></div>
             <div class="form-group"><label>Email *</label><input type="email" name="email" value="{{ old('email') }}" required></div>
             <div class="form-group"><label>Password *</label><input type="text" name="password" minlength="10" required></div>
+            <div class="form-group">
+                <label>Role *</label>
+                <select name="role" required>
+                    <option value="va" @selected(old('role', 'va') === 'va')>VA — works all business owners (no payments/leads)</option>
+                    <option value="leads" @selected(old('role') === 'leads')>Leads Agent — sales leads pipeline only</option>
+                </select>
+            </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add User</button>

@@ -8,9 +8,13 @@ use Illuminate\Database\Seeder;
 class TeamSeeder extends Seeder
 {
     /**
-     * Sync the super admin + VA + leads-agent users from env (config/team.php).
-     * Idempotent — safe to run on every deploy. Only touches accounts whose
-     * email + password are set in env; never deletes anyone.
+     * Guarantee the super admin account exists (from env) so login never breaks.
+     * Idempotent — safe to run on every deploy; never deletes anyone.
+     *
+     * VAs and leads agents are NOT seeded here. They are managed entirely from
+     * the Users & Activity screen (add with a role, delete permanently). Seeding
+     * them on every deploy used to re-create accounts the super admin had
+     * deleted — the database is the single source of truth for them now.
      */
     public function run(): void
     {
@@ -21,21 +25,7 @@ class TeamSeeder extends Seeder
             return;
         }
 
-        $superAdmin = $this->sync($super['email'], $super['name'] ?: 'Admin', $super['password'], 'super', null);
-
-        foreach (config('team.vas', []) as $va) {
-            if (empty($va['email']) || empty($va['password'])) {
-                continue;
-            }
-            $this->sync($va['email'], $va['name'] ?: $va['email'], $va['password'], 'va', $superAdmin->id);
-        }
-
-        foreach (config('team.leads', []) as $lead) {
-            if (empty($lead['email']) || empty($lead['password'])) {
-                continue;
-            }
-            $this->sync($lead['email'], $lead['name'] ?: $lead['email'], $lead['password'], 'leads', $superAdmin->id);
-        }
+        $this->sync($super['email'], $super['name'] ?: 'Admin', $super['password'], 'super', null);
     }
 
     /**

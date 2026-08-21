@@ -58,6 +58,9 @@ class UserController extends Controller
             'full_name' => 'required|string|max:255',
             'email'     => 'required|email|max:255|unique:admins,email',
             'password'  => 'required|string|min:10',
+            // Only VA and Leads Agent can be created here. A second super admin
+            // is never minted from this screen (privilege-escalation guard).
+            'role'      => 'required|in:va,leads',
         ]);
 
         // role + parent_admin_id are NOT mass-assignable — set explicitly.
@@ -65,11 +68,13 @@ class UserController extends Controller
         $admin->full_name       = $data['full_name'];
         $admin->email           = $data['email'];
         $admin->password        = $data['password'];
-        $admin->role            = 'va';
+        $admin->role            = $data['role'];
         $admin->parent_admin_id = Auth::guard('admin')->user()->dataOwnerId();
         $admin->save();
 
-        return back()->with('status', "{$data['full_name']} added.");
+        $roleLabel = $data['role'] === 'leads' ? 'Leads Agent' : 'VA';
+
+        return back()->with('status', "{$data['full_name']} added as {$roleLabel}.");
     }
 
     public function resetPassword(Request $request, string $id)
