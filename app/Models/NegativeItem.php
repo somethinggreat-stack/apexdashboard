@@ -35,10 +35,11 @@ class NegativeItem extends Model
     ];
 
     public const BUREAUS = [
-        'all'        => 'All Bureau',
-        'experian'   => 'Experian',
-        'transunion' => 'TransUnion',
-        'equifax'    => 'Equifax',
+        'all'         => 'All Bureau',
+        'experian'    => 'Experian',
+        'transunion'  => 'TransUnion',
+        'equifax'     => 'Equifax',
+        'chexsystems' => 'ChexSystems',
     ];
 
     /** Terminal statuses per goal: a delete-item is "deleted", an update-item is "updated". */
