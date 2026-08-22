@@ -54,7 +54,7 @@ class ResultsTrackingTest extends TestCase
             $status = $goal === 'update' ? 'updated' : 'deleted';
         }
         return $eu->negativeItems()->create([
-            'name' => $name, 'category' => 'account', 'goal' => $goal,
+            'name' => $name, 'category' => 'negative_account', 'goal' => $goal,
             'status' => $status, 'opened_on' => $openedOn, 'resolved_at' => $resolvedOn,
         ]);
     }
@@ -78,9 +78,9 @@ class ResultsTrackingTest extends TestCase
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
             ->post('/admin/end-users', $this->addClientPayload([
                 'negative_items' => [
-                    ['name' => 'Portfolio Recovery', 'category' => 'collection', 'goal' => 'delete', 'bureau' => 'experian'],
-                    ['name' => 'Capital One', 'category' => 'account', 'goal' => 'update', 'bureau' => ''],
-                    ['name' => '', 'category' => 'account', 'goal' => 'delete', 'bureau' => ''], // blank → ignored
+                    ['name' => 'Portfolio Recovery', 'category' => 'negative_account', 'goal' => 'delete', 'bureau' => 'experian'],
+                    ['name' => 'Capital One', 'category' => 'negative_account', 'goal' => 'update', 'bureau' => ''],
+                    ['name' => '', 'category' => 'negative_account', 'goal' => 'delete', 'bureau' => ''], // blank → ignored
                 ],
             ]))->assertRedirect();
 
@@ -96,7 +96,7 @@ class ResultsTrackingTest extends TestCase
 
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->other->id])
             ->post('/admin/end-users', $this->addClientPayload([
-                'email' => 'nо@t.com', 'negative_items' => [['name' => 'X', 'category' => 'account', 'goal' => 'delete']],
+                'email' => 'nо@t.com', 'negative_items' => [['name' => 'X', 'category' => 'negative_account', 'goal' => 'delete']],
             ]))->assertRedirect();
 
         $this->assertSame(0, NegativeItem::count());
@@ -108,7 +108,7 @@ class ResultsTrackingTest extends TestCase
         $eu = $this->eu($this->other, 'Ben');
 
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->other->id])
-            ->post('/admin/negative-items', ['end_user_id' => $eu->id, 'name' => 'X', 'category' => 'account', 'goal' => 'delete'])
+            ->post('/admin/negative-items', ['end_user_id' => $eu->id, 'name' => 'X', 'category' => 'negative_account', 'goal' => 'delete'])
             ->assertNotFound();
     }
 
@@ -194,16 +194,22 @@ class ResultsTrackingTest extends TestCase
         $this->item($jane, 'Portfolio Recovery', 'delete', null);
         $ben = $this->eu($this->other, 'Ben');
 
+        // Clinecea selected → Results tab + sidebar report links appear.
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
             ->get("/admin/end-users/{$jane->id}")
             ->assertOk()
             ->assertSee('Negative Items')
-            ->assertSee('Portfolio Recovery');
+            ->assertSee('Portfolio Recovery')
+            ->assertSee('EOD Report')
+            ->assertSee('Monthly Results');
 
+        // A non-tracking owner selected → none of it appears.
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->other->id])
             ->get("/admin/end-users/{$ben->id}")
             ->assertOk()
-            ->assertDontSee('Negative Items &amp; Results');
+            ->assertDontSee('Negative Items &amp; Results')
+            ->assertDontSee('EOD Report')
+            ->assertDontSee('Monthly Results');
     }
 
     public function test_leads_cannot_reach_results_reports(): void

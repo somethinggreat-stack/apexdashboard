@@ -20,7 +20,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('end_user_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('category')->default('account');   // account|inquiry|collection|public_record|other
+            $table->string('category')->default('negative_account');   // negative_account|inquiry|bankruptcy
             $table->string('goal')->default('delete');        // delete|update
             $table->string('bureau')->nullable();             // experian|transunion|equifax|multiple|null
             $table->string('status')->default('reporting');   // reporting|deleted|updated

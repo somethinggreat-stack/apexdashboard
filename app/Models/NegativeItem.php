@@ -22,11 +22,9 @@ class NegativeItem extends Model
     ];
 
     public const CATEGORIES = [
-        'account'       => 'Account',
-        'inquiry'       => 'Inquiry',
-        'collection'    => 'Collection',
-        'public_record' => 'Public Record',
-        'other'         => 'Other',
+        'negative_account' => 'Negative Account',
+        'inquiry'          => 'Inquiry',
+        'bankruptcy'       => 'Bankruptcy',
     ];
 
     public const GOALS = [

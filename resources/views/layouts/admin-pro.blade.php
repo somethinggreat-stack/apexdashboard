@@ -7,7 +7,6 @@
     $me      = Auth::guard('admin')->user();
     $isSuper = $me?->isSuper();
     $bo      = $selectedClient ?? null;
-    $hasResults = $me ? \App\Models\Client::where('admin_id', $me->dataOwnerId())->where('results_tracking', true)->exists() : false;
     $ini = collect(explode(' ', trim($me?->full_name ?: 'Admin')))
             ->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
 @endphp
@@ -147,6 +146,18 @@
                     Payments
                 </a>
                 @endif
+
+                {{-- Results reports — only for a results-tracking owner (Clinecea) --}}
+                @if ($selectedClient->resultsTrackingEnabled())
+                <a href="{{ route('admin.results.eod') }}" class="{{ request()->routeIs('admin.results.eod') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+                    EOD Report
+                </a>
+                <a href="{{ route('admin.results.monthly') }}" class="{{ request()->routeIs('admin.results.monthly') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    Monthly Results
+                </a>
+                @endif
             @else
                 @php
                     $isLeads   = request()->routeIs('admin.prospect-leads.index');
@@ -181,16 +192,6 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Profile
                 </a>
-                @if ($hasResults)
-                <a href="{{ route('admin.results.eod') }}" class="{{ request()->routeIs('admin.results.eod') ? 'active' : '' }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
-                    EOD Report
-                </a>
-                <a href="{{ route('admin.results.monthly') }}" class="{{ request()->routeIs('admin.results.monthly') ? 'active' : '' }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                    Monthly Results
-                </a>
-                @endif
                 @endif
 
                 @if ($isSuper)
@@ -216,16 +217,6 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Profile
                 </a>
-                @if ($hasResults)
-                <a href="{{ route('admin.results.eod') }}" class="{{ request()->routeIs('admin.results.eod') ? 'active' : '' }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
-                    EOD Report
-                </a>
-                <a href="{{ route('admin.results.monthly') }}" class="{{ request()->routeIs('admin.results.monthly') ? 'active' : '' }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                    Monthly Results
-                </a>
-                @endif
 
                 <a href="{{ route('admin.prospect-leads.index', ['channel' => 'whatsapp']) }}" class="{{ $isLeads && $curCh === 'whatsapp' ? 'active' : '' }}">{!! $icoWa !!} WhatsApp Leads</a>
                 <a href="{{ route('admin.prospect-leads.index', ['channel' => 'phone']) }}" class="{{ $isLeads && $curCh === 'phone' ? 'active' : '' }}">{!! $icoPh !!} Phone Leads</a>

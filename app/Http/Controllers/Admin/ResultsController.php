@@ -20,12 +20,22 @@ use Illuminate\Support\Facades\Auth;
  */
 class ResultsController extends Controller
 {
-    /** Business-owner ids in this org that have results tracking enabled. */
+    /**
+     * Business-owner ids to report on. When a business owner is selected (the
+     * reports are opened from that owner's nav), scope to just that owner if it
+     * has results tracking on; otherwise fall back to every enabled owner in the
+     * org. Either way only results-tracking owners are ever included.
+     */
     private function enabledOwnerIds()
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $query   = Client::where('admin_id', $ownerId)->where('results_tracking', true);
 
-        return Client::where('admin_id', $ownerId)->where('results_tracking', true)->pluck('id');
+        if ($selected = session('selected_client_id')) {
+            $query->where('id', $selected);
+        }
+
+        return $query->pluck('id');
     }
 
     private function ownerName($boIds): string

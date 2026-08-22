@@ -247,7 +247,7 @@ class EndUserController extends Controller
 
             $endUser->negativeItems()->create([
                 'name'                => mb_substr($name, 0, 255),
-                'category'            => array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'account',
+                'category'            => array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'negative_account',
                 'goal'                => array_key_exists($goal, NegativeItem::GOALS) ? $goal : 'delete',
                 'bureau'              => in_array($bureau, ['experian', 'transunion', 'equifax', 'multiple'], true) ? $bureau : null,
                 'status'              => 'reporting',
