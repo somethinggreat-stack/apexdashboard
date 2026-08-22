@@ -150,21 +150,35 @@ class EndUserController extends Controller
      * Letters>/<file>". Each document is filed under the round whose start date
      * is the latest on/before the document's date. Super-admin only.
      */
+    /** Active clients per batch — keeps each ZIP small enough to beat the host's request timeout. */
+    private const LETTERS_BATCH_SIZE = 5;
+
     public function exportLetters(Request $request)
     {
         @set_time_limit(600);
+        @ini_set('memory_limit', '512M');
 
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
         $bo      = Client::forAdmin($ownerId)->findOrFail(session('selected_client_id'));
 
-        $clients = EndUser::where('client_id', $bo->id)
+        $base = EndUser::where('client_id', $bo->id)
             ->where('status', 'active')
-            ->with('documents')
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get();
+            ->orderBy('first_name')->orderBy('last_name');
+
+        // Download one small batch of clients at a time (default) or everything.
+        $batch = $request->has('batch') ? max(0, (int) $request->query('batch')) : null;
+        if ($batch !== null) {
+            $ids = (clone $base)->pluck('id')
+                ->slice($batch * self::LETTERS_BATCH_SIZE, self::LETTERS_BATCH_SIZE)->values();
+            $clients = EndUser::whereIn('id', $ids)->with('documents')
+                ->orderBy('first_name')->orderBy('last_name')->get();
+        } else {
+            $clients = (clone $base)->with('documents')->get();
+        }
 
         $disk    = Storage::disk('private');
-        $zipPath = storage_path('app/tmp/letters-' . $bo->id . '-' . now()->format('YmdHis') . '.zip');
+        $suffix  = $batch !== null ? ('-part' . ($batch + 1)) : '';
+        $zipPath = storage_path('app/tmp/letters-' . $bo->id . $suffix . '-' . now()->format('YmdHis') . '.zip');
         if (!is_dir(dirname($zipPath))) {
             mkdir(dirname($zipPath), 0775, true);
         }
@@ -198,9 +212,34 @@ class EndUserController extends Controller
         $zip->close();
 
         $filename = 'letters-' . \Illuminate\Support\Str::slug($bo->business_name ?: 'business-owner')
-            . '-' . now()->format('Y-m-d') . '.zip';
+            . $suffix . '-' . now()->format('Y-m-d') . '.zip';
 
         return response()->download($zipPath, $filename)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Chooser page for the letters export: lists the active clients split into
+     * small batches (5 at a time) so each ZIP downloads fast without hitting the
+     * host's request timeout.
+     */
+    public function lettersIndex()
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $bo      = Client::forAdmin($ownerId)->findOrFail(session('selected_client_id'));
+
+        $clients = EndUser::where('client_id', $bo->id)
+            ->where('status', 'active')
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name']);
+
+        $batches = $clients->chunk(self::LETTERS_BATCH_SIZE)->values();
+
+        return view('admin.end-users.letters', [
+            'bo'      => $bo,
+            'batches' => $batches,
+            'total'   => $clients->count(),
+            'perBatch' => self::LETTERS_BATCH_SIZE,
+        ]);
     }
 
     /** Round start dates for a client, ascending: [['label' => '1st Round', 'date' => Carbon], ...]. */

@@ -212,7 +212,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->middleware('admin.super')->name('client-list.cfpb-export');
             Route::get('client-list/credit-monitoring-export', [Admin\EndUserController::class, 'exportCreditMonitoring'])
                 ->middleware('admin.super')->name('client-list.credit-monitoring-export');
-            // Bulk-download all active clients' letters as a ZIP (foldered by client + round)
+            // Bulk-download active clients' letters as ZIPs (foldered by client + round),
+            // in small batches so each download beats the host's request timeout.
+            Route::get('client-list/letters', [Admin\EndUserController::class, 'lettersIndex'])
+                ->middleware('admin.super')->name('client-list.letters');
             Route::get('client-list/letters-export', [Admin\EndUserController::class, 'exportLetters'])
                 ->middleware('admin.super')->name('client-list.letters-export');
             Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');

@@ -34,8 +34,8 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>Export CFPB Logins</span>
         </a>
-        <a href="{{ route('admin.client-list.letters-export') }}" class="btn btn-secondary"
-           title="Download all active clients' letters as a ZIP, foldered by client and round">
+        <a href="{{ route('admin.client-list.letters') }}" class="btn btn-secondary"
+           title="Download active clients' letters as ZIPs, foldered by client and round (5 clients per file)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span>Download Letters (ZIP)</span>
         </a>
