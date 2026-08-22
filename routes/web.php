@@ -72,6 +72,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
 
+        // Self-service profile — any authenticated admin (super, VA, leads agent)
+        // edits their own name, email and password.
+        Route::get('profile', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('profile', [Admin\ProfileController::class, 'update'])->name('profile.update');
+
         // ---- Super-admin only: website leads + user management ----
         Route::middleware('admin.super')->group(function () {
             // Main super-admin dashboard — cross-business-owner overview
