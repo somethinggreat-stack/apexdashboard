@@ -8,6 +8,7 @@ use App\Models\EndUser;
 use App\Models\NegativeItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ResultsTrackingTest extends TestCase
@@ -57,6 +58,16 @@ class ResultsTrackingTest extends TestCase
             'name' => $name, 'category' => 'negative_account', 'goal' => $goal,
             'status' => $status, 'opened_on' => $openedOn, 'resolved_at' => $resolvedOn,
         ]);
+    }
+
+    private function doc(EndUser $eu, string $name, string $date): void
+    {
+        $path = "docs/{$eu->id}/" . str_replace([' ', '.'], '_', $name);
+        Storage::disk('private')->put($path, 'PDF-CONTENT');
+        $d = $eu->documents()->create([
+            'file_name' => $name, 'file_type' => 'pdf', 'file_path' => $path, 'category' => 'other',
+        ]);
+        $d->forceFill(['created_at' => $date])->save();
     }
 
     private function addClientPayload(array $extra = []): array
@@ -252,6 +263,43 @@ class ResultsTrackingTest extends TestCase
             ->assertDontSee('Negative Items &amp; Results')
             ->assertDontSee('EOD Report')
             ->assertDontSee('Monthly Results');
+    }
+
+    public function test_export_letters_zips_active_clients_by_round(): void
+    {
+        Storage::fake('private');
+        $this->seedWorld();
+
+        $active = $this->eu($this->clinecea, 'Jahkayah', [
+            'email' => 'jl@t.com', 'status' => 'active',
+            'rounds' => ['1st Round', '2nd Round'], 'start_date' => '2026-05-21',
+            'round_dates' => ['2nd Round' => '2026-06-25'],
+        ]);
+        $this->doc($active, 'EX round1.pdf', '2026-05-21');
+        $this->doc($active, 'EX round2.pdf', '2026-06-25');
+
+        // Paused client must be excluded entirely.
+        $paused = $this->eu($this->clinecea, 'Paused', ['email' => 'p@t.com', 'status' => 'paused']);
+        $this->doc($paused, 'should-not-appear.pdf', '2026-05-21');
+
+        $resp = $this->actingAs($this->super, 'admin')
+            ->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get('/admin/client-list/letters-export');
+        $resp->assertOk();
+
+        $path = $resp->baseResponse->getFile()->getPathname();
+        $zip = new \ZipArchive();
+        $zip->open($path);
+        $names = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $names[] = $zip->getNameIndex($i);
+        }
+        $zip->close();
+        @unlink($path);
+
+        $this->assertContains('Jahkayah X/1st Round Letters/EX round1.pdf', $names);
+        $this->assertContains('Jahkayah X/2nd Round Letters/EX round2.pdf', $names);
+        $this->assertEmpty(array_filter($names, fn ($n) => str_contains($n, 'should-not-appear')));
     }
 
     public function test_leads_cannot_reach_results_reports(): void

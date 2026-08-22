@@ -145,6 +145,125 @@ class EndUserController extends Controller
     }
 
     /**
+     * Bulk-download every ACTIVE client's dispute letters for the selected
+     * business owner as one ZIP, foldered as: "<Client Name>/<Nth Round
+     * Letters>/<file>". Each document is filed under the round whose start date
+     * is the latest on/before the document's date. Super-admin only.
+     */
+    public function exportLetters(Request $request)
+    {
+        @set_time_limit(600);
+
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $bo      = Client::forAdmin($ownerId)->findOrFail(session('selected_client_id'));
+
+        $clients = EndUser::where('client_id', $bo->id)
+            ->where('status', 'active')
+            ->with('documents')
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get();
+
+        $disk    = Storage::disk('private');
+        $zipPath = storage_path('app/tmp/letters-' . $bo->id . '-' . now()->format('YmdHis') . '.zip');
+        if (!is_dir(dirname($zipPath))) {
+            mkdir(dirname($zipPath), 0775, true);
+        }
+
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+        foreach ($clients as $eu) {
+            $rounds     = $this->roundStartsFor($eu);
+            $folderBase = $this->zipSafe($eu->full_name ?: ('client-' . $eu->id));
+            $used       = [];
+
+            foreach ($eu->documents as $doc) {
+                if (!$doc->file_path || !$disk->exists($doc->file_path)) {
+                    continue;
+                }
+                $roundLabel = $this->roundLabelForDate($rounds, $doc->created_at);
+                $folder     = $folderBase . '/' . $roundLabel . ' Letters';
+                $name       = $this->uniqueZipName($used, $folder, $doc->file_name ?: ('document-' . $doc->id));
+                $entry      = $folder . '/' . $name;
+
+                $zip->addFile($disk->path($doc->file_path), $entry);
+                $zip->setCompressionName($entry, \ZipArchive::CM_STORE); // PDFs don't shrink; keep it fast
+            }
+        }
+
+        // If nothing matched, leave a note so the ZIP isn't empty/broken.
+        if ($zip->numFiles === 0) {
+            $zip->addFromString('README.txt', "No active clients with uploaded letters were found for {$bo->business_name}.");
+        }
+        $zip->close();
+
+        $filename = 'letters-' . \Illuminate\Support\Str::slug($bo->business_name ?: 'business-owner')
+            . '-' . now()->format('Y-m-d') . '.zip';
+
+        return response()->download($zipPath, $filename)->deleteFileAfterSend(true);
+    }
+
+    /** Round start dates for a client, ascending: [['label' => '1st Round', 'date' => Carbon], ...]. */
+    private function roundStartsFor(EndUser $eu): array
+    {
+        $rounds = [];
+        foreach ($eu->round_timeline as $label => $date) {
+            if ($date) {
+                $rounds[] = ['label' => $label, 'date' => \Illuminate\Support\Carbon::parse($date)->startOfDay()];
+            }
+        }
+        usort($rounds, fn ($a, $b) => $a['date'] <=> $b['date']);
+
+        return $rounds;
+    }
+
+    /** The round label a document belongs to: the latest round starting on/before its date. */
+    private function roundLabelForDate(array $rounds, $docDate): string
+    {
+        if (empty($rounds)) {
+            return '1st Round';
+        }
+        $date   = $docDate ? \Illuminate\Support\Carbon::parse($docDate)->startOfDay() : null;
+        $chosen = $rounds[0]['label'];
+        if ($date) {
+            foreach ($rounds as $r) {
+                if ($r['date']->lte($date)) {
+                    $chosen = $r['label'];
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return $chosen;
+    }
+
+    /** Filesystem-safe path segment. */
+    private function zipSafe(string $name): string
+    {
+        $name = preg_replace('/[\/\\\\:*?"<>|]+/', '-', trim($name));
+        return $name !== '' ? $name : 'unnamed';
+    }
+
+    /** A name unique within a zip folder — appends " (2)", " (3)" on collision. */
+    private function uniqueZipName(array &$used, string $folder, string $name): string
+    {
+        $name = $this->zipSafe($name);
+        $ext  = pathinfo($name, PATHINFO_EXTENSION);
+        $base = $ext !== '' ? substr($name, 0, -(strlen($ext) + 1)) : $name;
+
+        $candidate = $name;
+        $i = 2;
+        while (isset($used[$folder][$candidate])) {
+            $candidate = $ext !== '' ? "{$base} ({$i}).{$ext}" : "{$base} ({$i})";
+            $i++;
+        }
+        $used[$folder][$candidate] = true;
+
+        return $candidate;
+    }
+
+    /**
      * Download every active client's credit-monitoring login for the selected
      * business owner as a CSV. Super-admin only (route middleware); VAs never
      * bulk-export credentials. credit_monitoring_password is encrypted at rest
