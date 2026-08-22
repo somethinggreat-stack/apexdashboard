@@ -184,6 +184,15 @@ class EndUserController extends Controller
         ]);
     }
 
+    /** Add Client — full page form (replaces the old modal). */
+    public function create()
+    {
+        $selectedClient = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
+            ->findOrFail(session('selected_client_id'));
+
+        return view('admin.end-users.create', compact('selectedClient'));
+    }
+
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request, true);
@@ -255,10 +264,12 @@ class EndUserController extends Controller
             $category = (string) ($row['category'] ?? 'negative_account');
             $category = array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'negative_account';
             $goal     = NegativeItem::goalForCategory($category, (string) ($row['goal'] ?? 'delete'));
+            $detail   = NegativeItem::detailForCategory($category, (string) ($row['detail'] ?? ''));
             $bureau   = trim((string) ($row['bureau'] ?? ''));
 
             $endUser->negativeItems()->create([
                 'name'                => mb_substr($name, 0, 255),
+                'detail'              => $detail,
                 'category'            => $category,
                 'goal'                => $goal,
                 'bureau'              => array_key_exists($bureau, NegativeItem::BUREAUS) ? $bureau : 'all',

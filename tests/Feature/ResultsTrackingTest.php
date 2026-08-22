@@ -117,6 +117,38 @@ class ResultsTrackingTest extends TestCase
         $this->assertSame('delete', $kay->negativeItems()->first()->goal);
     }
 
+    public function test_add_client_is_a_full_page(): void
+    {
+        $this->seedWorld();
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get('/admin/end-users/create')
+            ->assertOk()
+            ->assertSee('Add Client')
+            ->assertSee('Negative Items');
+    }
+
+    public function test_item_detail_is_kept_per_category(): void
+    {
+        $this->seedWorld();
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->post('/admin/end-users', $this->addClientPayload([
+                'negative_items' => [
+                    ['category' => 'negative_account', 'name' => 'SYNCHRONY BANK', 'detail' => '224825XX', 'goal' => 'delete', 'bureau' => 'experian'],
+                    ['category' => 'inquiry', 'name' => 'NAVY FCU', 'detail' => '08/08/2025', 'goal' => 'delete', 'bureau' => 'equifax'],
+                    ['category' => 'bankruptcy', 'name' => 'CHAPTER 7', 'detail' => 'BK-123', 'goal' => 'delete', 'bureau' => 'transunion'],
+                    ['category' => 'personal_information', 'name' => '11006 S STATE ST', 'detail' => 'dropme', 'goal' => 'delete', 'bureau' => 'all'],
+                ],
+            ]))->assertRedirect();
+
+        $eu = EndUser::where('email', 'jane@t.com')->firstOrFail();
+        $this->assertSame('224825XX', $eu->negativeItems->firstWhere('name', 'SYNCHRONY BANK')->detail);
+        $this->assertSame('08/08/2025', $eu->negativeItems->firstWhere('name', 'NAVY FCU')->detail);
+        $this->assertSame('BK-123', $eu->negativeItems->firstWhere('name', 'CHAPTER 7')->detail);
+        // Personal Information has no detail — it's dropped.
+        $this->assertNull($eu->negativeItems->firstWhere('name', '11006 S STATE ST')->detail);
+    }
+
     public function test_add_client_requires_at_least_one_item_for_clinecea(): void
     {
         $this->seedWorld();

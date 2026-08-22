@@ -226,11 +226,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/resolve-round-error', [Admin\EndUserController::class, 'resolveRoundError'])->name('end-users.resolve-round-error');
 
             Route::get('end-users', [Admin\EndUserController::class, 'index'])->name('end-users.index');
-            // Live duplicate check (email / SSN) for the Add Client modal (distinct
+            // Live duplicate check (email / SSN) for the Add Client form (distinct
             // path so it never collides with end-users/{id}).
             Route::get('end-users-dup-check', [Admin\EndUserController::class, 'checkDuplicate'])->name('end-users.dup-check');
+            // Add Client — full page (must be declared before end-users/{id}).
+            Route::get('end-users/create', [Admin\EndUserController::class, 'create'])->name('end-users.create');
             Route::post('end-users', [Admin\EndUserController::class, 'store'])->name('end-users.store');
-            Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->name('end-users.show');
+            Route::get('end-users/{id}', [Admin\EndUserController::class, 'show'])->whereNumber('id')->name('end-users.show');
             Route::get('end-users/{id}/status-report', [Admin\EndUserController::class, 'statusReport'])->name('end-users.status-report');
             Route::put('end-users/{id}', [Admin\EndUserController::class, 'update'])->name('end-users.update');
             Route::delete('end-users/{id}', [Admin\EndUserController::class, 'destroy'])->name('end-users.destroy');

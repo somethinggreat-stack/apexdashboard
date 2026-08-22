@@ -8,7 +8,7 @@
 <div class="card">
     <div class="card-header">
         <h2>{{ ($bucket ?? 'in_progress') === 'clients' ? 'Clients' : 'In Progress' }} — {{ $selectedClient->business_name }}</h2>
-        <button class="btn btn-primary" onclick="openModal('createEndUserModal')">+ Add Client</button>
+        <a href="{{ route('admin.end-users.create') }}" class="btn btn-primary">+ Add Client</a>
     </div>
     <form method="GET" class="filter-bar">
         <select name="status">

@@ -24,6 +24,7 @@ class NegativeItemController extends Controller
         $data = $this->validateItem($request);
         $endUser->negativeItems()->create([
             'name'                => $data['name'],
+            'detail'              => $data['detail'] ?? null,
             'category'            => $data['category'],
             'goal'                => $data['goal'],
             'bureau'              => $data['bureau'] ?? null,
@@ -43,6 +44,7 @@ class NegativeItemController extends Controller
 
         $item->update([
             'name'     => $data['name'],
+            'detail'   => $data['detail'] ?? null,
             'category' => $data['category'],
             'goal'     => $data['goal'],
             'bureau'   => $data['bureau'] ?? null,
@@ -94,14 +96,17 @@ class NegativeItemController extends Controller
     {
         $data = $request->validate([
             'name'     => 'required|string|max:255',
+            'detail'   => 'nullable|string|max:255',
             'category' => 'required|in:' . implode(',', array_keys(NegativeItem::CATEGORIES)),
             'goal'     => 'required|in:' . implode(',', array_keys(NegativeItem::GOALS)),
             'bureau'   => 'required|in:' . implode(',', array_keys(NegativeItem::BUREAUS)),
         ]);
 
         // Only a Negative Account can be "updated to positive"; everything else
-        // (inquiry, bankruptcy, personal info, employers) can only be deleted.
-        $data['goal'] = NegativeItem::goalForCategory($data['category'], $data['goal']);
+        // (inquiry, bankruptcy, personal information) can only be deleted.
+        $data['goal']   = NegativeItem::goalForCategory($data['category'], $data['goal']);
+        // Detail = account number / inquiry date / bankruptcy ref; none for personal info.
+        $data['detail'] = NegativeItem::detailForCategory($data['category'], $data['detail'] ?? null);
 
         return $data;
     }

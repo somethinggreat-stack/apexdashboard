@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class NegativeItem extends Model
 {
     protected $fillable = [
-        'end_user_id', 'name', 'category', 'goal', 'bureau',
+        'end_user_id', 'name', 'detail', 'category', 'goal', 'bureau',
         'status', 'opened_on', 'resolved_at', 'resolved_round', 'created_by_admin_id',
     ];
 
@@ -25,8 +25,8 @@ class NegativeItem extends Model
         'negative_account'     => 'Negative Account',
         'inquiry'              => 'Inquiry',
         'bankruptcy'           => 'Bankruptcy',
+        // Personal Information covers addresses, employers, names — one free-text box.
         'personal_information' => 'Personal Information',
-        'employers'            => 'Employers',
     ];
 
     public const GOALS = [
@@ -97,6 +97,39 @@ class NegativeItem extends Model
     public function bureauLabel(): string
     {
         return self::BUREAUS[$this->bureau] ?? ucfirst((string) $this->bureau);
+    }
+
+    /** What the `detail` field means for this item's category (empty when N/A). */
+    public function detailLabel(): string
+    {
+        return self::detailLabelFor($this->category);
+    }
+
+    public static function detailLabelFor(string $category): string
+    {
+        return match ($category) {
+            'negative_account' => 'Acct #',
+            'inquiry'          => 'Date',
+            'bankruptcy'       => 'Ref #',
+            default            => '',   // personal_information: no detail
+        };
+    }
+
+    /** Keep the detail only for categories that have one; drop it otherwise. */
+    public static function detailForCategory(string $category, ?string $detail): ?string
+    {
+        if (self::detailLabelFor($category) === '') {
+            return null;
+        }
+        $detail = trim((string) $detail);
+        return $detail !== '' ? $detail : null;
+    }
+
+    /** "Name — detail" for reports/exports (e.g. "SYNCHRONY BANK — 224825XX"). */
+    public function displayName(): string
+    {
+        $detail = trim((string) $this->detail);
+        return $detail !== '' ? "{$this->name} — {$detail}" : $this->name;
     }
 
     /** Human status: Reporting / Deleted / Updated to positive. */

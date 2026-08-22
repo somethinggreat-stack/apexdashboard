@@ -84,7 +84,7 @@ class ResultsController extends Controller
         foreach ($clients as $eu) {
             foreach ($eu->negativeItems as $item) {
                 if ($item->resolved_at && $item->resolved_at->betweenIncluded($dayStart, $dayEnd)) {
-                    $add($eu, ($item->status === 'updated' ? 'Updated: ' : 'Deleted: ') . $item->name);
+                    $add($eu, ($item->status === 'updated' ? 'Updated: ' : 'Deleted: ') . $item->displayName());
                 }
             }
         }
@@ -151,12 +151,13 @@ class ResultsController extends Controller
             $updated   = $existing->filter(fn ($i) => $i->status === 'updated' && $i->resolved_at && $i->resolved_at->betweenIncluded($start, $end));
             $remaining = $existing->filter(fn ($i) => is_null($i->resolved_at) || $i->resolved_at->gt($end));
 
+            $names = fn ($col) => $col->map(fn ($i) => $i->displayName())->values()->all();
             $rows[] = [
                 'name'       => $eu->full_name,
-                'cameIn'     => $cameIn->pluck('name')->values()->all(),
-                'deleted'    => $deleted->pluck('name')->values()->all(),
-                'updated'    => $updated->pluck('name')->values()->all(),
-                'remaining'  => $remaining->pluck('name')->values()->all(),
+                'cameIn'     => $names($cameIn),
+                'deleted'    => $names($deleted),
+                'updated'    => $names($updated),
+                'remaining'  => $names($remaining),
                 'round'      => 'R' . $eu->current_round,
                 'status'     => $eu->resultsStatusLabel(),
             ];

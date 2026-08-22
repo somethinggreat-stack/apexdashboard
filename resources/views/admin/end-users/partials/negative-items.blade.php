@@ -70,10 +70,10 @@
             @foreach ($items as $item)
                 <div class="ni-item ni-item-{{ $item->status }}">
                     <div class="ni-item-main">
-                        <span class="ni-item-name">{{ $item->name }}</span>
+                        <span class="ni-item-name">{{ $item->name }}@if ($item->detail)<span class="ni-item-detail">{{ $item->detailLabel() }} {{ $item->detail }}</span>@endif</span>
                         <span class="ni-item-tags">
                             <span class="ni-tag">{{ $item->categoryLabel() }}</span>
-                            <span class="ni-tag ni-tag-goal">{{ $item->goalLabel() }}</span>
+                            @if ($item->category === 'negative_account')<span class="ni-tag ni-tag-goal">{{ $item->goalLabel() }}</span>@endif
                             <span class="ni-tag">{{ $item->bureauLabel() }}</span>
                             <span class="ni-status ni-status-{{ $item->status }}">{{ $item->statusLabel() }}@if ($item->resolved_at) · {{ $item->resolved_at->format('M j, Y') }}@endif</span>
                         </span>
@@ -99,13 +99,14 @@
         </div>
     @endif
 
-    {{-- Add item --}}
-    <form method="POST" action="{{ route('admin.negative-items.store') }}" class="ni-add">@csrf
+    {{-- Add item — pick the type first, then the fields adapt --}}
+    <form method="POST" action="{{ route('admin.negative-items.store') }}" class="ni-add" id="niAddForm">@csrf
         <input type="hidden" name="end_user_id" value="{{ $endUser->id }}">
-        <input type="text" name="name" placeholder="Account / creditor name" maxlength="255" required>
-        <select name="category">@foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-        <select name="goal">@foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-        <select name="bureau" required>
+        <select name="category" data-ni="category">@foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
+        <input type="text" name="name" data-ni="name" maxlength="255" required>
+        <input type="text" name="detail" data-ni="detail" maxlength="255">
+        <select name="goal" data-ni="goal">@foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
+        <select name="bureau" data-ni="bureau" required>
             @foreach (\App\Models\NegativeItem::BUREAUS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
         </select>
         <button class="btn btn-sm btn-primary">+ Add</button>
@@ -144,13 +145,18 @@
     .ni-item-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
     .ni-item-actions form, .ni-resolve { display:inline-flex; gap:6px; align-items:center; margin:0; }
     .ni-resolve input[type=date] { padding:6px 8px; border:1px solid #d7dee8; border-radius:8px; font-size:12px; }
-    .ni-add { display:grid; grid-template-columns:2fr 1.1fr 1.3fr 1.1fr auto; gap:8px; align-items:center; padding-top:6px; border-top:1px dashed var(--pro-line,#e6ebf2); }
+    .ni-add { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding-top:10px; border-top:1px dashed var(--pro-line,#e6ebf2); }
+    .ni-add [data-ni="category"] { flex:0 0 160px; }
+    .ni-add [data-ni="name"] { flex:1 1 200px; min-width:160px; }
+    .ni-add [data-ni="detail"] { flex:0 0 170px; }
+    .ni-add [data-ni="goal"] { flex:0 0 150px; }
+    .ni-add [data-ni="bureau"] { flex:0 0 140px; }
     .ni-add input, .ni-add select { padding:8px 10px; border:1px solid #d7dee8; border-radius:8px; font-size:13px; background:#fff; color:#0f172a; }
+    .ni-item-detail { margin-left:8px; font-size:12px; color:var(--pro-muted,#64748b); font-weight:600; }
     :root[data-theme="dark"] .ni-copy-input,
     :root[data-theme="dark"] .ni-resolve input,
     :root[data-theme="dark"] .ni-add input,
     :root[data-theme="dark"] .ni-add select { background:#10152a; border-color:var(--pro-line); color:var(--pro-text); }
-    @media (max-width:680px){ .ni-add { grid-template-columns:1fr 1fr; } }
 </style>
 <script>
     window.niCopy = function (id) {
@@ -159,21 +165,12 @@
         el.select();
         try { navigator.clipboard.writeText(el.value); } catch (e) { document.execCommand('copy'); }
     };
-    // Add-item form: only a Negative Account can be "Update to positive".
+</script>
+@include('admin.partials.negative-item-script')
+<script>
     (function () {
-        var form = document.querySelector('#results-panel .ni-add');
-        if (!form) return;
-        var cat = form.querySelector('select[name="category"]');
-        var goal = form.querySelector('select[name="goal"]');
-        if (!cat || !goal) return;
-        function sync() {
-            var isNeg = cat.value === 'negative_account';
-            var upd = goal.querySelector('option[value="update"]');
-            if (upd) upd.disabled = !isNeg;
-            if (!isNeg) goal.value = 'delete';
-        }
-        cat.addEventListener('change', sync);
-        sync();
+        var form = document.getElementById('niAddForm');
+        if (form && window.niBind) window.niBind(form);
     })();
 </script>
 @endonce
