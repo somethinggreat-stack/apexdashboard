@@ -251,47 +251,48 @@
 
             @if ($selectedClient->resultsTrackingEnabled())
             <div class="form-section">
-                <h4>Negative Items <span class="muted">(list every account, inquiry, collection…)</span></h4>
+                <h4>Negative Items <span class="muted">(required — list every account, inquiry, bankruptcy)</span></h4>
                 <p class="muted small" style="margin:0 0 10px;">
-                    Choose the goal for each item — <strong>Delete</strong> (get it removed) or <strong>Update to positive</strong>.
-                    You can add more or mark them off later on the client's page.
+                    Every field is required. Choose the goal for each item — <strong>Delete</strong> (get it removed) or
+                    <strong>Update to positive</strong>. Add more with <strong>+ Add Item</strong>; mark them off later on the client's page.
                 </p>
-                @php $oldItems = old('negative_items', []); @endphp
+                @php
+                    $oldItems = collect(old('negative_items', []))
+                        ->filter(fn ($r) => trim((string) ($r['name'] ?? '')) !== '')->values();
+                    if ($oldItems->isEmpty()) {
+                        $oldItems = collect([['name' => '', 'category' => '', 'goal' => '', 'bureau' => '']]);
+                    }
+                @endphp
                 <div id="niRows" class="ni-rows">
                     @foreach ($oldItems as $oi)
-                        @php $nm = trim((string)($oi['name'] ?? '')); @endphp
-                        @if ($nm !== '')
                         <div class="ni-row">
-                            <input type="text" name="negative_items[{{ $loop->index }}][name]" value="{{ $nm }}" placeholder="Account / creditor name" maxlength="255">
+                            <input type="text" name="negative_items[{{ $loop->index }}][name]" value="{{ $oi['name'] ?? '' }}" placeholder="Account / creditor name" maxlength="255" required>
                             <select name="negative_items[{{ $loop->index }}][category]">
                                 @foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}" @selected(($oi['category'] ?? '') === $k)>{{ $v }}</option>@endforeach
                             </select>
                             <select name="negative_items[{{ $loop->index }}][goal]">
                                 @foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}" @selected(($oi['goal'] ?? '') === $k)>{{ $v }}</option>@endforeach
                             </select>
-                            <select name="negative_items[{{ $loop->index }}][bureau]">
-                                <option value="">Bureau (optional)</option>
-                                @foreach (['experian' => 'Experian', 'transunion' => 'TransUnion', 'equifax' => 'Equifax', 'multiple' => 'Multiple'] as $k => $v)<option value="{{ $k }}" @selected(($oi['bureau'] ?? '') === $k)>{{ $v }}</option>@endforeach
+                            <select name="negative_items[{{ $loop->index }}][bureau]" required>
+                                @foreach (\App\Models\NegativeItem::BUREAUS as $k => $v)<option value="{{ $k }}" @selected(($oi['bureau'] ?: 'all') === $k)>{{ $v }}</option>@endforeach
                             </select>
                             <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
                         </div>
-                        @endif
                     @endforeach
                 </div>
                 <button type="button" class="btn btn-sm" onclick="niAddRow()">+ Add Item</button>
 
                 <template id="niRowTpl">
                     <div class="ni-row">
-                        <input type="text" data-ni="name" placeholder="Account / creditor name" maxlength="255">
+                        <input type="text" data-ni="name" placeholder="Account / creditor name" maxlength="255" required>
                         <select data-ni="category">
                             @foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
                         </select>
                         <select data-ni="goal">
                             @foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
                         </select>
-                        <select data-ni="bureau">
-                            <option value="">Bureau (optional)</option>
-                            @foreach (['experian' => 'Experian', 'transunion' => 'TransUnion', 'equifax' => 'Equifax', 'multiple' => 'Multiple'] as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                        <select data-ni="bureau" required>
+                            @foreach (\App\Models\NegativeItem::BUREAUS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
                         </select>
                         <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
                     </div>
@@ -306,7 +307,7 @@
                 @media (max-width:640px){ .ni-row { grid-template-columns:1fr 1fr; } }
             </style>
             <script>
-                window.niIdx = {{ count(array_filter($oldItems, fn ($r) => trim((string)($r['name'] ?? '')) !== '')) }};
+                window.niIdx = {{ $oldItems->count() }};
                 window.niAddRow = function () {
                     var tpl = document.getElementById('niRowTpl');
                     if (!tpl) return;
@@ -318,7 +319,6 @@
                     });
                     document.getElementById('niRows').appendChild(node);
                 };
-                if (!document.querySelector('#niRows .ni-row')) niAddRow();
             </script>
             @endif
 

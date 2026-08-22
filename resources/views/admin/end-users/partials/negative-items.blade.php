@@ -74,7 +74,7 @@
                         <span class="ni-item-tags">
                             <span class="ni-tag">{{ $item->categoryLabel() }}</span>
                             <span class="ni-tag ni-tag-goal">{{ $item->goalLabel() }}</span>
-                            @if ($item->bureau)<span class="ni-tag">{{ ucfirst($item->bureau) }}</span>@endif
+                            <span class="ni-tag">{{ $item->bureauLabel() }}</span>
                             <span class="ni-status ni-status-{{ $item->status }}">{{ $item->statusLabel() }}@if ($item->resolved_at) · {{ $item->resolved_at->format('M j, Y') }}@endif</span>
                         </span>
                     </div>
@@ -105,9 +105,8 @@
         <input type="text" name="name" placeholder="Account / creditor name" maxlength="255" required>
         <select name="category">@foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
         <select name="goal">@foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-        <select name="bureau">
-            <option value="">Bureau (optional)</option>
-            @foreach (['experian' => 'Experian', 'transunion' => 'TransUnion', 'equifax' => 'Equifax', 'multiple' => 'Multiple'] as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+        <select name="bureau" required>
+            @foreach (\App\Models\NegativeItem::BUREAUS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
         </select>
         <button class="btn btn-sm btn-primary">+ Add</button>
     </form>

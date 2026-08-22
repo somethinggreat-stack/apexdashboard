@@ -153,9 +153,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('daily-task', [Admin\DailyTaskController::class, 'index'])->name('daily-task');
         // CFPB Logins — last-12h CFPB logins entered per business owner
         Route::get('cfpb-logins', [Admin\CfpbLoginController::class, 'index'])->name('cfpb-logins');
-        // Results reports (owners with results tracking on — Clinecea): EOD + monthly
-        Route::get('results/eod', [Admin\ResultsController::class, 'eod'])->name('results.eod');
-        Route::get('results/monthly', [Admin\ResultsController::class, 'monthly'])->name('results.monthly');
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
@@ -247,6 +244,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('end-users/{id}/request-approval', [Admin\EndUserController::class, 'requestRoundApproval'])->whereNumber('id')->name('end-users.request-approval');
             Route::post('end-users/{id}/approve-round', [Admin\EndUserController::class, 'approveRound'])->whereNumber('id')->name('end-users.approve-round');
             Route::post('end-users/{id}/clear-approval', [Admin\EndUserController::class, 'clearRoundApproval'])->whereNumber('id')->name('end-users.clear-approval');
+
+            // Results reports (results-tracking owner — Clinecea): EOD + monthly.
+            // Inside client.selected so the selected owner stays active in the nav.
+            Route::get('results/eod', [Admin\ResultsController::class, 'eod'])->name('results.eod');
+            Route::get('results/monthly', [Admin\ResultsController::class, 'monthly'])->name('results.monthly');
 
             Route::post('process-steps', [Admin\ProcessStepController::class, 'store'])->name('process-steps.store');
             Route::put('process-steps/{id}', [Admin\ProcessStepController::class, 'update'])->name('process-steps.update');

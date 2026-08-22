@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('category')->default('negative_account');   // negative_account|inquiry|bankruptcy
             $table->string('goal')->default('delete');        // delete|update
-            $table->string('bureau')->nullable();             // experian|transunion|equifax|multiple|null
+            $table->string('bureau')->default('all');          // all|experian|transunion|equifax
             $table->string('status')->default('reporting');   // reporting|deleted|updated
             $table->date('opened_on');                        // when it entered the file (defaults to client start)
             $table->date('resolved_at')->nullable();          // when deleted/updated

@@ -96,7 +96,7 @@ class NegativeItemController extends Controller
             'name'     => 'required|string|max:255',
             'category' => 'required|in:' . implode(',', array_keys(NegativeItem::CATEGORIES)),
             'goal'     => 'required|in:' . implode(',', array_keys(NegativeItem::GOALS)),
-            'bureau'   => 'nullable|in:experian,transunion,equifax,multiple',
+            'bureau'   => 'required|in:' . implode(',', array_keys(NegativeItem::BUREAUS)),
         ]);
     }
 

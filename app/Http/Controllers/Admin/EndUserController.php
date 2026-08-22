@@ -200,6 +200,17 @@ class EndUserController extends Controller
                 ->withErrors(['ssn' => 'A client with this SSN already exists for this business owner.']);
         }
 
+        // Results-tracking owners (Clinecea) must have at least one negative item
+        // entered with the client — the reports depend on it.
+        if (Client::find($boId)?->resultsTrackingEnabled()) {
+            $hasItem = collect($request->input('negative_items', []))
+                ->contains(fn ($r) => trim((string) ($r['name'] ?? '')) !== '');
+            if (!$hasItem) {
+                return back()->withInput()
+                    ->withErrors(['negative_items' => 'Add at least one negative item before creating this client.']);
+            }
+        }
+
         $data['client_id'] = $boId;
         $data['status'] = 'active';
 
@@ -249,7 +260,7 @@ class EndUserController extends Controller
                 'name'                => mb_substr($name, 0, 255),
                 'category'            => array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'negative_account',
                 'goal'                => array_key_exists($goal, NegativeItem::GOALS) ? $goal : 'delete',
-                'bureau'              => in_array($bureau, ['experian', 'transunion', 'equifax', 'multiple'], true) ? $bureau : null,
+                'bureau'              => array_key_exists($bureau, NegativeItem::BUREAUS) ? $bureau : 'all',
                 'status'              => 'reporting',
                 'opened_on'           => $openedOn,
                 'created_by_admin_id' => $adminId,

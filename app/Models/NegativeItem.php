@@ -32,6 +32,13 @@ class NegativeItem extends Model
         'update' => 'Update to positive',
     ];
 
+    public const BUREAUS = [
+        'all'        => 'All Bureau',
+        'experian'   => 'Experian',
+        'transunion' => 'TransUnion',
+        'equifax'    => 'Equifax',
+    ];
+
     /** Terminal statuses per goal: a delete-item is "deleted", an update-item is "updated". */
     public const STATUSES = ['reporting', 'deleted', 'updated'];
 
@@ -70,6 +77,11 @@ class NegativeItem extends Model
     public function categoryLabel(): string
     {
         return self::CATEGORIES[$this->category] ?? ucfirst($this->category);
+    }
+
+    public function bureauLabel(): string
+    {
+        return self::BUREAUS[$this->bureau] ?? ucfirst((string) $this->bureau);
     }
 
     /** Human status: Reporting / Deleted / Updated to positive. */

@@ -90,6 +90,18 @@ class ResultsTrackingTest extends TestCase
         $this->assertSame('update', $eu->negativeItems->firstWhere('name', 'Capital One')->goal);
     }
 
+    public function test_add_client_requires_at_least_one_item_for_clinecea(): void
+    {
+        $this->seedWorld();
+
+        // No negative_items at all → rejected, client not created.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->post('/admin/end-users', $this->addClientPayload())
+            ->assertSessionHasErrors('negative_items');
+
+        $this->assertSame(0, EndUser::where('client_id', $this->clinecea->id)->count());
+    }
+
     public function test_items_do_not_save_for_owner_without_tracking(): void
     {
         $this->seedWorld();
@@ -142,8 +154,10 @@ class ResultsTrackingTest extends TestCase
         $this->item($eu, 'D', 'delete', null);           // reporting
         $this->item($eu, 'E', 'delete', '2026-09-05');   // deleted Sep
 
+        $sess = ['selected_client_id' => $this->clinecea->id];
+
         // August: came in 5, deleted 2, updated 1, remaining 2 (D, E still reporting end of Aug).
-        $this->actingAs($this->super, 'admin')->get('/admin/results/monthly?month=2026-08')
+        $this->actingAs($this->super, 'admin')->withSession($sess)->get('/admin/results/monthly?month=2026-08')
             ->assertOk()
             ->assertSee('Came into month with (5)')
             ->assertSee('Deleted this month (2)')
@@ -151,7 +165,7 @@ class ResultsTrackingTest extends TestCase
             ->assertSee('Remaining (2)');
 
         // September: came in 2 (D, E), deleted 1 (E), remaining 1 (D).
-        $this->actingAs($this->super, 'admin')->get('/admin/results/monthly?month=2026-09')
+        $this->actingAs($this->super, 'admin')->withSession($sess)->get('/admin/results/monthly?month=2026-09')
             ->assertOk()
             ->assertSee('Came into month with (2)')
             ->assertSee('Deleted this month (1)')
@@ -165,7 +179,8 @@ class ResultsTrackingTest extends TestCase
         $this->item($eu, 'A', 'delete', null);   // 2 reporting → nearing completion
         $this->item($eu, 'B', 'delete', null);
 
-        $this->actingAs($this->super, 'admin')->get('/admin/results/eod')
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get('/admin/results/eod')
             ->assertOk()
             ->assertSee('Jane X')                // full_name (first + last)
             ->assertSee('Nearing completion');
@@ -222,8 +237,9 @@ class ResultsTrackingTest extends TestCase
         $leads = new Admin(['email' => 'leads@test.com', 'password' => 'secret-pass', 'full_name' => 'Leads']);
         $leads->role = 'leads'; $leads->parent_admin_id = $this->super->id; $leads->save();
 
-        $this->actingAs($this->super, 'admin')->get('/admin/results/eod')->assertOk();
-        $this->actingAs($va, 'admin')->get('/admin/results/monthly')->assertOk();
+        $sess = ['selected_client_id' => $this->clinecea->id];
+        $this->actingAs($this->super, 'admin')->withSession($sess)->get('/admin/results/eod')->assertOk();
+        $this->actingAs($va, 'admin')->withSession($sess)->get('/admin/results/monthly')->assertOk();
         $this->actingAs($leads, 'admin')->get('/admin/results/eod')->assertStatus(403);
     }
 }
