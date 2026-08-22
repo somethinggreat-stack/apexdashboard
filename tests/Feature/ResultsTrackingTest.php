@@ -149,16 +149,17 @@ class ResultsTrackingTest extends TestCase
         $this->assertNull($eu->negativeItems->firstWhere('name', '11006 S STATE ST')->detail);
     }
 
-    public function test_add_client_requires_at_least_one_item_for_clinecea(): void
+    public function test_add_client_allows_no_items_items_are_optional(): void
     {
         $this->seedWorld();
 
-        // No negative_items at all → rejected, client not created.
+        // No negative_items — the client is still created (items are optional now).
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
             ->post('/admin/end-users', $this->addClientPayload())
-            ->assertSessionHasErrors('negative_items');
+            ->assertRedirect()->assertSessionHasNoErrors();
 
-        $this->assertSame(0, EndUser::where('client_id', $this->clinecea->id)->count());
+        $eu = EndUser::where('client_id', $this->clinecea->id)->firstOrFail();
+        $this->assertCount(0, $eu->negativeItems);
     }
 
     public function test_items_do_not_save_for_owner_without_tracking(): void

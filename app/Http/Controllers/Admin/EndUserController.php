@@ -209,17 +209,6 @@ class EndUserController extends Controller
                 ->withErrors(['ssn' => 'A client with this SSN already exists for this business owner.']);
         }
 
-        // Results-tracking owners (Clinecea) must have at least one negative item
-        // entered with the client — the reports depend on it.
-        if (Client::find($boId)?->resultsTrackingEnabled()) {
-            $hasItem = collect($request->input('negative_items', []))
-                ->contains(fn ($r) => trim((string) ($r['name'] ?? '')) !== '');
-            if (!$hasItem) {
-                return back()->withInput()
-                    ->withErrors(['negative_items' => 'Add at least one negative item before creating this client.']);
-            }
-        }
-
         $data['client_id'] = $boId;
         $data['status'] = 'active';
 

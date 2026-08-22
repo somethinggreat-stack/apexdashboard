@@ -1,10 +1,10 @@
 {{-- Negative-items repeater for the Add Client page. Item type is chosen first;
      the fields adapt (account #, inquiry date, bankruptcy ref, or name only). --}}
 <div class="form-section">
-    <h4>Negative Items <span class="muted">(required — list every account, inquiry, bankruptcy, personal-info item)</span></h4>
+    <h4>Negative Items <span class="muted">(optional — you can add these now or later on the client's Results tab)</span></h4>
     <p class="muted small" style="margin:0 0 10px;">
         Pick the <strong>item type</strong> first, then fill the fields that appear. Only a <strong>Negative Account</strong> can be
-        <em>Updated to positive</em>; everything else is a deletion. Add more with <strong>+ Add Item</strong>.
+        <em>Updated to positive</em>; everything else is a deletion. Add more with <strong>+ Add Item</strong>. Leave blank to skip.
     </p>
 
     @php
@@ -24,12 +24,12 @@
                 <select name="negative_items[{{ $loop->index }}][category]" data-ni="category">
                     @foreach ($niCats as $k => $v)<option value="{{ $k }}" @selected(($oi['category'] ?? 'negative_account') === $k)>{{ $v }}</option>@endforeach
                 </select>
-                <input type="text" name="negative_items[{{ $loop->index }}][name]" data-ni="name" value="{{ $oi['name'] ?? '' }}" maxlength="255" required>
+                <input type="text" name="negative_items[{{ $loop->index }}][name]" data-ni="name" value="{{ $oi['name'] ?? '' }}" maxlength="255">
                 <input type="text" name="negative_items[{{ $loop->index }}][detail]" data-ni="detail" value="{{ $oi['detail'] ?? '' }}" maxlength="255">
                 <select name="negative_items[{{ $loop->index }}][goal]" data-ni="goal">
                     @foreach ($niGoals as $k => $v)<option value="{{ $k }}" @selected(($oi['goal'] ?? 'delete') === $k)>{{ $v }}</option>@endforeach
                 </select>
-                <select name="negative_items[{{ $loop->index }}][bureau]" data-ni="bureau" required>
+                <select name="negative_items[{{ $loop->index }}][bureau]" data-ni="bureau">
                     @foreach ($niBureaus as $k => $v)<option value="{{ $k }}" @selected(($oi['bureau'] ?: 'all') === $k)>{{ $v }}</option>@endforeach
                 </select>
                 <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
@@ -43,12 +43,12 @@
             <select name="negative_items[__IDX__][category]" data-ni="category">
                 @foreach ($niCats as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
             </select>
-            <input type="text" name="negative_items[__IDX__][name]" data-ni="name" maxlength="255" required>
+            <input type="text" name="negative_items[__IDX__][name]" data-ni="name" maxlength="255">
             <input type="text" name="negative_items[__IDX__][detail]" data-ni="detail" maxlength="255">
             <select name="negative_items[__IDX__][goal]" data-ni="goal">
                 @foreach ($niGoals as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
             </select>
-            <select name="negative_items[__IDX__][bureau]" data-ni="bureau" required>
+            <select name="negative_items[__IDX__][bureau]" data-ni="bureau">
                 @foreach ($niBureaus as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
             </select>
             <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
