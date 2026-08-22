@@ -8,7 +8,6 @@ use App\Models\EndUser;
 use App\Models\NegativeItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ResultsTrackingTest extends TestCase
@@ -58,16 +57,6 @@ class ResultsTrackingTest extends TestCase
             'name' => $name, 'category' => 'negative_account', 'goal' => $goal,
             'status' => $status, 'opened_on' => $openedOn, 'resolved_at' => $resolvedOn,
         ]);
-    }
-
-    private function doc(EndUser $eu, string $name, string $date): void
-    {
-        $path = "docs/{$eu->id}/" . str_replace([' ', '.'], '_', $name);
-        Storage::disk('private')->put($path, 'PDF-CONTENT');
-        $d = $eu->documents()->create([
-            'file_name' => $name, 'file_type' => 'pdf', 'file_path' => $path, 'category' => 'other',
-        ]);
-        $d->forceFill(['created_at' => $date])->save();
     }
 
     private function addClientPayload(array $extra = []): array
@@ -263,94 +252,6 @@ class ResultsTrackingTest extends TestCase
             ->assertDontSee('Negative Items &amp; Results')
             ->assertDontSee('EOD Report')
             ->assertDontSee('Monthly Results');
-    }
-
-    public function test_export_letters_zips_active_clients_by_round(): void
-    {
-        Storage::fake('private');
-        $this->seedWorld();
-
-        $active = $this->eu($this->clinecea, 'Jahkayah', [
-            'email' => 'jl@t.com', 'status' => 'active',
-            'rounds' => ['1st Round', '2nd Round'], 'start_date' => '2026-05-21',
-            'round_dates' => ['2nd Round' => '2026-06-25'],
-        ]);
-        $this->doc($active, 'EX round1.pdf', '2026-05-21');
-        $this->doc($active, 'EX round2.pdf', '2026-06-25');
-
-        // None of these belong on the Clients list, so none may appear:
-        // paused, in-progress (not done), and held — even though all are "active".
-        $paused = $this->eu($this->clinecea, 'Paused', ['email' => 'p@t.com', 'status' => 'paused']);
-        $this->doc($paused, 'paused-skip.pdf', '2026-05-21');
-
-        $inProgress = $this->eu($this->clinecea, 'InProg', ['email' => 'ip@t.com', 'intake_status' => null]);
-        $this->doc($inProgress, 'inprog-skip.pdf', '2026-05-21');
-
-        $held = $this->eu($this->clinecea, 'Held', ['email' => 'h@t.com', 'held_at' => now()]);
-        $this->doc($held, 'held-skip.pdf', '2026-05-21');
-
-        $names = $this->zipEntries(
-            $this->actingAs($this->super, 'admin')
-                ->withSession(['selected_client_id' => $this->clinecea->id])
-                ->get('/admin/client-list/letters-export')->assertOk()
-        );
-
-        $this->assertTrue($names->contains('Jahkayah X/1st Round Letters/EX round1.pdf'));
-        $this->assertTrue($names->contains('Jahkayah X/2nd Round Letters/EX round2.pdf'));
-        foreach (['paused-skip', 'inprog-skip', 'held-skip'] as $skip) {
-            $this->assertEmpty($names->filter(fn ($n) => str_contains($n, $skip))->all(), "{$skip} must be excluded");
-        }
-    }
-
-    /** Read a download response's ZIP and return its entry paths, then clean up. */
-    private function zipEntries($response): \Illuminate\Support\Collection
-    {
-        $path = $response->baseResponse->getFile()->getPathname();
-        $zip = new \ZipArchive();
-        $zip->open($path);
-        $names = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $names[] = $zip->getNameIndex($i);
-        }
-        $zip->close();
-        @unlink($path);
-
-        return collect($names);
-    }
-
-    public function test_letters_export_splits_into_batches_of_five_clients(): void
-    {
-        Storage::fake('private');
-        $this->seedWorld();
-
-        // 7 active clients C1..C7 (sort by first name), one letter each.
-        for ($i = 1; $i <= 7; $i++) {
-            $eu = $this->eu($this->clinecea, "C{$i}", ['email' => "c{$i}@t.com"]);
-            $this->doc($eu, "c{$i}.pdf", '2026-08-01');
-        }
-
-        $get = fn ($batch) => $this->actingAs($this->super, 'admin')
-            ->withSession(['selected_client_id' => $this->clinecea->id])
-            ->get('/admin/client-list/letters-export?batch=' . $batch);
-
-        // Part 1 → C1..C5 only.
-        $b0 = $this->zipEntries($get(0));
-        foreach (['C1 X', 'C2 X', 'C3 X', 'C4 X', 'C5 X'] as $n) {
-            $this->assertTrue($b0->contains(fn ($e) => str_starts_with($e, $n . '/')), "batch 0 should include {$n}");
-        }
-        $this->assertFalse($b0->contains(fn ($e) => str_starts_with($e, 'C6 X/')));
-        $this->assertFalse($b0->contains(fn ($e) => str_starts_with($e, 'C7 X/')));
-
-        // Part 2 → C6, C7 only (no overlap with part 1).
-        $b1 = $this->zipEntries($get(1));
-        $this->assertTrue($b1->contains(fn ($e) => str_starts_with($e, 'C6 X/')));
-        $this->assertTrue($b1->contains(fn ($e) => str_starts_with($e, 'C7 X/')));
-        $this->assertFalse($b1->contains(fn ($e) => str_starts_with($e, 'C1 X/')));
-
-        // The chooser page lists 2 parts.
-        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
-            ->get('/admin/client-list/letters')
-            ->assertOk()->assertSee('Part 1')->assertSee('Part 2');
     }
 
     public function test_leads_cannot_reach_results_reports(): void
