@@ -90,6 +90,33 @@ class ResultsTrackingTest extends TestCase
         $this->assertSame('update', $eu->negativeItems->firstWhere('name', 'Capital One')->goal);
     }
 
+    public function test_only_negative_accounts_can_have_the_update_goal(): void
+    {
+        $this->seedWorld();
+
+        // Add Client path: update goal survives only for negative accounts.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->post('/admin/end-users', $this->addClientPayload([
+                'negative_items' => [
+                    ['name' => 'Cap One', 'category' => 'negative_account', 'goal' => 'update', 'bureau' => 'all'],
+                    ['name' => 'Hard Pull', 'category' => 'inquiry', 'goal' => 'update', 'bureau' => 'all'],
+                    ['name' => 'Old Address', 'category' => 'personal_information', 'goal' => 'update', 'bureau' => 'all'],
+                ],
+            ]))->assertRedirect();
+
+        $eu = EndUser::where('email', 'jane@t.com')->firstOrFail();
+        $this->assertSame('update', $eu->negativeItems->firstWhere('name', 'Cap One')->goal);
+        $this->assertSame('delete', $eu->negativeItems->firstWhere('name', 'Hard Pull')->goal);
+        $this->assertSame('delete', $eu->negativeItems->firstWhere('name', 'Old Address')->goal);
+
+        // Results-tab add path: an inquiry with goal=update is forced to delete.
+        $kay = $this->eu($this->clinecea, 'Kay');
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->post('/admin/negative-items', ['end_user_id' => $kay->id, 'name' => 'Inq', 'category' => 'inquiry', 'goal' => 'update', 'bureau' => 'all'])
+            ->assertRedirect();
+        $this->assertSame('delete', $kay->negativeItems()->first()->goal);
+    }
+
     public function test_add_client_requires_at_least_one_item_for_clinecea(): void
     {
         $this->seedWorld();

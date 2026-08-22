@@ -308,6 +308,17 @@
             </style>
             <script>
                 window.niIdx = {{ $oldItems->count() }};
+                // Only a Negative Account can be "Update to positive"; every other
+                // category is delete-only — force Delete and disable the option.
+                window.niSyncGoal = function (row) {
+                    var cat = row.querySelector('select[name$="[category]"]');
+                    var goal = row.querySelector('select[name$="[goal]"]');
+                    if (!cat || !goal) return;
+                    var isNeg = cat.value === 'negative_account';
+                    var upd = goal.querySelector('option[value="update"]');
+                    if (upd) upd.disabled = !isNeg;
+                    if (!isNeg) goal.value = 'delete';
+                };
                 window.niAddRow = function () {
                     var tpl = document.getElementById('niRowTpl');
                     if (!tpl) return;
@@ -318,7 +329,18 @@
                         el.removeAttribute('data-ni');
                     });
                     document.getElementById('niRows').appendChild(node);
+                    window.niSyncGoal(node);
                 };
+                (function () {
+                    var rows = document.getElementById('niRows');
+                    if (!rows) return;
+                    rows.addEventListener('change', function (e) {
+                        if (e.target && e.target.name && e.target.name.indexOf('[category]') !== -1) {
+                            window.niSyncGoal(e.target.closest('.ni-row'));
+                        }
+                    });
+                    rows.querySelectorAll('.ni-row').forEach(function (r) { window.niSyncGoal(r); });
+                })();
             </script>
             @endif
 

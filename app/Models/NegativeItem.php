@@ -44,6 +44,19 @@ class NegativeItem extends Model
     /** Terminal statuses per goal: a delete-item is "deleted", an update-item is "updated". */
     public const STATUSES = ['reporting', 'deleted', 'updated'];
 
+    /**
+     * The allowed goal for a category. Only a Negative Account can be "updated to
+     * positive"; every other item type (inquiry, bankruptcy, personal info,
+     * employers) can only be deleted — so their goal is forced to 'delete'.
+     */
+    public static function goalForCategory(string $category, string $goal): string
+    {
+        if ($category !== 'negative_account') {
+            return 'delete';
+        }
+        return array_key_exists($goal, self::GOALS) ? $goal : 'delete';
+    }
+
     public function endUser()
     {
         return $this->belongsTo(EndUser::class);

@@ -252,14 +252,15 @@ class EndUserController extends Controller
             if ($name === '') {
                 continue;
             }
-            $category = (string) ($row['category'] ?? 'account');
-            $goal     = (string) ($row['goal'] ?? 'delete');
+            $category = (string) ($row['category'] ?? 'negative_account');
+            $category = array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'negative_account';
+            $goal     = NegativeItem::goalForCategory($category, (string) ($row['goal'] ?? 'delete'));
             $bureau   = trim((string) ($row['bureau'] ?? ''));
 
             $endUser->negativeItems()->create([
                 'name'                => mb_substr($name, 0, 255),
-                'category'            => array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'negative_account',
-                'goal'                => array_key_exists($goal, NegativeItem::GOALS) ? $goal : 'delete',
+                'category'            => $category,
+                'goal'                => $goal,
                 'bureau'              => array_key_exists($bureau, NegativeItem::BUREAUS) ? $bureau : 'all',
                 'status'              => 'reporting',
                 'opened_on'           => $openedOn,

@@ -159,5 +159,21 @@
         el.select();
         try { navigator.clipboard.writeText(el.value); } catch (e) { document.execCommand('copy'); }
     };
+    // Add-item form: only a Negative Account can be "Update to positive".
+    (function () {
+        var form = document.querySelector('#results-panel .ni-add');
+        if (!form) return;
+        var cat = form.querySelector('select[name="category"]');
+        var goal = form.querySelector('select[name="goal"]');
+        if (!cat || !goal) return;
+        function sync() {
+            var isNeg = cat.value === 'negative_account';
+            var upd = goal.querySelector('option[value="update"]');
+            if (upd) upd.disabled = !isNeg;
+            if (!isNeg) goal.value = 'delete';
+        }
+        cat.addEventListener('change', sync);
+        sync();
+    })();
 </script>
 @endonce

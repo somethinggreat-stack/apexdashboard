@@ -92,12 +92,18 @@ class NegativeItemController extends Controller
 
     private function validateItem(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name'     => 'required|string|max:255',
             'category' => 'required|in:' . implode(',', array_keys(NegativeItem::CATEGORIES)),
             'goal'     => 'required|in:' . implode(',', array_keys(NegativeItem::GOALS)),
             'bureau'   => 'required|in:' . implode(',', array_keys(NegativeItem::BUREAUS)),
         ]);
+
+        // Only a Negative Account can be "updated to positive"; everything else
+        // (inquiry, bankruptcy, personal info, employers) can only be deleted.
+        $data['goal'] = NegativeItem::goalForCategory($data['category'], $data['goal']);
+
+        return $data;
     }
 
     /** Fetch an end user, or 404 unless it's in this org and its owner has results tracking. */
