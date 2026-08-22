@@ -278,28 +278,28 @@ class ResultsTrackingTest extends TestCase
         $this->doc($active, 'EX round1.pdf', '2026-05-21');
         $this->doc($active, 'EX round2.pdf', '2026-06-25');
 
-        // Paused client must be excluded entirely.
+        // None of these belong on the Clients list, so none may appear:
+        // paused, in-progress (not done), and held — even though all are "active".
         $paused = $this->eu($this->clinecea, 'Paused', ['email' => 'p@t.com', 'status' => 'paused']);
-        $this->doc($paused, 'should-not-appear.pdf', '2026-05-21');
+        $this->doc($paused, 'paused-skip.pdf', '2026-05-21');
 
-        $resp = $this->actingAs($this->super, 'admin')
-            ->withSession(['selected_client_id' => $this->clinecea->id])
-            ->get('/admin/client-list/letters-export');
-        $resp->assertOk();
+        $inProgress = $this->eu($this->clinecea, 'InProg', ['email' => 'ip@t.com', 'intake_status' => null]);
+        $this->doc($inProgress, 'inprog-skip.pdf', '2026-05-21');
 
-        $path = $resp->baseResponse->getFile()->getPathname();
-        $zip = new \ZipArchive();
-        $zip->open($path);
-        $names = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $names[] = $zip->getNameIndex($i);
+        $held = $this->eu($this->clinecea, 'Held', ['email' => 'h@t.com', 'held_at' => now()]);
+        $this->doc($held, 'held-skip.pdf', '2026-05-21');
+
+        $names = $this->zipEntries(
+            $this->actingAs($this->super, 'admin')
+                ->withSession(['selected_client_id' => $this->clinecea->id])
+                ->get('/admin/client-list/letters-export')->assertOk()
+        );
+
+        $this->assertTrue($names->contains('Jahkayah X/1st Round Letters/EX round1.pdf'));
+        $this->assertTrue($names->contains('Jahkayah X/2nd Round Letters/EX round2.pdf'));
+        foreach (['paused-skip', 'inprog-skip', 'held-skip'] as $skip) {
+            $this->assertEmpty($names->filter(fn ($n) => str_contains($n, $skip))->all(), "{$skip} must be excluded");
         }
-        $zip->close();
-        @unlink($path);
-
-        $this->assertContains('Jahkayah X/1st Round Letters/EX round1.pdf', $names);
-        $this->assertContains('Jahkayah X/2nd Round Letters/EX round2.pdf', $names);
-        $this->assertEmpty(array_filter($names, fn ($n) => str_contains($n, 'should-not-appear')));
     }
 
     /** Read a download response's ZIP and return its entry paths, then clean up. */

@@ -153,6 +153,20 @@ class EndUserController extends Controller
     /** Active clients per batch — keeps each ZIP small enough to beat the host's request timeout. */
     private const LETTERS_BATCH_SIZE = 5;
 
+    /**
+     * The exact set the letters export covers: the same clients shown on the
+     * Clients list (round-1 done, not held) that are active — NOT every
+     * active-status record across New Clients / In Progress / Round Errors / etc.
+     */
+    private function letterClientsQuery(Client $bo)
+    {
+        return EndUser::forClient($bo->id)
+            ->notHeld()
+            ->done()
+            ->where('status', 'active')
+            ->orderBy('first_name')->orderBy('last_name');
+    }
+
     public function exportLetters(Request $request)
     {
         @set_time_limit(600);
@@ -161,9 +175,7 @@ class EndUserController extends Controller
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
         $bo      = Client::forAdmin($ownerId)->findOrFail(session('selected_client_id'));
 
-        $base = EndUser::where('client_id', $bo->id)
-            ->where('status', 'active')
-            ->orderBy('first_name')->orderBy('last_name');
+        $base = $this->letterClientsQuery($bo);
 
         // Download one small batch of clients at a time (default) or everything.
         $batch = $request->has('batch') ? max(0, (int) $request->query('batch')) : null;
@@ -227,10 +239,7 @@ class EndUserController extends Controller
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
         $bo      = Client::forAdmin($ownerId)->findOrFail(session('selected_client_id'));
 
-        $clients = EndUser::where('client_id', $bo->id)
-            ->where('status', 'active')
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['id', 'first_name', 'last_name']);
+        $clients = $this->letterClientsQuery($bo)->get(['id', 'first_name', 'last_name']);
 
         $batches = $clients->chunk(self::LETTERS_BATCH_SIZE)->values();
 
