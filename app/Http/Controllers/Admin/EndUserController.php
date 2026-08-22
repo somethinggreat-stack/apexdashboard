@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\Message;
+use App\Models\NegativeItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -209,12 +210,101 @@ class EndUserController extends Controller
             $endUser->update($files);
         }
 
+        $this->storeNegativeItems($request, $endUser);
+
         Message::postSystem(
             $endUser->client_id,
             "New client {$endUser->full_name} has been added. Start working on it."
         );
 
         return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
+    }
+
+    /**
+     * Save the negative items entered on the Add Client form. Only for owners
+     * with results tracking on; each item's opened_on is the client's start date
+     * so the enrollment month is attributed correctly. Blank rows are ignored.
+     */
+    private function storeNegativeItems(Request $request, EndUser $endUser): void
+    {
+        if (!$endUser->client?->resultsTrackingEnabled()) {
+            return;
+        }
+
+        $openedOn = $endUser->start_date
+            ? \Illuminate\Support\Carbon::parse($endUser->start_date)->toDateString()
+            : now()->toDateString();
+        $adminId = Auth::guard('admin')->id();
+
+        foreach ((array) $request->input('negative_items', []) as $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $category = (string) ($row['category'] ?? 'account');
+            $goal     = (string) ($row['goal'] ?? 'delete');
+            $bureau   = trim((string) ($row['bureau'] ?? ''));
+
+            $endUser->negativeItems()->create([
+                'name'                => mb_substr($name, 0, 255),
+                'category'            => array_key_exists($category, NegativeItem::CATEGORIES) ? $category : 'account',
+                'goal'                => array_key_exists($goal, NegativeItem::GOALS) ? $goal : 'delete',
+                'bureau'              => in_array($bureau, ['experian', 'transunion', 'equifax', 'multiple'], true) ? $bureau : null,
+                'status'              => 'reporting',
+                'opened_on'           => $openedOn,
+                'created_by_admin_id' => $adminId,
+            ]);
+        }
+    }
+
+    /** Mark a client as awaiting the owner's approval for their next round (SOP §2). */
+    public function requestRoundApproval(Request $request, string $id)
+    {
+        $endUser = $this->resultsScopedEndUser($id);
+        $round   = min(8, max(1, $endUser->current_round + 1));
+
+        $endUser->update([
+            'round_approval_status' => 'awaiting',
+            'round_approval_round'  => $round,
+            'round_approval_at'     => now(),
+        ]);
+
+        return back()->with('confirm', "Marked awaiting approval for Round {$round}.");
+    }
+
+    /** Record that the owner approved the next round. */
+    public function approveRound(string $id)
+    {
+        $endUser = $this->resultsScopedEndUser($id);
+        $endUser->update([
+            'round_approval_status' => 'approved',
+            'round_approval_at'     => now(),
+        ]);
+
+        return back()->with('confirm', 'Round approved — you can proceed.');
+    }
+
+    /** Clear an approval request/state. */
+    public function clearRoundApproval(string $id)
+    {
+        $endUser = $this->resultsScopedEndUser($id);
+        $endUser->update([
+            'round_approval_status' => null,
+            'round_approval_round'  => null,
+            'round_approval_at'     => null,
+        ]);
+
+        return back()->with('confirm', 'Approval status cleared.');
+    }
+
+    /** An end user in this org whose owner has results tracking on, or 404. */
+    private function resultsScopedEndUser(string $id): EndUser
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+
+        return EndUser::whereKey($id)
+            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId)->where('results_tracking', true))
+            ->firstOrFail();
     }
 
     /**
@@ -279,6 +369,7 @@ class EndUserController extends Controller
             'documents',
             'scoreHistory',
             'notes.createdBy',
+            'negativeItems',
         ])->findOrFail($id);
 
         return view('admin.end-users.show', compact('endUser'));

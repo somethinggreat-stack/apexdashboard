@@ -15,7 +15,7 @@ class Client extends Authenticatable
 
     protected $fillable = [
         'admin_id', 'business_name', 'email', 'password',
-        'phone', 'monthly_fee', 'status', 'custom_lists_enabled',
+        'phone', 'monthly_fee', 'status', 'custom_lists_enabled', 'results_tracking',
         'access_revoked', 'access_revoked_message',
         'referred_by_chantal', 'is_commission_referrer', 'referrer_id',
         'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
@@ -35,6 +35,7 @@ class Client extends Authenticatable
         'referred_by_chantal'  => 'boolean',
         'is_commission_referrer' => 'boolean',
         'custom_lists_enabled' => 'boolean',
+        'results_tracking'     => 'boolean',
         'access_revoked'       => 'boolean',
         'per_round_fee'        => 'decimal:2',
         'hourly_rate'          => 'decimal:2',
@@ -45,6 +46,12 @@ class Client extends Authenticatable
 
     /** Allowed round-cycle lengths (days) a business owner can run on. */
     public const ROUND_CYCLE_OPTIONS = [20, 30];
+
+    /** Whether the negative-items results system (item entry, EOD + monthly reports) is on for this owner. */
+    public function resultsTrackingEnabled(): bool
+    {
+        return (bool) $this->results_tracking;
+    }
 
     /** This owner's round-cycle length in days (20 or 30); defaults to 30. */
     public function roundCycleDays(): int

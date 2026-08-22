@@ -249,6 +249,79 @@
                 </div>
             </div>
 
+            @if ($selectedClient->resultsTrackingEnabled())
+            <div class="form-section">
+                <h4>Negative Items <span class="muted">(list every account, inquiry, collection…)</span></h4>
+                <p class="muted small" style="margin:0 0 10px;">
+                    Choose the goal for each item — <strong>Delete</strong> (get it removed) or <strong>Update to positive</strong>.
+                    You can add more or mark them off later on the client's page.
+                </p>
+                @php $oldItems = old('negative_items', []); @endphp
+                <div id="niRows" class="ni-rows">
+                    @foreach ($oldItems as $oi)
+                        @php $nm = trim((string)($oi['name'] ?? '')); @endphp
+                        @if ($nm !== '')
+                        <div class="ni-row">
+                            <input type="text" name="negative_items[{{ $loop->index }}][name]" value="{{ $nm }}" placeholder="Account / creditor name" maxlength="255">
+                            <select name="negative_items[{{ $loop->index }}][category]">
+                                @foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}" @selected(($oi['category'] ?? '') === $k)>{{ $v }}</option>@endforeach
+                            </select>
+                            <select name="negative_items[{{ $loop->index }}][goal]">
+                                @foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}" @selected(($oi['goal'] ?? '') === $k)>{{ $v }}</option>@endforeach
+                            </select>
+                            <select name="negative_items[{{ $loop->index }}][bureau]">
+                                <option value="">Bureau (optional)</option>
+                                @foreach (['experian' => 'Experian', 'transunion' => 'TransUnion', 'equifax' => 'Equifax', 'multiple' => 'Multiple'] as $k => $v)<option value="{{ $k }}" @selected(($oi['bureau'] ?? '') === $k)>{{ $v }}</option>@endforeach
+                            </select>
+                            <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
+                        </div>
+                        @endif
+                    @endforeach
+                </div>
+                <button type="button" class="btn btn-sm" onclick="niAddRow()">+ Add Item</button>
+
+                <template id="niRowTpl">
+                    <div class="ni-row">
+                        <input type="text" data-ni="name" placeholder="Account / creditor name" maxlength="255">
+                        <select data-ni="category">
+                            @foreach (\App\Models\NegativeItem::CATEGORIES as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                        </select>
+                        <select data-ni="goal">
+                            @foreach (\App\Models\NegativeItem::GOALS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                        </select>
+                        <select data-ni="bureau">
+                            <option value="">Bureau (optional)</option>
+                            @foreach (['experian' => 'Experian', 'transunion' => 'TransUnion', 'equifax' => 'Equifax', 'multiple' => 'Multiple'] as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                        </select>
+                        <button type="button" class="ni-del" onclick="this.closest('.ni-row').remove()" title="Remove">✕</button>
+                    </div>
+                </template>
+            </div>
+            <style>
+                .ni-rows { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+                .ni-row { display:grid; grid-template-columns: 2fr 1.1fr 1.3fr 1.1fr 32px; gap:8px; align-items:center; }
+                .ni-row input, .ni-row select { padding:8px 10px; border:1px solid #d7dee8; border-radius:8px; font-size:13px; background:#fff; color:#0f172a; }
+                .ni-del { border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; height:34px; cursor:pointer; font-weight:700; }
+                :root[data-theme="dark"] .ni-row input, :root[data-theme="dark"] .ni-row select { background:#10152a; border-color:var(--pro-line); color:var(--pro-text); }
+                @media (max-width:640px){ .ni-row { grid-template-columns:1fr 1fr; } }
+            </style>
+            <script>
+                window.niIdx = {{ count(array_filter($oldItems, fn ($r) => trim((string)($r['name'] ?? '')) !== '')) }};
+                window.niAddRow = function () {
+                    var tpl = document.getElementById('niRowTpl');
+                    if (!tpl) return;
+                    var node = tpl.content.firstElementChild.cloneNode(true);
+                    var idx = window.niIdx++;
+                    node.querySelectorAll('[data-ni]').forEach(function (el) {
+                        el.setAttribute('name', 'negative_items[' + idx + '][' + el.getAttribute('data-ni') + ']');
+                        el.removeAttribute('data-ni');
+                    });
+                    document.getElementById('niRows').appendChild(node);
+                };
+                if (!document.querySelector('#niRows .ni-row')) niAddRow();
+            </script>
+            @endif
+
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createEndUserModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Create Client</button>

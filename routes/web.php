@@ -153,6 +153,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('daily-task', [Admin\DailyTaskController::class, 'index'])->name('daily-task');
         // CFPB Logins — last-12h CFPB logins entered per business owner
         Route::get('cfpb-logins', [Admin\CfpbLoginController::class, 'index'])->name('cfpb-logins');
+        // Results reports (owners with results tracking on — Clinecea): EOD + monthly
+        Route::get('results/eod', [Admin\ResultsController::class, 'eod'])->name('results.eod');
+        Route::get('results/monthly', [Admin\ResultsController::class, 'monthly'])->name('results.monthly');
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
@@ -234,6 +237,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('end-users/{id}/status-report', [Admin\EndUserController::class, 'statusReport'])->name('end-users.status-report');
             Route::put('end-users/{id}', [Admin\EndUserController::class, 'update'])->name('end-users.update');
             Route::delete('end-users/{id}', [Admin\EndUserController::class, 'destroy'])->name('end-users.destroy');
+
+            // Negative items (results tracking) + round approval — enabled owners only
+            Route::post('negative-items', [Admin\NegativeItemController::class, 'store'])->name('negative-items.store');
+            Route::put('negative-items/{id}', [Admin\NegativeItemController::class, 'update'])->whereNumber('id')->name('negative-items.update');
+            Route::post('negative-items/{id}/resolve', [Admin\NegativeItemController::class, 'resolve'])->whereNumber('id')->name('negative-items.resolve');
+            Route::post('negative-items/{id}/reopen', [Admin\NegativeItemController::class, 'reopen'])->whereNumber('id')->name('negative-items.reopen');
+            Route::delete('negative-items/{id}', [Admin\NegativeItemController::class, 'destroy'])->whereNumber('id')->name('negative-items.destroy');
+            Route::post('end-users/{id}/request-approval', [Admin\EndUserController::class, 'requestRoundApproval'])->whereNumber('id')->name('end-users.request-approval');
+            Route::post('end-users/{id}/approve-round', [Admin\EndUserController::class, 'approveRound'])->whereNumber('id')->name('end-users.approve-round');
+            Route::post('end-users/{id}/clear-approval', [Admin\EndUserController::class, 'clearRoundApproval'])->whereNumber('id')->name('end-users.clear-approval');
 
             Route::post('process-steps', [Admin\ProcessStepController::class, 'store'])->name('process-steps.store');
             Route::put('process-steps/{id}', [Admin\ProcessStepController::class, 'update'])->name('process-steps.update');

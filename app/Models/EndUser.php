@@ -92,6 +92,7 @@ class EndUser extends Model
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
+        'round_approval_status', 'round_approval_round', 'round_approval_at',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
     protected $casts = [
@@ -101,6 +102,7 @@ class EndUser extends Model
         'held_at' => 'datetime',
         'listed_at' => 'datetime',
         'cfpb_logged_at' => 'datetime',
+        'round_approval_at' => 'datetime',
         'date_of_birth' => 'date',
         'per_round_fee' => 'decimal:2',
         'per_round_fees' => 'array',
@@ -152,6 +154,45 @@ class EndUser extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** Negative accounts/items on this client's file (results tracking). */
+    public function negativeItems()
+    {
+        return $this->hasMany(NegativeItem::class);
+    }
+
+    /**
+     * How many negative items are still reporting. Uses the already-loaded
+     * relation when present (no extra query); otherwise counts in the DB.
+     */
+    public function remainingNegativeCount(): int
+    {
+        if ($this->relationLoaded('negativeItems')) {
+            return $this->negativeItems->where('status', 'reporting')->count();
+        }
+        return $this->negativeItems()->reporting()->count();
+    }
+
+    /** True when only 1–2 negative items remain — "nearing completion" (SOP §4). */
+    public function isNearingCompletion(): bool
+    {
+        $left = $this->remainingNegativeCount();
+        return $left >= 1 && $left <= 2;
+    }
+
+    /** Short human status for the results reports: Hold / New / Error / Active. */
+    public function resultsStatusLabel(): string
+    {
+        if ($this->held_at) {
+            return 'On Hold';
+        }
+        return match ($this->intake_status) {
+            'pending_review' => 'New Client',
+            'error'          => 'Error',
+            'round_error'    => 'Round Error',
+            default          => 'Active',
+        };
     }
 
     public function deletedBy()

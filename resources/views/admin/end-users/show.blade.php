@@ -198,9 +198,18 @@
         Comments ({{ $noteCount }})@if ($noteCount)<span class="notes-dot" aria-hidden="true"></span>@endif
     </button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
+    @if ($endUser->client?->resultsTrackingEnabled())
+        <button class="tab" data-target="tab-results">Results ({{ $endUser->negativeItems->count() }})</button>
+    @endif
 </div>
 
 @include('admin.end-users.partials.overview', ['endUser' => $endUser, 'totalDocs' => $totalDocs])
+
+@if ($endUser->client?->resultsTrackingEnabled())
+<div id="tab-results" class="tab-panel">
+    @include('admin.end-users.partials.negative-items', ['endUser' => $endUser])
+</div>
+@endif
 
 <div id="tab-profile" class="tab-panel">
     <div class="card">
