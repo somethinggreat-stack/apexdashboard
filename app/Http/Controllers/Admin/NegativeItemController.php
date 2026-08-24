@@ -72,6 +72,8 @@ class NegativeItemController extends Controller
             'resolved_round' => $round,
         ]);
 
+        \App\Models\ClientEvent::log($item->endUser, 'result', "Marked {$item->name} ({$item->bureauLabel()}) as " . $item->statusLabel());
+
         return back()->with('confirm', 'Marked ' . $item->statusLabel() . '.');
     }
 
@@ -81,12 +83,15 @@ class NegativeItemController extends Controller
         $item = $this->authorizedItem($id);
         $item->update(['status' => 'reporting', 'resolved_at' => null, 'resolved_round' => null]);
 
+        \App\Models\ClientEvent::log($item->endUser, 'result', "Reopened {$item->name} ({$item->bureauLabel()}) — back to reporting");
+
         return back()->with('confirm', 'Item set back to reporting.');
     }
 
     public function destroy(int $id)
     {
         $item = $this->authorizedItem($id);
+        \App\Models\ClientEvent::log($item->endUser, 'result', "Removed result item {$item->name} ({$item->bureauLabel()})");
         $item->delete();
 
         return back()->with('confirm', 'Item removed.');

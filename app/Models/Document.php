@@ -12,9 +12,14 @@ class Document extends Model
     use HasFactory;
 
     protected $fillable = [
-        'end_user_id', 'process_step_id',
+        'end_user_id', 'uploaded_by_admin_id', 'process_step_id',
         'file_name', 'file_type', 'file_path', 'category', 'description',
     ];
+
+    public function uploadedBy()
+    {
+        return $this->belongsTo(Admin::class, 'uploaded_by_admin_id');
+    }
 
     protected static function booted(): void
     {

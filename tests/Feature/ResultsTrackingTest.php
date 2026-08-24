@@ -308,6 +308,38 @@ class ResultsTrackingTest extends TestCase
             ->assertDontSee('Monthly Results');
     }
 
+    public function test_client_activity_is_tracked_and_super_only(): void
+    {
+        $this->seedWorld();
+        $va = new Admin(['email' => 'va2@test.com', 'password' => 'secret-pass', 'full_name' => 'Abid Hussain']);
+        $va->role = 'va'; $va->parent_admin_id = $this->super->id; $va->save();
+
+        $eu = $this->eu($this->clinecea, 'Track');
+
+        // Super places the client on hold → an event is logged against that admin.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->post("/admin/end-users/{$eu->id}/hold", ['reason' => 'docs missing'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('client_events', [
+            'end_user_id' => $eu->id, 'admin_id' => $this->super->id, 'event' => 'held',
+        ]);
+
+        // Super sees the Activity tab with the event.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get("/admin/end-users/{$eu->id}")
+            ->assertOk()
+            ->assertSee('Activity &amp; Tracking', false)
+            ->assertSee('Placed on Hold')
+            ->assertSee('docs missing');
+
+        // A VA does NOT see the Activity tab at all.
+        $this->actingAs($va, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get("/admin/end-users/{$eu->id}")
+            ->assertOk()
+            ->assertDontSee('Activity &amp; Tracking', false);
+    }
+
     public function test_leads_cannot_reach_results_reports(): void
     {
         $this->seedWorld();

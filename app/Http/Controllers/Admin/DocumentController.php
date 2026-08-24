@@ -54,6 +54,7 @@ class DocumentController extends Controller
 
         $document = Document::create([
             'end_user_id' => $data['end_user_id'],
+            'uploaded_by_admin_id' => auth('admin')->id(),
             'process_step_id' => $data['process_step_id'] ?? null,
             'file_name' => $file->getClientOriginalName(),
             'file_type' => $fileType,
@@ -160,6 +161,7 @@ class DocumentController extends Controller
 
                 Document::create([
                     'end_user_id'     => $data['end_user_id'],
+                    'uploaded_by_admin_id' => auth('admin')->id(),
                     'process_step_id' => $data['process_step_id'] ?? null,
                     'file_name'       => $file->getClientOriginalName(),
                     'file_type'       => $fileType,

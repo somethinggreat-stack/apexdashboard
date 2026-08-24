@@ -58,6 +58,25 @@ class EndUser extends Model
             }
         });
 
+        // Audit trail (super-admin Activity tab): who moved this client where.
+        static::created(function (EndUser $user) {
+            \App\Models\ClientEvent::log($user, 'created', 'Client added to ' . \App\Models\ClientEvent::bucketLabel($user->intake_status, (bool) $user->held_at));
+        });
+        static::updated(function (EndUser $user) {
+            if ($user->wasChanged('intake_status')) {
+                $reason = $user->move_reason ? " — {$user->move_reason}" : '';
+                \App\Models\ClientEvent::log($user, 'moved', 'Moved to ' . \App\Models\ClientEvent::bucketLabel($user->intake_status, false) . $reason);
+            }
+            if ($user->wasChanged('held_at')) {
+                if ($user->held_at) {
+                    $reason = $user->move_reason ? " — {$user->move_reason}" : '';
+                    \App\Models\ClientEvent::log($user, 'held', "Placed on Hold / Pause{$reason}");
+                } else {
+                    \App\Models\ClientEvent::log($user, 'resumed', 'Resumed from Hold / Pause');
+                }
+            }
+        });
+
         static::deleting(function (EndUser $user) {
             // A soft delete (Recycle Bin) must keep everything for a possible
             // restore — leave the documents and identity files exactly where
@@ -160,6 +179,12 @@ class EndUser extends Model
     public function negativeItems()
     {
         return $this->hasMany(NegativeItem::class);
+    }
+
+    /** Audit-trail events (moves, holds, profile edits) — super-admin Activity tab. */
+    public function clientEvents()
+    {
+        return $this->hasMany(ClientEvent::class);
     }
 
     /**

@@ -384,7 +384,46 @@ class EndUserController extends Controller
             'negativeItems',
         ])->findOrFail($id);
 
-        return view('admin.end-users.show', compact('endUser'));
+        // Per-client audit timeline — super admin only.
+        $activity = Auth::guard('admin')->user()->isSuper()
+            ? $this->buildClientTimeline($endUser)
+            : null;
+
+        return view('admin.end-users.show', compact('endUser', 'activity'));
+    }
+
+    /**
+     * Merge every tracked action on this client — moves/holds/profile edits
+     * (client_events), process steps, comments, result items and document
+     * uploads — into one timeline, newest first, each with the VA + timestamp.
+     */
+    private function buildClientTimeline(EndUser $eu): array
+    {
+        $eu->loadMissing(['clientEvents.admin', 'processSteps.createdBy', 'notes.createdBy', 'negativeItems.createdBy', 'documents.uploadedBy']);
+        $t = [];
+
+        foreach ($eu->clientEvents as $e) {
+            $t[] = ['at' => $e->created_at, 'who' => $e->admin?->full_name ?? 'System', 'kind' => $e->event, 'text' => $e->description];
+        }
+        foreach ($eu->processSteps as $s) {
+            $t[] = ['at' => $s->created_at, 'who' => $s->createdBy?->full_name ?? 'System', 'kind' => 'step',
+                    'text' => 'Logged step: ' . ($s->step_type_label ?? $s->step_type) . " (Round {$s->round}, Week {$s->week})"];
+        }
+        foreach ($eu->notes as $n) {
+            $t[] = ['at' => $n->created_at, 'who' => $n->createdBy?->full_name ?? 'System', 'kind' => 'comment',
+                    'text' => 'Comment: ' . \Illuminate\Support\Str::limit($n->note_text, 90)];
+        }
+        foreach ($eu->negativeItems as $it) {
+            $t[] = ['at' => $it->created_at, 'who' => $it->createdBy?->full_name ?? 'System', 'kind' => 'result',
+                    'text' => 'Added result item: ' . $it->name . ' (' . $it->bureauLabel() . ')'];
+        }
+        foreach ($eu->documents as $d) {
+            $t[] = ['at' => $d->created_at, 'who' => $d->uploadedBy?->full_name ?? 'System', 'kind' => 'doc',
+                    'text' => 'Uploaded document: ' . $d->file_name];
+        }
+
+        usort($t, fn ($a, $b) => $b['at'] <=> $a['at']);
+        return $t;
     }
 
     public function statusReport(string $id)
@@ -561,6 +600,12 @@ class EndUserController extends Controller
         $data = array_merge($data, $files);
 
         $endUser->update($data);
+
+        // A full profile-form submission (has first_name) is a client edit worth
+        // logging; inline list edits (status/dates only) are not.
+        if ($request->has('first_name')) {
+            \App\Models\ClientEvent::log($endUser, 'profile', 'Edited client profile');
+        }
 
         // Fall back to the client's own page (never the site root) if the
         // referer is missing — some hosts strip it on multipart posts, and we

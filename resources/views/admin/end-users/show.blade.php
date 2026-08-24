@@ -201,6 +201,9 @@
     @if ($endUser->client?->resultsTrackingEnabled())
         <button class="tab" data-target="tab-results">Results ({{ $endUser->negativeItems->count() }})</button>
     @endif
+    @if (!is_null($activity ?? null))
+        <button class="tab" data-target="tab-activity">Activity ({{ count($activity) }})</button>
+    @endif
 </div>
 
 @include('admin.end-users.partials.overview', ['endUser' => $endUser, 'totalDocs' => $totalDocs])
@@ -208,6 +211,12 @@
 @if ($endUser->client?->resultsTrackingEnabled())
 <div id="tab-results" class="tab-panel">
     @include('admin.end-users.partials.negative-items', ['endUser' => $endUser])
+</div>
+@endif
+
+@if (!is_null($activity ?? null))
+<div id="tab-activity" class="tab-panel">
+    @include('admin.end-users.partials.activity', ['activity' => $activity, 'endUser' => $endUser])
 </div>
 @endif
 
