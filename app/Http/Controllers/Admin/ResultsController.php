@@ -66,19 +66,27 @@ class ResultsController extends Controller
             $add($eu, 'New client setup');
         }
 
-        // Rounds sent today = Week-1 process steps logged today.
-        $roundsSent = 0;
+        // Rounds sent today = each client+round whose Week-1 was started today.
+        // A round's Week 1 has several steps (letters, phone, FTC, CFPB, upload),
+        // so dedupe per (client, round) — one "Round N sent" per round, not per step.
+        $roundsSentSet = [];
         ProcessStep::whereIn('end_user_id', $clients->pluck('id'))
             ->where('week', 1)
             ->whereBetween('created_at', [$dayStart, $dayEnd])
             ->with('endUser')
             ->get()
-            ->each(function (ProcessStep $step) use ($add, &$roundsSent) {
-                if ($step->endUser) {
-                    $add($step->endUser, 'Round ' . $step->round . ' sent');
-                    $roundsSent++;
+            ->each(function (ProcessStep $step) use ($add, &$roundsSentSet) {
+                if (!$step->endUser) {
+                    return;
                 }
+                $key = $step->end_user_id . '-' . $step->round;
+                if (isset($roundsSentSet[$key])) {
+                    return;
+                }
+                $roundsSentSet[$key] = true;
+                $add($step->endUser, 'Round ' . $step->round . ' sent');
             });
+        $roundsSent = count($roundsSentSet);
 
         // Items deleted / updated today.
         foreach ($clients as $eu) {

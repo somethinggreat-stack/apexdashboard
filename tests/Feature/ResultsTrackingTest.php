@@ -6,6 +6,7 @@ use App\Models\Admin;
 use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\NegativeItem;
+use App\Models\ProcessStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -244,6 +245,26 @@ class ResultsTrackingTest extends TestCase
             ->assertOk()
             ->assertSee('Jane X')                // full_name (first + last)
             ->assertSee('Nearing completion');
+    }
+
+    public function test_eod_counts_a_round_once_not_per_week1_step(): void
+    {
+        $this->seedWorld();
+        $eu = $this->eu($this->clinecea, 'Desh');
+
+        // A round's Week 1 has several steps — all logged today, same round.
+        foreach (['ex_tu_eq_letters_generated', 'phone_call_disputes', 'ftc_and_freezes', 'cfpb_3b_and_innovis', 'experian_upload'] as $t) {
+            ProcessStep::create([
+                'end_user_id' => $eu->id, 'round' => 3, 'week' => 1,
+                'step_type' => $t, 'step_date' => now()->toDateString(), 'created_by_admin_id' => $this->super->id,
+            ]);
+        }
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get('/admin/results/eod')
+            ->assertOk()
+            ->assertSee('Rounds sent: 1')                 // one round, not five
+            ->assertDontSee('Round 3 sent; Round 3 sent'); // not repeated in the copy text
     }
 
     public function test_round_approval_flow(): void
