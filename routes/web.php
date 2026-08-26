@@ -197,6 +197,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('messages/{id}/star', [Admin\MessageController::class, 'toggleStar'])->name('messages.star');
             Route::post('messages/{id}/note', [Admin\MessageController::class, 'saveNote'])->name('messages.note');
 
+            // Tasks View — the selected BO's own 30-day work log (rounds started
+            // per day), the internal twin of the owner's Tasks View but WITH the
+            // VA name on each entry (super-admin/VA side only).
+            Route::get('tasks', [Admin\TaskController::class, 'index'])->name('tasks');
+
             // New Clients — intake-form submissions pending review for this BO
             Route::get('new-clients', [Admin\EndUserController::class, 'newClients'])->name('new-clients');
             Route::post('new-clients/{id}/approve', [Admin\EndUserController::class, 'approveIntake'])->name('new-clients.approve');

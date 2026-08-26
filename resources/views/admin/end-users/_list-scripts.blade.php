@@ -6,21 +6,16 @@
 @php
     $statusOptions = ['active','paused','graduated','cancelled'];
     $roundOptions  = App\Models\EndUser::ROUND_OPTIONS;
-    // Canonical first step per week, keyed by round cycle (30-day = 4 weeks,
-    // 20-day = 3 weeks). Used to pre-fill the quick-log step type.
-    $weekStepCanonical = [
-        30 => [
-            1 => 'ex_tu_eq_letters_generated',
-            2 => 'tu_ex_call_followups',
-            3 => 'aggressive_bureau_followup',
-            4 => 'pull_latest_report',
-        ],
-        20 => [
-            1 => 'ex_tu_eq_letters_generated',
-            2 => 'cfpb_3b_and_innovis',
-            3 => 'aggressive_bureau_followup',
-        ],
-    ];
+    // Canonical (first) step per week for the quick-log modal — derived straight
+    // from the backend's step-by-week map so it can never drift from what the
+    // store() validator accepts. 20-day week 2 = tu_ex_call_followups, NOT the
+    // 30-day value; hardcoding it wrong is what produced "step_types.0 invalid".
+    $weekStepCanonical = [];
+    foreach ([30, 20] as $cycleDays) {
+        foreach (App\Models\ProcessStep::stepTypesByWeek($cycleDays) as $w => $steps) {
+            $weekStepCanonical[$cycleDays][$w] = array_key_first($steps);
+        }
+    }
 @endphp
 
 @push('scripts')

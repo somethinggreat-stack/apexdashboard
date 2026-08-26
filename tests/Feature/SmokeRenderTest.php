@@ -109,6 +109,7 @@ class SmokeRenderTest extends TestCase
                 '/admin/select-business-owner',
                 '/admin/universal-search',
                 '/admin/daily-task',
+                '/admin/tasks',                         // per-BO 30-day Tasks View
                 '/admin/recycle-bin',
                 '/admin/new-clients',
                 '/admin/end-users',                     // In Progress list
@@ -136,6 +137,7 @@ class SmokeRenderTest extends TestCase
 
             $boPaths = [
                 '/business-owner/dashboard',
+                '/business-owner/tasks',                // 30-day Tasks View
                 '/business-owner/end-users',            // In Progress
                 '/business-owner/client-list',          // Done Clients
                 '/business-owner/errors',
