@@ -53,6 +53,6 @@
     .act-meta { font-size:12px; color:var(--pro-muted,#64748b); margin-top:2px; }
     .act-who { font-weight:700; color:var(--pro-text,#334155); }
     .act-dot { margin:0 5px; }
-    :root[data-theme="dark"] .act-ico { box-shadow:0 0 0 3px var(--pro-panel,#0f1424); }
+    :root[data-theme="dark"] .act-ico { box-shadow:0 0 0 3px var(--pro-card,#161b2e); }
 </style>
 @endpush
