@@ -115,8 +115,10 @@
 
 @if (!empty($owes))
     @php
+        // Outstanding ignores inactive owners ($owes is active-only); Collected
+        // includes money already taken from inactive owners too ($collectedAll).
         $totOwed = array_sum(array_column($owes, 'pending'));
-        $totColl = array_sum(array_column($owes, 'done'));
+        $totColl = $collectedAll ?? array_sum(array_column($owes, 'done'));
     @endphp
     <div class="card owes-card">
         <div class="sbo-head">

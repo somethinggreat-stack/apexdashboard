@@ -68,7 +68,19 @@ class ClientSelectorController extends Controller
         usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
         usort($owes, fn ($a, $b) => $b['pending'] <=> $a['pending']);
 
-        return view('admin.client-selector.index', compact('clients', 'attention', 'owes'));
+        // Total Collected counts money already taken from EVERY owner, active or
+        // not — historical revenue doesn't disappear when an owner goes inactive.
+        // (Total Outstanding, by contrast, ignores inactive owners: $owes above is
+        // active-only, so we don't chase a churned owner's balance.)
+        $collectedAll = array_sum(array_column($owes, 'done'));
+        if ($isSuper) {
+            $collectedAll += (float) Client::forAdmin($adminId)
+                ->where('status', '!=', 'active')
+                ->get()
+                ->sum(fn ($c) => $c->paymentTotals()['done']);
+        }
+
+        return view('admin.client-selector.index', compact('clients', 'attention', 'owes', 'collectedAll'));
     }
 
     /**

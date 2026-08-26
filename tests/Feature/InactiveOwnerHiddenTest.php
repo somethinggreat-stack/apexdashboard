@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Admin;
 use App\Models\Client;
+use App\Models\ClientPayment;
 use App\Models\EndUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -72,5 +73,35 @@ class InactiveOwnerHiddenTest extends TestCase
         $manage = $this->get(route('admin.clients.index'));
         $manage->assertStatus(200);
         $manage->assertSee('Churned Owner');
+    }
+
+    public function test_total_collected_includes_inactive_owner_but_outstanding_excludes_it(): void
+    {
+        // Active owner: no money at all.
+        $this->makeBo('Active Owner', 'active@test.com', 'active');
+
+        // Inactive owner: $777 already collected on a past client.
+        $churned = $this->makeBo('Churned Owner', 'churned@test.com', 'inactive');
+        $eu = EndUser::create([
+            'client_id' => $churned->id, 'first_name' => 'Paid', 'last_name' => 'Client',
+            'suffix' => 'None', 'email' => 'paid@churned.test', 'current_address' => '1 St',
+            'city' => 'Town', 'state' => 'ST', 'zipcode' => '12345', 'status' => 'active',
+            'start_date' => '2026-06-01', 'intake_status' => 'done', 'rounds' => ['1st Round'],
+        ]);
+        ClientPayment::create([
+            'end_user_id' => $eu->id, 'round' => 1, 'amount' => 777,
+            'is_free' => false, 'paid_at' => '2026-06-15',
+            'created_by_admin_id' => $this->super->id,
+        ]);
+
+        $this->actingAs($this->super, 'admin');
+        $picker = $this->get(route('admin.client-selector.index'));
+
+        $picker->assertStatus(200);
+        // Collected still counts the inactive owner's $777 …
+        $picker->assertSee('$777.00');
+        // … but the inactive owner never appears as a card, and nothing is owed
+        // (the only pending would have come from the excluded inactive owner).
+        $picker->assertDontSee('Churned Owner');
     }
 }
