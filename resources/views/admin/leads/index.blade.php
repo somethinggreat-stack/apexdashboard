@@ -107,7 +107,7 @@
         color: var(--text-soft); background: var(--surface-2); border: 1px solid var(--border); text-decoration: none;
     }
     .lead-tab:hover { background: var(--border); }
-    .lead-tab.active { background: #2563eb; color: var(--on-accent); border-color: #2563eb; }
+    .lead-tab.active { background: #2563eb; color: var(--on-accent, #fff); border-color: #2563eb; }
     .lead-tab-count {
         font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
         background: rgba(15,23,42,.08); color: inherit;

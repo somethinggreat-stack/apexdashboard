@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Portal') - Apex Growth Solutions</title>
-    <link rel="stylesheet" href="{{ asset('css/client.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/client.css') }}?v={{ @filemtime(public_path('css/client.css')) ?: '1' }}">
     <style>
         :root { --agp-accent:#2563eb; --agp-accent2:#38bdf8; }
         /* Match the admin console's flat light background. */

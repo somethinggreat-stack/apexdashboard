@@ -41,7 +41,7 @@
 .chat-select-box input[type=checkbox] { width:18px; height:18px; cursor:pointer; }
 
 .chat-bubble { padding:10px 14px; border-radius:12px; font-size:14px; line-height:1.45; word-break:break-word; position:relative; }
-.from-admin .chat-bubble { background:#1a6fc4; color:var(--on-accent); border-bottom-right-radius:4px; }
+.from-admin .chat-bubble { background:#1a6fc4; color:var(--on-accent, #fff); border-bottom-right-radius:4px; }
 .from-client .chat-bubble { background:var(--surface); color:var(--text); border:1px solid var(--border); border-bottom-left-radius:4px; }
 .from-system .chat-bubble { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:inline-block; font-style:italic; font-size:13px; }
 
@@ -168,7 +168,7 @@
 .note-modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
 .note-modal-actions button { padding:8px 16px; border-radius:6px; font:inherit; font-size:13px; cursor:pointer; border:1px solid transparent; }
 .note-modal-actions .cancel { background:var(--surface); border-color:var(--muted); color:var(--text-soft); }
-.note-modal-actions .save { background:#1a6fc4; color:var(--on-accent); }
+.note-modal-actions .save { background:#1a6fc4; color:var(--on-accent, #fff); }
 .note-modal-actions .clear { background:var(--surface); border-color:#fecaca; color:#dc2626; margin-right:auto; }
 
 /* Toast */

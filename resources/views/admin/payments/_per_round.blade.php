@@ -64,7 +64,7 @@
 @push('head')
 <style>
     .inv-gen-btn {
-        background: #0b2e5b; color: var(--on-accent); border: 0;
+        background: #0b2e5b; color: var(--on-accent, #fff); border: 0;
         font-size: 12px; font-weight: 700; letter-spacing: .3px;
         padding: 7px 12px; border-radius: 6px; cursor: pointer;
     }
@@ -79,7 +79,7 @@
     .inv-copy-btn:disabled { color: var(--muted); cursor: not-allowed; }
     .pay-all-btn {
         margin-left: auto; background: linear-gradient(135deg, #34d399, #059669);
-        color: var(--on-accent); border: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .2px;
+        color: var(--on-accent, #fff); border: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .2px;
         padding: 9px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap;
         box-shadow: 0 6px 16px rgba(5, 150, 105, .28);
     }
@@ -356,7 +356,7 @@
     }
     .bulk-action button {
         font-size: 13px; font-weight: 600; padding: 7px 14px;
-        background: #2563eb; color: var(--on-accent); border: 0; border-radius: 6px; cursor: pointer;
+        background: #2563eb; color: var(--on-accent, #fff); border: 0; border-radius: 6px; cursor: pointer;
     }
     .bulk-action button:disabled { background: var(--muted); cursor: not-allowed; }
     .bulk-action button:not(:disabled):hover { background: #1d4ed8; }

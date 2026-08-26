@@ -123,7 +123,7 @@
         background:var(--surface); color:var(--pro-text); min-width:180px; font-family:inherit;
     }
     .re-edit textarea { min-width:260px; resize:vertical; }
-    .re-save   { font-size:11px; padding:4px 10px; cursor:pointer; background:#16a34a; color:var(--on-accent); border:0; border-radius:5px; }
+    .re-save   { font-size:11px; padding:4px 10px; cursor:pointer; background:#16a34a; color:var(--on-accent, #fff); border:0; border-radius:5px; }
     .re-cancel { font-size:11px; padding:4px 10px; cursor:pointer; background:var(--pro-line); color:var(--pro-text-soft); border:0; border-radius:5px; }
 </style>
 @endpush

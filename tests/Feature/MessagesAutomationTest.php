@@ -88,10 +88,13 @@ class MessagesAutomationTest extends TestCase
                 'step_type' => $type, 'step_date' => '2026-08-26',
             ])->assertSessionHasNoErrors();
 
-        // Round 1 Week 1 → one "started Round 1" message (any round counts).
+        // Round 1 Week 1 → one "started Round 1" message (any round counts), and
+        // the very first message must NOT promise results yet.
         $post(1, 1, 'ex_tu_eq_letters_generated');
         $this->assertSame(1, Message::where('client_id', $bo->id)->count());
-        $this->assertStringContainsString('started Round 1', Message::where('client_id', $bo->id)->first()->body);
+        $r1 = Message::where('client_id', $bo->id)->first()->body;
+        $this->assertStringContainsString('started Round 1', $r1);
+        $this->assertStringNotContainsStringIgnoringCase('results', $r1);
 
         // A second Round 1 Week-1 step → NO duplicate.
         $post(1, 1, 'phone_call_disputes');

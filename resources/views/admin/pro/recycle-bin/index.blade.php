@@ -126,8 +126,8 @@
     .pro-act:hover { border-color:var(--muted); }
     .pro-act.del { border-color:#fecaca; color:#b91c1c; }
     .pro-act.del:hover { background:#fef2f2; border-color:#f87171; }
-    .rb-empty-all { background:#e11d48; color:var(--on-accent); border-color:#e11d48; font-weight:700; }
-    .rb-empty-all:hover { background:#be123c; border-color:#be123c; color:var(--on-accent); }
+    .rb-empty-all { background:#e11d48; color:var(--on-accent, #fff); border-color:#e11d48; font-weight:700; }
+    .rb-empty-all:hover { background:#be123c; border-color:#be123c; color:var(--on-accent, #fff); }
 :root[data-theme="dark"] .rb-sub{color:var(--pro-muted);}
 :root[data-theme="dark"] .rb-mid{background:var(--pro-card);border-color:var(--pro-line);color:var(--pro-text);}
 </style>

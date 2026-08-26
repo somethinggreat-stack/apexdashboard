@@ -22,6 +22,10 @@
     {{-- Set the theme before first paint so there's no flash of the wrong colour. --}}
     <script>(function(){try{var t=localStorage.getItem('apex-theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <title>@yield('title', 'Admin') - Apex Growth Solutions</title>
+    {{-- admin.css first (shared base + tokens), then the pro skin. Both are
+         version-stamped so a deploy always busts the browser cache — the pro
+         sheet used to @import admin.css unversioned, which cached it stale. --}}
+    <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ @filemtime(public_path('css/admin.css')) ?: '1' }}">
     <link rel="stylesheet" href="{{ asset('css/admin-pro.css') }}?v={{ @filemtime(public_path('css/admin-pro.css')) ?: '1' }}">
     <link rel="stylesheet" href="{{ asset('css/galaxy.css') }}?v={{ @filemtime(public_path('css/galaxy.css')) ?: '1' }}">
     @stack('head')

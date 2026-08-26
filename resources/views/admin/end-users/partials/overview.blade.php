@@ -698,8 +698,8 @@
         font-size: 12px; font-weight: 700;
     }
     #tab-overview .ov-tl-bubble svg { width: 13px; height: 13px; }
-    #tab-overview .ov-tl-completed { background: #10b981; color: var(--on-accent); }
-    #tab-overview .ov-tl-in_progress { background: #3b82f6; color: var(--on-accent); }
+    #tab-overview .ov-tl-completed { background: #10b981; color: var(--on-accent, #fff); }
+    #tab-overview .ov-tl-in_progress { background: #3b82f6; color: var(--on-accent, #fff); }
     #tab-overview .ov-tl-upcoming { background: var(--border); color: var(--muted); }
 
     #tab-overview .ov-tl-label { font-size: 13.5px; color: var(--text); }
@@ -886,7 +886,7 @@
     #roundScheduleModal .rm-next-btn {
         display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
         padding: 11px 14px; margin-bottom: 14px; cursor: pointer;
-        background: linear-gradient(135deg, #4f46e5, #4338ca); color: var(--on-accent); border: 0;
+        background: linear-gradient(135deg, #4f46e5, #4338ca); color: var(--on-accent, #fff); border: 0;
         border-radius: 11px; font-size: 14px; font-weight: 700;
         box-shadow: 0 6px 18px rgba(79,70,229,.28); transition: filter .15s, transform .15s;
     }

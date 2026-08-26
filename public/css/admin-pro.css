@@ -4,8 +4,10 @@
    The @import MUST stay first: it pulls in the shared component styles
    (.card, .btn, .data-table, chat, payments) that the Messages and Payments
    pages still rely on. Everything below re-skins the chrome on top of it.
+   admin.css is loaded as its own version-stamped <link> in the pro layout
+   (before this sheet), so it is NOT @imported here — an unversioned @import
+   would cache the shared base + tokens stale across deploys.
    ========================================================================== */
-@import url('admin.css');
 
 /* Global scale for the console. This one is tuned for the SIDEBAR: at 0.8 the
    16px labels sit at the size we want and all 16 rows fit without scrolling.
