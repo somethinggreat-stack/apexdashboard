@@ -172,7 +172,7 @@
                     Errors @if ($errorCount > 0)<span class="badge-portal" style="background:#dc2626;">{{ $errorCount }}</span>@endif
                 </a>
                 @php $inProgressCount = \App\Models\EndUser::forClient($selectedClient->id)->notHeld()->inProgress()->count(); @endphp
-                <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.index') ? 'active' : '' }}">In Progress @if ($inProgressCount > 0)<span class="badge-portal" style="background:#64748b;">{{ $inProgressCount }}</span>@endif</a>
+                <a href="{{ route('admin.end-users.index') }}" class="{{ request()->routeIs('admin.end-users.index') ? 'active' : '' }}">In Progress @if ($inProgressCount > 0)<span class="badge-portal" style="background:#10b981;">{{ $inProgressCount }}</span>@endif</a>
                 <a href="{{ route('admin.client-list') }}" class="{{ request()->routeIs('admin.client-list') || request()->routeIs('admin.end-users.show') ? 'active' : '' }}">Clients</a>
                 @php $adminUnread = $selectedClient->unreadCountForAdmin(); @endphp
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
