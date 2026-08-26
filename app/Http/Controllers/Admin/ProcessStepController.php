@@ -126,13 +126,10 @@ class ProcessStepController extends Controller
         if ($created > 0 && ! $roundExistedBefore && (int) $data['week'] === 1) {
             $eu = EndUser::find($data['end_user_id']);
             if ($eu) {
-                $round = (int) $data['round'];
-                // Round 1 is the very first message about this client — don't
-                // promise results yet; later rounds do.
-                $body = $round === 1
-                    ? "We've started Round 1 for {$eu->full_name} — their dispute process is now underway."
-                    : "We've started Round {$round} for {$eu->full_name}. We'll update you as results come in.";
-                Message::postFromTeam($eu->client_id, $body);
+                Message::postFromTeam(
+                    $eu->client_id,
+                    "We've started Round {$data['round']} for {$eu->full_name} — their dispute process is now underway."
+                );
             }
         }
 
