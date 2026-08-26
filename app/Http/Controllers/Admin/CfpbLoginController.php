@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * CFPB Logins — a per-business-owner report of clients that had their CFPB login
- * (universal or per-round) entered/updated in the last 24 hours. Same shape as
+ * (universal or per-round) entered/updated in the last 12 hours. Same shape as
  * the Daily Task page: grouped by owner, with the VA who did it and a
  * copy-paste WhatsApp message.
  */
 class CfpbLoginController extends Controller
 {
-    private const WINDOW_HOURS = 24;
+    private const WINDOW_HOURS = 12;
 
     public function index()
     {

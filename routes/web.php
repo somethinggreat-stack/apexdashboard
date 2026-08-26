@@ -311,6 +311,10 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         // Referral commission — visible only to the owner flagged is_commission_referrer (Chantal).
         Route::get('commissions', [Client\CommissionController::class, 'index'])->name('commissions.index');
 
+        // Tasks View — the owner's own 30-day work log (rounds started per day),
+        // mirroring the internal Daily Task signal. Read-only, no VA names.
+        Route::get('tasks', [Client\TaskController::class, 'index'])->name('tasks');
+
         // New Clients — intake submissions pending VA review (BOs can view only)
         Route::get('new-clients', [Client\EndUserController::class, 'newClients'])->name('new-clients');
 

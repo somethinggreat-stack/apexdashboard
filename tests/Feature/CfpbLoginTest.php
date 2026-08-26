@@ -100,19 +100,19 @@ class CfpbLoginTest extends TestCase
             ->assertOk()->assertSee('Round Cfpb');
     }
 
-    public function test_window_is_24h(): void
+    public function test_window_is_12h(): void
     {
         $this->seedWorld();
         $recent = $this->eu('Recent Cfpb', 'rc@test.com');
-        $recent->forceFill(['cfpb_logged_at' => now()->subHours(20), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+        $recent->forceFill(['cfpb_logged_at' => now()->subHours(8), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
 
         $old = $this->eu('Old Cfpb', 'o@test.com');
-        $old->forceFill(['cfpb_logged_at' => now()->subHours(25), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+        $old->forceFill(['cfpb_logged_at' => now()->subHours(13), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
 
         $this->actingAs($this->super, 'admin')->get('/admin/cfpb-logins')
             ->assertOk()
-            ->assertSee('Recent Cfpb')   // 20h ago → inside 24h window
-            ->assertDontSee('Old Cfpb'); // 25h ago → outside
+            ->assertSee('Recent Cfpb')   // 8h ago → inside 12h window
+            ->assertDontSee('Old Cfpb'); // 13h ago → outside
     }
 
     public function test_super_and_va_can_open_but_leads_cannot(): void
