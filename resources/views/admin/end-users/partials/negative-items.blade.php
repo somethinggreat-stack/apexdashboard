@@ -123,20 +123,20 @@
     .ni-chip-near { background:#fef3c7; color:#92400e; }
     .ni-chip-wait { background:#fef3c7; color:#92400e; }
     .ni-chip-ok { background:#dcfce7; color:#166534; }
-    .ni-approval { border:1px solid var(--pro-line,#e6ebf2); border-radius:12px; padding:12px 14px; margin:4px 0 16px; background:rgba(148,163,184,.06); }
+    .ni-approval { border:1px solid var(--pro-line,var(--border)); border-radius:12px; padding:12px 14px; margin:4px 0 16px; background:rgba(148,163,184,.06); }
     .ni-approval-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
     .ni-approval-body { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
     .ni-copywrap { display:flex; gap:6px; align-items:center; flex:1 1 320px; }
-    .ni-copy-input { flex:1; padding:8px 10px; border:1px solid #d7dee8; border-radius:8px; font-size:12.5px; background:#fff; color:#0f172a; }
+    .ni-copy-input { flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12.5px; background:var(--surface); color:var(--text); }
     .ni-approval-actions { display:flex; gap:6px; flex-wrap:wrap; }
     .ni-approval-actions form { display:inline; margin:0; }
     .ni-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
-    .ni-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--pro-line,#e6ebf2); border-radius:10px; flex-wrap:wrap; }
+    .ni-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--pro-line,var(--border)); border-radius:10px; flex-wrap:wrap; }
     .ni-item-del, .ni-item-updated { background:rgba(34,197,94,.06); }
     .ni-item-main { display:flex; flex-direction:column; gap:4px; min-width:200px; }
     .ni-item-name { font-weight:700; }
     .ni-item-tags { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-    .ni-tag { font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; color:#475569; }
+    .ni-tag { font-size:11px; padding:2px 8px; border-radius:6px; background:var(--surface-2); color:var(--text-soft); }
     .ni-tag-goal { background:#e0e7ff; color:#3730a3; }
     .ni-status { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
     .ni-status-reporting { background:#e0f2fe; color:#075985; }
@@ -144,15 +144,15 @@
     .ni-status-updated { background:#ede9fe; color:#5b21b6; }
     .ni-item-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
     .ni-item-actions form, .ni-resolve { display:inline-flex; gap:6px; align-items:center; margin:0; }
-    .ni-resolve input[type=date] { padding:6px 8px; border:1px solid #d7dee8; border-radius:8px; font-size:12px; }
-    .ni-add { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding-top:10px; border-top:1px dashed var(--pro-line,#e6ebf2); }
+    .ni-resolve input[type=date] { padding:6px 8px; border:1px solid var(--border); border-radius:8px; font-size:12px; }
+    .ni-add { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding-top:10px; border-top:1px dashed var(--pro-line,var(--border)); }
     .ni-add [data-ni="category"] { flex:0 0 160px; }
     .ni-add [data-ni="name"] { flex:1 1 200px; min-width:160px; }
     .ni-add [data-ni="detail"] { flex:0 0 170px; }
     .ni-add [data-ni="goal"] { flex:0 0 150px; }
     .ni-add [data-ni="bureau"] { flex:0 0 140px; }
-    .ni-add input, .ni-add select { padding:8px 10px; border:1px solid #d7dee8; border-radius:8px; font-size:13px; background:#fff; color:#0f172a; }
-    .ni-item-detail { margin-left:8px; font-size:12px; color:var(--pro-muted,#64748b); font-weight:600; }
+    .ni-add input, .ni-add select { padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--text); }
+    .ni-item-detail { margin-left:8px; font-size:12px; color:var(--pro-muted,var(--muted)); font-weight:600; }
     :root[data-theme="dark"] .ni-copy-input,
     :root[data-theme="dark"] .ni-resolve input,
     :root[data-theme="dark"] .ni-add input,

@@ -120,10 +120,10 @@
     .re-edit.editing { display:inline-flex; flex-wrap:wrap; gap:6px; align-items:flex-start; }
     .re-edit input[type="text"], .re-edit textarea {
         font-size:12.5px; padding:5px 8px; border-radius:6px; border:1px solid var(--pro-line);
-        background:#fff; color:var(--pro-text); min-width:180px; font-family:inherit;
+        background:var(--surface); color:var(--pro-text); min-width:180px; font-family:inherit;
     }
     .re-edit textarea { min-width:260px; resize:vertical; }
-    .re-save   { font-size:11px; padding:4px 10px; cursor:pointer; background:#16a34a; color:#fff; border:0; border-radius:5px; }
+    .re-save   { font-size:11px; padding:4px 10px; cursor:pointer; background:#16a34a; color:var(--on-accent); border:0; border-radius:5px; }
     .re-cancel { font-size:11px; padding:4px 10px; cursor:pointer; background:var(--pro-line); color:var(--pro-text-soft); border:0; border-radius:5px; }
 </style>
 @endpush

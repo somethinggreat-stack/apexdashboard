@@ -98,16 +98,16 @@
 <style>
     .lead-search input {
         width: 280px; max-width: 100%; padding: 8px 12px;
-        border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;
+        border: 1px solid var(--muted); border-radius: 8px; font-size: 13px;
     }
     .lead-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
     .lead-tab {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
-        color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; text-decoration: none;
+        color: var(--text-soft); background: var(--surface-2); border: 1px solid var(--border); text-decoration: none;
     }
-    .lead-tab:hover { background: #e2e8f0; }
-    .lead-tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .lead-tab:hover { background: var(--border); }
+    .lead-tab.active { background: #2563eb; color: var(--on-accent); border-color: #2563eb; }
     .lead-tab-count {
         font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
         background: rgba(15,23,42,.08); color: inherit;

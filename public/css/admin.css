@@ -1,17 +1,34 @@
 :root {
+    color-scheme: light;
     --primary: #2563eb;
     --primary-dark: #1d4ed8;
     --secondary: #64748b;
     --danger: #dc2626;
     --bg: #f8fafc;
     --surface: #ffffff;
+    --surface-2: #f1f5f9;              /* elevated / inset surface: hover rows, inner panels, tag chips */
     --border: #e2e8f0;
+    --border-soft: #edeff5;            /* hairline dividers */
     --text: #0f172a;
+    --text-soft: #475569;             /* secondary text */
     --muted: #64748b;
+    --hover: rgba(15, 23, 42, 0.045);  /* row / control hover */
+    --selected: rgba(37, 99, 235, 0.08);/* selected / active row */
+    --on-accent: #ffffff;              /* text/icon on a saturated accent fill (stays white in both themes) */
     --sidebar: #0f172a;
     --sidebar-text: #cbd5e1;
     --sidebar-active: #1e293b;
     --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+
+    /* Semantic state tints for chips / badges / banners. One token per state
+       that flips light↔dark automatically, so pages stop hardcoding pale fills.
+       *-bg = fill, *-fg = text/icon on that fill. */
+    --tint-green-bg:  #dcfce7; --tint-green-fg:  #166534;
+    --tint-amber-bg:  #fef3c7; --tint-amber-fg:  #92400e;
+    --tint-red-bg:    #fee2e2; --tint-red-fg:    #b91c1c;
+    --tint-blue-bg:   #dbeafe; --tint-blue-fg:   #1d4ed8;
+    --tint-indigo-bg: #e0e7ff; --tint-indigo-fg: #4338ca;
+    --tint-slate-bg:  #f1f5f9; --tint-slate-fg:  #475569;
 }
 
 * { box-sizing: border-box; }
@@ -229,7 +246,7 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
     display: flex; gap: 8px; align-items: center; padding: 8px 0;
     border-top: 1px solid var(--border); font-size: 13px; flex-wrap: wrap;
 }
-.badge { background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.badge { background: var(--surface-2); color: var(--text-soft); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
 .muted { color: var(--muted); font-size: 12px; }
 
 /* Timeline */
@@ -274,9 +291,9 @@ input.prefilled { background: #fef9c3; border-color: #facc15; }
 .timeline-delete { margin: 0 0 0 auto; display: inline; }
 .timeline-delete .btn-sm { padding: 3px 10px; }
 .step-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.stat-pill { padding: 3px 10px; background: #e2e8f0; color: var(--text); border-radius: 999px; font-size: 12px; font-weight: 500; }
-.stat-pill.stat-success { background: #dcfce7; color: #166534; }
-.stat-pill.stat-warn { background: #fef3c7; color: #92400e; }
+.stat-pill { padding: 3px 10px; background: var(--surface-2); color: var(--text); border-radius: 999px; font-size: 12px; font-weight: 500; }
+.stat-pill.stat-success { background: var(--tint-green-bg); color: var(--tint-green-fg); }
+.stat-pill.stat-warn { background: var(--tint-amber-bg); color: var(--tint-amber-fg); }
 .step-docs { margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 6px; font-size: 13px; }
 .step-docs .doc-chip {
     display: inline-block; margin: 4px 4px 0 0; padding: 4px 10px;
@@ -1064,12 +1081,26 @@ body.drawer-open { overflow: hidden; }
    already dark and are left untouched.
    ========================================================================== */
 :root[data-theme="dark"] {
-    --bg:       #0b0f1c;
-    --surface:  #161b2e;
-    --border:   #272d49;
-    --text:     #e6eaf6;
-    --muted:    #8a94b0;
-    --shadow:   0 1px 3px rgba(0,0,0,.5);
+    color-scheme: dark;               /* native date pickers, select popups, scrollbars follow dark */
+    --bg:         #0b0f1c;
+    --surface:    #161b2e;
+    --surface-2:  #12172a;
+    --border:     #272d49;
+    --border-soft:#1d2237;
+    --text:       #e6eaf6;
+    --text-soft:  #aab4d0;
+    --muted:      #8a94b0;
+    --hover:      rgba(255,255,255,.05);
+    --selected:   rgba(99,102,241,.14);
+    --shadow:     0 1px 3px rgba(0,0,0,.5);
+
+    /* State tints: translucent fills + light text so they read on dark without glowing. */
+    --tint-green-bg:  rgba(16,185,129,.18); --tint-green-fg:  #6ee7b7;
+    --tint-amber-bg:  rgba(245,158,11,.18); --tint-amber-fg:  #fcd34d;
+    --tint-red-bg:    rgba(239,68,68,.18);  --tint-red-fg:    #fca5a5;
+    --tint-blue-bg:   rgba(59,130,246,.18); --tint-blue-fg:   #93c5fd;
+    --tint-indigo-bg: rgba(99,102,241,.20); --tint-indigo-fg: #c7d2fe;
+    --tint-slate-bg:  rgba(148,163,184,.16);--tint-slate-fg:  #cbd5e1;
 }
 
 /* Tables */
@@ -1094,7 +1125,6 @@ body.drawer-open { overflow: hidden; }
 :root[data-theme="dark"] .info-grid > div > div { color: var(--text); }
 :root[data-theme="dark"] .form-section,
 :root[data-theme="dark"] .profile-section-head { border-color: var(--border); }
-:root[data-theme="dark"] .badge { background: #2a3150; color: #cbd5e1; }
 :root[data-theme="dark"] .w4s2-fields,
 :root[data-theme="dark"] .step-docs,
 :root[data-theme="dark"] .bureau-stat { background: #12172a; border-color: var(--border); }

@@ -584,8 +584,8 @@
         margin-bottom: 20px;
     }
     #tab-overview .ov-stat-card {
-        background: #fff;
-        border: 1px solid #eef0f4;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 14px;
         padding: 16px 18px;
         box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.03);
@@ -596,10 +596,10 @@
         transform: translateY(-1px);
     }
     #tab-overview .ov-stat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    #tab-overview .ov-stat-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #64748b; flex: 1; }
-    #tab-overview .ov-stat-value { font-size: 26px; font-weight: 700; color: #0f172a; line-height: 1.1; margin-bottom: 4px; letter-spacing: -.5px; }
-    #tab-overview .ov-stat-unit { font-size: 14px; color: #64748b; font-weight: 500; }
-    #tab-overview .ov-stat-sub { font-size: 11.5px; color: #94a3b8; }
+    #tab-overview .ov-stat-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); flex: 1; }
+    #tab-overview .ov-stat-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1.1; margin-bottom: 4px; letter-spacing: -.5px; }
+    #tab-overview .ov-stat-unit { font-size: 14px; color: var(--muted); font-weight: 500; }
+    #tab-overview .ov-stat-sub { font-size: 11.5px; color: var(--muted); }
 
     /* Icon squares */
     #tab-overview .ov-icon {
@@ -619,13 +619,13 @@
     #tab-overview .ov-donut {
         --size: 40px; --p: 0;
         width: var(--size); height: var(--size); border-radius: 50%;
-        background: conic-gradient(#0d9488 calc(var(--p)*1%), #e2e8f0 0);
+        background: conic-gradient(#0d9488 calc(var(--p)*1%), var(--border) 0);
         display: grid; place-items: center;
         margin-left: auto;
     }
     #tab-overview .ov-donut span {
-        font-size: 10px; font-weight: 700; color: #0f172a;
-        background: #fff; width: 28px; height: 28px;
+        font-size: 10px; font-weight: 700; color: var(--text);
+        background: var(--surface); width: 28px; height: 28px;
         border-radius: 50%; display: grid; place-items: center;
     }
 
@@ -636,8 +636,8 @@
         gap: 18px;
     }
     #tab-overview .ov-block {
-        background: #fff;
-        border: 1px solid #eef0f4;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 14px;
         padding: 18px 20px;
         margin-bottom: 16px;
@@ -658,11 +658,11 @@
     #tab-overview .ov-icon-green-soft  { background: #ecfdf5; color: #059669; }
     #tab-overview .ov-icon-amber-soft  { background: #fffbeb; color: #d97706; }
 
-    #tab-overview .ov-block-h { font-size: 15px; font-weight: 700; color: #0f172a; }
-    #tab-overview .ov-block-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+    #tab-overview .ov-block-h { font-size: 15px; font-weight: 700; color: var(--text); }
+    #tab-overview .ov-block-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
     #tab-overview .ov-btn-primary {
-        background: #ffffff; color: #2563eb; border: 1px solid #dbeafe;
+        background: var(--surface); color: #2563eb; border: 1px solid #dbeafe;
         font-size: 13px; font-weight: 600;
         padding: 7px 14px; border-radius: 8px; cursor: pointer;
         transition: background .15s;
@@ -689,7 +689,7 @@
         grid-template-columns: 36px 1fr auto auto;
         align-items: center; gap: 12px;
         padding: 10px 4px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--surface-2);
     }
     #tab-overview .ov-tl-row:last-child { border-bottom: 0; }
     #tab-overview .ov-tl-bubble {
@@ -698,19 +698,19 @@
         font-size: 12px; font-weight: 700;
     }
     #tab-overview .ov-tl-bubble svg { width: 13px; height: 13px; }
-    #tab-overview .ov-tl-completed { background: #10b981; color: #fff; }
-    #tab-overview .ov-tl-in_progress { background: #3b82f6; color: #fff; }
-    #tab-overview .ov-tl-upcoming { background: #e2e8f0; color: #64748b; }
+    #tab-overview .ov-tl-completed { background: #10b981; color: var(--on-accent); }
+    #tab-overview .ov-tl-in_progress { background: #3b82f6; color: var(--on-accent); }
+    #tab-overview .ov-tl-upcoming { background: var(--border); color: var(--muted); }
 
-    #tab-overview .ov-tl-label { font-size: 13.5px; color: #1e293b; }
+    #tab-overview .ov-tl-label { font-size: 13.5px; color: var(--text); }
     #tab-overview .ov-tl-pill {
         font-size: 10.5px; font-weight: 700; padding: 3px 10px;
         border-radius: 999px; text-transform: none; letter-spacing: 0;
     }
     #tab-overview .ov-tl-pill-completed { background: #d1fae5; color: #065f46; }
     #tab-overview .ov-tl-pill-in_progress { background: #ede9fe; color: #5b21b6; }
-    #tab-overview .ov-tl-pill-upcoming { background: #f1f5f9; color: #64748b; }
-    #tab-overview .ov-tl-date { font-size: 11.5px; color: #94a3b8; min-width: 72px; text-align: right; }
+    #tab-overview .ov-tl-pill-upcoming { background: var(--surface-2); color: var(--muted); }
+    #tab-overview .ov-tl-date { font-size: 11.5px; color: var(--muted); min-width: 72px; text-align: right; }
 
     /* Round summary */
     #tab-overview .ov-block-summary { padding-bottom: 22px; }
@@ -722,31 +722,31 @@
     #tab-overview .ov-donut-lg {
         --size: 140px; --p: 0;
         width: var(--size); height: var(--size); border-radius: 50%;
-        background: conic-gradient(#10b981 calc(var(--p)*1%), #e2e8f0 0);
+        background: conic-gradient(#10b981 calc(var(--p)*1%), var(--border) 0);
         display: grid; place-items: center;
         position: relative;
     }
     #tab-overview .ov-donut-inner {
-        width: 110px; height: 110px; background: #fff;
+        width: 110px; height: 110px; background: var(--surface);
         border-radius: 50%;
         display: grid; place-items: center; text-align: center;
     }
-    #tab-overview .ov-donut-pct { font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; }
-    #tab-overview .ov-donut-cap { font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: .8px; }
-    #tab-overview .ov-summary-caption { text-align: center; font-size: 12px; color: #64748b; margin-top: 10px; }
+    #tab-overview .ov-donut-pct { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+    #tab-overview .ov-donut-cap { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .8px; }
+    #tab-overview .ov-summary-caption { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
     #tab-overview .ov-summary-list { display: flex; flex-direction: column; gap: 10px; }
     #tab-overview .ov-summary-row {
         display: flex; align-items: center; gap: 10px;
-        font-size: 13px; color: #1e293b;
-        padding: 8px 0; border-bottom: 1px solid #f1f5f9;
+        font-size: 13px; color: var(--text);
+        padding: 8px 0; border-bottom: 1px solid var(--surface-2);
     }
     #tab-overview .ov-summary-row:last-child { border-bottom: 0; }
-    #tab-overview .ov-summary-row strong { margin-left: auto; color: #0f172a; }
+    #tab-overview .ov-summary-row strong { margin-left: auto; color: var(--text); }
     #tab-overview .ov-summary-row-est strong { font-size: 12.5px; }
     #tab-overview .ov-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     #tab-overview .ov-dot-green { background: #10b981; }
     #tab-overview .ov-dot-blue  { background: #3b82f6; }
-    #tab-overview .ov-dot-gray  { background: #cbd5e1; }
+    #tab-overview .ov-dot-gray  { background: var(--muted); }
     #tab-overview .ov-dot-amber { background: #f59e0b; }
 
     /* Documents grid */
@@ -756,7 +756,7 @@
         gap: 12px;
     }
     #tab-overview .ov-doc-card {
-        background: #fff; border: 1px solid #eef0f4; border-radius: 12px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
         padding: 14px 12px;
         display: flex; flex-direction: column; gap: 4px;
         min-height: 130px;
@@ -772,16 +772,16 @@
     }
     #tab-overview .ov-ext-jpg, #tab-overview .ov-ext-jpeg, #tab-overview .ov-ext-png { background: #d1fae5; color: #047857; }
     #tab-overview .ov-ext-pdf { background: #fee2e2; color: #b91c1c; }
-    #tab-overview .ov-doc-name { font-size: 13px; font-weight: 600; color: #0f172a; }
-    #tab-overview .ov-doc-meta { font-size: 11px; color: #94a3b8; }
+    #tab-overview .ov-doc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    #tab-overview .ov-doc-meta { font-size: 11px; color: var(--muted); }
     #tab-overview .ov-doc-actions { margin-top: auto; display: flex; gap: 6px; }
     #tab-overview .ov-doc-btn {
         width: 28px; height: 28px; border-radius: 6px;
-        background: #f1f5f9; color: #475569;
+        background: var(--surface-2); color: var(--text-soft);
         display: inline-flex; align-items: center; justify-content: center;
     }
     #tab-overview .ov-doc-upload {
-        border: 2px dashed #cbd5e1; background: #f8fafc;
+        border: 2px dashed var(--muted); background: var(--surface-2);
         align-items: center; justify-content: center; text-align: center;
         cursor: pointer;
     }
@@ -802,20 +802,20 @@
     #tab-overview .ov-shield svg { width: 32px; height: 32px; }
     #tab-overview .ov-shield-on  { background: linear-gradient(135deg,#d1fae5,#a7f3d0); color: #047857; }
     #tab-overview .ov-shield-off { background: linear-gradient(135deg,#fee2e2,#fecaca); color: #b91c1c; }
-    #tab-overview .ov-shield-label { font-size: 16px; font-weight: 700; color: #0f172a; }
-    #tab-overview .ov-shield-sub { font-size: 12px; color: #64748b; }
-    #tab-overview .ov-shield-msg { font-size: 11.5px; color: #64748b; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px; }
+    #tab-overview .ov-shield-label { font-size: 16px; font-weight: 700; color: var(--text); }
+    #tab-overview .ov-shield-sub { font-size: 12px; color: var(--muted); }
+    #tab-overview .ov-shield-msg { font-size: 11.5px; color: var(--muted); padding-bottom: 12px; border-bottom: 1px solid var(--surface-2); margin-bottom: 4px; }
     #tab-overview .ov-kv { display: flex; flex-direction: column; }
     #tab-overview .ov-kv-row {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 9px 0; border-bottom: 1px solid #f1f5f9;
-        font-size: 12.5px; color: #64748b;
+        padding: 9px 0; border-bottom: 1px solid var(--surface-2);
+        font-size: 12.5px; color: var(--muted);
     }
     #tab-overview .ov-kv-row:last-child { border-bottom: 0; }
-    #tab-overview .ov-kv-row strong { color: #0f172a; font-weight: 600; }
+    #tab-overview .ov-kv-row strong { color: var(--text); font-weight: 600; }
 
     /* Notes */
-    #tab-overview .ov-note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    #tab-overview .ov-note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--surface-2); }
     #tab-overview .ov-note:last-of-type { border-bottom: 0; }
     #tab-overview .ov-note-icon {
         width: 28px; height: 28px; border-radius: 8px;
@@ -823,15 +823,15 @@
         display: inline-flex; align-items: center; justify-content: center;
         flex-shrink: 0;
     }
-    #tab-overview .ov-note-text { font-size: 13px; color: #0f172a; font-weight: 600; }
-    #tab-overview .ov-note-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    #tab-overview .ov-note-text { font-size: 13px; color: var(--text); font-weight: 600; }
+    #tab-overview .ov-note-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
     /* Activity */
     #tab-overview .ov-activity-row {
         display: grid;
         grid-template-columns: 28px 1fr auto;
         gap: 10px; align-items: center;
-        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+        padding: 10px 0; border-bottom: 1px solid var(--surface-2);
     }
     #tab-overview .ov-activity-row:last-of-type { border-bottom: 0; }
     #tab-overview .ov-activity-icon {
@@ -841,14 +841,14 @@
     #tab-overview .ov-act-step { background: #d1fae5; color: #047857; }
     #tab-overview .ov-act-doc  { background: #ede9fe; color: #7c3aed; }
     #tab-overview .ov-act-note { background: #fffbeb; color: #d97706; }
-    #tab-overview .ov-activity-title { font-size: 13px; font-weight: 600; color: #0f172a; }
-    #tab-overview .ov-activity-sub { font-size: 11.5px; color: #64748b; }
+    #tab-overview .ov-activity-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    #tab-overview .ov-activity-sub { font-size: 11.5px; color: var(--muted); }
     #tab-overview .ov-activity-date {
-        font-size: 11px; color: #94a3b8; text-align: right; line-height: 1.4;
+        font-size: 11px; color: var(--muted); text-align: right; line-height: 1.4;
     }
-    #tab-overview .ov-activity-date span { color: #cbd5e1; }
+    #tab-overview .ov-activity-date span { color: var(--muted); }
 
-    #tab-overview .ov-empty { font-size: 13px; color: #94a3b8; padding: 12px 0; }
+    #tab-overview .ov-empty { font-size: 13px; color: var(--muted); padding: 12px 0; }
 
     /* Rounds & Schedule block */
     #tab-overview .ov-icon-teal-soft { background: #ecfeff; color: #0d9488; }
@@ -857,7 +857,7 @@
     #tab-overview .ov-round-item {
         display: flex; align-items: center; gap: 12px;
         flex: 1 1 180px; min-width: 180px;
-        background: #f8fafc; border: 1px solid #eef0f4; border-radius: 12px;
+        background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
         padding: 12px 14px;
     }
     #tab-overview .ov-round-badge {
@@ -866,44 +866,44 @@
         display: inline-flex; align-items: center; justify-content: center;
         font-size: 14px; font-weight: 800; letter-spacing: -.5px;
     }
-    #tab-overview .ov-round-name { font-size: 13.5px; font-weight: 700; color: #0f172a; }
-    #tab-overview .ov-round-date { font-size: 12px; color: #64748b; margin-top: 2px; }
+    #tab-overview .ov-round-name { font-size: 13.5px; font-weight: 700; color: var(--text); }
+    #tab-overview .ov-round-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
     #tab-overview .ov-rounds-foot {
         display: flex; flex-wrap: wrap; gap: 28px;
-        margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1f5f9;
+        margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--surface-2);
     }
     #tab-overview .ov-rounds-foot-item { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-    #tab-overview .ov-rounds-foot-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #64748b; }
-    #tab-overview .ov-rounds-foot-val { font-size: 18px; font-weight: 700; color: #0f172a; }
+    #tab-overview .ov-rounds-foot-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+    #tab-overview .ov-rounds-foot-val { font-size: 18px; font-weight: 700; color: var(--text); }
     #tab-overview .ov-rounds-foot-val.is-over { color: #dc2626; }
     #tab-overview .ov-rounds-foot-val.is-soon { color: #d97706; }
     #tab-overview .ov-rounds-tag {
-        font-size: 10.5px; font-weight: 600; color: #64748b;
-        background: #eef2f7; padding: 2px 8px; border-radius: 999px; align-self: center;
+        font-size: 10.5px; font-weight: 600; color: var(--muted);
+        background: var(--border); padding: 2px 8px; border-radius: 999px; align-self: center;
     }
 
     /* ===== Manage Rounds modal (unscoped — renders outside #tab-overview) ===== */
     #roundScheduleModal .rm-next-btn {
         display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
         padding: 11px 14px; margin-bottom: 14px; cursor: pointer;
-        background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff; border: 0;
+        background: linear-gradient(135deg, #4f46e5, #4338ca); color: var(--on-accent); border: 0;
         border-radius: 11px; font-size: 14px; font-weight: 700;
         box-shadow: 0 6px 18px rgba(79,70,229,.28); transition: filter .15s, transform .15s;
     }
     #roundScheduleModal .rm-next-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
     #roundScheduleModal .rm-next-btn svg { width: 18px; height: 18px; }
-    #roundScheduleModal .rm-next-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: default; transform: none; }
+    #roundScheduleModal .rm-next-btn:disabled { background: var(--muted); box-shadow: none; cursor: default; transform: none; }
 
     #roundScheduleModal .rm-list { display: flex; flex-direction: column; gap: 8px; }
     #roundScheduleModal .rm-row {
         display: flex; align-items: center; gap: 14px;
         padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 12px;
-        background: #f8fafc; transition: background .15s, border-color .15s;
+        background: var(--surface-2); transition: background .15s, border-color .15s;
     }
-    #roundScheduleModal .rm-row.is-on { background: #fff; border-color: #c7d2fe; }
+    #roundScheduleModal .rm-row.is-on { background: var(--surface); border-color: #c7d2fe; }
     #roundScheduleModal .rm-row.is-current { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5 inset; }
-    #roundScheduleModal .rm-name { flex: 1; font-size: 14px; font-weight: 700; color: #0f172a; }
-    #roundScheduleModal .rm-row:not(.is-on) .rm-name { color: #94a3b8; font-weight: 600; }
+    #roundScheduleModal .rm-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text); }
+    #roundScheduleModal .rm-row:not(.is-on) .rm-name { color: var(--muted); font-weight: 600; }
     #roundScheduleModal .rm-current-tag {
         display: none; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
         background: #eef2ff; color: #4338ca; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle;
@@ -913,16 +913,16 @@
     /* toggle switch */
     #roundScheduleModal .rm-toggle { position: relative; display: inline-block; width: 40px; height: 23px; flex: none; cursor: pointer; }
     #roundScheduleModal .rm-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
-    #roundScheduleModal .rm-switch { position: absolute; inset: 0; background: #cbd5e1; border-radius: 999px; transition: background .18s; }
-    #roundScheduleModal .rm-switch::before { content: ""; position: absolute; height: 17px; width: 17px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+    #roundScheduleModal .rm-switch { position: absolute; inset: 0; background: var(--muted); border-radius: 999px; transition: background .18s; }
+    #roundScheduleModal .rm-switch::before { content: ""; position: absolute; height: 17px; width: 17px; left: 3px; top: 3px; background: var(--surface); border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
     #roundScheduleModal .rm-toggle input:checked + .rm-switch { background: #4f46e5; }
     #roundScheduleModal .rm-toggle input:checked + .rm-switch::before { transform: translateX(17px); }
 
-    #roundScheduleModal .rm-date { padding: 7px 9px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; font-family: inherit; }
-    #roundScheduleModal .rm-date:disabled { background: #f1f5f9; color: #cbd5e1; }
-    #roundScheduleModal .rm-next-date { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9; }
-    #roundScheduleModal .rm-next-date label { display: block; font-size: 12.5px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
-    #roundScheduleModal .rm-next-date input { padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; }
+    #roundScheduleModal .rm-date { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; font-family: inherit; }
+    #roundScheduleModal .rm-date:disabled { background: var(--surface-2); color: var(--muted); }
+    #roundScheduleModal .rm-next-date { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--surface-2); }
+    #roundScheduleModal .rm-next-date label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+    #roundScheduleModal .rm-next-date input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; }
     #roundScheduleModal .rm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 
     /* Responsive */

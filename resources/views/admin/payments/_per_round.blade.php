@@ -64,27 +64,27 @@
 @push('head')
 <style>
     .inv-gen-btn {
-        background: #0b2e5b; color: #fff; border: 0;
+        background: #0b2e5b; color: var(--on-accent); border: 0;
         font-size: 12px; font-weight: 700; letter-spacing: .3px;
         padding: 7px 12px; border-radius: 6px; cursor: pointer;
     }
     .inv-gen-btn:hover:not(:disabled) { background: #082246; }
-    .inv-gen-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .inv-gen-btn:disabled { background: var(--muted); cursor: not-allowed; }
     .inv-copy-btn {
-        background: #fff; color: #475569; border: 1px solid #cbd5e1;
+        background: var(--surface); color: var(--text-soft); border: 1px solid var(--muted);
         font-size: 12px; font-weight: 600;
         padding: 6px 10px; border-radius: 6px; cursor: pointer;
     }
-    .inv-copy-btn:hover:not(:disabled) { background: #f1f5f9; }
-    .inv-copy-btn:disabled { color: #cbd5e1; cursor: not-allowed; }
+    .inv-copy-btn:hover:not(:disabled) { background: var(--surface-2); }
+    .inv-copy-btn:disabled { color: var(--muted); cursor: not-allowed; }
     .pay-all-btn {
         margin-left: auto; background: linear-gradient(135deg, #34d399, #059669);
-        color: #fff; border: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .2px;
+        color: var(--on-accent); border: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .2px;
         padding: 9px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap;
         box-shadow: 0 6px 16px rgba(5, 150, 105, .28);
     }
     .pay-all-btn:hover:not(:disabled) { filter: brightness(1.05); }
-    .pay-all-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+    .pay-all-btn:disabled { background: var(--muted); box-shadow: none; cursor: not-allowed; }
 </style>
 @endpush
 
@@ -236,7 +236,7 @@
             Copy the block below and paste into ChatGPT (or your invoice tool).
         </p>
         <textarea id="invoiceListText" readonly
-                  style="width:100%; min-height:320px; padding:14px; font-family:Menlo,Consolas,monospace; font-size:12.5px; line-height:1.55; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; color:#0f172a; resize:vertical;">{{ $invoiceText }}</textarea>
+                  style="width:100%; min-height:320px; padding:14px; font-family:Menlo,Consolas,monospace; font-size:12.5px; line-height:1.55; border:1px solid var(--muted); border-radius:8px; background:var(--surface-2); color:var(--text); resize:vertical;">{{ $invoiceText }}</textarea>
         <div class="form-actions" style="margin-top:14px;">
             <button type="button" class="btn btn-secondary" onclick="closeModal('invoiceListModal')">Close</button>
             <button type="button" class="btn btn-primary" id="copyInvoiceBtn">Copy to Clipboard</button>
@@ -321,7 +321,7 @@
                 <label>Fee for this Round ($)</label>
                 <input type="number" step="0.01" min="0" max="100000" name="per_round_fee" id="rr-input" placeholder="Default">
             </div>
-            <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:#475569; cursor:pointer;">
+            <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-soft); cursor:pointer;">
                 <input type="checkbox" name="apply_all" id="rr-apply-all" value="1">
                 Apply this amount to <strong>all rounds</strong> for this client
             </label>
@@ -341,24 +341,24 @@
     /* Bulk action bar */
     .bulk-bar {
         display: flex; align-items: center; gap: 16px;
-        background: linear-gradient(135deg, #f8fafc, #fff);
-        border: 1px solid #e2e8f0; border-radius: 12px;
+        background: linear-gradient(135deg, var(--surface-2), var(--surface));
+        border: 1px solid var(--border); border-radius: 12px;
         padding: 10px 16px; margin-bottom: 12px;
         flex-wrap: wrap;
     }
-    .bulk-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
-    .bulk-count { font-size: 12px; color: #94a3b8; font-weight: 500; }
+    .bulk-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-soft); cursor: pointer; }
+    .bulk-count { font-size: 12px; color: var(--muted); font-weight: 500; }
     .bulk-action { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-    .bulk-action > span { font-size: 12.5px; color: #475569; }
+    .bulk-action > span { font-size: 12.5px; color: var(--text-soft); }
     .bulk-action select {
-        font-size: 13px; padding: 6px 10px; border: 1px solid #cbd5e1;
-        border-radius: 6px; background: #fff; font-weight: 500;
+        font-size: 13px; padding: 6px 10px; border: 1px solid var(--muted);
+        border-radius: 6px; background: var(--surface); font-weight: 500;
     }
     .bulk-action button {
         font-size: 13px; font-weight: 600; padding: 7px 14px;
-        background: #2563eb; color: #fff; border: 0; border-radius: 6px; cursor: pointer;
+        background: #2563eb; color: var(--on-accent); border: 0; border-radius: 6px; cursor: pointer;
     }
-    .bulk-action button:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .bulk-action button:disabled { background: var(--muted); cursor: not-allowed; }
     .bulk-action button:not(:disabled):hover { background: #1d4ed8; }
 
     /* Round chips — the actionable cells */
@@ -380,8 +380,8 @@
     .chip-paid svg { color: #059669; }
 
     .chip-unpaid {
-        background: #fff; color: #2563eb;
-        border: 1.5px dashed #cbd5e1;
+        background: var(--surface); color: #2563eb;
+        border: 1.5px dashed var(--muted);
     }
     .chip-unpaid:hover { background: #eff6ff; border-color: #2563eb; border-style: solid; }
 
@@ -423,10 +423,10 @@
         cursor: pointer; transition: background .12s, color .12s, border-color .12s;
     }
     /* "Free / test" — mark a round done at $0 (no revenue, no commission) */
-    .chip-free { background: #f1f5f9; color: #64748b; border: 1px solid #d7dee8; }
-    .chip-free:hover { background: #e2e8f0; color: #475569; border-color: #94a3b8; }
+    .chip-free { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+    .chip-free:hover { background: var(--border); color: var(--text-soft); border-color: var(--muted); }
     /* Edit this round's rate */
-    .chip-edit { background: #fff; color: #a3aec0; border: 1px solid #e6ebf2; }
+    .chip-edit { background: var(--surface); color: #a3aec0; border: 1px solid var(--border); }
     .chip-edit:hover { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
     .chip-edit svg { width: 12px; height: 12px; }
     /* Stronger affordance when a custom rate is already set on this round */
@@ -434,18 +434,18 @@
     .chip-stack:has(.chip-custom) .chip-edit:hover { color: #6d28d9; }
 
     /* A round closed as free/test — slate instead of the green paid chip */
-    .chip-free-paid { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; }
-    .chip-free-paid:hover { background: #e2e8f0; border-color: #94a3b8; }
+    .chip-free-paid { background: var(--surface-2); color: var(--text-soft); border: 1.5px solid var(--muted); }
+    .chip-free-paid:hover { background: var(--border); border-color: var(--muted); }
 
     /* Per-client rate pill (next to client name) */
     .rate-pill {
         display: inline-flex; align-items: center; gap: 5px;
         margin-left: 8px; padding: 2px 8px; border-radius: 999px;
         font-size: 11px; font-weight: 700; cursor: pointer;
-        background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+        background: var(--surface-2); color: var(--text-soft); border: 1px solid var(--border);
         vertical-align: middle;
     }
-    .rate-pill:hover { background: #e2e8f0; }
+    .rate-pill:hover { background: var(--border); }
     .rate-pill-custom { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
     .rate-pill-custom:hover { background: #ddd6fe; }
     .rate-tag { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; opacity: .8; }
@@ -453,8 +453,8 @@
     /* Tighter cells */
     .pay-matrix .sel-col { width: 32px; text-align: center; }
     .pay-matrix .round-col { width: 92px; text-align: center; }
-    .pay-matrix .total-col { width: 80px; text-align: right; font-weight: 600; color: #0f172a; }
-    .pay-matrix tbody tr:hover { background: #f8fafc; }
+    .pay-matrix .total-col { width: 80px; text-align: right; font-weight: 600; color: var(--text); }
+    .pay-matrix tbody tr:hover { background: var(--surface-2); }
     .row-check, #bulk-select-all { cursor: pointer; }
 
     @media (max-width: 900px) {

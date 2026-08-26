@@ -63,7 +63,7 @@
                             <input type="number" step="0.25" min="0" max="1000" name="hours"
                                    value="{{ rtrim(rtrim(number_format($p['hours'], 2, '.', ''), '0'), '.') }}"
                                    class="period-hours-input" data-rate="{{ $data['rate'] }}"
-                                   style="width:90px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                                   style="width:90px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
                             <button type="submit" class="pay-btn-primary" style="padding:6px 12px;">Save</button>
                         </form>
                     </td>
@@ -71,7 +71,7 @@
                     <td>
                         @if ($p['payout'])
                             <span class="pay-payout-paid">✓ ${{ number_format($p['payout']->amount_paid, 2) }}</span>
-                            <div style="font-size:11px; color:#94a3b8;">{{ $p['payout']->paid_at?->format('M j, Y') }}{{ $p['payout']->method ? ' · '.$p['payout']->method : '' }}</div>
+                            <div style="font-size:11px; color:var(--muted);">{{ $p['payout']->paid_at?->format('M j, Y') }}{{ $p['payout']->method ? ' · '.$p['payout']->method : '' }}</div>
                         @else
                             <span class="pay-payout-pending">Awaiting payment</span>
                         @endif

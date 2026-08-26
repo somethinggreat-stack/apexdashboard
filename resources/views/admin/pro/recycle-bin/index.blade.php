@@ -115,19 +115,19 @@
 
 @push('head')
 <style>
-    .rb-sub { font-size:11.5px; color:#94a3b8; margin-top:2px; }
+    .rb-sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
     .rb-actions { white-space:nowrap; }
     .rb-actions form { display:inline-block; margin:0 2px; }
     .rb-days { display:inline-block; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; }
     .rb-ok   { background:#ecfdf5; color:#047857; }
     .rb-mid  { background:#fffbeb; color:#b45309; }
     .rb-soon { background:#fef2f2; color:#b91c1c; }
-    .pro-act { border:1px solid #d7dee8; background:#fff; color:#0f172a; border-radius:8px; padding:6px 12px; font-size:12.5px; font-weight:600; cursor:pointer; }
-    .pro-act:hover { border-color:#94a3b8; }
+    .pro-act { border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:8px; padding:6px 12px; font-size:12.5px; font-weight:600; cursor:pointer; }
+    .pro-act:hover { border-color:var(--muted); }
     .pro-act.del { border-color:#fecaca; color:#b91c1c; }
     .pro-act.del:hover { background:#fef2f2; border-color:#f87171; }
-    .rb-empty-all { background:#e11d48; color:#fff; border-color:#e11d48; font-weight:700; }
-    .rb-empty-all:hover { background:#be123c; border-color:#be123c; color:#fff; }
+    .rb-empty-all { background:#e11d48; color:var(--on-accent); border-color:#e11d48; font-weight:700; }
+    .rb-empty-all:hover { background:#be123c; border-color:#be123c; color:var(--on-accent); }
 :root[data-theme="dark"] .rb-sub{color:var(--pro-muted);}
 :root[data-theme="dark"] .rb-mid{background:var(--pro-card);border-color:var(--pro-line);color:var(--pro-text);}
 </style>

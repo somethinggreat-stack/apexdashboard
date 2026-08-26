@@ -46,7 +46,7 @@
 
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <input type="text" id="intakeLink" value="{{ $client->intakeUrl() }}" readonly
-                   style="flex:1; min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:#f8fafc; color:#0f172a;"
+                   style="flex:1; min-width:280px; padding:10px 12px; border:1px solid var(--muted); border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:var(--surface-2); color:var(--text);"
                    onclick="this.select();">
             <button type="button" class="btn btn-primary" id="copyIntake">Copy</button>
             <a href="{{ $client->intakeUrl() }}" target="_blank" class="btn btn-secondary">Open</a>
@@ -158,7 +158,7 @@
 
 @push('head')
 <style>
-    .pending-badge { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:#fee2e2; color:#b91c1c; font-size:13px; font-weight:700; vertical-align:middle; }
+    .pending-badge { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:var(--tint-red-bg); color:var(--tint-red-fg); font-size:13px; font-weight:700; vertical-align:middle; }
     .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .row-actions form { display:inline; margin:0; }
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }
@@ -166,12 +166,12 @@
     .btn-approve:hover { background:#a7f3d0; }
     .btn-toerror { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
     .btn-toerror:hover { background:#fde68a; }
-    .review-note { margin-top:4px; font-size:12px; color:#b91c1c; font-weight:600; max-width:320px; }
+    .review-note { margin-top:4px; font-size:12px; color:var(--tint-red-fg); font-weight:600; max-width:320px; }
     .api-field { margin-top:12px; }
-    .api-field label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px; }
-    .api-field code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:11.5px; }
+    .api-field label { display:block; font-size:12px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+    .api-field code { background:var(--surface-2); padding:1px 5px; border-radius:4px; font-size:11.5px; }
     .api-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .api-row input { flex:1; min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:#f8fafc; color:#0f172a; }
+    .api-row input { flex:1; min-width:280px; padding:10px 12px; border:1px solid var(--muted); border-radius:8px; font-family:Menlo,Consolas,monospace; font-size:12.5px; background:var(--surface-2); color:var(--text); }
 </style>
 @endpush
 

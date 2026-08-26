@@ -233,7 +233,7 @@
 @push('head')
 <style>
     .lead-count-badge { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:#dbeafe; color:#1e40af; font-size:13px; font-weight:700; vertical-align:middle; }
-    .prospect-notes { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #475569; line-height: 1.45; }
+    .prospect-notes { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--text-soft); line-height: 1.45; }
     .prospect-pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.2px; white-space:nowrap; }
     .prospect-pill-new           { background:#e0f2fe; color:#075985; }
     .prospect-pill-contacted     { background:#ede9fe; color:#5b21b6; }

@@ -132,13 +132,13 @@
     .days-left-over { color:#dc2626; font-weight:700; }
     .round-timeline { display:inline-flex; flex-direction:column; gap:1px; }
     .round-date { font-size:12px; line-height:1.5; white-space:nowrap; }
-    .round-date strong { display:inline-block; min-width:34px; color:#475569; }
+    .round-date strong { display:inline-block; min-width:34px; color:var(--text-soft); }
     .name-link { color:#1e40af; text-decoration:none; font-weight:600; }
     .name-link:hover { text-decoration:underline; }
 
     .inline-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
     .inline-edit .inline-pencil {
-        opacity:0; transition:opacity .15s; font-size:11px; color:#64748b;
+        opacity:0; transition:opacity .15s; font-size:11px; color:var(--muted);
     }
     .inline-edit:hover .inline-pencil { opacity:1; }
     .inline-edit.editing { display:inline-flex; gap:4px; }

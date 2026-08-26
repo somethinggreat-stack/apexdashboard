@@ -63,8 +63,8 @@
 
 @push('head')
 <style>
-    .err-count { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:#fee2e2; color:#b91c1c; font-size:13px; font-weight:700; vertical-align:middle; }
-    .err-note { max-width:360px; color:#b91c1c; font-weight:600; font-size:13px; white-space:pre-wrap; word-break:break-word; }
+    .err-count { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:var(--tint-red-bg); color:var(--tint-red-fg); font-size:13px; font-weight:700; vertical-align:middle; }
+    .err-note { max-width:360px; color:var(--tint-red-fg); font-weight:600; font-size:13px; white-space:pre-wrap; word-break:break-word; }
     .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .row-actions form { display:inline; margin:0; }
     .row-actions .btn { white-space:nowrap; padding:5px 11px; font-size:12px; line-height:1.3; }

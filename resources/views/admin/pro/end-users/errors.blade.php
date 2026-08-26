@@ -37,13 +37,13 @@
                     <tr>
                         <td>
                             <div class="pro-name">
-                                <span class="pro-avatar" style="background:#fee2e2; color:#b91c1c;">
+                                <span class="pro-avatar" style="background:var(--tint-red-bg); color:var(--tint-red-fg);">
                                     {{ mb_strtoupper(mb_substr($eu->first_name, 0, 1) . mb_substr($eu->last_name, 0, 1)) }}
                                 </span>
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
-                        <td><span style="color:#dc2626; font-weight:600;">{{ $eu->intake_review_note ?: '—' }}</span></td>
+                        <td><span style="color:var(--tint-red-fg); font-weight:600;">{{ $eu->intake_review_note ?: '—' }}</span></td>
                         <td>{{ $eu->email }}</td>
                         <td>{{ $eu->phone ?: '—' }}</td>
                         <td>

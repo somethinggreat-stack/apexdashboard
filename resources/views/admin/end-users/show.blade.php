@@ -96,7 +96,7 @@
     <style>
         /* Round field in the header — click to open the round editor */
         .round-hero-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:1px 5px; margin:-1px -5px; transition:background .15s; }
-        .round-hero-edit:hover { background:#eef2ff; }
+        .round-hero-edit:hover { background:var(--selected); }
         .rhe-pencil { opacity:0; font-size:11px; color:#4f46e5; transition:opacity .15s; }
         .round-hero-edit:hover .rhe-pencil { opacity:1; }
 
@@ -131,7 +131,7 @@
 
         /* Card-header name (now the single source of the client's name) */
         .client-header-name { display: flex; align-items: center; padding-bottom: 12px; }
-        .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -.3px; }
+        .client-header-name h2 { margin: 0; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
 
         /* Single-row, premium header info strip — scoped only to the client detail page */
         .info-grid.client-header-row {
@@ -149,14 +149,14 @@
             font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: .9px;
-            color: #94a3b8;
+            color: var(--muted);
             font-weight: 600;
             margin-bottom: 4px;
         }
         .info-grid.client-header-row > div > div {
             font-size: 14px;
             font-weight: 600;
-            color: #0f172a;
+            color: var(--text);
             line-height: 1.35;
             white-space: nowrap;
             overflow: hidden;
@@ -167,12 +167,12 @@
         }
         .client-header-row .inline-edit { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .client-header-row .inline-edit .inline-pencil {
-            opacity: 0; transition: opacity .15s; font-size: 11px; color: #94a3b8;
+            opacity: 0; transition: opacity .15s; font-size: 11px; color: var(--muted);
         }
         .client-header-row .inline-edit:hover .inline-pencil { opacity: 1; }
         .client-header-row .inline-edit select { font-size: 12px; padding: 2px 6px; min-width: 120px; }
         .client-header-row .inline-edit .inline-save  { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #16a34a; color: white; border: 0; border-radius: 4px; }
-        .client-header-row .inline-edit .inline-cancel { font-size: 11px; padding: 3px 9px; cursor: pointer; background: #e5e7eb; color: #374151; border: 0; border-radius: 4px; }
+        .client-header-row .inline-edit .inline-cancel { font-size: 11px; padding: 3px 9px; cursor: pointer; background: var(--surface-2); color: var(--text-soft); border: 0; border-radius: 4px; }
         @media (max-width: 1180px) {
             .info-grid.client-header-row {
                 grid-template-columns: repeat(3, 1fr);

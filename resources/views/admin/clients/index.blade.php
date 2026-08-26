@@ -82,7 +82,7 @@
 
             @include('admin.clients._referral-fields')
 
-            <div class="form-section" style="margin-top:18px; padding:16px 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+            <div class="form-section" style="margin-top:18px; padding:16px 18px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;">
                 <h4 style="margin-top:0;">Payment Arrangement *</h4>
                 <p class="muted" style="margin:0 0 12px; font-size:12.5px;">How does this BO pay you for the work on their clients?</p>
 

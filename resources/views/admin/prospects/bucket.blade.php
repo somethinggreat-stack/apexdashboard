@@ -77,7 +77,7 @@
 @push('head')
 <style>
     .lead-count-badge { display:inline-block; margin-left:8px; padding:2px 10px; border-radius:999px; background:#dbeafe; color:#1e40af; font-size:13px; font-weight:700; vertical-align:middle; }
-    .prospect-notes { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #475569; line-height: 1.45; }
+    .prospect-notes { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--text-soft); line-height: 1.45; }
     .wa-link { color: #16a34a; font-weight: 600; white-space: nowrap; }
     .wa-link:hover { text-decoration: underline; }
     .row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
