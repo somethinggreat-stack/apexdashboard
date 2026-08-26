@@ -13,3 +13,7 @@ Schedule::command('activity:prune')->dailyAt('03:00');
 
 // Empty the Recycle Bin of anything past its 10-day retention (rows + files).
 Schedule::command('recyclebin:purge')->dailyAt('03:15');
+
+// Nightly 10 PM ET: message each business owner the clients we worked today
+// (rounds started). Timezone handles EST/EDT automatically.
+Schedule::command('messages:daily-digest')->timezone('America/New_York')->dailyAt('22:00');

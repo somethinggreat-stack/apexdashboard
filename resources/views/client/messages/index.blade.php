@@ -42,7 +42,7 @@
         @forelse ($messages as $msg)
             @php
                 $cls = $msg->isFromAdmin() ? 'from-admin' : ($msg->isFromClient() ? 'from-client' : 'from-system');
-                $who = $msg->isFromClient() ? 'You' : ($msg->isFromAdmin() ? 'VA Team' : 'System');
+                $who = $msg->isFromClient() ? 'You' : ($msg->isFromAdmin() ? 'Apex Growth Team' : 'System');
             @endphp
             <div class="chat-msg {{ $cls }}">
                 <div class="chat-bubble">{{ $msg->body }}</div>

@@ -221,9 +221,11 @@ class EndUserController extends Controller
 
         $this->storeNegativeItems($request, $endUser);
 
-        Message::postSystem(
+        // Let the owner know we've taken the client on (team-added clients only —
+        // this store() path is the VA/admin add, not the owner's intake link).
+        Message::postFromTeam(
             $endUser->client_id,
-            "New client {$endUser->full_name} has been added. Start working on it."
+            "We've added {$endUser->full_name} to your account and our team has started working on their credit repair. We'll keep you posted here."
         );
 
         return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
