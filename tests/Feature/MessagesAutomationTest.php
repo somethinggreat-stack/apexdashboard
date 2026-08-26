@@ -76,30 +76,35 @@ class MessagesAutomationTest extends TestCase
         $this->assertStringNotContainsString('Start working on it', $msg->body);
     }
 
-    public function test_round_two_start_messages_owner_but_round_one_and_duplicates_do_not(): void
+    public function test_only_week1_first_step_of_a_round_messages_the_owner(): void
     {
         [$super, $bo] = $this->world();
         $eu = $this->eu($bo, 'Sarah', ['1st Round', '2nd Round']);
 
-        $post = fn (int $round, string $type) => $this->actingAs($super, 'admin')
+        $post = fn (int $round, int $week, string $type) => $this->actingAs($super, 'admin')
             ->withSession(['selected_client_id' => $bo->id])
             ->post('/admin/process-steps', [
-                'end_user_id' => $eu->id, 'round' => $round, 'week' => 1,
+                'end_user_id' => $eu->id, 'round' => $round, 'week' => $week,
                 'step_type' => $type, 'step_date' => '2026-08-26',
             ])->assertSessionHasNoErrors();
 
-        // Round 1 start → NO message.
-        $post(1, 'ex_tu_eq_letters_generated');
-        $this->assertSame(0, Message::where('client_id', $bo->id)->count());
-
-        // Round 2 first step → one "moved into Round 2" message.
-        $post(2, 'ex_tu_eq_letters_generated');
+        // Round 1 Week 1 → one "started Round 1" message (any round counts).
+        $post(1, 1, 'ex_tu_eq_letters_generated');
         $this->assertSame(1, Message::where('client_id', $bo->id)->count());
-        $this->assertStringContainsString('moved into Round 2', Message::where('client_id', $bo->id)->first()->body);
+        $this->assertStringContainsString('started Round 1', Message::where('client_id', $bo->id)->first()->body);
 
-        // A second Round 2 step → NO duplicate.
-        $post(2, 'phone_call_disputes');
+        // A second Round 1 Week-1 step → NO duplicate.
+        $post(1, 1, 'phone_call_disputes');
         $this->assertSame(1, Message::where('client_id', $bo->id)->count());
+
+        // Week 2 of Round 1 → NO message.
+        $post(1, 2, 'tu_ex_call_followups');
+        $this->assertSame(1, Message::where('client_id', $bo->id)->count());
+
+        // Round 2 Week 1 → a second message ("started Round 2").
+        $post(2, 1, 'ex_tu_eq_letters_generated');
+        $this->assertSame(2, Message::where('client_id', $bo->id)->count());
+        $this->assertStringContainsString('started Round 2', Message::where('client_id', $bo->id)->latest('id')->first()->body);
     }
 
     public function test_daily_digest_sends_only_to_owners_with_work_today(): void

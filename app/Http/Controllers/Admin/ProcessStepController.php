@@ -121,15 +121,14 @@ class ProcessStepController extends Controller
             }
         }
 
-        // Round just started (its first-ever step logged, Week 1, Round 2+) →
-        // let the owner know. Round 1 is announced by the client-added message.
-        if ($created > 0 && ! $roundExistedBefore
-            && (int) $data['week'] === 1 && (int) $data['round'] >= 2) {
+        // Round started → tell the owner. Fires ONLY on the first Week-1 step of
+        // a round (any round, 1 and up); never on Week 2/3/4 or a repeat step.
+        if ($created > 0 && ! $roundExistedBefore && (int) $data['week'] === 1) {
             $eu = EndUser::find($data['end_user_id']);
             if ($eu) {
                 Message::postFromTeam(
                     $eu->client_id,
-                    "{$eu->full_name} has moved into Round {$data['round']} of their dispute process. We'll update you as results come in."
+                    "We've started Round {$data['round']} for {$eu->full_name}. We'll update you as results come in."
                 );
             }
         }
