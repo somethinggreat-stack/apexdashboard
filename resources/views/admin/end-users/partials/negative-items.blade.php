@@ -157,6 +157,7 @@
     :root[data-theme="dark"] .ni-resolve input,
     :root[data-theme="dark"] .ni-add input,
     :root[data-theme="dark"] .ni-add select { background:#10152a; border-color:var(--pro-line); color:var(--pro-text); }
+    :root[data-theme="dark"] .ni-tag { background:rgba(148,163,184,.16); color:var(--pro-text-soft); }
 </style>
 <script>
     window.niCopy = function (id) {
