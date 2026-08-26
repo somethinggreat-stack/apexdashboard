@@ -492,15 +492,32 @@ class EndUser extends Model
      */
     public function getMissingWeekAttribute(): ?int
     {
-        $days    = $this->days_active;
-        $wk      = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 6 (1/7/13)
-        $count   = $this->roundWeekCount();    // 30-day → 4 weeks, 20-day → 3 weeks
+        $days     = $this->days_active;
+        $wk       = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 6 (1/7/13)
+        $count    = $this->roundWeekCount();    // 30-day → 4 weeks, 20-day → 3 weeks
+        $daysLeft = $this->days_left_in_round;
 
         for ($w = 1; $w <= $count; $w++) {
-            $dueDay   = (($w - 1) * $wk) + 1;
-            $logged   = (int) ($this->{"week{$w}_count"} ?? 0);
-            if ($days >= $dueDay && $logged === 0) {
-                return $w;
+            $logged = (int) ($this->{"week{$w}_count"} ?? 0);
+            if ($logged !== 0) {
+                continue;
+            }
+
+            if ($w === $count) {
+                // The LAST week is the round's closeout (pull report / record
+                // deletions). It must NOT nag on the weekly schedule — you can
+                // only do it after the response window. So it becomes "due" only
+                // once the round is PAST its date: days left negative (i.e. the
+                // next-round date has passed). 30-day → Week 4, 20-day → Week 3.
+                if ($daysLeft !== null && $daysLeft < 0) {
+                    return $w;
+                }
+            } else {
+                // Earlier weeks keep their normal schedule.
+                $dueDay = (($w - 1) * $wk) + 1;
+                if ($days >= $dueDay) {
+                    return $w;
+                }
             }
         }
         return null;
