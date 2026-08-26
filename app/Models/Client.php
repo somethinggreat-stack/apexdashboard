@@ -217,7 +217,7 @@ class Client extends Authenticatable
      * clients are excluded by EndUser's global scope. Unread messages stay a
      * separate small count (different table).
      *
-     * @return array{pending:int, errors:int, new_errors_resolved:int, round_errors:int, resolved_by_client:int, hold:int, unread:int}
+     * @return array{pending:int, errors:int, new_errors_resolved:int, round_errors:int, resolved_by_client:int, in_progress:int, hold:int, unread:int}
      */
     public function navCounts(): array
     {
@@ -228,6 +228,7 @@ class Client extends Authenticatable
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS new_errors_resolved,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NULL     THEN 1 ELSE 0 END) AS round_errors,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS resolved_by_client,
+                 SUM(CASE WHEN held_at IS NULL AND (intake_status IS NULL OR intake_status NOT IN ('pending_review','error','round_error','done')) THEN 1 ELSE 0 END) AS in_progress,
                  SUM(CASE WHEN held_at IS NOT NULL                                   THEN 1 ELSE 0 END) AS hold"
             )
             ->first();
@@ -238,6 +239,7 @@ class Client extends Authenticatable
             'new_errors_resolved' => (int) ($row->new_errors_resolved ?? 0),
             'round_errors'        => (int) ($row->round_errors ?? 0),
             'resolved_by_client'  => (int) ($row->resolved_by_client ?? 0),
+            'in_progress'         => (int) ($row->in_progress ?? 0),
             'hold'                => (int) ($row->hold ?? 0),
             'unread'              => $this->unreadCountForAdmin(),
         ];

@@ -183,6 +183,9 @@ html, body { height: 100%; }
     font-size: 10px; font-weight: 700; text-align: center; line-height: 1.4;
 }
 .pro-nav a.active .pro-count { background: rgba(255,255,255,.22); }
+/* Neutral count for normal lists (In Progress) — not an alert, so not red. */
+.pro-nav .pro-count.pro-count-soft { background: rgba(255,255,255,.16); color: #dbe2f4; }
+.pro-nav a.active .pro-count.pro-count-soft { background: rgba(255,255,255,.28); color: #fff; }
 
 .pro-logout-wrap { flex-shrink: 0; padding: 6px 13px 10px; }
 .pro-logout {
