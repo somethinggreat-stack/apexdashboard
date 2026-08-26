@@ -16,7 +16,11 @@ class ClientSelectorController extends Controller
         $adminId = $admin->dataOwnerId();
         $isSuper = $admin->isSuper();
 
+        // Active owners only — an inactive business owner drops off the picker,
+        // its balance and its Needs-Attention work. Reactivate it from the
+        // Add/Remove Business Owners page to bring it back.
         $clients = Client::forAdmin($adminId)
+            ->active()
             ->withCount('endUsers')
             ->orderBy('business_name')
             ->get();

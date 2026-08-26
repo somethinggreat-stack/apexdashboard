@@ -15,7 +15,10 @@ class DashboardController extends Controller
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
 
+        // Active owners only — inactive business owners are excluded from every
+        // dashboard figure (Needs Attention, balances, payment totals, stats).
         $clients = Client::forAdmin($ownerId)
+            ->active()
             ->withCount('endUsers')
             ->orderBy('business_name')
             ->get();
@@ -73,7 +76,7 @@ class DashboardController extends Controller
         $totalClients = (int) $clients->sum('end_users_count');
         $activeOwners = $clients->count();
 
-        $newThisMonth = EndUser::whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
+        $newThisMonth = EndUser::whereHas('client', fn ($q) => $q->where('admin_id', $ownerId)->where('status', 'active'))
             ->where('created_at', '>=', Carbon::now()->startOfMonth())
             ->count();
 

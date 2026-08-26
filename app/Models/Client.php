@@ -261,6 +261,17 @@ class Client extends Authenticatable
         return $query->where('admin_id', $adminId);
     }
 
+    /**
+     * Only business owners currently marked active. Inactive owners are hidden
+     * from the dashboard and the business-owner picker (balances, Needs
+     * Attention, payment totals, stats) — they remain on the Add/Remove
+     * Business Owners page so they can be reactivated.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
     public function timeEntries()
     {
         return $this->hasMany(TimeEntry::class);
