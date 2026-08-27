@@ -103,6 +103,7 @@
         }
 
     </style>
+    @include('partials.pwa-head')
     @stack('head')
 </head>
 <body class="admin-body">
@@ -329,6 +330,7 @@
 })();
 
 </script>
+@include('partials.pwa-install')
 @stack('scripts')
 </body>
 </html>

@@ -54,3 +54,20 @@
 <IfModule mod_brotli.c>
     AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/css application/javascript application/json text/xml application/xml image/svg+xml
 </IfModule>
+
+# ============================================
+# PWA: correct manifest type, and NEVER long-cache the service worker or
+# manifest (or browsers won't pick up new versions). Must come after the
+# css/js caching block above so these override it for sw.js.
+# ============================================
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "^sw\.js$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+    <FilesMatch "\.webmanifest$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

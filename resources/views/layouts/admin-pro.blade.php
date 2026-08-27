@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ @filemtime(public_path('css/admin.css')) ?: '1' }}">
     <link rel="stylesheet" href="{{ asset('css/admin-pro.css') }}?v={{ @filemtime(public_path('css/admin-pro.css')) ?: '1' }}">
     <link rel="stylesheet" href="{{ asset('css/galaxy.css') }}?v={{ @filemtime(public_path('css/galaxy.css')) ?: '1' }}">
+    @include('partials.pwa-head')
     @stack('head')
 </head>
 <body class="pro-body admin-body">
@@ -414,6 +415,7 @@
     apply();
 })();
 </script>
+@include('partials.pwa-install')
 @stack('scripts')
 </body>
 </html>

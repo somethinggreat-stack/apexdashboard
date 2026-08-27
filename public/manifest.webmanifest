@@ -1,0 +1,28 @@
+{
+    "name": "Apex Growth Solutions",
+    "short_name": "Apex",
+    "description": "Apex credit-repair fulfillment dashboard for the Apex Growth team.",
+    "id": "/admin/",
+    "start_url": "/admin/dashboard?source=pwa",
+    "scope": "/admin/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "orientation": "any",
+    "background_color": "#0b1220",
+    "theme_color": "#4f46e5",
+    "categories": ["business", "productivity"],
+    "lang": "en",
+    "dir": "ltr",
+    "icons": [
+        { "src": "/Images/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/Images/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "/Images/pwa/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+        { "src": "/Images/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ],
+    "shortcuts": [
+        { "name": "Daily Task", "short_name": "Daily Task", "url": "/admin/daily-task?source=pwa", "icons": [{ "src": "/Images/pwa/icon-192.png", "sizes": "192x192" }] },
+        { "name": "Clients", "short_name": "Clients", "url": "/admin/client-list?source=pwa", "icons": [{ "src": "/Images/pwa/icon-192.png", "sizes": "192x192" }] },
+        { "name": "CFPB Logins", "short_name": "CFPB", "url": "/admin/cfpb-logins?source=pwa", "icons": [{ "src": "/Images/pwa/icon-192.png", "sizes": "192x192" }] },
+        { "name": "Select Business Owner", "short_name": "Select BO", "url": "/admin/select-business-owner?source=pwa", "icons": [{ "src": "/Images/pwa/icon-192.png", "sizes": "192x192" }] }
+    ]
+}
