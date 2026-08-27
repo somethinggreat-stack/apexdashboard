@@ -159,16 +159,26 @@ class EndUserController extends Controller
             $query->search($request->search);
         }
 
+        // Default ordering: the client whose next round is closest (fewest days
+        // left) sits on top, so past-due files — which have NEGATIVE days left —
+        // naturally float above everyone. Ties break on the next round date, then
+        // name. Clients with no scheduled round (null days) sink to the bottom.
         $endUsers = $query->orderBy('start_date', 'asc')->orderBy('first_name')->get()
             ->sort(function ($a, $b) {
-                $byIncomplete = ($b->is_incomplete ? 1 : 0) <=> ($a->is_incomplete ? 1 : 0);
-                if ($byIncomplete !== 0) return $byIncomplete;
-                return $a->start_date <=> $b->start_date;
+                // Null days (no scheduled round) sink to the bottom.
+                $an = $a->days_left_in_round === null;
+                $bn = $b->days_left_in_round === null;
+                if ($an || $bn) {
+                    return ($an ? 1 : 0) <=> ($bn ? 1 : 0);
+                }
+                return ($a->days_left_in_round <=> $b->days_left_in_round)
+                    ?: (($a->next_round_date ?? '') <=> ($b->next_round_date ?? ''))
+                    ?: (mb_strtolower($a->full_name) <=> mb_strtolower($b->full_name));
             })
             ->values();
 
         // Optional column sort (pro console). Without it, the default ordering
-        // above stands: incomplete files first, then oldest start date.
+        // above stands: soonest next round (and past-due) first.
         $sortKeys = [
             'name'     => fn ($e) => mb_strtolower($e->full_name),
             'round'    => fn ($e) => $e->current_round,
