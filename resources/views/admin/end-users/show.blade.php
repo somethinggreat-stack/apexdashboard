@@ -70,7 +70,7 @@
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
         <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
         <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
-        <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
+        <div><label>Days Active</label><div>{{ $endUser->ever_started ? $endUser->days_active : 'Not started' }}</div></div>
         <div>
             <label>Status</label>
             <div>
@@ -85,8 +85,9 @@
         <div>
             <label>Round</label>
             <div>
+                @php $startedRounds = array_keys($endUser->round_timeline); @endphp
                 <span class="round-hero-edit" onclick="openModal('roundScheduleModal')" role="button" tabindex="0" title="Manage rounds — start the next round or fix dates">
-                    {{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}
+                    {{ $startedRounds ? implode(', ', $startedRounds) : 'Not started' }}
                     <span class="rhe-pencil" aria-hidden="true">✎</span>
                 </span>
             </div>

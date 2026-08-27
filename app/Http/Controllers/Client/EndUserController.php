@@ -196,7 +196,9 @@ class EndUserController extends Controller
             'credit_monitoring_security_answer' => $data['credit_monitoring_security_answer'] ?? null,
             'status'                            => 'active',
             'start_date'                        => $data['start_date'],
-            'rounds'                            => ['1st Round'],
+            // No round is marked on intake. The 1st round starts only when the
+            // team logs its first Week-1 step — that's when day-counting begins.
+            'rounds'                            => [],
             'intake_status'                     => 'pending_review',
             'intake_submitted_ip'               => $request->ip(),
             'intake_submitted_at'               => now(),

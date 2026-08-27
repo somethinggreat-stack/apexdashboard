@@ -60,7 +60,7 @@
                         <a href="{{ route('client.end-users.show', $eu) }}" class="name-link">{{ $eu->full_name }}</a>
                     </td>
                     <td class="no-link">{{ $eu->email }}</td>
-                    <td class="no-link">{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
+                    <td class="no-link">{{ !empty($eu->round_timeline) ? implode(', ', array_keys($eu->round_timeline)) : '—' }}</td>
                     <td class="no-link">
                         @forelse ($eu->round_timeline as $label => $date)
                             <div class="round-date">

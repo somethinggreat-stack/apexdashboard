@@ -49,9 +49,9 @@
         <div><label>Business Owner</label><div>{{ $endUser->client?->business_name }}</div></div>
         <div><label>Email</label><div title="{{ $endUser->email }}">{{ $endUser->email }}</div></div>
         <div><label>Phone</label><div>{{ $endUser->phone ?? '—' }}</div></div>
-        <div><label>Days Active</label><div>{{ $endUser->days_active }}</div></div>
+        <div><label>Days Active</label><div>{{ $endUser->ever_started ? $endUser->days_active : 'Not started' }}</div></div>
         <div><label>Status</label><div><span class="pill pill-{{ $endUser->status }}">{{ $endUser->status }}</span></div></div>
-        <div><label>Round</label><div>{{ !empty($endUser->rounds) ? implode(', ', $endUser->rounds) : '—' }}</div></div>
+        <div><label>Round</label><div>{{ !empty($endUser->round_timeline) ? implode(', ', array_keys($endUser->round_timeline)) : 'Not started' }}</div></div>
     </div>
     @push('head')
     <style>

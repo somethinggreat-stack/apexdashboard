@@ -210,8 +210,11 @@ class ProfileUpdateTest extends TestCase
 
         $eu->refresh();
         $this->assertSame(['1st Round', '2nd Round', '3rd Round'], $eu->rounds);
-        // 1st round date is the client start_date.
-        $this->assertSame('2026-06-17', $eu->start_date->toDateString());
+        // Every round's marked date now lives in round_dates — the 1st round
+        // included (it is NOT the client's added date).
+        $this->assertSame('2026-06-17', $eu->round_dates['1st Round']);
+        $this->assertSame('2026-06-17', $eu->roundStartDate(1));
+        $this->assertSame('2026-01-01', $eu->start_date->toDateString(), 'added date is untouched');
         // Later rounds live in round_dates.
         $this->assertSame('2026-07-04', $eu->round_dates['2nd Round']);
         $this->assertSame('2026-08-06', $eu->round_dates['3rd Round']);

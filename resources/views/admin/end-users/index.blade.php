@@ -51,7 +51,7 @@
                         <span class="inline-edit inline-edit-round"
                               data-id="{{ $eu->id }}"
                               data-current="{{ json_encode($eu->rounds ?? []) }}">
-                            {{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}
+                            {{ !empty($eu->round_timeline) ? implode(', ', array_keys($eu->round_timeline)) : '—' }}
                             <span class="inline-pencil" aria-hidden="true">✎</span>
                         </span>
                     </td>

@@ -3,7 +3,7 @@
     $groups = $steps->groupBy(fn ($s) => 'Round ' . $s->round)->map(
         fn ($byRound) => $byRound->groupBy(fn ($s) => 'Week ' . $s->week)
     );
-    $rounds = $endUser->rounds ?? [];
+    $rounds = array_keys($endUser->round_timeline);   // only rounds actually started
 @endphp
 
 <div class="status-report">
@@ -15,11 +15,11 @@
         <div class="status-report-stats">
             <div>
                 <span class="muted">Started</span>
-                <strong>{{ $endUser->start_date?->format('M d, Y') ?? '—' }}</strong>
+                <strong>{{ $endUser->ever_started ? \Carbon\Carbon::parse($endUser->roundStartDate(1))->format('M d, Y') : 'Not started' }}</strong>
             </div>
             <div>
                 <span class="muted">Days Active</span>
-                <strong>{{ $endUser->days_active }}</strong>
+                <strong>{{ $endUser->ever_started ? $endUser->days_active : '—' }}</strong>
             </div>
             <div>
                 <span class="muted">Active Rounds</span>

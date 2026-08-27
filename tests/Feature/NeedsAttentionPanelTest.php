@@ -34,12 +34,14 @@ class NeedsAttentionPanelTest extends TestCase
             'intake_token' => \Illuminate\Support\Str::random(20),
         ]);
 
-        // An active client whose round is well past due → shows as overdue + incomplete.
+        // An active client whose round is MARKED (started 45 days ago) and well
+        // past due → shows as overdue + incomplete.
         EndUser::create([
             'client_id' => $bo->id, 'first_name' => 'Pat', 'last_name' => 'Doe', 'suffix' => 'None',
             'email' => 'pat@t.com', 'current_address' => '1 St', 'city' => 'T', 'state' => 'ST',
             'zipcode' => '12345', 'status' => 'active', 'start_date' => now()->subDays(45)->toDateString(),
             'intake_status' => null, 'rounds' => ['1st Round'],
+            'round_dates' => ['1st Round' => now()->subDays(45)->toDateString()],
         ]);
 
         $resp = $this->actingAs($va, 'admin')->get(route('admin.client-selector.index'));

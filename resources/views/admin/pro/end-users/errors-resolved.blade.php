@@ -43,7 +43,7 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
-                        <td>{{ !empty($eu->rounds) ? implode(', ', $eu->rounds) : '—' }}</td>
+                        <td>{{ !empty($eu->round_timeline) ? implode(', ', array_keys($eu->round_timeline)) : '—' }}</td>
                         <td><span class="re-type">{{ $eu->error_type ?: '—' }}</span></td>
                         <td>
                             <span class="re-resolved-at">

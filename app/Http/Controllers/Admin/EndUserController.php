@@ -70,7 +70,7 @@ class EndUserController extends Controller
         return EndUser::notHeld()
             ->where(fn ($q) => $q->whereNull('intake_status')
                 ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']))
-            ->with('processSteps:id,end_user_id,round,week,step_type')
+            ->with('processSteps:id,end_user_id,round,week,step_type,step_date')
             ->withCount([
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
                 'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
@@ -86,10 +86,15 @@ class EndUserController extends Controller
         $logged = 0;
 
         foreach ($clients as $eu) {
+            // Nothing to log for a round that hasn't been started (no Week 1 yet).
+            $start = $eu->current_round_start_date;
+            if (! $start) {
+                continue;
+            }
             $wk     = $eu->roundWeekLength();
             $count  = $eu->roundWeekCount();
             $round  = $eu->current_round;
-            $days   = $eu->days_active;
+            $days   = (int) \Carbon\Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
             $byWeek = ProcessStep::stepTypesByWeek($eu->roundCycleDays());
 
             for ($w = 1; $w <= $count; $w++) {
@@ -142,7 +147,7 @@ class EndUserController extends Controller
             // progress % is derived from the step log — eager load it so the
             // accessor doesn't fire a query per row; client carries the round
             // cycle length the date accessors read.
-            ->with(['client', 'processSteps:id,end_user_id,round,step_type'])
+            ->with(['client', 'processSteps:id,end_user_id,round,step_type,step_date'])
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -548,20 +553,16 @@ class EndUserController extends Controller
 
         $data = $this->validatedPayload($request, false);
 
-        // Inline "Round Started" edit: the date the current round began. For the
-        // 1st round that IS the client's start_date; for a later round it lives in
-        // round_dates[label]. Blank clears a later round's date (1st falls back to
-        // no start).
+        // Inline "Round Started" edit: the date the current round began. Every
+        // round (1st included) stores its marked date in round_dates[label], so
+        // it's the round's start — never the client's added date. Blank clears it,
+        // reverting to "derived from the first logged step".
         if ($request->has('round_started')) {
             $rs = $data['round_started'] ?? null;
             $label = $endUser->current_round_label;
-            if ($label === '1st Round') {
-                $data['start_date'] = $rs;
-            } else {
-                $dates = $endUser->round_dates ?? [];
-                if ($rs) { $dates[$label] = $rs; } else { unset($dates[$label]); }
-                $data['round_dates'] = $dates ?: null;
-            }
+            $dates = $endUser->round_dates ?? [];
+            if ($rs) { $dates[$label] = $rs; } else { unset($dates[$label]); }
+            $data['round_dates'] = $dates ?: null;
             unset($data['round_started']);
         }
 
@@ -647,26 +648,20 @@ class EndUserController extends Controller
         if ($request->has('rounds_present')) {
             $newRounds = $request->input('rounds', []) ?: [];
             $data['rounds'] = $newRounds ?: null;
-
-            // Auto-stamp the start date for any round that is now selected but
-            // doesn't yet have a recorded date — captured server-side the moment
-            // the round is started, no manual date entry. Existing dates are kept
-            // (even if a round is later deselected) so history is never lost.
-            $dates = $endUser->round_dates ?? [];
-            foreach ($newRounds as $label) {
-                if ($label !== '1st Round' && empty($dates[$label])) {
-                    $dates[$label] = now()->toDateString();
-                }
-            }
-            $data['round_dates'] = $dates ?: null;
+            // No date is stamped just for toggling a round on. A round's start
+            // date is derived from its first logged step (or set explicitly in
+            // Edit Rounds & Dates), so a round never begins counting until its
+            // Week 1 is actually marked.
         } else {
             unset($data['rounds']);
         }
 
         // Overview "Rounds & Schedule" editor: set which rounds are reached AND
-        // each round's individual start date in one submit. 1st Round's date is
-        // the client start_date; later rounds live in round_dates[label]. Dates
-        // for rounds that are no longer selected are kept so history is not lost.
+        // each round's individual start date in one submit. EVERY round's marked
+        // date (1st included) lives in round_dates[label] — never the client's
+        // added date. An explicit date wins; a reached-but-undated round keeps
+        // deriving its start from the first logged step (no auto "today" stamp).
+        // Dates for rounds no longer selected are kept so history is not lost.
         if ($request->has('round_schedule_present')) {
             $newRounds = array_values(array_intersect(EndUser::ROUND_OPTIONS, (array) $request->input('rounds', [])));
             $data['rounds'] = $newRounds ?: null;
@@ -676,26 +671,14 @@ class EndUserController extends Controller
 
             foreach (EndUser::ROUND_OPTIONS as $label) {
                 $raw = trim((string) ($inputDates[$label] ?? ''));
-                $iso = null;
-                if ($raw !== '') {
-                    try { $iso = \Carbon\Carbon::parse($raw)->toDateString(); } catch (\Throwable $e) { $iso = null; }
+                if ($raw === '') {
+                    continue;   // no explicit date → derive from the first step
                 }
-
-                if ($label === '1st Round') {
-                    if (in_array($label, $newRounds, true) && $iso) {
-                        $data['start_date'] = $iso;
-                    }
-                    continue;
+                try {
+                    $dates[$label] = \Carbon\Carbon::parse($raw)->toDateString();
+                } catch (\Throwable $e) {
+                    // ignore an unparseable date
                 }
-
-                if (in_array($label, $newRounds, true)) {
-                    if ($iso) {
-                        $dates[$label] = $iso;              // explicit date wins
-                    } elseif (empty($dates[$label])) {
-                        $dates[$label] = now()->toDateString(); // reached but undated → stamp today
-                    }
-                }
-                // Rounds left unchecked keep any existing date (history preserved).
             }
 
             $data['round_dates'] = $dates ?: null;

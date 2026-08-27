@@ -27,7 +27,7 @@
                 @foreach ($group as $eu)
                     <tr class="row-link" data-href="{{ route('admin.end-users.show', $eu) }}">
                         <td><a href="{{ route('admin.end-users.show', $eu) }}" class="name-link">{{ $eu->full_name }}</a></td>
-                        <td>{{ $eu->days_active }}</td>
+                        <td>{{ $eu->ever_started ? $eu->days_active : '—' }}</td>
                         <td><span class="pill pill-incomplete">{{ $eu->incomplete_reason }}</span></td>
                         <td class="no-link">
                             <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>

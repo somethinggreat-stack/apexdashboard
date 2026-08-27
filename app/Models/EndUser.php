@@ -502,9 +502,19 @@ class EndUser extends Model
         return substr($digits, 0, 3) . '-' . substr($digits, 3, 2) . '-' . substr($digits, 5);
     }
 
-    public function getDaysActiveAttribute()
+    /**
+     * Days the client has been ACTIVELY worked — counted from the day the 1st
+     * round was marked (its first Week-1 step logged), NOT from the day the
+     * client was added to the system. Null until the 1st round is marked, so an
+     * unworked client reads "not started" instead of silently ticking up days.
+     */
+    public function getDaysActiveAttribute(): ?int
     {
-        return (int) Carbon::parse($this->start_date)->diffInDays(now()) + 1;
+        $start = $this->roundStartDate(1);
+        if (! $start) {
+            return null;
+        }
+        return (int) Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
     }
 
     /**
@@ -524,7 +534,13 @@ class EndUser extends Model
      */
     public function getMissingWeekAttribute(): ?int
     {
-        $days   = $this->days_active;
+        // Nothing is "due" until the round is actually marked (its first Week-1
+        // step logged). An unstarted round is never on the schedule.
+        $start = $this->current_round_start_date;
+        if (! $start) {
+            return null;
+        }
+        $days   = (int) Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
         $wk     = $this->roundWeekLength();
         $count  = $this->roundWeekCount();
         $byWeek = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
@@ -611,20 +627,57 @@ class EndUser extends Model
 
     public function getCurrentRoundAttribute(): int
     {
-        return max(1, count($this->rounds ?? []));
+        $byRounds = count($this->rounds ?? []);
+        $steps    = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
+        $bySteps  = (int) $steps->max('round');
+
+        return max(1, $byRounds, $bySteps);
     }
 
     /**
-     * The date a given round label was first started, or null if not recorded.
-     * Round dates are stamped automatically when a round is added (see
-     * EndUserController::update). The 1st round's date is the client start_date.
+     * The authoritative start date of a round — the date it was MARKED. A round
+     * is marked when its first Week-1 step is logged (or when a date is set by
+     * hand in Edit Rounds & Dates, stored in round_dates). It is NEVER the
+     * client's added date: a client with no steps for the round returns null, so
+     * every day-count (days active, days left, next round, past-due) stays blank
+     * until the team actually starts the round. Applies to every round equally.
+     */
+    public function roundStartDate(int $round): ?string
+    {
+        $label = self::ROUND_OPTIONS[$round - 1] ?? null;
+
+        // A hand-set date (Edit Rounds & Dates) wins.
+        if ($label && ! empty($this->round_dates[$label])) {
+            return Carbon::parse($this->round_dates[$label])->toDateString();
+        }
+
+        // Otherwise the round starts on its earliest logged step.
+        $steps = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
+        $earliest = $steps->where('round', $round)->min('step_date');
+
+        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
+    }
+
+    /**
+     * The date a given round label was marked, or null if it hasn't been. Thin
+     * wrapper over roundStartDate() keyed by label.
      */
     public function roundStartedAt(string $label): ?string
     {
-        if ($label === '1st Round') {
-            return $this->start_date ? Carbon::parse($this->start_date)->toDateString() : null;
-        }
-        return $this->round_dates[$label] ?? null;
+        $idx = array_search($label, self::ROUND_OPTIONS, true);
+        return $idx === false ? null : $this->roundStartDate($idx + 1);
+    }
+
+    /** True once the client's 1st round has ever been marked (they've been worked). */
+    public function getEverStartedAttribute(): bool
+    {
+        return $this->roundStartDate(1) !== null;
+    }
+
+    /** True once the CURRENT round has been marked; gates its day-counts. */
+    public function getRoundStartedAttribute(): bool
+    {
+        return $this->current_round_start_date !== null;
     }
 
     public function getSecondRoundStartedAtAttribute(): ?string
@@ -633,40 +686,32 @@ class EndUser extends Model
     }
 
     /**
-     * Ordered map of each started round label => its start date (or null),
-     * for every round the client is currently on. Used to render the
-     * "Round Started" column. 1st Round resolves to the client start_date;
-     * 2nd–5th rounds resolve to their auto-stamped round_dates entry.
+     * Ordered map of each STARTED round label => its marked start date. Only
+     * rounds that have actually begun (a step logged, or a hand-set date) appear
+     * — a round the client has merely "reached" but not started stays out, so
+     * the timeline never shows a round as started before it is.
      */
     public function getRoundTimelineAttribute(): array
     {
-        $selected = $this->rounds ?? [];
         $out = [];
-        foreach (self::ROUND_OPTIONS as $label) {
-            if (in_array($label, $selected, true)) {
-                $out[$label] = $this->roundStartedAt($label);
+        foreach (self::ROUND_OPTIONS as $i => $label) {
+            $date = $this->roundStartDate($i + 1);
+            if ($date !== null) {
+                $out[$label] = $date;
             }
         }
         return $out;
     }
 
     /**
-     * The start date of the round the client is currently on (the highest
-     * round they're in). Falls back to the client start_date for round 1.
+     * The marked start date of the round the client is currently on, or null if
+     * that round hasn't been started yet (no step logged for it). Every
+     * round-based counter reads from here, so all of them stay blank until the
+     * round is marked.
      */
     public function getCurrentRoundStartDateAttribute(): ?string
     {
-        $selected = $this->rounds ?? [];
-        $highest = null;
-        foreach (self::ROUND_OPTIONS as $label) {
-            if (in_array($label, $selected, true)) {
-                $highest = $label;
-            }
-        }
-        if ($highest === null) {
-            return $this->start_date ? Carbon::parse($this->start_date)->toDateString() : null;
-        }
-        return $this->roundStartedAt($highest);
+        return $this->roundStartDate($this->current_round);
     }
 
     /**
@@ -736,17 +781,10 @@ class EndUser extends Model
         return $daysLeft !== null && $daysLeft <= 0 && !$this->roundClosedOut($this->current_round);
     }
 
-    /** The label of the round the client is currently on (highest selected). */
+    /** The label of the round the client is currently on. */
     public function getCurrentRoundLabelAttribute(): string
     {
-        $selected = $this->rounds ?? [];
-        $highest = '1st Round';
-        foreach (self::ROUND_OPTIONS as $label) {
-            if (in_array($label, $selected, true)) {
-                $highest = $label;
-            }
-        }
-        return $highest;
+        return self::ROUND_OPTIONS[$this->current_round - 1] ?? "Round {$this->current_round}";
     }
 
     /** The date the current round is due to end (start + the owner's cycle). */

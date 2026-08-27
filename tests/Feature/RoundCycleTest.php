@@ -40,7 +40,10 @@ class RoundCycleTest extends TestCase
             'client_id' => $bo->id, 'first_name' => 'Jane', 'last_name' => 'Roe', 'suffix' => 'None',
             'email' => "c{$bo->id}@test.com", 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
             'zipcode' => '12345', 'status' => 'active', 'start_date' => $start,
+            // Round 1 is MARKED as started on $start (its date lives in
+            // round_dates now, not the client's added date).
             'intake_status' => 'done', 'rounds' => ['1st Round'],
+            'round_dates' => ['1st Round' => $start],
         ]);
     }
 

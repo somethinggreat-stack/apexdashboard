@@ -112,6 +112,13 @@ class ProcessStepController extends Controller
             }
         }
 
+        // Logging any step for a round marks that round as started — its start
+        // date is the earliest logged step (read live by the model), so all the
+        // day-counts for the round begin from here.
+        if ($created > 0) {
+            $this->markRoundStarted((int) $data['end_user_id'], (int) $data['round']);
+        }
+
         $msg = match (true) {
             $created > 0 && $skipped > 0 => "Process step(s) logged. {$created} created, {$skipped} skipped (already existed for this round & week).",
             $created > 0                 => 'Process step(s) logged.',
@@ -164,6 +171,28 @@ class ProcessStepController extends Controller
 
         $existing[] = $nextLabel;
         $endUser->update(['rounds' => $existing]);
+    }
+
+    /**
+     * Add a round's label to the client's rounds array the first time a step is
+     * logged for it, in canonical order. This is what "marks" the round; the
+     * start date itself is derived live from the earliest logged step.
+     */
+    private function markRoundStarted(int $endUserId, int $round): void
+    {
+        $label = EndUser::ROUND_OPTIONS[$round - 1] ?? null;
+        if (! $label) return;
+
+        $endUser = EndUser::find($endUserId);
+        if (! $endUser) return;
+
+        $rounds = $endUser->rounds ?? [];
+        if (in_array($label, $rounds, true)) return;
+
+        $rounds[] = $label;
+        $endUser->update([
+            'rounds' => array_values(array_intersect(EndUser::ROUND_OPTIONS, $rounds)),
+        ]);
     }
 
     private function validatedPayload(Request $request, bool $creating): array

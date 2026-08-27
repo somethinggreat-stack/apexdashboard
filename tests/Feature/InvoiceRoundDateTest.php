@@ -31,7 +31,7 @@ class InvoiceRoundDateTest extends TestCase
             'email' => 'islam@test.com', 'current_address' => '1 St', 'city' => 'Town', 'state' => 'ST',
             'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-07-17',
             'intake_status' => 'done', 'rounds' => ['1st Round', '2nd Round'],
-            'round_dates' => ['2nd Round' => '2026-08-06'],
+            'round_dates' => ['1st Round' => '2026-07-17', '2nd Round' => '2026-08-06'],
         ]);
 
         $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
@@ -43,7 +43,7 @@ class InvoiceRoundDateTest extends TestCase
         $r1 = $items->firstWhere('round', 1);
         $r2 = $items->firstWhere('round', 2);
 
-        $this->assertSame('2026-07-17', $r1['round_started'], '1st round uses the client start date');
+        $this->assertSame('2026-07-17', $r1['round_started'], '1st round uses its marked date');
         $this->assertSame('2026-08-06', $r2['round_started'], '2nd round uses its stamped date');
     }
 }

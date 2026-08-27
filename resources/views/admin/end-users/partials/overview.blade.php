@@ -9,8 +9,15 @@
 
     $allSteps          = $endUser->processSteps;
     $stepsByRound      = $allSteps->groupBy('round');
-    $currentRoundNum   = max(1, (int) ($stepsByRound->keys()->max() ?? 1));
+    $currentRoundNum   = $endUser->current_round;               // step-aware model value
     $currentRoundSteps = $stepsByRound->get($currentRoundNum, collect());
+
+    // Round-start state — the model's single source of truth. Everything below
+    // reads from the MARKED start date (first logged step), never the added date.
+    $markedStart  = $endUser->current_round_start_date;   // null until the round is marked
+    $roundStarted = $endUser->round_started;              // current round marked?
+    $everStarted  = $endUser->ever_started;               // 1st round ever marked?
+    $round1Start  = $endUser->roundStartDate(1);
 
     $stepTypesByWeek    = ProcessStep::stepTypesByWeek($endUser->roundCycleDays());
     $totalStepsPerRound = collect($stepTypesByWeek)->sum(fn ($w) => count($w));
@@ -33,8 +40,7 @@
         + (int) $s->equifax_accounts_disputed
     );
 
-    $roundLabels = [1=>'1st Round', 2=>'2nd Round', 3=>'3rd Round', 4=>'4th Round', 5=>'5th Round'];
-    $currentRoundLabel = $roundLabels[$currentRoundNum] ?? "Round {$currentRoundNum}";
+    $currentRoundLabel = $endUser->current_round_label;
 
     $loggedTypes = $currentRoundSteps->pluck('step_type')->toArray();
     $nextAction = null;
@@ -50,8 +56,8 @@
 
     $cycleDays = $endUser->roundCycleDays();          // 20 or 30, from the business owner
     $weekLen   = $endUser->roundWeekLength();         // cycleDays ÷ 4 (7 or 5)
-    $estCompletion = $endUser->start_date
-        ? $endUser->start_date->copy()->addDays($cycleDays * $currentRoundNum)->format('M d, Y')
+    $estCompletion = $markedStart
+        ? \Carbon\Carbon::parse($markedStart)->copy()->addDays($cycleDays)->format('M d, Y')
         : '—';
 
     // Compute the week-by-week schedule locally so we don't depend on
@@ -63,20 +69,33 @@
     for ($w = 1; $w <= $weekCount; $w++) {
         $weekCounts[$w] = $allSteps->where('week', $w)->count();
     }
-    $daysActive = $endUser->days_active;
+    // Schedule pressure only exists once the round is marked, and days are
+    // counted from the marked start — never the client's added date.
     $missingWeek = null;
-    for ($w = 1; $w <= $weekCount; $w++) {
-        $dueDay = (($w - 1) * $weekLen) + 1;
-        if ($daysActive >= $dueDay && ($weekCounts[$w] ?? 0) === 0) {
-            $missingWeek = $w;
-            break;
+    if ($roundStarted && $markedStart) {
+        $daysIntoRound = (int) \Carbon\Carbon::parse($markedStart)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
+        for ($w = 1; $w <= $weekCount; $w++) {
+            $dueDay = (($w - 1) * $weekLen) + 1;
+            if ($daysIntoRound >= $dueDay && ($weekCounts[$w] ?? 0) === 0) {
+                $missingWeek = $w;
+                break;
+            }
         }
     }
-    $isOnTrack    = $missingWeek === null;
-    $statusCaption = $isOnTrack ? 'On Track' : "Week {$missingWeek} due";
-    $statusMessage = $isOnTrack
-        ? 'Everything is on track. Keep going!'
-        : "Time to log Week {$missingWeek} — keep the momentum going.";
+    $isOnTrack = ! $roundStarted || $missingWeek === null;   // not-started reads calm, not red
+    if (! $everStarted) {
+        $statusCaption = 'Not started';
+        $statusMessage = 'Log the first Week 1 step to start Round 1 — the clock begins then.';
+    } elseif (! $roundStarted) {
+        $statusCaption = 'Round not started';
+        $statusMessage = "Log Week 1 to start Round {$currentRoundNum}.";
+    } elseif ($isOnTrack) {
+        $statusCaption = 'On Track';
+        $statusMessage = 'Everything is on track. Keep going!';
+    } else {
+        $statusCaption = "Week {$missingWeek} due";
+        $statusMessage = "Time to log Week {$missingWeek} — keep the momentum going.";
+    }
 
     // Week 1 progress display — match the mockup's per-step list
     $week1Types = $stepTypesByWeek[1] ?? [];
@@ -99,7 +118,7 @@
             'num'   => $stepIdx,
             'label' => $cleanLabel,
             'state' => $state,
-            'date'  => $endUser->start_date?->copy()->addDays($stepIdx - 1)?->format('M d, Y') ?? '—',
+            'date'  => $markedStart ? \Carbon\Carbon::parse($markedStart)->copy()->addDays($stepIdx - 1)->format('M d, Y') : '—',
         ];
     }
 
@@ -191,8 +210,13 @@
                 </div>
                 <div class="ov-stat-label">Days Active</div>
             </div>
-            <div class="ov-stat-value">{{ $endUser->days_active }} <span class="ov-stat-unit">Days</span></div>
-            <div class="ov-stat-sub">Since {{ $endUser->start_date?->format('M d, Y') ?? '—' }}</div>
+            @if ($everStarted)
+                <div class="ov-stat-value">{{ $endUser->days_active }} <span class="ov-stat-unit">Days</span></div>
+                <div class="ov-stat-sub">Since {{ $round1Start ? \Carbon\Carbon::parse($round1Start)->format('M d, Y') : '—' }}</div>
+            @else
+                <div class="ov-stat-value" style="font-size:20px;">Not started</div>
+                <div class="ov-stat-sub">1st round hasn't been marked yet</div>
+            @endif
         </div>
 
         {{-- Total Rounds --}}
@@ -206,7 +230,7 @@
                     <span>{{ $currentRoundPercent }}%</span>
                 </div>
             </div>
-            <div class="ov-stat-value">{{ $currentRoundLabel }}</div>
+            <div class="ov-stat-value">{{ $everStarted ? $currentRoundLabel : 'Not started' }}</div>
             <div class="ov-stat-sub">Total Steps: {{ $allRoundsTotalSteps }}</div>
         </div>
 
@@ -274,7 +298,7 @@
                     <div class="ov-round-badge">1st</div>
                     <div class="ov-round-meta">
                         <div class="ov-round-name">1st Round</div>
-                        <div class="ov-round-date">{{ $endUser->start_date ? 'Started ' . $endUser->start_date->format('M j, Y') : 'Not started' }}</div>
+                        <div class="ov-round-date">Not started yet</div>
                     </div>
                 </div>
             @endforelse
@@ -434,9 +458,9 @@
                 <div class="ov-shield-msg">{{ $statusMessage }}</div>
 
                 <div class="ov-kv">
-                    <div class="ov-kv-row"><span>Current Round</span><strong>{{ $currentRoundLabel }}</strong></div>
-                    <div class="ov-kv-row"><span>Days Active</span><strong>{{ $endUser->days_active }}</strong></div>
-                    <div class="ov-kv-row"><span>Started On</span><strong>{{ $endUser->start_date?->format('M d, Y') ?? '—' }}</strong></div>
+                    <div class="ov-kv-row"><span>Current Round</span><strong>{{ $everStarted ? $currentRoundLabel : 'Not started' }}</strong></div>
+                    <div class="ov-kv-row"><span>Days Active</span><strong>{{ $everStarted ? $endUser->days_active : '—' }}</strong></div>
+                    <div class="ov-kv-row"><span>Started On</span><strong>{{ $round1Start ? \Carbon\Carbon::parse($round1Start)->format('M d, Y') : '—' }}</strong></div>
                     <div class="ov-kv-row"><span>Steps This Round</span><strong>{{ $currentRoundCompleted }}</strong></div>
                     <div class="ov-kv-row"><span>Next Action</span><strong>{{ $nextAction }}</strong></div>
                 </div>

@@ -202,7 +202,9 @@ class IntakeController extends Controller
             'credit_monitoring_pin'               => $data['credit_monitoring_pin'] ?? null,
             'status'                            => 'active',
             'start_date'                        => now()->toDateString(),
-            'rounds'                            => ['1st Round'],
+            // No round is marked on intake. The 1st round starts only when the
+            // team logs its first Week-1 step — that's when day-counting begins.
+            'rounds'                            => [],
             'intake_status'                     => 'pending_review',
             'intake_submitted_ip'               => $request->ip(),
             'intake_submitted_at'               => now(),
