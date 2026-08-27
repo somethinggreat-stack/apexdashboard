@@ -31,14 +31,19 @@ class WorkDayShiftTest extends TestCase
         $nextMorning = Carbon::parse('2026-08-27 09:00', WorkDay::TZ);
         $this->assertSame('2026-08-26', WorkDay::dateFor($nextMorning));
 
-        // 3 PM Aug 27 PKT (after the 1 PM rollover, new shift) → "2026-08-27".
-        $afterRollover = Carbon::parse('2026-08-27 15:00', WorkDay::TZ);
-        $this->assertSame('2026-08-27', WorkDay::dateFor($afterRollover));
+        // 3 PM Aug 27 PKT (off-hours, before the 4 PM rollover) is still the
+        // just-ended shift → "2026-08-26".
+        $offHours = Carbon::parse('2026-08-27 15:00', WorkDay::TZ);
+        $this->assertSame('2026-08-26', WorkDay::dateFor($offHours));
 
-        // Bounds of Aug 26 work-day = 1 PM PKT Aug 26 → 1 PM PKT Aug 27 (UTC 08:00→08:00).
+        // 4 PM Aug 27 PKT — the new shift begins → "2026-08-27".
+        $newShift = Carbon::parse('2026-08-27 16:00', WorkDay::TZ);
+        $this->assertSame('2026-08-27', WorkDay::dateFor($newShift));
+
+        // Bounds of Aug 26 work-day = 4 PM PKT Aug 26 → 4 PM PKT Aug 27 (UTC 11:00→11:00).
         [$start, $end] = WorkDay::bounds('2026-08-26');
-        $this->assertSame('2026-08-26 08:00:00', $start->utc()->format('Y-m-d H:i:s'));
-        $this->assertSame('2026-08-27 08:00:00', $end->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-08-26 11:00:00', $start->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-08-27 11:00:00', $end->utc()->format('Y-m-d H:i:s'));
 
         // The whole shift sits inside those bounds.
         $this->assertTrue($evening->utc()->gte($start) && $evening->utc()->lt($end));

@@ -9,19 +9,20 @@ use Illuminate\Support\Carbon;
  * that counts a day's work, so they all agree (Daily Task, CFPB Logins, EOD,
  * Tasks View, nightly digest).
  *
- * The team works ~4 PM → 10 AM Pakistan time. The work-day rolls over at 1 PM
- * PKT (inside the 10 AM–4 PM off-gap), so a full shift is always one work-day,
- * and a shift that runs 4 PM Aug 26 → 10 AM Aug 27 is labeled "Aug 26" (the
- * night it started). Timestamps are stored UTC; these helpers map to/from the
- * shift window.
+ * The team works ~4 PM → 10 AM Pakistan time. The work-day rolls over at 4 PM
+ * PKT — exactly when the new shift begins — so a full shift is one work-day,
+ * a shift that runs 4 PM Aug 26 → 10 AM Aug 27 is labeled "Aug 26" (the night
+ * it started), and during the 10 AM–4 PM off-gap the "current" shift stays the
+ * one that just ended (so you can review / send its EOD). Timestamps are stored
+ * UTC; these helpers map to/from the shift window.
  */
 class WorkDay
 {
     /** Pakistan Standard Time — UTC+5, no daylight saving. */
     public const TZ = 'Asia/Karachi';
 
-    /** Day rollover hour in PKT (1 PM), in the middle of the off-shift gap. */
-    public const ROLLOVER_HOUR = 13;
+    /** Day rollover hour in PKT (4 PM) — the moment a new shift starts. */
+    public const ROLLOVER_HOUR = 16;
 
     /** The work-day date (Y-m-d) a given instant belongs to (defaults to now). */
     public static function dateFor(?Carbon $t = null): string
