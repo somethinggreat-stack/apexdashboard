@@ -265,6 +265,32 @@ class EndUser extends Model
     }
 
     /** "In Progress" — actively worked clients (not new, not error, not done). */
+    /**
+     * Name/email/phone search that matches however the user types it — first
+     * name, last name, middle name, the full name in any order, or a partial.
+     * Each word must appear in one of the fields, so "Steve", "Depasse",
+     * "Steve Depasse" and "Depasse Steve" all find the same client. No CONCAT so
+     * it behaves identically on MySQL and SQLite.
+     */
+    public function scopeSearch($query, ?string $term)
+    {
+        $term = trim((string) $term);
+        if ($term === '') {
+            return $query;
+        }
+        foreach (preg_split('/\s+/', $term) as $word) {
+            $like = '%' . $word . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('first_name', 'like', $like)
+                    ->orWhere('middle_name', 'like', $like)
+                    ->orWhere('last_name', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('phone', 'like', $like);
+            });
+        }
+        return $query;
+    }
+
     public function scopeInProgress($query)
     {
         return $query->where(fn ($q) => $q->whereNull('intake_status')

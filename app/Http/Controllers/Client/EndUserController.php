@@ -46,13 +46,8 @@ class EndUserController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
-            $query->where(function ($q) use ($term) {
-                $q->where('first_name', 'like', $term)
-                    ->orWhere('last_name', 'like', $term)
-                    ->orWhere('email', 'like', $term);
-            });
+        if ($request->filled("search")) {
+            $query->search($request->search);
         }
 
         $endUsers = $query->orderBy('start_date', 'asc')->orderBy('first_name')->get()
@@ -409,13 +404,8 @@ class EndUserController extends Controller
                 'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
             ]);
 
-        if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
-            $query->where(function ($q) use ($term) {
-                $q->where('first_name', 'like', $term)
-                    ->orWhere('last_name', 'like', $term)
-                    ->orWhere('email', 'like', $term);
-            });
+        if ($request->filled("search")) {
+            $query->search($request->search);
         }
 
         $endUsers = $query->orderBy('first_name')->get();

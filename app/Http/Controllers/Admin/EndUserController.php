@@ -156,12 +156,7 @@ class EndUserController extends Controller
         }
 
         if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
-            $query->where(function ($q) use ($term) {
-                $q->where('first_name', 'like', $term)
-                    ->orWhere('last_name', 'like', $term)
-                    ->orWhere('email', 'like', $term);
-            });
+            $query->search($request->search);
         }
 
         $endUsers = $query->orderBy('start_date', 'asc')->orderBy('first_name')->get()

@@ -106,16 +106,9 @@ class ClientSelectorController extends Controller
         }
 
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
-        $like    = '%' . $q . '%';
 
         $rows = EndUser::whereHas('client', fn ($c) => $c->where('admin_id', $ownerId))
-            ->where(function ($w) use ($like) {
-                $w->where('first_name', 'like', $like)
-                  ->orWhere('last_name', 'like', $like)
-                  ->orWhere('email', 'like', $like)
-                  ->orWhere('phone', 'like', $like)
-                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$like]);
-            })
+            ->search($q)
             ->with('client:id,business_name')
             ->orderBy('first_name')
             ->limit(30)
