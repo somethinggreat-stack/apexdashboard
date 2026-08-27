@@ -4,7 +4,7 @@
 @section('subtitle', "End-of-day report for {$ownerName} — copy and send.")
 
 @php
-    $dateLabel = $generatedAt->timezone('America/New_York')->format('M j, Y');
+    $dateLabel = \Illuminate\Support\Carbon::parse($workDate, \App\Support\WorkDay::TZ)->format('M j, Y');
     $clientsWorked = count($worked);
 
     // Build the copy-paste EOD text in the SOP format.
@@ -44,12 +44,28 @@
             </span>
             <h2>EOD Report — {{ $ownerName }}</h2>
         </div>
-        <button type="button" class="dt-btn dt-btn-primary" data-copy-el="eodText">📋 Copy Report</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <form method="GET" class="dt-dayform">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
+                <select name="date" onchange="this.form.submit()">
+                    @foreach ($recentDays as $d)
+                        <option value="{{ $d['date'] }}" @selected($d['date'] === $workDate)>{{ $d['label'] }}{{ $loop->first ? ' · this shift' : '' }}</option>
+                    @endforeach
+                </select>
+            </form>
+            <button type="button" class="dt-btn dt-btn-primary" data-copy-el="eodText">📋 Copy Report</button>
+        </div>
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
-        {{ $dateLabel }} · generated {{ $generatedAt->timezone('America/New_York')->format('g:i A') }} ET.
+        {{ $isCurrent ? 'Current shift' : 'Shift of' }} <strong>{{ $workLabel }}</strong> (4 PM → 10 AM PKT) · generated {{ $generatedAt->format('g:i A') }} PKT.
     </p>
 </div>
+
+<style>
+    .dt-dayform { position:relative; display:inline-flex; align-items:center; }
+    .dt-dayform svg { position:absolute; left:11px; color:var(--pro-muted); pointer-events:none; }
+    .dt-dayform select { appearance:none; background:var(--pro-card); border:1px solid var(--pro-line); border-radius:10px; color:var(--pro-text); font:inherit; font-size:13px; font-weight:600; padding:8px 14px 8px 32px; cursor:pointer; }
+</style>
 
 <div class="pro-panel" style="margin-bottom:16px; padding:16px 18px;">
     <textarea id="eodText" class="dt-wa-text" readonly onclick="this.select()">{{ $eodText }}</textarea>
@@ -59,26 +75,26 @@
     <div class="dt-stat dt-accent-indigo">
         <div class="dt-stat-top"><span class="dt-stat-label">Clients Worked</span></div>
         <div class="dt-stat-val">{{ $clientsWorked }}</div>
-        <div class="dt-stat-sub">Today</div>
+        <div class="dt-stat-sub">This shift</div>
     </div>
     <div class="dt-stat dt-accent-green">
         <div class="dt-stat-top"><span class="dt-stat-label">New Clients Set Up</span></div>
         <div class="dt-stat-val">{{ $newClientsCount }}</div>
-        <div class="dt-stat-sub">Today</div>
+        <div class="dt-stat-sub">This shift</div>
     </div>
     <div class="dt-stat dt-accent-amber">
         <div class="dt-stat-top"><span class="dt-stat-label">Rounds Sent</span></div>
         <div class="dt-stat-val">{{ $roundsSent }}</div>
-        <div class="dt-stat-sub">Today</div>
+        <div class="dt-stat-sub">This shift</div>
     </div>
 </div>
 
 <div class="pro-panel" style="padding:16px 18px; margin-bottom:16px;">
-    <h3 style="margin:0 0 10px; font-size:15px;">Clients worked today</h3>
+    <h3 style="margin:0 0 10px; font-size:15px;">Clients worked this shift</h3>
     @forelse ($worked as $w)
         <div class="eod-row"><strong>{{ $w['name'] }}</strong><span>{{ implode('  ·  ', $w['tasks']) }}</span></div>
     @empty
-        <p class="muted">No client work logged today.</p>
+        <p class="muted">No client work logged this shift.</p>
     @endforelse
 </div>
 

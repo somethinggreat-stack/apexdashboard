@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\EndUser;
-use App\Models\Message;
 use App\Models\NegativeItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -221,12 +220,7 @@ class EndUserController extends Controller
 
         $this->storeNegativeItems($request, $endUser);
 
-        // Let the owner know we've taken the client on (team-added clients only —
-        // this store() path is the VA/admin add, not the owner's intake link).
-        Message::postFromTeam(
-            $endUser->client_id,
-            "We've added {$endUser->full_name} to your account and our team has started working on their credit repair. We'll keep you posted here."
-        );
+        // No owner-facing message on a team add — we never message the BO.
 
         return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
     }

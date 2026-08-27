@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\ProcessStep;
+use App\Support\WorkDay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -46,33 +47,36 @@ class ResultsController extends Controller
     public function eod(Request $request)
     {
         $boIds     = $this->enabledOwnerIds();
-        $dayStart  = Carbon::today();
-        $dayEnd    = Carbon::today()->endOfDay();
+        // The EOD covers ONE SHIFT — the shared WorkDay window (4 PM → 10 AM PKT),
+        // the same window as the Daily Task page, so the two always agree.
+        $date                = WorkDay::normalise($request->query('date'));
+        [$dayStart, $dayEnd] = WorkDay::bounds($date);   // [start, end) half-open
 
         $clients = EndUser::whereIn('client_id', $boIds)
             ->with(['negativeItems', 'client'])
             ->get();
 
-        // What was worked today, keyed by client id.
+        // What was worked this shift, keyed by client id.
         $worked = [];
         $add = function (EndUser $eu, string $task) use (&$worked) {
             $worked[$eu->id]['name'] ??= $eu->full_name;
             $worked[$eu->id]['tasks'][] = $task;
         };
 
-        // New clients set up today.
-        $newClients = $clients->filter(fn ($eu) => $eu->created_at && $eu->created_at->betweenIncluded($dayStart, $dayEnd));
+        // New clients set up this shift.
+        $newClients = $clients->filter(fn ($eu) => $eu->created_at && $eu->created_at->gte($dayStart) && $eu->created_at->lt($dayEnd));
         foreach ($newClients as $eu) {
             $add($eu, 'New client setup');
         }
 
-        // Rounds sent today = each client+round whose Week-1 was started today.
-        // A round's Week 1 has several steps (letters, phone, FTC, CFPB, upload),
-        // so dedupe per (client, round) — one "Round N sent" per round, not per step.
+        // Rounds sent this shift = each client+round whose Week-1 was started in
+        // the window. A round's Week 1 has several steps, so dedupe per
+        // (client, round) — one "Round N sent" per round, not per step.
         $roundsSentSet = [];
         ProcessStep::whereIn('end_user_id', $clients->pluck('id'))
             ->where('week', 1)
-            ->whereBetween('created_at', [$dayStart, $dayEnd])
+            ->where('created_at', '>=', $dayStart)
+            ->where('created_at', '<', $dayEnd)
             ->with('endUser')
             ->get()
             ->each(function (ProcessStep $step) use ($add, &$roundsSentSet) {
@@ -88,10 +92,10 @@ class ResultsController extends Controller
             });
         $roundsSent = count($roundsSentSet);
 
-        // Items deleted / updated today.
+        // Items deleted / updated this shift.
         foreach ($clients as $eu) {
             foreach ($eu->negativeItems as $item) {
-                if ($item->resolved_at && $item->resolved_at->betweenIncluded($dayStart, $dayEnd)) {
+                if ($item->resolved_at && $item->resolved_at->gte($dayStart) && $item->resolved_at->lt($dayEnd)) {
                     $add($eu, ($item->status === 'updated' ? 'Updated: ' : 'Deleted: ') . $item->displayName());
                 }
             }
@@ -114,7 +118,7 @@ class ResultsController extends Controller
 
         return view($this->adminView('admin.results.eod'), [
             'ownerName'       => $this->ownerName($boIds),
-            'generatedAt'     => Carbon::now(),
+            'generatedAt'     => Carbon::now()->timezone(WorkDay::TZ),
             'worked'          => array_values($worked),
             'newClientsCount' => $newClients->count(),
             'roundsSent'      => $roundsSent,
@@ -123,6 +127,10 @@ class ResultsController extends Controller
             'onHold'          => $onHold,
             'issues'          => $issues,
             'enabled'         => $boIds->isNotEmpty(),
+            'workDate'        => $date,
+            'workLabel'       => WorkDay::label($date),
+            'isCurrent'       => WorkDay::isCurrent($date),
+            'recentDays'      => collect(WorkDay::recent(15))->map(fn ($d) => ['date' => $d, 'label' => WorkDay::label($d)])->all(),
         ]);
     }
 

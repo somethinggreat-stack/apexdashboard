@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EndUser;
-use App\Models\Message;
 use App\Models\ProcessStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -90,14 +89,6 @@ class ProcessStepController extends Controller
             'equifax_score_now'             => $data['equifax_score_now'] ?? null,
         ];
 
-        // Did this round already have any step before this request? If not and
-        // we're logging its Week-1 work, this call STARTS the round — used to
-        // send the owner a "moved into Round N" update (rounds 2+ only; Round 1's
-        // start is already covered by the client-added message).
-        $roundExistedBefore = ProcessStep::where('end_user_id', $data['end_user_id'])
-            ->where('round', $data['round'])
-            ->exists();
-
         $created = 0;
         $skipped = 0;
 
@@ -118,18 +109,6 @@ class ProcessStepController extends Controller
 
             if ($type === 'record_deletions' && (int) $data['week'] === 4) {
                 $this->advanceRoundFor((int) $data['end_user_id'], (int) $data['round']);
-            }
-        }
-
-        // Round started → tell the owner. Fires ONLY on the first Week-1 step of
-        // a round (any round, 1 and up); never on Week 2/3/4 or a repeat step.
-        if ($created > 0 && ! $roundExistedBefore && (int) $data['week'] === 1) {
-            $eu = EndUser::find($data['end_user_id']);
-            if ($eu) {
-                Message::postFromTeam(
-                    $eu->client_id,
-                    "We've started Round {$data['round']} for {$eu->full_name} — their dispute process is now underway."
-                );
             }
         }
 

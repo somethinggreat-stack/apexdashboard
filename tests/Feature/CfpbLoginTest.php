@@ -100,19 +100,26 @@ class CfpbLoginTest extends TestCase
             ->assertOk()->assertSee('Round Cfpb');
     }
 
-    public function test_window_is_12h(): void
+    public function test_window_is_the_current_shift(): void
     {
         $this->seedWorld();
         $recent = $this->eu('Recent Cfpb', 'rc@test.com');
-        $recent->forceFill(['cfpb_logged_at' => now()->subHours(8), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+        $recent->forceFill(['cfpb_logged_at' => now(), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
 
         $old = $this->eu('Old Cfpb', 'o@test.com');
-        $old->forceFill(['cfpb_logged_at' => now()->subHours(13), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
+        $old->forceFill(['cfpb_logged_at' => now()->subDays(2), 'cfpb_logged_by_admin_id' => $this->super->id])->save();
 
         $this->actingAs($this->super, 'admin')->get('/admin/cfpb-logins')
             ->assertOk()
-            ->assertSee('Recent Cfpb')   // 8h ago → inside 12h window
-            ->assertDontSee('Old Cfpb'); // 13h ago → outside
+            ->assertSee('Recent Cfpb')   // this shift → shown
+            ->assertDontSee('Old Cfpb'); // a previous shift → hidden
+
+        // And a past shift can be pulled up by date.
+        $day = \App\Support\WorkDay::dateFor(now()->subDays(2));
+        $this->actingAs($this->super, 'admin')->get('/admin/cfpb-logins?date=' . $day)
+            ->assertOk()
+            ->assertSee('Old Cfpb')
+            ->assertDontSee('Recent Cfpb');
     }
 
     public function test_super_and_va_can_open_but_leads_cannot(): void

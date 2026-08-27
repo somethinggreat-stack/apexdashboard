@@ -4,27 +4,29 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EndUser;
+use App\Support\WorkDay;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 /**
  * CFPB Logins — a per-business-owner report of clients that had their CFPB login
- * (universal or per-round) entered/updated in the last 12 hours. Same shape as
- * the Daily Task page: grouped by owner, with the VA who did it and a
- * copy-paste WhatsApp message.
+ * (universal or per-round) entered/updated during a SHIFT (the shared WorkDay
+ * window). Same shape as the Daily Task page: grouped by owner, with the VA who
+ * did it, a copy-paste WhatsApp message, and the last-15-shifts date picker.
  */
 class CfpbLoginController extends Controller
 {
-    private const WINDOW_HOURS = 12;
-
-    public function index()
+    public function index(Request $request)
     {
-        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
-        $cutoff  = Carbon::now()->subHours(self::WINDOW_HOURS);
+        $ownerId       = Auth::guard('admin')->user()->dataOwnerId();
+        $date          = WorkDay::normalise($request->query('date'));
+        [$start, $end] = WorkDay::bounds($date);
 
         $groups = [];
 
-        EndUser::where('cfpb_logged_at', '>=', $cutoff)
+        EndUser::where('cfpb_logged_at', '>=', $start)
+            ->where('cfpb_logged_at', '<', $end)
             ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
             ->with(['client', 'cfpbLoggedBy'])
             ->orderByDesc('cfpb_logged_at')
@@ -53,9 +55,12 @@ class CfpbLoginController extends Controller
 
         return view($this->adminView('admin.cfpb-logins'), [
             'groups'      => $groups,
-            'windowHours' => self::WINDOW_HOURS,
             'clientCount' => $clientCount,
-            'generatedAt' => Carbon::now(),
+            'workDate'    => $date,
+            'workLabel'   => WorkDay::label($date),
+            'isCurrent'   => WorkDay::isCurrent($date),
+            'recentDays'  => collect(WorkDay::recent(15))->map(fn ($d) => ['date' => $d, 'label' => WorkDay::label($d)])->all(),
+            'generatedAt' => Carbon::now()->timezone(WorkDay::TZ),
         ]);
     }
 }

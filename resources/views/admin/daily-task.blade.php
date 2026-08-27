@@ -1,7 +1,7 @@
 @extends($adminLayout ?? 'layouts.admin-pro')
 
 @section('title', 'Daily Task')
-@section('subtitle', "Everything worked on in the last {$windowHours} hours — grouped by business owner.")
+@section('subtitle', "Every round started this shift — grouped by business owner.")
 
 @php
     // WhatsApp-style copy text: OWNER (caps) then client names, dashed separator.
@@ -29,15 +29,32 @@
             <h2>Daily Task</h2>
             <span class="pro-panel-count" style="background:#e0e7ff; color:#4338ca;">{{ count($groups) }} owners · {{ $clientCount }} clients</span>
         </div>
-        @if (!empty($groups))
-            <button type="button" class="dt-btn dt-btn-primary" data-copy-el="dtCopyAll">📋 Copy All (WhatsApp)</button>
-        @endif
+        <div style="display:flex; align-items:center; gap:10px;">
+            <form method="GET" class="dt-dayform">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
+                <select name="date" onchange="this.form.submit()">
+                    @foreach ($recentDays as $d)
+                        <option value="{{ $d['date'] }}" @selected($d['date'] === $workDate)>{{ $d['label'] }}{{ $loop->first ? ' · this shift' : '' }}</option>
+                    @endforeach
+                </select>
+            </form>
+            @if (!empty($groups))
+                <button type="button" class="dt-btn dt-btn-primary" data-copy-el="dtCopyAll">📋 Copy All (WhatsApp)</button>
+            @endif
+        </div>
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
-        Clients a VA started a round for — a Round-N Week&nbsp;1 step logged — in the last {{ $windowHours }} hours.
-        Generated {{ $generatedAt->timezone('America/New_York')->format('M j, Y g:i A') }} ET.
+        {{ $isCurrent ? 'Current shift' : 'Shift of' }} <strong>{{ $workLabel }}</strong> — the 4 PM → 10 AM (PKT) work-day.
+        Clients a VA started a round for (a Round-N Week&nbsp;1 step logged).
+        Generated {{ $generatedAt->format('M j, Y g:i A') }} PKT.
     </p>
 </div>
+
+<style>
+    .dt-dayform { position:relative; display:inline-flex; align-items:center; }
+    .dt-dayform svg { position:absolute; left:11px; color:var(--pro-muted); pointer-events:none; }
+    .dt-dayform select { appearance:none; background:var(--pro-card); border:1px solid var(--pro-line); border-radius:10px; color:var(--pro-text); font:inherit; font-size:13px; font-weight:600; padding:8px 14px 8px 32px; cursor:pointer; }
+</style>
 
 {{-- WhatsApp message — visible, ready to send --}}
 @if (!empty($groups))
@@ -87,7 +104,7 @@
             <span class="dt-stat-label">Clients Worked</span>
         </div>
         <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
-        <div class="dt-stat-sub">Rounds started · last {{ $windowHours }}h</div>
+        <div class="dt-stat-sub">Rounds started · this shift</div>
     </div>
     <div class="dt-stat dt-accent-green">
         <div class="dt-stat-top">
@@ -95,7 +112,7 @@
             <span class="dt-stat-label">Business Owners Worked</span>
         </div>
         <div class="dt-stat-val">{{ number_format($ownersWorked) }}</div>
-        <div class="dt-stat-sub">Owners with activity today</div>
+        <div class="dt-stat-sub">Owners active this shift</div>
     </div>
     <div class="dt-stat dt-accent-amber">
         <div class="dt-stat-top">
@@ -160,7 +177,7 @@
     </div>
 @empty
     <div class="pro-panel" style="padding:40px 22px; text-align:center; color:var(--pro-muted);">
-        No client work logged in the last {{ $windowHours }} hours.
+        No rounds were started this shift.
     </div>
 @endforelse
 

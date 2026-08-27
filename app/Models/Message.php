@@ -55,22 +55,6 @@ class Message extends Model
         ]);
     }
 
-    /**
-     * An automated message TO the business owner that reads as coming from the
-     * team ("Apex Growth Team"). Sent as an admin message with no specific
-     * sender — the owner never sees an individual VA. Used for the automatic
-     * client-added, round-started and nightly-summary updates.
-     */
-    public static function postFromTeam(int $clientId, string $body): self
-    {
-        return static::create([
-            'client_id'   => $clientId,
-            'sender_type' => self::SENDER_ADMIN,
-            'sender_id'   => null,
-            'body'        => $body,
-        ]);
-    }
-
     public function isFromAdmin(): bool  { return $this->sender_type === self::SENDER_ADMIN; }
     public function isFromClient(): bool { return $this->sender_type === self::SENDER_CLIENT; }
     public function isSystem(): bool     { return $this->sender_type === self::SENDER_SYSTEM; }

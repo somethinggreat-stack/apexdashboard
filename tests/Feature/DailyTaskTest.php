@@ -66,7 +66,7 @@ class DailyTaskTest extends TestCase
             'step_type' => 'ftc_and_freezes', 'step_date' => '2026-06-02',
             'created_by_admin_id' => $this->super->id,
         ]);
-        ProcessStep::where('id', $listedStep->id)->update(['created_at' => now()->subHours(13)]);
+        ProcessStep::where('id', $listedStep->id)->update(['created_at' => now()->subDays(2)]);
 
         // Old step (13h ago) → hidden.
         $old = $this->eu('Old Worked', 'approved', 'o@test.com');
@@ -75,7 +75,7 @@ class DailyTaskTest extends TestCase
             'step_type' => 'phone_call_disputes', 'step_date' => '2026-06-02',
             'created_by_admin_id' => $this->super->id,
         ]);
-        ProcessStep::where('id', $oldStep->id)->update(['created_at' => now()->subHours(13)]);
+        ProcessStep::where('id', $oldStep->id)->update(['created_at' => now()->subDays(2)]);
 
         // Recent step but NOT week 1 (a later-week CFPB, like the reported bug) → hidden.
         $laterWeek = $this->eu('Later Week Only', 'approved', 'f@test.com');
