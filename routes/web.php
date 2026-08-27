@@ -163,6 +163,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])
             ->name('client-selector.clear');
 
+        // PWA desktop app — poll for newly-arrived clients across ALL the owner's
+        // business owners (no selection needed) to raise a desktop notification.
+        Route::get('new-clients-poll', [Admin\PwaController::class, 'newClientsPoll'])
+            ->name('pwa.new-clients-poll');
+
         // Business-owner CRUD — super admin only (add/remove business owners)
         Route::resource('clients', Admin\ClientController::class)->except(['show'])->middleware('admin.super');
 
