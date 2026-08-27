@@ -10,10 +10,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The last week of a round (Week 4 on a 30-day cycle, Week 3 on a 20-day cycle)
- * is the closeout — pull report / record deletions. Its "incomplete" flag must
- * NOT appear on the weekly schedule; it appears only once the round is PAST due
- * (days left negative). Earlier weeks keep their normal schedule.
+ * The closeout steps (Pull Latest Report + Record Deletions) — in 20-day Week 3
+ * / 30-day Week 4 — must flag as "incomplete" ONLY once the round is past due
+ * (days left negative), and independently of the aggressive-follow-up step that
+ * shares the last week on a 20-day cycle. Every OTHER week flags on its normal
+ * schedule, unchanged.
  */
 class LastWeekIncompleteTest extends TestCase
 {
@@ -33,8 +34,7 @@ class LastWeekIncompleteTest extends TestCase
         ]);
     }
 
-    /** Reload with the per-week step counts the badge logic reads. */
-    private function withWeekCounts(int $id): EndUser
+    private function withCounts(int $id): EndUser
     {
         return EndUser::withCount([
             'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
@@ -44,6 +44,7 @@ class LastWeekIncompleteTest extends TestCase
         ])->find($id);
     }
 
+    /** A client with every REGULAR step logged (incl. aggressive) but NO closeout. */
     private function client(Client $bo, string $startDate): EndUser
     {
         $admin = Admin::first();
@@ -53,53 +54,58 @@ class LastWeekIncompleteTest extends TestCase
             'zipcode' => '12345', 'status' => 'active', 'start_date' => $startDate,
             'intake_status' => null, 'rounds' => ['1st Round'],
         ]);
-        // Log every NON-final week so only the closeout week could be "missing".
-        $lastWeek = ProcessStep::weekCount($bo->roundCycleDays());   // 30→4, 20→3
-        $types = [1 => 'ex_tu_eq_letters_generated', 2 => 'tu_ex_call_followups', 3 => 'aggressive_bureau_followup'];
-        for ($w = 1; $w < $lastWeek; $w++) {
+        // First regular (non-closeout) step of each week — leaves ONLY closeout missing.
+        foreach (ProcessStep::stepTypesByWeek($bo->roundCycleDays()) as $w => $steps) {
+            $regular = array_values(array_diff(array_keys($steps), EndUser::CLOSEOUT_STEPS));
+            if (! $regular) {
+                continue;   // 30-day Week 4 — closeout only, nothing to log
+            }
             ProcessStep::create([
-                'end_user_id' => $eu->id, 'round' => 1, 'week' => $w, 'step_type' => $types[$w],
+                'end_user_id' => $eu->id, 'round' => 1, 'week' => $w, 'step_type' => $regular[0],
                 'step_date' => $startDate, 'created_by_admin_id' => $admin->id,
             ]);
         }
         return $eu;
     }
 
-    public function test_week4_not_flagged_before_due_but_flagged_once_past_due_30day(): void
+    public function test_closeout_flags_only_past_due_even_when_aggressive_is_logged_30day(): void
     {
         $bo = $this->bo(30);
 
-        // Day 25: past the old Week-4 schedule (day 22) but round NOT past due (5 left).
-        $notDue = $this->withWeekCounts($this->client($bo, now()->subDays(25)->toDateString())->id);
-        $this->assertGreaterThan(0, $notDue->days_left_in_round);
-        $this->assertNull($notDue->missing_week, 'Week 4 must NOT flag before the round is past due');
-
-        // Day 35: round past due (days left negative) → Week 4 now flags.
-        $pastDue = $this->withWeekCounts($this->client($bo, now()->subDays(35)->toDateString())->id);
-        $this->assertLessThan(0, $pastDue->days_left_in_round);
-        $this->assertSame(4, $pastDue->missing_week, 'Week 4 must flag once the round is past due');
-    }
-
-    public function test_week3_is_the_closeout_on_20day(): void
-    {
-        $bo = $this->bo(20);
-
-        // Day 16: past old Week-3 schedule (day 13) but not past due (4 left).
-        $notDue = $this->withWeekCounts($this->client($bo, now()->subDays(16)->toDateString())->id);
+        // Day 25: past the old Week-4 schedule day (22) but NOT past due → not incomplete.
+        $notDue = $this->withCounts($this->client($bo, now()->subDays(25)->toDateString())->id);
         $this->assertGreaterThan(0, $notDue->days_left_in_round);
         $this->assertNull($notDue->missing_week);
+        $this->assertFalse($notDue->is_incomplete);
 
-        // Day 24: past due → Week 3 flags.
-        $pastDue = $this->withWeekCounts($this->client($bo, now()->subDays(24)->toDateString())->id);
+        // Day 35: past due → closeout flags, even though aggressive (week 3) is logged.
+        $pastDue = $this->withCounts($this->client($bo, now()->subDays(35)->toDateString())->id);
         $this->assertLessThan(0, $pastDue->days_left_in_round);
-        $this->assertSame(3, $pastDue->missing_week);
+        $this->assertNull($pastDue->missing_week);          // all regular weeks done
+        $this->assertTrue($pastDue->closeout_due);
+        $this->assertTrue($pastDue->is_incomplete);
+    }
+
+    public function test_closeout_flags_only_past_due_on_20day(): void
+    {
+        $bo = $this->bo(20);   // closeout lives in Week 3 with the aggressive step
+
+        $notDue = $this->withCounts($this->client($bo, now()->subDays(16)->toDateString())->id);
+        $this->assertGreaterThan(0, $notDue->days_left_in_round);
+        $this->assertFalse($notDue->is_incomplete);
+
+        // Aggressive logged, closeout missing, past due → incomplete (the ADEOLA case).
+        $pastDue = $this->withCounts($this->client($bo, now()->subDays(24)->toDateString())->id);
+        $this->assertLessThan(0, $pastDue->days_left_in_round);
+        $this->assertTrue($pastDue->closeout_due);
+        $this->assertTrue($pastDue->is_incomplete);
     }
 
     public function test_earlier_weeks_still_flag_on_schedule(): void
     {
         $bo = $this->bo(30);
         $admin = Admin::first();
-        // Day 10, only Week 1 logged → Week 2 (due day 8) should flag as before.
+        // Day 10, only Week 1 logged → Week 2 (due day 8) flags, as before.
         $eu = EndUser::create([
             'client_id' => $bo->id, 'first_name' => 'E', 'last_name' => 'Y', 'suffix' => 'None',
             'email' => uniqid() . '@t.com', 'current_address' => '1 St', 'city' => 'T', 'state' => 'ST',
@@ -111,6 +117,6 @@ class LastWeekIncompleteTest extends TestCase
             'step_date' => now()->subDays(10)->toDateString(), 'created_by_admin_id' => $admin->id,
         ]);
 
-        $this->assertSame(2, $this->withWeekCounts($eu->id)->missing_week);
+        $this->assertSame(2, $this->withCounts($eu->id)->missing_week);
     }
 }

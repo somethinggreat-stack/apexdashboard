@@ -482,56 +482,75 @@ class EndUser extends Model
     }
 
     /**
-     * Returns the first missing-week number based on days_active, or null if
-     * the client is on track. Phases become due one "week length" apart, where
-     * a week length is the owner's cycle ÷ its number of weeks:
-     *   30-day cycle → 4 weeks (wk=7): due days 1 / 8 / 15 / 22
-     *   20-day cycle → 3 weeks (wk=6): due days 1 / 7 / 13
-     * (Earlier weeks are also checked, so a client past the window with no
-     *  Week 1 step still shows "Week 1 not logged".)
+     * The closeout steps — pull the report + record deletions. They live in the
+     * LAST week (20-day → Week 3, 30-day → Week 4) and are the only steps that
+     * can't be done until the round's response window is over, so they're
+     * treated specially: never nagged on the weekly schedule, only once the
+     * round is past due (see closeout_due).
+     */
+    public const CLOSEOUT_STEPS = ['pull_latest_report', 'record_deletions'];
+
+    /**
+     * The first missing-week number on the weekly SCHEDULE, or null if on track.
+     * Phases become due one "week length" apart (30-day: days 1/8/15/22, 20-day:
+     * 1/7/13). A week that holds ONLY closeout steps (30-day Week 4) is skipped
+     * here — its steps are handled by closeout_due, past due only.
      */
     public function getMissingWeekAttribute(): ?int
     {
-        $days     = $this->days_active;
-        $wk       = $this->roundWeekLength();   // 30-day → 7 (1/8/15/22), 20-day → 6 (1/7/13)
-        $count    = $this->roundWeekCount();    // 30-day → 4 weeks, 20-day → 3 weeks
-        $daysLeft = $this->days_left_in_round;
+        $days   = $this->days_active;
+        $wk     = $this->roundWeekLength();
+        $count  = $this->roundWeekCount();
+        $byWeek = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
 
         for ($w = 1; $w <= $count; $w++) {
-            $logged = (int) ($this->{"week{$w}_count"} ?? 0);
-            if ($logged !== 0) {
+            // Skip a week with no regular (non-closeout) work — nothing is due on
+            // the schedule for it.
+            $regular = array_diff(array_keys($byWeek[$w] ?? []), self::CLOSEOUT_STEPS);
+            if (empty($regular)) {
                 continue;
             }
-
-            if ($w === $count) {
-                // The LAST week is the round's closeout (pull report / record
-                // deletions). It must NOT nag on the weekly schedule — you can
-                // only do it after the response window. So it becomes "due" only
-                // once the round is PAST its date: days left negative (i.e. the
-                // next-round date has passed). 30-day → Week 4, 20-day → Week 3.
-                if ($daysLeft !== null && $daysLeft < 0) {
-                    return $w;
-                }
-            } else {
-                // Earlier weeks keep their normal schedule.
-                $dueDay = (($w - 1) * $wk) + 1;
-                if ($days >= $dueDay) {
-                    return $w;
-                }
+            $dueDay = (($w - 1) * $wk) + 1;
+            if ($days >= $dueDay && (int) ($this->{"week{$w}_count"} ?? 0) === 0) {
+                return $w;
             }
         }
         return null;
     }
 
+    /**
+     * True when the round is PAST DUE (days left negative) and its closeout —
+     * Pull Latest Report + Record Deletions — hasn't been fully logged for the
+     * CURRENT round. This is the only thing that surfaces those two steps as
+     * "incomplete", exactly what the last-week rule is about.
+     */
+    public function getCloseoutDueAttribute(): bool
+    {
+        $daysLeft = $this->days_left_in_round;
+        if ($daysLeft === null || $daysLeft >= 0) {
+            return false;
+        }
+        $logged = ($this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps())
+            ->where('round', $this->current_round)
+            ->pluck('step_type')->unique()->all();
+
+        return array_diff(self::CLOSEOUT_STEPS, $logged) !== [];
+    }
+
     public function getIncompleteReasonAttribute(): ?string
     {
-        $w = $this->missing_week;
-        return $w ? "Week {$w} not logged" : null;
+        if ($w = $this->missing_week) {
+            return "Week {$w} not logged";
+        }
+        if ($this->closeout_due) {
+            return 'Round past due — pull report / record deletions';
+        }
+        return null;
     }
 
     public function getIsIncompleteAttribute(): bool
     {
-        return $this->missing_week !== null;
+        return $this->missing_week !== null || $this->closeout_due;
     }
 
     public function getCurrentRoundAttribute(): int

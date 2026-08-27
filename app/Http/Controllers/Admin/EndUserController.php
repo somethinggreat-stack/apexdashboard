@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\EndUser;
 use App\Models\NegativeItem;
+use App\Models\ProcessStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +27,78 @@ class EndUserController extends Controller
     public function activeClients(Request $request)
     {
         return $this->listView($request, 'clients');
+    }
+
+    /**
+     * Super-admin bulk fix: for the selected business owner, log the missing
+     * WEEKLY steps for every flagged (incomplete-log) client so the nags clear.
+     * It NEVER logs the closeout steps (Pull Latest Report / Record Deletions) —
+     * those stay a manual, past-due-only task in every scenario.
+     */
+    public function clearIncomplete(Request $request)
+    {
+        abort_unless(Auth::guard('admin')->user()?->isSuper(), 403);
+
+        $clientId = session('selected_client_id');
+        $adminId  = Auth::guard('admin')->id();
+
+        // Every actively-worked client (In Progress + Done), not on hold.
+        $clients = EndUser::forClient($clientId)
+            ->notHeld()
+            ->where(fn ($q) => $q->whereNull('intake_status')
+                ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']))
+            ->with('processSteps:id,end_user_id,round,week,step_type')
+            ->withCount([
+                'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
+                'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
+                'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
+                'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
+            ])
+            ->get();
+
+        $today  = now()->toDateString();
+        $logged = 0;
+
+        foreach ($clients as $eu) {
+            $wk     = $eu->roundWeekLength();
+            $count  = $eu->roundWeekCount();
+            $round  = $eu->current_round;
+            $days   = $eu->days_active;
+            $byWeek = ProcessStep::stepTypesByWeek($eu->roundCycleDays());
+
+            for ($w = 1; $w <= $count; $w++) {
+                // Only the regular (non-closeout) steps of the week — the closeout
+                // steps are deliberately never logged by this button.
+                $regular = array_diff(array_keys($byWeek[$w] ?? []), EndUser::CLOSEOUT_STEPS);
+                if (empty($regular)) {
+                    continue;
+                }
+                $dueDay = (($w - 1) * $wk) + 1;
+                if ($days < $dueDay || (int) ($eu->{"week{$w}_count"} ?? 0) !== 0) {
+                    continue;   // not due yet, or already has a step for this week
+                }
+
+                $already = $eu->processSteps->where('round', $round)->where('week', $w)->pluck('step_type')->all();
+                foreach ($regular as $type) {
+                    if (in_array($type, $already, true)) {
+                        continue;
+                    }
+                    ProcessStep::create([
+                        'end_user_id'         => $eu->id,
+                        'round'               => $round,
+                        'week'                => $w,
+                        'step_type'           => $type,
+                        'step_date'           => $today,
+                        'created_by_admin_id' => $adminId,
+                    ]);
+                    $logged++;
+                }
+            }
+        }
+
+        return back()->with('confirm', $logged > 0
+            ? "Incomplete logs cleared — {$logged} step(s) logged. Pull Latest Report & Record Deletions were left untouched."
+            : 'Nothing to clear — no client had a missing weekly step. (Closeout steps are never auto-logged.)');
     }
 
     private function listView(Request $request, string $bucket)

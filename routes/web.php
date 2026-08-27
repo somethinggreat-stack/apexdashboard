@@ -217,6 +217,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->middleware('admin.super')->name('client-list.cfpb-export');
             Route::get('client-list/credit-monitoring-export', [Admin\EndUserController::class, 'exportCreditMonitoring'])
                 ->middleware('admin.super')->name('client-list.credit-monitoring-export');
+            // Super-admin only: log the missing weekly steps for every flagged
+            // client — but NEVER the closeout steps (pull report / record deletions).
+            Route::post('clear-incomplete', [Admin\EndUserController::class, 'clearIncomplete'])
+                ->middleware('admin.super')->name('end-users.clear-incomplete');
             Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');
