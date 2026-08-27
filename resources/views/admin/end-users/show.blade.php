@@ -400,7 +400,7 @@
                             <span class="badge">Week {{ $step->week }}</span>
                             <span class="badge step-badge">{{ $step->step_type_label }}</span>
                             <span class="timeline-date">{{ $step->step_date?->format('M d, Y') }}</span>
-                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" class="timeline-delete" onsubmit="return confirm('Delete this process step?')">
+                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" class="timeline-delete" data-confirm-delete data-confirm-message="Delete this process step?">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
@@ -449,7 +449,7 @@
                         <div class="doc-actions">
                             <a href="{{ $idoc['url'] }}" target="_blank" class="btn btn-sm">Open</a>
                             <a href="{{ $idoc['url'] }}" download class="btn btn-sm" title="Download"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
-                            <form method="POST" action="{{ route('admin.end-users.identity.destroy', [$endUser->id, $idoc['type']]) }}" style="display:inline" onsubmit="return confirm('Delete this identity document? This cannot be undone.')">
+                            <form method="POST" action="{{ route('admin.end-users.identity.destroy', [$endUser->id, $idoc['type']]) }}" style="display:inline" data-confirm-delete data-confirm-message="Delete this identity document? This cannot be undone.">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger" title="Delete">×</button>
                             </form>
@@ -474,7 +474,7 @@
                             <div class="doc-actions">
                                 <a href="{{ $doc->url }}" target="_blank" class="btn btn-sm">Open</a>
                                 <a href="{{ $doc->url }}" download class="btn btn-sm" title="Download"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
-                                <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="display:inline" onsubmit="return confirm('Delete this document?')">
+                                <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="display:inline" data-confirm-delete data-confirm-message="Delete this document?">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-danger" title="Delete">×</button>
                                 </form>
@@ -500,7 +500,7 @@
                     <span class="muted">· {{ $note->created_at?->format('M d, Y H:i') }}</span>
                 </div>
                 <div class="note-body">{{ $note->note_text }}</div>
-                <form method="POST" action="{{ route('admin.notes.destroy', $note->id) }}" onsubmit="return confirm('Delete this comment?')">
+                <form method="POST" action="{{ route('admin.notes.destroy', $note->id) }}" data-confirm-delete data-confirm-message="Delete this comment?">
                     @csrf @method('DELETE')
                     <button class="btn btn-sm btn-danger">Delete</button>
                 </form>

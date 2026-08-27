@@ -51,7 +51,7 @@
             <button type="button" class="btn btn-primary" id="copyIntake">Copy</button>
             <a href="{{ $client->intakeUrl() }}" target="_blank" class="btn btn-secondary">Open</a>
             <form method="POST" action="{{ route('admin.new-clients.regenerate') }}" style="display:inline"
-                  onsubmit="return confirm('Regenerate the link? The current link stops working immediately.')">
+                  data-confirm-action data-confirm-message="Regenerate the link? The current link stops working immediately.">
                 @csrf
                 <button type="submit" class="btn btn-danger">Regenerate</button>
             </form>
@@ -81,7 +81,7 @@
                     <input type="text" id="apiKey" value="{{ $client->intake_api_key }}" readonly onclick="this.select();">
                     <button type="button" class="btn btn-primary" id="copyKey">Copy</button>
                     <form method="POST" action="{{ route('admin.new-clients.api-key') }}" style="display:inline"
-                          onsubmit="return confirm('Regenerate the API key? The current key stops working immediately.')">
+                          data-confirm-action data-confirm-message="Regenerate the API key? The current key stops working immediately.">
                         @csrf
                         <button type="submit" class="btn btn-secondary">Regenerate</button>
                     </form>
@@ -130,7 +130,7 @@
                         <div class="row-actions">
                             <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Review</a>
                             <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
-                                  onsubmit="return confirm(@js('Are you sure you want to move ' . $eu->full_name . ' to In Progress?'))">
+                                  data-confirm-action data-confirm-message="Are you sure you want to move {{ $eu->full_name }} to In Progress?">
                                 @csrf
                                 <button class="btn btn-sm btn-approve">Move to In Progress</button>
                             </form>

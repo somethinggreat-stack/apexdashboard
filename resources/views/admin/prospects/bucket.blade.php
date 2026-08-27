@@ -55,12 +55,12 @@
                     <td class="no-link">
                         <div class="row-actions">
                             <form method="POST" action="{{ route('admin.prospects.reactivate', $prospect) }}"
-                                  onsubmit="return confirm('Move {{ addslashes($prospect->name) }} back to its pipeline?')">
+                                  data-confirm-action data-confirm-message="Move {{ $prospect->name }} back to its pipeline?">
                                 @csrf
                                 <button class="btn btn-sm btn-primary">Reactivate</button>
                             </form>
                             <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}"
-                                  onsubmit="return confirm('Permanently delete {{ addslashes($prospect->name) }}?')">
+                                  data-confirm-delete data-confirm-message="Permanently delete {{ $prospect->name }}?">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>

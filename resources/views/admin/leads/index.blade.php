@@ -81,7 +81,7 @@
                     </td>
                     <td>
                         <form method="POST" action="{{ route('admin.leads.destroy', $lead) }}" style="display:inline"
-                              onsubmit="return confirm('Delete this lead from {{ addslashes($lead->fullName() ?: $lead->email) }}? This cannot be undone.')">
+                              data-confirm-delete data-confirm-message="Delete this lead from {{ $lead->fullName() ?: $lead->email }}? This cannot be undone.">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">Delete</button>
                         </form>

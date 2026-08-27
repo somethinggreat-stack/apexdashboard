@@ -81,13 +81,13 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
                                 <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
-                                      onsubmit="return confirm(@js('Move ' . $eu->full_name . ' back to In Progress?'))">
+                                      data-confirm-action data-confirm-message="Move {{ $eu->full_name }} back to In Progress?">
                                     @csrf
                                     <button class="pro-act done">Move to In Progress</button>
                                 </form>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
-                                      onsubmit="return confirm(@js('Delete client ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">
+                                      data-confirm-delete data-confirm-message="Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
                                 </form>

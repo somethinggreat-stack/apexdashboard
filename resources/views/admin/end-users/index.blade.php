@@ -86,7 +86,7 @@
                         <a href="{{ route('admin.end-users.show', $eu) }}" class="btn btn-sm">Open</a>
                         @if (($bucket ?? 'in_progress') !== 'clients')
                             <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}" style="display:inline"
-                                  onsubmit="return confirm(@js('Are you sure you want to move ' . $eu->full_name . ' to Clients? The round clock starts today.'))">
+                                  data-confirm-action data-confirm-message="Are you sure you want to move {{ $eu->full_name }} to Clients? The round clock starts today.">
                                 @csrf
                                 <button class="btn btn-sm btn-todone">Move to Clients</button>
                             </form>

@@ -61,7 +61,7 @@
                                 <button class="pro-act" type="submit">Restore</button>
                             </form>
                             <form method="POST" action="{{ route('admin.recycle-bin.client.force', $o->id) }}"
-                                  onsubmit="return confirm('Permanently delete {{ addslashes($o->business_name) }} and all {{ $o->end_users_count }} of its clients, including every document? This cannot be undone.')">
+                                  data-confirm-delete data-confirm-message="Permanently delete {{ $o->business_name }} and all {{ $o->end_users_count }} of its clients, including every document? This cannot be undone.">
                                 @csrf @method('DELETE')
                                 <button class="pro-act del" type="submit">Delete forever</button>
                             </form>
@@ -99,7 +99,7 @@
                                 <button class="pro-act" type="submit">Restore</button>
                             </form>
                             <form method="POST" action="{{ route('admin.recycle-bin.end-user.force', $c->id) }}"
-                                  onsubmit="return confirm('Permanently delete {{ addslashes($c->full_name) }} and their documents? This cannot be undone.')">
+                                  data-confirm-delete data-confirm-message="Permanently delete {{ $c->full_name }} and their documents? This cannot be undone.">
                                 @csrf @method('DELETE')
                                 <button class="pro-act del" type="submit">Delete forever</button>
                             </form>

@@ -89,17 +89,17 @@
                                 Edit
                             </button>
                             <form method="POST" action="{{ route('admin.prospects.mark-interested', $prospect) }}"
-                                  onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Interested Leads?')">
+                                  data-confirm-action data-confirm-message="Move {{ $prospect->name }} to Interested Leads?">
                                 @csrf
                                 <button class="btn btn-sm btn-interested" title="Move to Interested Leads">Interested</button>
                             </form>
                             <form method="POST" action="{{ route('admin.prospects.mark-lost', $prospect) }}"
-                                  onsubmit="return confirm('Move {{ addslashes($prospect->name) }} to Lost Leads?')">
+                                  data-confirm-action data-confirm-message="Move {{ $prospect->name }} to Lost Leads?">
                                 @csrf
                                 <button class="btn btn-sm btn-lost" title="Move to Lost Leads">Lost</button>
                             </form>
                             <form method="POST" action="{{ route('admin.prospects.destroy', $prospect) }}"
-                                  onsubmit="return confirm('Remove {{ addslashes($prospect->name) }} from leads?')">
+                                  data-confirm-delete data-confirm-message="Remove {{ $prospect->name }} from leads?">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>

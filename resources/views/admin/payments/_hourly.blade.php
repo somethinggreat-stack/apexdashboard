@@ -78,7 +78,7 @@
                     </td>
                     <td class="actions-col">
                         @if ($p['payout'])
-                            <form method="POST" action="{{ route('admin.payments.payout.destroy', $p['payout']->id) }}" onsubmit="return confirm('Remove this payout record?')" style="display:inline;">
+                            <form method="POST" action="{{ route('admin.payments.payout.destroy', $p['payout']->id) }}" data-confirm-delete data-confirm-message="Remove this payout record?" style="display:inline;">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Undo</button>
                             </form>

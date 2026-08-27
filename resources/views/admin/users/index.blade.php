@@ -41,7 +41,7 @@
                             </form>
                             @if (!$u->isSuper() && $u->id !== Auth::guard('admin')->id())
                                 <form method="POST" action="{{ route('admin.users.destroy', $u->id) }}"
-                                      onsubmit="return confirm('Remove {{ addslashes($u->full_name) }}? They will no longer be able to log in.')">
+                                      data-confirm-delete data-confirm-message="Remove {{ $u->full_name }}? They will no longer be able to log in.">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-danger">Delete</button>
                                 </form>

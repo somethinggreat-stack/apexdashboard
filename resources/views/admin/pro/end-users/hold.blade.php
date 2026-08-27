@@ -57,7 +57,7 @@
                                 </form>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
-                                      onsubmit="return confirm(@js('Delete ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">
+                                      data-confirm-delete data-confirm-message="Delete {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
                                 </form>

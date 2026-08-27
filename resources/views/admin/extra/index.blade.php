@@ -102,7 +102,7 @@
                                 data-notes="{{ $p->notes }}"
                                 onclick="openExtra(this)">Edit</button>
                             <form method="POST" action="{{ route('admin.extra.destroy', $p->id) }}"
-                                  onsubmit="return confirm('Remove {{ addslashes($p->client_name) }}?')">
+                                  data-confirm-delete data-confirm-message="Remove {{ $p->client_name }}?">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>

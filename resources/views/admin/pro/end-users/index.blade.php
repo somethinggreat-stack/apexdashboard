@@ -25,7 +25,10 @@
 @section('topbar-action')
     @if ($isSuper)
         <form method="POST" action="{{ route('admin.end-users.clear-incomplete') }}"
-              onsubmit="return confirm('Mark every incomplete log complete for this business owner?\n\nThis logs the missing weekly steps for all flagged clients. It will NEVER log Pull Latest Report or Record Deletions.');">
+              data-confirm-action
+              data-confirm-title="Mark all incomplete logs complete?"
+              data-confirm-message="This logs the missing weekly steps for every flagged client of this business owner. It will NEVER log Pull Latest Report or Record Deletions."
+              data-confirm-ok="Mark all complete">
             @csrf
             <button type="submit" class="btn btn-secondary"
                     title="Log the missing weekly steps for every flagged client — never the closeout steps">
@@ -274,7 +277,10 @@
 
                                 @unless ($isDone)
                                     <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}"
-                                          onsubmit="return confirm(@js('Are you sure you want to move ' . $eu->full_name . ' to Clients? The round clock starts today.'))">
+                                          data-confirm-action
+                                          data-confirm-title="Move to Clients?"
+                                          data-confirm-message="{{ $eu->full_name }} will move to the Clients list and the round clock starts today."
+                                          data-confirm-ok="Move to Clients">
                                         @csrf
                                         <button class="pro-act done">Move to Clients</button>
                                     </form>
@@ -300,7 +306,9 @@
                                         onclick="openMoveReason({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', 'hold')">Hold/Pause</button>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
-                                      onsubmit="return confirm(@js('Delete client ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">
+                                      data-confirm-delete
+                                      data-confirm-title="Delete this client?"
+                                      data-confirm-message="{{ $eu->full_name }} and all their documents will be moved to the Recycle Bin. You can restore them there for 10 days.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
                                 </form>

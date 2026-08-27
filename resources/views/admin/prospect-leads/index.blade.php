@@ -109,7 +109,7 @@
                                 Edit
                             </button>
                             <form method="POST" action="{{ route('admin.prospect-leads.destroy', $lead) }}"
-                                  onsubmit="return confirm('Remove {{ addslashes($lead->name) }} from leads?')">
+                                  data-confirm-delete data-confirm-message="Remove {{ $lead->name }} from leads?">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>

@@ -87,13 +87,13 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
                                 <form method="POST" action="{{ route('admin.end-users.resolve-round-error', $eu->id) }}"
-                                      onsubmit="return confirm('Resolve {{ addslashes($eu->full_name) }} and move them back to the Clients list?')">
+                                      data-confirm-action data-confirm-message="Resolve {{ $eu->full_name }} and move them back to the Clients list?">
                                     @csrf
                                     <button class="pro-act done">Resolve → Clients</button>
                                 </form>
 
                                 <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
-                                      onsubmit="return confirm(@js('Delete client ' . $eu->full_name . ' and all their documents? This cannot be undone.'))">
+                                      data-confirm-delete data-confirm-message="Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
                                 </form>

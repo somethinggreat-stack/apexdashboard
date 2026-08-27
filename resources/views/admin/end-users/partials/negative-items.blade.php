@@ -90,7 +90,7 @@
                             </form>
                         @endif
                         <form method="POST" action="{{ route('admin.negative-items.destroy', $item->id) }}"
-                              onsubmit="return confirm('Remove this item?')">@csrf @method('DELETE')
+                              data-confirm-delete data-confirm-message="Remove this item?">@csrf @method('DELETE')
                             <button class="btn btn-sm btn-danger">✕</button>
                         </form>
                     </div>
