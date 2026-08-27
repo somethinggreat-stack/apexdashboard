@@ -30,21 +30,44 @@ class EndUserController extends Controller
     }
 
     /**
-     * Super-admin bulk fix: for the selected business owner, log the missing
-     * WEEKLY steps for every flagged (incomplete-log) client so the nags clear.
-     * It NEVER logs the closeout steps (Pull Latest Report / Record Deletions) —
-     * those stay a manual, past-due-only task in every scenario.
+     * Super-admin bulk fix: log the missing WEEKLY steps for every flagged
+     * (incomplete-log) client so the nags clear. It NEVER logs the closeout steps
+     * (Pull Latest Report / Record Deletions) — those stay a manual, past-due-only
+     * task in every scenario. Scoped to the SELECTED business owner.
      */
     public function clearIncomplete(Request $request)
     {
         abort_unless(Auth::guard('admin')->user()?->isSuper(), 403);
 
-        $clientId = session('selected_client_id');
-        $adminId  = Auth::guard('admin')->id();
+        $clients = $this->incompleteCandidates()
+            ->where('client_id', session('selected_client_id'))
+            ->get();
+        $logged = $this->logMissingWeeklySteps($clients, Auth::guard('admin')->id());
 
-        // Every actively-worked client (In Progress + Done), not on hold.
-        $clients = EndUser::forClient($clientId)
-            ->notHeld()
+        return back()->with('confirm', $this->clearedMessage($logged));
+    }
+
+    /**
+     * Same as clearIncomplete(), but across EVERY business owner in the org — the
+     * universal button on the super-admin dashboard's Needs Attention panel.
+     */
+    public function clearIncompleteAll(Request $request)
+    {
+        abort_unless(Auth::guard('admin')->user()?->isSuper(), 403);
+
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $boIds   = Client::forAdmin($ownerId)->pluck('id');
+
+        $clients = $this->incompleteCandidates()->whereIn('client_id', $boIds)->get();
+        $logged  = $this->logMissingWeeklySteps($clients, Auth::guard('admin')->id());
+
+        return back()->with('confirm', $this->clearedMessage($logged));
+    }
+
+    /** Base query: actively-worked clients (In Progress + Done), not on hold, with the counts the incomplete logic reads. */
+    private function incompleteCandidates()
+    {
+        return EndUser::notHeld()
             ->where(fn ($q) => $q->whereNull('intake_status')
                 ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']))
             ->with('processSteps:id,end_user_id,round,week,step_type')
@@ -53,9 +76,12 @@ class EndUserController extends Controller
                 'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
                 'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
                 'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
-            ])
-            ->get();
+            ]);
+    }
 
+    /** Log each flagged client's missing regular weekly steps — never the closeout steps. Returns count logged. */
+    private function logMissingWeeklySteps($clients, int $adminId): int
+    {
         $today  = now()->toDateString();
         $logged = 0;
 
@@ -67,8 +93,8 @@ class EndUserController extends Controller
             $byWeek = ProcessStep::stepTypesByWeek($eu->roundCycleDays());
 
             for ($w = 1; $w <= $count; $w++) {
-                // Only the regular (non-closeout) steps of the week — the closeout
-                // steps are deliberately never logged by this button.
+                // Only the regular (non-closeout) steps — the closeout steps are
+                // deliberately never logged.
                 $regular = array_diff(array_keys($byWeek[$w] ?? []), EndUser::CLOSEOUT_STEPS);
                 if (empty($regular)) {
                     continue;
@@ -96,9 +122,14 @@ class EndUserController extends Controller
             }
         }
 
-        return back()->with('confirm', $logged > 0
+        return $logged;
+    }
+
+    private function clearedMessage(int $logged): string
+    {
+        return $logged > 0
             ? "Incomplete logs cleared — {$logged} step(s) logged. Pull Latest Report & Record Deletions were left untouched."
-            : 'Nothing to clear — no client had a missing weekly step. (Closeout steps are never auto-logged.)');
+            : 'Nothing to clear — no client had a missing weekly step. (Closeout steps are never auto-logged.)';
     }
 
     private function listView(Request $request, string $bucket)

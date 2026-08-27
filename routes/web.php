@@ -81,6 +81,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('admin.super')->group(function () {
             // Main super-admin dashboard — cross-business-owner overview
             Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+            // Universal: clear incomplete logs across ALL owners (never the closeout steps).
+            Route::post('clear-incomplete-all', [Admin\EndUserController::class, 'clearIncompleteAll'])
+                ->name('end-users.clear-incomplete-all');
 
             // Leads (from public website forms)
             Route::get('leads', [LeadController::class, 'dashboard'])->name('leads.index');

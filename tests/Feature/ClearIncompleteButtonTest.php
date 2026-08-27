@@ -115,4 +115,51 @@ class ClearIncompleteButtonTest extends TestCase
             ->post(route('admin.end-users.clear-incomplete'))
             ->assertForbidden();
     }
+
+    public function test_universal_button_clears_across_all_owners(): void
+    {
+        ['super' => $super] = $this->world;
+
+        // Flagged client under BO 1 (day 10, only Week 1 → Week 2 missing).
+        $eu1 = $this->eu(now()->subDays(10)->toDateString(), [[1, 'ex_tu_eq_letters_generated']]);
+
+        // A SECOND owner with its own flagged client.
+        $bo2 = Client::create([
+            'admin_id' => $super->id, 'business_name' => 'BO2', 'email' => 'bo2@t.com',
+            'password' => 'x', 'monthly_fee' => 0, 'status' => 'active',
+            'compensation_model' => 'per_round', 'per_round_fee' => 15, 'round_cycle_days' => 30,
+            'intake_token' => \Illuminate\Support\Str::random(20),
+        ]);
+        $eu2 = EndUser::create([
+            'client_id' => $bo2->id, 'first_name' => 'Z', 'last_name' => 'Q', 'suffix' => 'None',
+            'email' => 'z@t.com', 'current_address' => '1 St', 'city' => 'T', 'state' => 'ST',
+            'zipcode' => '12345', 'status' => 'active', 'start_date' => now()->subDays(10)->toDateString(),
+            'intake_status' => null, 'rounds' => ['1st Round'],
+        ]);
+        ProcessStep::create([
+            'end_user_id' => $eu2->id, 'round' => 1, 'week' => 1, 'step_type' => 'ex_tu_eq_letters_generated',
+            'step_date' => now()->subDays(10)->toDateString(), 'created_by_admin_id' => $super->id,
+        ]);
+
+        $this->actingAs($super, 'admin')
+            ->post(route('admin.end-users.clear-incomplete-all'))
+            ->assertRedirect();
+
+        // Both owners' clients got their missing Week 2 logged, and no closeout anywhere.
+        $this->assertGreaterThan(0, ProcessStep::where('end_user_id', $eu1->id)->where('week', 2)->count());
+        $this->assertGreaterThan(0, ProcessStep::where('end_user_id', $eu2->id)->where('week', 2)->count());
+        $this->assertSame(0, ProcessStep::whereIn('step_type', EndUser::CLOSEOUT_STEPS)->count());
+    }
+
+    public function test_universal_button_is_super_only(): void
+    {
+        $va = new Admin(['email' => 'va2@t.com', 'password' => 'x', 'full_name' => 'Va']);
+        $va->role = 'va';
+        $va->parent_admin_id = $this->world['super']->id;
+        $va->save();
+
+        $this->actingAs($va, 'admin')
+            ->post(route('admin.end-users.clear-incomplete-all'))
+            ->assertForbidden();
+    }
 }

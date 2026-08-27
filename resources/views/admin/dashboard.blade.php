@@ -102,67 +102,8 @@
     </div>
 </div>
 
-{{-- ===================== BO Overview + Needs Attention ===================== --}}
-<div class="dash-grid">
-    <div class="dcard">
-        <div class="dcard-head">
-            <div>
-                <h2>Business Owners Overview</h2>
-                <p class="dcard-sub">{{ $activeOwners }} active business owners</p>
-            </div>
-            <a href="{{ route('admin.client-selector.index') }}" class="dbtn-ghost">View All →</a>
-        </div>
-
-        <input type="text" id="boSearch" class="dsearch" placeholder="Search business owners…" onkeyup="filterBOs(this.value)">
-
-        <div class="bo-grid" id="boGrid">
-            @foreach ($clients as $client)
-                <form method="POST" action="{{ route('admin.client-selector.select', $client->id) }}" class="bo-card-form" data-name="{{ strtolower($client->business_name) }}">
-                    @csrf
-                    <input type="hidden" name="redirect_to" value="{{ route('admin.end-users.index') }}">
-                    <button type="submit" class="bo-card">
-                        <span class="bo-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
-                        <span class="bo-body">
-                            <span class="bo-name">{{ $client->business_name }}</span>
-                            <span class="bo-meta">{{ $client->end_users_count }} clients</span>
-                        </span>
-                        <span class="bo-pill pill-{{ $client->status }}">{{ strtoupper($client->status) }}</span>
-                        <span class="bo-menu">⋮</span>
-                    </button>
-                </form>
-            @endforeach
-        </div>
-        <div id="boEmpty" class="dempty" style="display:none;">No business owners match.</div>
-    </div>
-
-    <div class="dcard">
-        <div class="dcard-head">
-            <div><h2>Needs Attention</h2></div>
-            @if (!empty($attention))<span class="att-chip">{{ count($attention) }}</span>@endif
-        </div>
-        <div class="att-colhead"><span>Business Owner</span><span>Status</span><span class="att-act-h">Action</span></div>
-        <div class="att-list">
-        @forelse ($attention as $a)
-            @php $bo = $a['client']; @endphp
-            <div class="att-row">
-                <span class="att-bo">{{ $bo->business_name }}</span>
-                <span class="att-badges">
-                    @if ($a['pending'])<span class="ab ab-blue">{{ $a['pending'] }} new</span>@endif
-                    @if ($a['incomplete'])<span class="ab ab-amber">{{ $a['incomplete'] }} incomplete</span>@endif
-                    @if ($a['overdue'])<span class="ab ab-red">{{ $a['overdue'] }} overdue</span>@endif
-                </span>
-                <form method="POST" action="{{ route('admin.client-selector.select', $bo->id) }}" class="att-act">
-                    @csrf
-                    <input type="hidden" name="redirect_to" value="{{ $a['pending'] ? route('admin.new-clients') : route('admin.end-users.index') }}">
-                    <button type="submit" class="{{ $a['pending'] ? 'dbtn-primary' : 'dbtn-soft' }}">{{ $a['pending'] ? 'Review New Clients →' : 'Open Clients →' }}</button>
-                </form>
-            </div>
-        @empty
-            <div class="dempty">Everything looks good — nothing needs attention.</div>
-        @endforelse
-        </div>
-    </div>
-</div>
+{{-- ===================== Needs Attention (full width) ===================== --}}
+@include('admin.partials.needs-attention', ['clearAllUrl' => route('admin.end-users.clear-incomplete-all')])
 @push('head')
 <style>
     .content { background:#f6f8fc; }
@@ -318,19 +259,4 @@
 </style>
 @endpush
 
-@push('scripts')
-<script>
-
-window.filterBOs = function (q) {
-    q = (q || '').trim().toLowerCase();
-    var any = false;
-    document.querySelectorAll('#boGrid .bo-card-form').forEach(function (el) {
-        var show = !q || (el.getAttribute('data-name') || '').indexOf(q) !== -1;
-        el.style.display = show ? '' : 'none';
-        if (show) any = true;
-    });
-    document.getElementById('boEmpty').style.display = any ? 'none' : 'block';
-};
-</script>
-@endpush
 @endsection
