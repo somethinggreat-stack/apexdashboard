@@ -110,18 +110,40 @@
     });
 
     /* --------- quick-log modal --------- */
-    window.openQuickLog = function (euId, name, missingWeek, currentRound, cycleDays) {
+    // Labels for the closeout steps (past-due-only) so the hint reads well.
+    var QL_LABELS = { pull_latest_report: 'Pull Latest Report', record_deletions: 'Record Deletions / Update Deletions' };
+    var qlPresetWeek = null, qlPresetSteps = [], qlStepsMap = {};
+
+    function qlHint(week) {
+        var hint = document.getElementById('quickLogTypeHint');
+        if (!hint) return;
+        if (String(week) === String(qlPresetWeek) && qlPresetSteps.length) {
+            hint.textContent = 'Will log: ' + qlPresetSteps.map(function (s) { return QL_LABELS[s] || s; }).join(', ') + '.';
+        } else {
+            hint.textContent = 'A canonical step will be created for the chosen week. Open the client to add additional step types.';
+        }
+    }
+
+    // The step types the modal will submit for the chosen week: the preset
+    // (closeout) steps for the targeted week, otherwise that week's canonical step.
+    function qlStepsFor(week) {
+        if (String(week) === String(qlPresetWeek) && qlPresetSteps.length) {
+            return qlPresetSteps.slice();
+        }
+        var c = qlStepsMap[week];
+        return c ? [c] : [];
+    }
+
+    window.openQuickLog = function (euId, name, targetWeek, currentRound, cycleDays, presetSteps) {
         cycleDays = (parseInt(cycleDays, 10) === 20) ? 20 : 30;
         var weekCount = (cycleDays === 20) ? 3 : 4;               // 20-day → 3 weeks
-        var stepsMap  = WEEK_STEPS[cycleDays] || WEEK_STEPS[30];
+        qlStepsMap = WEEK_STEPS[cycleDays] || WEEK_STEPS[30];
 
         document.getElementById('quickLogEndUserId').value = euId;
         document.getElementById('quickLogName').textContent = name;
         var weekSel = document.getElementById('quickLogWeek');
         var roundSel = document.getElementById('quickLogRound');
-        var typeIn  = document.getElementById('quickLogStepType');
 
-        // Rebuild the Week options to match this client's cycle (3 or 4 weeks).
         weekSel.innerHTML = '';
         for (var w = 1; w <= weekCount; w++) {
             var o = document.createElement('option');
@@ -129,13 +151,34 @@
             weekSel.appendChild(o);
         }
 
-        missingWeek = Math.min(parseInt(missingWeek, 10) || 1, weekCount);
-        weekSel.value = missingWeek;
+        targetWeek = Math.min(parseInt(targetWeek, 10) || 1, weekCount);
+        weekSel.value = targetWeek;
         roundSel.value = Math.max(1, currentRound || 1);
-        typeIn.value = stepsMap[missingWeek] || 'ex_tu_eq_letters_generated';
-        weekSel.onchange = function () { typeIn.value = stepsMap[weekSel.value] || ''; };
+
+        qlPresetWeek  = targetWeek;
+        qlPresetSteps = Array.isArray(presetSteps) ? presetSteps : [];
+        qlHint(weekSel.value);
+        weekSel.onchange = function () { qlHint(weekSel.value); };
         openModal('quickLogModal');
     };
+
+    // Build the step_types[] the store expects from whatever the modal resolves to.
+    (function () {
+        var qlForm = document.querySelector('#quickLogModal form');
+        if (!qlForm) return;
+        qlForm.addEventListener('submit', function () {
+            qlForm.querySelectorAll('input[data-ql-step]').forEach(function (n) { n.remove(); });
+            var single = document.getElementById('quickLogStepType');
+            if (single) single.value = '';   // use step_types[] instead
+            var steps = qlStepsFor(document.getElementById('quickLogWeek').value);
+            if (!steps.length) { steps = ['ex_tu_eq_letters_generated']; }
+            steps.forEach(function (s) {
+                var i = document.createElement('input');
+                i.type = 'hidden'; i.name = 'step_types[]'; i.value = s; i.setAttribute('data-ql-step', '1');
+                qlForm.appendChild(i);
+            });
+        });
+    })();
 
     /* --------- move to errors (prompts for the error) --------- */
     window.moveToErrors = function (btn, name) {

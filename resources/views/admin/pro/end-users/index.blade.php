@@ -198,9 +198,10 @@
                                 <div>
                                     <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                                     @if ($eu->is_incomplete)
+                                        @php $inc = $eu->incompleteTarget(); @endphp
                                         <button type="button" class="pro-flag"
                                                 title="{{ $eu->incomplete_reason }} — click to log"
-                                                onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $eu->missing_week ?? 1 }}, {{ $eu->current_round }}, {{ $eu->roundCycleDays() }})">
+                                                onclick="openQuickLog({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', {{ $inc['week'] }}, {{ $eu->current_round }}, {{ $eu->roundCycleDays() }}, {{ \Illuminate\Support\Js::from($inc['steps']) }})">
                                             Incomplete · log
                                         </button>
                                     @endif

@@ -49,6 +49,31 @@ class QuickLogAndAdminTasksTest extends TestCase
     }
 
     /**
+     * The quick-log badge, for a past-due closeout, submits both closeout steps
+     * as step_types[] on the last week — the store must accept and create both
+     * (30-day Week 4). This is the path the incomplete badge now uses.
+     */
+    public function test_closeout_steps_log_via_step_types_array(): void
+    {
+        $super = $this->super();
+        $bo    = $this->bo($super, 30);
+        $eu    = $this->eu($bo);
+
+        $this->actingAs($super, 'admin')
+            ->withSession(['selected_client_id' => $bo->id])
+            ->post(route('admin.process-steps.store'), [
+                'end_user_id' => $eu->id,
+                'round'       => 1,
+                'week'        => 4,
+                'step_types'  => ['pull_latest_report', 'record_deletions'],
+                'step_date'   => '2026-08-26',
+            ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('process_steps', ['end_user_id' => $eu->id, 'round' => 1, 'week' => 4, 'step_type' => 'pull_latest_report']);
+        $this->assertDatabaseHas('process_steps', ['end_user_id' => $eu->id, 'round' => 1, 'week' => 4, 'step_type' => 'record_deletions']);
+    }
+
+    /**
      * For every cycle and week, the canonical (first) step the quick-log modal
      * pre-fills must be a step store() accepts for that week. This is exactly
      * what broke for 20-day week 2.

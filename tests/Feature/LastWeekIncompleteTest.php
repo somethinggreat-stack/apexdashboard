@@ -84,6 +84,13 @@ class LastWeekIncompleteTest extends TestCase
         $this->assertNull($pastDue->missing_week);          // all regular weeks done
         $this->assertTrue($pastDue->closeout_due);
         $this->assertTrue($pastDue->is_incomplete);
+
+        // The quick-log target is the CLOSEOUT week (4) + the two missing steps —
+        // NOT Week 1.
+        $this->assertSame(
+            ['week' => 4, 'steps' => ['pull_latest_report', 'record_deletions']],
+            $pastDue->incompleteTarget()
+        );
     }
 
     public function test_closeout_flags_only_past_due_on_20day(): void
@@ -99,6 +106,12 @@ class LastWeekIncompleteTest extends TestCase
         $this->assertLessThan(0, $pastDue->days_left_in_round);
         $this->assertTrue($pastDue->closeout_due);
         $this->assertTrue($pastDue->is_incomplete);
+
+        // 20-day closeout lives in Week 3.
+        $this->assertSame(
+            ['week' => 3, 'steps' => ['pull_latest_report', 'record_deletions']],
+            $pastDue->incompleteTarget()
+        );
     }
 
     public function test_earlier_weeks_still_flag_on_schedule(): void
@@ -117,6 +130,12 @@ class LastWeekIncompleteTest extends TestCase
             'step_date' => now()->subDays(10)->toDateString(), 'created_by_admin_id' => $admin->id,
         ]);
 
-        $this->assertSame(2, $this->withCounts($eu->id)->missing_week);
+        $reloaded = $this->withCounts($eu->id);
+        $this->assertSame(2, $reloaded->missing_week);
+        // A schedule gap targets that week + its first regular step (not closeout).
+        $this->assertSame(
+            ['week' => 2, 'steps' => ['tu_ex_call_followups']],
+            $reloaded->incompleteTarget()
+        );
     }
 }

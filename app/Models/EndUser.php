@@ -553,6 +553,36 @@ class EndUser extends Model
         return $this->missing_week !== null || $this->closeout_due;
     }
 
+    /**
+     * What the quick-log badge should open to: the week + the exact step types
+     * that are missing. For a schedule gap that's the missing week's first step;
+     * for the past-due closeout it's the LAST week (20-day W3 / 30-day W4) with
+     * the missing closeout steps (Pull Latest Report / Record Deletions) — never
+     * Week 1 when Week 1 is already done.
+     *
+     * @return array{week:int, steps:array<int,string>}
+     */
+    public function incompleteTarget(): array
+    {
+        $byWeek = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
+
+        if ($w = $this->missing_week) {
+            $regular = array_values(array_diff(array_keys($byWeek[$w] ?? []), self::CLOSEOUT_STEPS));
+            return ['week' => $w, 'steps' => $regular ? [$regular[0]] : []];
+        }
+
+        if ($this->closeout_due) {
+            $logged = ($this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps())
+                ->where('round', $this->current_round)->pluck('step_type')->unique()->all();
+            return [
+                'week'  => $this->roundWeekCount(),
+                'steps' => array_values(array_diff(self::CLOSEOUT_STEPS, $logged)),
+            ];
+        }
+
+        return ['week' => 1, 'steps' => []];
+    }
+
     public function getCurrentRoundAttribute(): int
     {
         return max(1, count($this->rounds ?? []));
