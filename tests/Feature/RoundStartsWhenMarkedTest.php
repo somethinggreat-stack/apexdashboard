@@ -103,6 +103,29 @@ class RoundStartsWhenMarkedTest extends TestCase
         $this->assertNotNull($eu->days_left_in_round);
     }
 
+    public function test_next_round_is_measured_from_the_latest_started_round(): void
+    {
+        // 20-day owner. A client whose 3rd round is marked (Aug 19) — the next
+        // round date and days-left must come from the LATEST started round, not
+        // an earlier one. Regression: a client showed next-round from round 2
+        // (Aug 4 + 20) while the timeline showed round 3 started Aug 19.
+        $this->bo->update(['round_cycle_days' => 20]);
+        $eu = $this->client([
+            'rounds' => ['1st Round', '2nd Round'],
+            'round_dates' => [
+                '1st Round' => '2026-06-13',
+                '2nd Round' => '2026-08-04',
+                '3rd Round' => '2026-08-19',
+            ],
+        ]);
+        $eu = $this->reload($eu->id);
+
+        $this->assertSame(3, $eu->current_round, 'current round follows the latest started round');
+        $this->assertSame('2026-08-19', $eu->current_round_start_date);
+        $this->assertSame('2026-09-08', $eu->next_round_date, 'exactly 20 days after the 3rd round start');
+        $this->assertSame(['1st Round', '2nd Round', '3rd Round'], array_keys($eu->round_timeline));
+    }
+
     public function test_second_round_does_not_count_until_its_week1_is_marked(): void
     {
         // Round 1 was worked 40 days ago; round 2 has been reached (advanced) but

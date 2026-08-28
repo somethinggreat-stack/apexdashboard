@@ -627,11 +627,26 @@ class EndUser extends Model
 
     public function getCurrentRoundAttribute(): int
     {
+        // Reached rounds (in the rounds array) — a round can be reached before its
+        // first step, in which case it's the current round but not yet "started".
         $byRounds = count($this->rounds ?? []);
-        $steps    = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
-        $bySteps  = (int) $steps->max('round');
 
-        return max(1, $byRounds, $bySteps);
+        // The highest round that actually has a MARKED start date (a hand-set
+        // round_dates entry or a logged step). This keeps current_round in step
+        // with round_timeline / the "Round Started" column, so the next-round
+        // date and days-left are always measured from the latest round shown.
+        $byDates = 0;
+        foreach (($this->round_dates ?? []) as $label => $date) {
+            $idx = array_search($label, self::ROUND_OPTIONS, true);
+            if ($idx !== false && ! empty($date)) {
+                $byDates = max($byDates, $idx + 1);
+            }
+        }
+
+        $steps   = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
+        $bySteps = (int) $steps->max('round');
+
+        return max(1, $byRounds, $byDates, $bySteps);
     }
 
     /**
