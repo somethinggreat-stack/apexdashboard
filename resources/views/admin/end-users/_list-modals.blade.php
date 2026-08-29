@@ -142,7 +142,7 @@
         <div class="rp-grid">
             @foreach (\App\Models\EndUser::ROUND_OPTIONS as $i => $rpLabel)
                 <button type="button" class="rp-pill" data-round="{{ $rpLabel }}" data-n="{{ $i + 1 }}">
-                    <span class="rp-check">✓</span> R{{ $i + 1 }}
+                    <span class="rp-check">✓</span> Round {{ $i + 1 }}
                 </button>
             @endforeach
         </div>
