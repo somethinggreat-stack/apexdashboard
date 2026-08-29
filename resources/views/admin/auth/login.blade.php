@@ -125,12 +125,27 @@
         @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
 
         @media (max-width:980px){
-            .auth{ grid-template-columns:1fr; }
-            .pane-hero{ display:none; }
-            .pane-form{ background:
-                radial-gradient(700px circle at 50% 0%, rgba(37,99,235,.06), transparent 55%), #fbfcfe; }
+            .auth{ display:block; }
+            .pane-form{
+                align-items:flex-start; padding:54px 26px 46px; min-height:auto;
+                background:radial-gradient(700px circle at 50% -10%, rgba(37,99,235,.07), transparent 55%), #fbfcfe;
+            }
+            .pane-hero{ display:flex; padding:46px 26px 58px; }
+            .pane-hero::after{ display:none; }
+            .hero-wrap{ max-width:560px; }
+            .hero-title{ font-size:30px; }
+            .hero-sub{ font-size:14.5px; margin-bottom:24px; }
+            .cards{ grid-template-columns:1fr; gap:14px; }
+            .cards::before, .cards::after{ display:none; }
+            .glass{ padding:17px; }
+            .g-num{ font-size:27px; }
         }
-        @media (max-width:420px){ h1{ font-size:29px; } }
+        @media (max-width:420px){
+            .pane-form{ padding:40px 20px 36px; }
+            h1{ font-size:28px; }
+            .hero-title{ font-size:26px; }
+            .pane-hero{ padding:36px 20px 48px; }
+        }
     </style>
 </head>
 <body>
