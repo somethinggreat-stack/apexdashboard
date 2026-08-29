@@ -453,6 +453,17 @@
         .pay-matrix .payfree { font-size: 8.5px; }
     }
 
+    /* Pin the checkbox + client name so they stay visible if the row ever has to
+       scroll on a narrow screen — the round squares never cover the name. */
+    .pay-matrix thead th.sel-col,
+    .pay-matrix tbody td.sel-col { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+    .pay-matrix thead th.sel-col { background: var(--surface-2); z-index: 3; }
+    .pay-matrix thead th:nth-child(2),
+    .pay-matrix tbody td.pay-client { position: sticky; left: 32px; z-index: 2; background: var(--surface); }
+    .pay-matrix thead th:nth-child(2) { background: var(--surface-2); z-index: 3; }
+    .pay-matrix tbody tr:hover td.sel-col,
+    .pay-matrix tbody tr:hover td.pay-client { background: var(--surface-2); }
+
     @media (max-width: 900px) {
         .bulk-bar { gap: 10px; }
         .bulk-action { margin-left: 0; }

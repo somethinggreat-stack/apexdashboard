@@ -22,6 +22,7 @@
         'other' => 'Other',
     ];
     $rounds = App\Models\ProcessStep::rounds();
+    $nextWorkable = $endUser->nextWorkable();   // the step-lock frontier for the Add-Step box
     $weeks = App\Models\ProcessStep::weeks($endUser->roundCycleDays());
     $stepTypesByWeek = App\Models\ProcessStep::stepTypesByWeek($endUser->roundCycleDays());
     $documentsByCategory = $endUser->documents->groupBy('category');
@@ -571,6 +572,7 @@
                         <option value="{{ $val }}">{{ $label }}</option>
                     @endforeach
                 </select>
+                <small class="muted" id="stepLockHint" style="display:block; margin-top:6px;"></small>
             </div>
             <div class="form-group">
                 <div class="msel2-head">
@@ -1070,8 +1072,35 @@
         selected.clear();
         sync();
     });
-    roundSel.addEventListener('change', function () { sync(); });
+    // ---- Sequential-lock guide: open on the next workable step, grey out ahead ----
+    const nextWorkable = @json($nextWorkable);
+    function applyLockGuide() {
+        var fr = nextWorkable.round, fw = nextWorkable.week;
+        Array.prototype.forEach.call(roundSel.options, function (o) {
+            o.disabled = parseInt(o.value, 10) > fr;   // future rounds are locked
+        });
+        if (parseInt(roundSel.value, 10) > fr) roundSel.value = String(fr);
+        var selRound = parseInt(roundSel.value, 10);
+        Array.prototype.forEach.call(weekSel.options, function (o) {
+            var wv = parseInt(o.value, 10);
+            o.disabled = (selRound === fr && wv > fw) || (selRound > fr);   // future weeks locked
+        });
+        if (selRound === fr && parseInt(weekSel.value, 10) > fw) weekSel.value = String(fw);
+        var hint = document.getElementById('stepLockHint');
+        if (hint) hint.textContent = 'Next up: Round ' + fr + ' · Week ' + fw + '. Later rounds/weeks unlock as you finish each one.';
+    }
+    document.querySelectorAll('[onclick*="addStepModal"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            roundSel.value = String(nextWorkable.round);
+            weekSel.value  = String(nextWorkable.week);
+            applyLockGuide();
+            rebuildForWeek();
+        });
+    });
+
+    roundSel.addEventListener('change', function () { applyLockGuide(); sync(); });
     weekSel.addEventListener('change', rebuildForWeek);
+    applyLockGuide();
 
     // Guard: block submit if nothing selected.
     const stepForm = document.querySelector('#addStepModal form');

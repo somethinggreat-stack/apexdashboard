@@ -46,7 +46,7 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
-                        <td>{{ !empty($eu->round_timeline) ? implode(', ', array_keys($eu->round_timeline)) : '—' }}</td>
+                        <td>{{ $eu->started_rounds_short ?: 'Not started' }}</td>
                         <td>
                             <div class="pro-round-dates">
                                 @forelse ($eu->round_timeline as $label => $date)

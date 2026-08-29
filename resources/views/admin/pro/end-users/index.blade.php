@@ -214,7 +214,7 @@
                                   data-id="{{ $eu->id }}"
                                   data-name="{{ $eu->full_name }}"
                                   data-current="{{ json_encode($eu->rounds ?? []) }}">
-                                {{ $eu->started_rounds_short ?: '—' }}
+                                {{ $eu->started_rounds_short ?: 'Not started' }}
                                 <span class="inline-pencil" aria-hidden="true">✎</span>
                             </span>
                         </td>

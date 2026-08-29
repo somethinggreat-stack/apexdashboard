@@ -129,6 +129,20 @@ class SequentialStepLockTest extends TestCase
         $this->assertContains('2nd Round', $eu->fresh()->rounds ?? []);
     }
 
+    public function test_next_workable_points_at_the_frontier(): void
+    {
+        $bo = $this->bo(30);
+        $eu = $this->eu($bo);
+        $reload = fn () => EndUser::with('processSteps')->find($eu->id);
+
+        // Fresh client → the frontier is Round 1, Week 1.
+        $this->assertSame(['round' => 1, 'week' => 1], $reload()->nextWorkable());
+
+        // Finish Week 1 → the frontier moves to Week 2.
+        $this->completeWeek($eu, 30, 1, 1);
+        $this->assertSame(['round' => 1, 'week' => 2], $reload()->nextWorkable());
+    }
+
     public function test_in_order_logging_is_allowed(): void
     {
         $bo = $this->bo(30);

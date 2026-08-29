@@ -658,6 +658,32 @@ class EndUser extends Model
         return null;
     }
 
+    /**
+     * The next step the team should log — the first (round, week) that isn't
+     * fully complete, scanning from Round 1. Drives the Add-Step box so it opens
+     * on the right step and greys out everything still locked ahead of it.
+     *
+     * @return array{round:int, week:int}
+     */
+    public function nextWorkable(): array
+    {
+        $count    = $this->roundWeekCount();
+        $byWeek   = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
+        $maxRound = min(count(self::ROUND_OPTIONS), max(1, $this->current_round) + 1);
+
+        for ($r = 1; $r <= $maxRound; $r++) {
+            for ($w = 1; $w <= $count; $w++) {
+                if (empty($byWeek[$w] ?? [])) {
+                    continue;
+                }
+                if (! $this->weekFullyLogged($r, $w, $byWeek)) {
+                    return ['round' => $r, 'week' => $w];
+                }
+            }
+        }
+        return ['round' => max(1, $this->current_round), 'week' => 1];
+    }
+
     /** True when every step type that belongs to (round, week) has been logged. */
     public function weekFullyLogged(int $round, int $week, ?array $byWeek = null): bool
     {

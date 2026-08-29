@@ -43,7 +43,7 @@
     .pay-settings-grid input, .pay-settings-grid select { width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); }
 
     /* Per-round matrix */
-    .pay-matrix { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+    .pay-matrix { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow-x:auto; box-shadow:0 1px 2px rgba(15,23,42,.04); }
     .pay-matrix table { width:100%; border-collapse:collapse; }
     .pay-matrix th, .pay-matrix td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--surface-2); }
     .pay-matrix thead th { background:var(--surface-2); font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); font-weight:600; }

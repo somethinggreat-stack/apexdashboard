@@ -300,7 +300,7 @@
                     <div class="ov-round-badge">1st</div>
                     <div class="ov-round-meta">
                         <div class="ov-round-name">1st Round</div>
-                        <div class="ov-round-date">Not started yet</div>
+                        <div class="ov-round-date">Not started</div>
                     </div>
                 </div>
             @endforelse
