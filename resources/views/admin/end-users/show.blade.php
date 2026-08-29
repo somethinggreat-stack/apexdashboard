@@ -629,40 +629,6 @@
                 <small class="msel-hint" id="stepMselHint">Pick one or more. Each becomes its own timeline entry for the chosen round &amp; week.</small>
             </div>
             <div class="form-group"><label>Date</label><input type="date" name="step_date" id="stepDateInput" value="{{ now()->timezone('America/New_York')->toDateString() }}" required></div>
-            <div id="w4s2-fields" class="w4s2-fields" hidden>
-                <div class="bureau-block">
-                    <h4>Round Results</h4>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Total Deletions</label><input type="number" name="total_deletions" min="0"></div>
-                        <div class="form-group"><label>Updated to Positive</label><input type="number" name="updated_to_positive" min="0"></div>
-                    </div>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Updated to Negative</label><input type="number" name="updated_to_negative" min="0"></div>
-                        <div class="form-group"><label>Added</label><input type="number" name="items_added" min="0"></div>
-                    </div>
-                </div>
-                <div class="bureau-block">
-                    <h4>Experian</h4>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Score Before</label><input type="number" name="experian_score_before" min="300" max="850"></div>
-                        <div class="form-group"><label>Score Now</label><input type="number" name="experian_score_now" min="300" max="850"></div>
-                    </div>
-                </div>
-                <div class="bureau-block">
-                    <h4>TransUnion</h4>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Score Before</label><input type="number" name="transunion_score_before" min="300" max="850"></div>
-                        <div class="form-group"><label>Score Now</label><input type="number" name="transunion_score_now" min="300" max="850"></div>
-                    </div>
-                </div>
-                <div class="bureau-block">
-                    <h4>Equifax</h4>
-                    <div class="bureau-row">
-                        <div class="form-group"><label>Score Before</label><input type="number" name="equifax_score_before" min="300" max="850"></div>
-                        <div class="form-group"><label>Score Now</label><input type="number" name="equifax_score_now" min="300" max="850"></div>
-                    </div>
-                </div>
-            </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addStepModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Step(s)</button>

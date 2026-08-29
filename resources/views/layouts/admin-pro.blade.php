@@ -111,7 +111,7 @@
 
                 <a href="{{ route('admin.errors-resolved-new') }}" class="{{ request()->routeIs('admin.errors-resolved-new') ? 'active' : '' }}">
                     <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    <span class="pro-nav-label">Resolved by BO — New Clients</span>
+                    <span class="pro-nav-label">New Clients Error Resolved</span>
                     @if ($nav['new_errors_resolved'] > 0)<span class="pro-count">{{ $nav['new_errors_resolved'] }}</span>@endif
                 </a>
 
@@ -134,7 +134,7 @@
 
                 <a href="{{ route('admin.errors-resolved') }}" class="{{ request()->routeIs('admin.errors-resolved') ? 'active' : '' }}">
                     <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    <span class="pro-nav-label">Resolved by BO — Next Round</span>
+                    <span class="pro-nav-label">Next Round Error Resolved</span>
                     @if ($nav['resolved_by_client'] > 0)<span class="pro-count">{{ $nav['resolved_by_client'] }}</span>@endif
                 </a>
 

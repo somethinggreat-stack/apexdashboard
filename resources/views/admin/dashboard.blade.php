@@ -103,7 +103,7 @@
 </div>
 
 {{-- ===================== Needs Attention (full width) ===================== --}}
-@include('admin.partials.needs-attention', ['clearAllUrl' => route('admin.end-users.clear-incomplete-all')])
+@include('admin.partials.needs-attention')
 @push('head')
 <style>
     .content { background:#f6f8fc; }

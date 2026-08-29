@@ -1,6 +1,6 @@
 @extends('layouts.admin-pro')
 
-@section('title', 'Errors Resolved by BO for New Clients')
+@section('title', 'New Clients Error Resolved')
 @section('subtitle', 'New-client errors the business owner fixed — updated login is ready, process and send back to In Progress.')
 
 @section('content')
@@ -10,7 +10,7 @@
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#34d399,#059669);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </span>
-            <h2>Errors Resolved by BO for New Clients</h2>
+            <h2>New Clients Error Resolved</h2>
             <span class="pro-panel-count" style="background:#dcfce7; color:#166534;">{{ $endUsers->count() }}</span>
         </div>
     </div>

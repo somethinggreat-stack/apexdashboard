@@ -1,9 +1,7 @@
 {{--
     Premium "Needs Attention" panel — shared by the super-admin Dashboard and the
     VA-side Select Business Owner page. Requires: $attention (array of
-    ['client','pending','incomplete','overdue','score']). Optional: $clearAllUrl
-    (renders a super-admin "Mark All Complete" button that clears incomplete logs
-    across every owner, never the closeout steps).
+    ['client','pending','incomplete','overdue','score']).
 --}}
 @if (!empty($attention))
     @php
@@ -32,19 +30,6 @@
                 </div>
             </div>
             <div class="nx-head-right">
-                @isset($clearAllUrl)
-                    <form method="POST" action="{{ $clearAllUrl }}"
-                          data-confirm-action
-                          data-confirm-title="Mark all incomplete logs complete?"
-                          data-confirm-message="This logs the missing weekly steps for every flagged client across ALL business owners. It will NEVER log Pull Latest Report or Record Deletions."
-                          data-confirm-ok="Mark all complete">
-                        @csrf
-                        <button type="submit" class="nx-clearall" title="Log the missing weekly steps for every flagged client of every owner — never the closeout steps">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                            <span>Mark All Complete</span>
-                        </button>
-                    </form>
-                @endisset
                 <label class="nx-sort">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
                     <select id="nxSort" onchange="nxSort(this.value)">
@@ -130,9 +115,6 @@
     .nx-head-ico svg { width:22px; height:22px; }
     .nx-head h2 { margin:0; font-size:20px; font-weight:800; letter-spacing:-.01em; color:var(--text); }
     .nx-sub { margin:2px 0 0; font-size:13px; color:var(--muted); }
-    .nx-clearall { display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--tint-green-fg); background:var(--tint-green-bg); border:1px solid transparent; border-radius:11px; padding:9px 15px; cursor:pointer; transition:filter .12s; }
-    .nx-clearall:hover { filter:brightness(.97); }
-    .nx-clearall svg { width:16px; height:16px; }
     .nx-sort { position:relative; display:inline-flex; align-items:center; }
     .nx-sort > svg:first-child { position:absolute; left:12px; width:15px; height:15px; color:var(--muted); pointer-events:none; }
     .nx-sort select { appearance:none; background:var(--surface); border:1px solid var(--border); border-radius:11px; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:9px 34px 9px 34px; cursor:pointer; }

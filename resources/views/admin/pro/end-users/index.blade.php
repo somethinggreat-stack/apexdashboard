@@ -23,20 +23,6 @@
 @section('subtitle', 'Manage and monitor all your clients in one place.')
 
 @section('topbar-action')
-    @if ($isSuper)
-        <form method="POST" action="{{ route('admin.end-users.clear-incomplete') }}"
-              data-confirm-action
-              data-confirm-title="Mark all incomplete logs complete?"
-              data-confirm-message="This logs the missing weekly steps for every flagged client of this business owner. It will NEVER log Pull Latest Report or Record Deletions."
-              data-confirm-ok="Mark all complete">
-            @csrf
-            <button type="submit" class="btn btn-secondary"
-                    title="Log the missing weekly steps for every flagged client — never the closeout steps">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                <span>Mark All Incomplete Complete</span>
-            </button>
-        </form>
-    @endif
     @if ($isDone && $isSuper)
         <a href="{{ route('admin.client-list.credit-monitoring-export') }}" class="btn btn-secondary"
            title="Download all credit-monitoring logins for this business owner as a CSV">
