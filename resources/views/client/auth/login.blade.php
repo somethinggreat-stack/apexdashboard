@@ -212,19 +212,13 @@ input:focus{
   overflow:hidden;
 }
 .stage::before{
-  content:"";position:absolute;inset:-14%;
+  content:"";position:absolute;inset:0;
   background-image:
     radial-gradient(circle, rgba(140,190,255,.55) .9px, transparent 1.1px),
     radial-gradient(circle, rgba(120,170,255,.28) .8px, transparent 1px);
   background-size:64px 64px, 27px 27px;
   background-position:0 0, 13px 9px;
   opacity:.5;
-  will-change:transform;
-  animation:drift 26s ease-in-out infinite alternate;
-}
-@keyframes drift{
-  from{transform:translate(0,0)}
-  to{transform:translate(2.4%,3.4%)}
 }
 .stage::after{
   content:"";position:absolute;
@@ -232,12 +226,6 @@ input:focus{
   transform:translate(-50%,-50%);
   background:repeating-radial-gradient(circle, rgba(96,160,255,.075) 0 1px, transparent 1px 92px);
   opacity:.85;pointer-events:none;
-  will-change:transform;
-  animation:spin 200s linear infinite;
-}
-@keyframes spin{
-  from{transform:translate(-50%,-50%) rotate(0)}
-  to{transform:translate(-50%,-50%) rotate(360deg)}
 }
 
 .stage-inner{position:relative;z-index:2;max-width:820px;margin:0 auto;width:100%}
@@ -267,13 +255,25 @@ input:focus{
   position:relative;
   display:flex;align-items:center;gap:16px;
   padding:18px 20px;
-  border:1px solid var(--card-line);
+  border:1px solid rgba(120,185,255,.34);
   border-radius:18px;
   background:linear-gradient(150deg, rgba(24,54,120,.55), rgba(8,20,52,.42));
-  box-shadow:0 0 0 1px rgba(6,15,40,.5) inset, 0 18px 40px -26px rgba(0,0,0,.9);
-  transition:border-color .2s, transform .2s;
+  box-shadow:
+    0 0 0 1px rgba(110,180,255,.22),
+    0 0 22px -2px rgba(80,160,255,.40),
+    0 0 0 1px rgba(6,15,40,.5) inset,
+    0 18px 40px -26px rgba(0,0,0,.9);
+  transition:border-color .2s, box-shadow .2s, transform .2s;
 }
-.stat:hover{border-color:rgba(120,185,255,.55);transform:translateY(-2px)}
+.stat:hover{
+  border-color:rgba(150,205,255,.72);
+  box-shadow:
+    0 0 0 1px rgba(150,200,255,.42),
+    0 0 30px -1px rgba(90,170,255,.6),
+    0 0 0 1px rgba(6,15,40,.5) inset,
+    0 18px 40px -26px rgba(0,0,0,.9);
+  transform:translateY(-2px);
+}
 .stat .tile{
   flex:0 0 auto;
   width:52px;height:52px;border-radius:13px;
@@ -306,26 +306,9 @@ input:focus{
   transform:translate(-50%,-50%);
   background:radial-gradient(circle,#e8f2ff 0%,#5aa2ff 55%,rgba(90,160,255,0) 76%);
   box-shadow:0 0 14px 3px rgba(90,160,255,.9);
-  animation:nodePulse 3s ease-in-out infinite;
 }
 .n1{left:37%;top:25%} .n2{left:63%;top:25%}
 .n3{left:37%;top:75%} .n4{left:63%;top:75%}
-@keyframes nodePulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.16)}}
-
-.pulse{
-  position:absolute;width:7px;height:7px;border-radius:50%;z-index:2;pointer-events:none;
-  transform:translate(-50%,-50%);
-  background:radial-gradient(circle,#fff 0%,#8cc4ff 55%,rgba(60,140,255,0) 80%);
-  box-shadow:0 0 12px 3px rgba(120,190,255,.95);
-}
-.p1{animation:flow1 2.8s ease-in-out infinite}
-.p2{animation:flow2 2.8s ease-in-out infinite .35s}
-.p3{animation:flow3 2.8s ease-in-out infinite .7s}
-.p4{animation:flow4 2.8s ease-in-out infinite 1.05s}
-@keyframes flow1{0%{left:37%;top:25%;opacity:0}12%{opacity:1}82%{opacity:1}100%{left:50%;top:50%;opacity:0}}
-@keyframes flow2{0%{left:63%;top:25%;opacity:0}12%{opacity:1}82%{opacity:1}100%{left:50%;top:50%;opacity:0}}
-@keyframes flow3{0%{left:37%;top:75%;opacity:0}12%{opacity:1}82%{opacity:1}100%{left:50%;top:50%;opacity:0}}
-@keyframes flow4{0%{left:63%;top:75%;opacity:0}12%{opacity:1}82%{opacity:1}100%{left:50%;top:50%;opacity:0}}
 
 .core{
   position:absolute;left:50%;top:50%;
@@ -334,22 +317,14 @@ input:focus{
   display:grid;place-items:center;
   background:radial-gradient(circle, rgba(70,150,255,.5) 0%, rgba(20,60,150,.2) 38%, rgba(4,10,30,0) 68%);
 }
-.core::before{
-  content:"";position:absolute;width:92px;height:92px;border-radius:50%;
-  border:1px solid rgba(130,190,255,.6);
-  animation:sonar 3.4s ease-out infinite;
-}
 .ring{position:absolute;border-radius:50%;border:1px solid rgba(110,175,255,.28)}
 .ring.a{inset:16px} .ring.b{inset:48px;border-color:rgba(120,185,255,.42)}
 .ring.c{inset:80px;border-color:rgba(150,205,255,.58)}
 .spark{
-  width:28px;height:28px;border-radius:50%;
-  background:radial-gradient(circle,#ffffff 0%,#9fceff 40%,rgba(60,140,255,0) 74%);
-  box-shadow:0 0 42px 15px rgba(80,160,255,.8);
-  animation:pulse 3.2s ease-in-out infinite;
+  width:34px;height:34px;border-radius:50%;
+  background:radial-gradient(circle,#ffffff 0%,#9fceff 42%,rgba(60,140,255,0) 76%);
+  box-shadow:0 0 48px 16px rgba(80,160,255,.85);
 }
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.8}}
-@keyframes sonar{0%{transform:scale(.35);opacity:.85}100%{transform:scale(1.95);opacity:0}}
 
 .chips{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:52px}
 .chip{
@@ -483,9 +458,6 @@ input:focus{
 
           <span class="node n1"></span><span class="node n2"></span>
           <span class="node n3"></span><span class="node n4"></span>
-
-          <span class="pulse p1"></span><span class="pulse p2"></span>
-          <span class="pulse p3"></span><span class="pulse p4"></span>
 
           <div class="core">
             <span class="ring a"></span><span class="ring b"></span><span class="ring c"></span>
