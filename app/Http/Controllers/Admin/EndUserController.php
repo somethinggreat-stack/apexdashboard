@@ -151,7 +151,7 @@ class EndUserController extends Controller
             // progress % is derived from the step log — eager load it so the
             // accessor doesn't fire a query per row; client carries the round
             // cycle length the date accessors read.
-            ->with(['client', 'processSteps:id,end_user_id,round,step_type,step_date'])
+            ->with(['client', 'processSteps:id,end_user_id,round,week,step_type,step_date'])
             ->withCount([
                 'processSteps',
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
