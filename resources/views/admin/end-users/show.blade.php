@@ -195,27 +195,24 @@
            .is-on class fallback for older engines. */
         .round-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
         .round-pick-pill {
-            position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 2px; padding: 12px 8px 11px; border-radius: 14px; cursor: pointer; overflow: hidden;
+            position: relative; display: flex; align-items: center; justify-content: center;
+            min-height: 46px; padding: 0 10px; border-radius: 12px; cursor: pointer; overflow: hidden;
             background: var(--surface-2, #f8fafc); border: 1.5px solid var(--border, #e6ebf2);
             box-shadow: 0 1px 2px rgba(15, 23, 42, .05); user-select: none;
             transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
         }
         .round-pick-pill input { position: absolute; opacity: 0; width: 0; height: 0; }
-        .round-pick-pill .rp-lbl {
-            font-size: 9.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
-            color: var(--muted, #94a3b8); transition: color .15s;
-        }
-        .round-pick-pill .rp-num {
-            font-size: 19px; font-weight: 800; line-height: 1; color: var(--text, #334155); transition: color .15s;
+        .round-pick-pill .rp-text {
+            font-size: 14px; font-weight: 700; line-height: 1; white-space: nowrap;
+            color: var(--text, #334155); transition: color .15s;
         }
         .round-pick-pill .rp-badge {
-            position: absolute; top: 6px; right: 6px; width: 17px; height: 17px; border-radius: 50%;
+            position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             background: #fff; color: #4338ca; box-shadow: 0 1px 4px rgba(67, 56, 202, .45);
             opacity: 0; transform: scale(.4); transition: opacity .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1);
         }
-        .round-pick-pill .rp-badge svg { width: 10px; height: 10px; }
+        .round-pick-pill .rp-badge svg { width: 9px; height: 9px; }
         .round-pick-pill:hover { transform: translateY(-2px); border-color: #a5b4fc; box-shadow: 0 6px 16px rgba(79, 70, 229, .15); }
         .round-pick-pill:focus-within { outline: 2px solid #6366f1; outline-offset: 2px; }
 
@@ -223,8 +220,7 @@
             background: linear-gradient(140deg, #6366f1, #4338ca); border-color: transparent;
             box-shadow: 0 8px 20px rgba(67, 56, 202, .32);
         }
-        .round-pick-pill.is-on .rp-lbl, .round-pick-pill:has(input:checked) .rp-lbl { color: rgba(255, 255, 255, .82); }
-        .round-pick-pill.is-on .rp-num, .round-pick-pill:has(input:checked) .rp-num { color: #fff; }
+        .round-pick-pill.is-on .rp-text, .round-pick-pill:has(input:checked) .rp-text { color: #fff; }
         .round-pick-pill.is-on .rp-badge, .round-pick-pill:has(input:checked) .rp-badge { opacity: 1; transform: scale(1); }
         .round-pick-pill.is-on:hover, .round-pick-pill:has(input:checked):hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(67, 56, 202, .42); }
 
@@ -842,8 +838,7 @@
                                 <label class="round-pick-pill">
                                     <input type="checkbox" name="rounds[]" value="{{ $round }}" @checked(in_array($round, $selectedRounds, true))>
                                     <span class="rp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                    <span class="rp-lbl">Round</span>
-                                    <span class="rp-num">{{ $i + 1 }}</span>
+                                    <span class="rp-text">Round {{ $i + 1 }}</span>
                                 </label>
                             @endforeach
                         </div>
