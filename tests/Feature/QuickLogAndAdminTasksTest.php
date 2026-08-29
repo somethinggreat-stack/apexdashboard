@@ -53,11 +53,30 @@ class QuickLogAndAdminTasksTest extends TestCase
      * as step_types[] on the last week — the store must accept and create both
      * (30-day Week 4). This is the path the incomplete badge now uses.
      */
+    /** Fully log every step of a round's weeks 1..through (bypasses the endpoint). */
+    private function completeWeeks(Admin $super, EndUser $eu, int $cycle, int $round, int $through): void
+    {
+        foreach (ProcessStep::stepTypesByWeek($cycle) as $w => $steps) {
+            if ($w > $through) {
+                break;
+            }
+            foreach (array_keys($steps) as $type) {
+                ProcessStep::firstOrCreate(
+                    ['end_user_id' => $eu->id, 'round' => $round, 'week' => $w, 'step_type' => $type],
+                    ['step_date' => '2026-08-01', 'created_by_admin_id' => $super->id]
+                );
+            }
+        }
+    }
+
     public function test_closeout_steps_log_via_step_types_array(): void
     {
         $super = $this->super();
         $bo    = $this->bo($super, 30);
         $eu    = $this->eu($bo);
+
+        // Weeks 1–3 must be complete before the Week 4 closeout can be logged.
+        $this->completeWeeks($super, $eu, 30, 1, 3);
 
         $this->actingAs($super, 'admin')
             ->withSession(['selected_client_id' => $bo->id])
@@ -88,6 +107,9 @@ class QuickLogAndAdminTasksTest extends TestCase
 
             foreach (ProcessStep::stepTypesByWeek($cycle) as $week => $steps) {
                 $canonical = array_key_first($steps);   // what the modal sends
+
+                // Sequential lock: earlier weeks must be complete first.
+                $this->completeWeeks($super, $eu, $cycle, 1, $week - 1);
 
                 $resp = $this->actingAs($super, 'admin')
                     ->withSession(['selected_client_id' => $bo->id])

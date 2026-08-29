@@ -63,6 +63,17 @@ class ProcessStepController extends Controller
             'integer' => 'Numbers only.',
         ]);
 
+        // Strict sequential lock: no round/week can be worked until every earlier
+        // week — and every earlier round in full, closeout steps included — is
+        // complete. Applies to everyone, VA and super admin alike.
+        $endUser = EndUser::find($data['end_user_id']);
+        if ($endUser && $reason = $endUser->sequentialBlockReason((int) $data['round'], (int) $data['week'])) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $reason, 'errors' => ['step_types' => [$reason]]], 422);
+            }
+            return back()->withErrors(['step_types' => $reason])->withInput();
+        }
+
         $shared = [
             'end_user_id'                   => $data['end_user_id'],
             'round'                         => $data['round'],

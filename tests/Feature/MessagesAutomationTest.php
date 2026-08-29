@@ -60,13 +60,13 @@ class MessagesAutomationTest extends TestCase
             'client_id' => $bo->id, 'first_name' => 'Sarah', 'last_name' => 'C', 'suffix' => 'None',
             'email' => 's@test.com', 'current_address' => '1 St', 'city' => 'T', 'state' => 'ST',
             'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-06-01',
-            'intake_status' => null, 'rounds' => ['1st Round', '2nd Round'],
+            'intake_status' => null, 'rounds' => [],
         ]);
 
         $this->actingAs($super, 'admin')
             ->withSession(['selected_client_id' => $bo->id])
             ->post('/admin/process-steps', [
-                'end_user_id' => $eu->id, 'round' => 2, 'week' => 1,
+                'end_user_id' => $eu->id, 'round' => 1, 'week' => 1,
                 'step_type' => 'ex_tu_eq_letters_generated', 'step_date' => '2026-08-26',
             ])->assertSessionHasNoErrors();
 

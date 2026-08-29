@@ -596,6 +596,53 @@ class EndUser extends Model
     }
 
     /**
+     * Steps must be logged strictly in order. A round/week can only be worked
+     * once EVERY earlier week of the same round — and EVERY earlier round in
+     * full, closeout steps included — is completely logged. Returns null when
+     * logging (round, week) is allowed, or a human message naming the blocker.
+     * Enforced for everyone, VAs and super admins alike.
+     */
+    public function sequentialBlockReason(int $round, int $week): ?string
+    {
+        $byWeek    = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
+        $weekCount = \App\Models\ProcessStep::weekCount($this->roundCycleDays());
+
+        // Every earlier round must be finished in full (through its last week,
+        // which holds Pull Latest Report + Record Deletions).
+        for ($r = 1; $r < $round; $r++) {
+            for ($w = 1; $w <= $weekCount; $w++) {
+                if (! $this->weekFullyLogged($r, $w, $byWeek)) {
+                    return "Round {$r} isn't finished — complete every step through Week {$weekCount} "
+                        . "(including Pull Latest Report and Record Deletions) before starting Round {$round}.";
+                }
+            }
+        }
+
+        // Every earlier week of THIS round must be finished.
+        for ($w = 1; $w < $week; $w++) {
+            if (! $this->weekFullyLogged($round, $w, $byWeek)) {
+                return "Round {$round} Week {$w} isn't finished — complete all of its steps before Week {$week}.";
+            }
+        }
+
+        return null;
+    }
+
+    /** True when every step type that belongs to (round, week) has been logged. */
+    public function weekFullyLogged(int $round, int $week, ?array $byWeek = null): bool
+    {
+        $byWeek ??= \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
+        $needed = array_keys($byWeek[$week] ?? []);
+        if (empty($needed)) {
+            return true;
+        }
+        $steps = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
+        $logged = $steps->where('round', $round)->where('week', $week)->pluck('step_type')->all();
+
+        return empty(array_diff($needed, $logged));
+    }
+
+    /**
      * What the quick-log badge should open to: the week + the exact step types
      * that are missing. For a schedule gap that's the missing week's first step;
      * for the past-due closeout it's the LAST week (20-day W3 / 30-day W4) with

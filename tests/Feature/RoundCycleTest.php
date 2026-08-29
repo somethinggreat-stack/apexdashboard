@@ -145,6 +145,19 @@ class RoundCycleTest extends TestCase
         $bo = $this->bo(20);
         $eu = $this->client($bo);
 
+        // Weeks 1–2 must be complete before Week 3 (sequential lock).
+        foreach (\App\Models\ProcessStep::stepTypesByWeek(20) as $w => $steps) {
+            if ($w >= 3) {
+                break;
+            }
+            foreach (array_keys($steps) as $type) {
+                \App\Models\ProcessStep::create([
+                    'end_user_id' => $eu->id, 'round' => 1, 'week' => $w, 'step_type' => $type,
+                    'step_date' => '2026-06-01', 'created_by_admin_id' => $super->id,
+                ]);
+            }
+        }
+
         // Week 3 closeout step is valid for a 20-day client...
         $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $bo->id])
             ->post('/admin/process-steps', [
