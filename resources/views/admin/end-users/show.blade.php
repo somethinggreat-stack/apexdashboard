@@ -398,6 +398,7 @@
 </div>
 
 <div id="tab-timeline" class="tab-panel">
+    <span id="next-workable" data-round="{{ $nextWorkable['round'] }}" data-week="{{ $nextWorkable['week'] }}" hidden></span>
     <div class="card">
         <div class="card-header">
             <h3>Process Timeline</h3>
@@ -427,7 +428,7 @@
                             <span class="badge">Week {{ $step->week }}</span>
                             <span class="badge step-badge">{{ $step->step_type_label }}</span>
                             <span class="timeline-date">{{ $step->step_date?->format('M d, Y') }}</span>
-                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" class="timeline-delete" data-confirm-delete data-confirm-message="Delete this process step?">
+                            <form method="POST" action="{{ route('admin.process-steps.destroy', $step->id) }}" class="timeline-delete">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
@@ -886,8 +887,8 @@
             var inp = document.getElementById('stepDateInput');
             if (inp) inp.value = estToday();
         }
-        document.querySelectorAll('[onclick*="addStepModal"]').forEach(function (btn) {
-            btn.addEventListener('click', stampStepDate);
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('[onclick*="addStepModal"]')) { stampStepDate(); }
         });
     })();
 
@@ -1073,7 +1074,13 @@
         sync();
     });
     // ---- Sequential-lock guide: open on the next workable step, grey out ahead ----
-    const nextWorkable = @json($nextWorkable);
+    var nextWorkable = @json($nextWorkable);
+    function syncNextWorkable() {
+        var el = document.getElementById('next-workable');
+        if (el && el.dataset.round) {
+            nextWorkable = { round: parseInt(el.dataset.round, 10), week: parseInt(el.dataset.week, 10) };
+        }
+    }
     function applyLockGuide() {
         var fr = nextWorkable.round, fw = nextWorkable.week;
         Array.prototype.forEach.call(roundSel.options, function (o) {
@@ -1089,31 +1096,95 @@
         var hint = document.getElementById('stepLockHint');
         if (hint) hint.textContent = 'Next up: Round ' + fr + ' · Week ' + fw + '. Later rounds/weeks unlock as you finish each one.';
     }
-    document.querySelectorAll('[onclick*="addStepModal"]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            roundSel.value = String(nextWorkable.round);
-            weekSel.value  = String(nextWorkable.week);
-            applyLockGuide();
-            rebuildForWeek();
-        });
+    document.addEventListener('click', function (e) {
+        if (! e.target.closest('[onclick*="addStepModal"]')) return;
+        syncNextWorkable();   // stays correct after a snappy panel refresh
+        roundSel.value = String(nextWorkable.round);
+        weekSel.value  = String(nextWorkable.week);
+        applyLockGuide();
+        rebuildForWeek();
     });
 
     roundSel.addEventListener('change', function () { applyLockGuide(); sync(); });
     weekSel.addEventListener('change', rebuildForWeek);
     applyLockGuide();
 
-    // Guard: block submit if nothing selected.
+    // Snappy save: log the step over AJAX and refresh the tabs in place — no full
+    // reload, and you stay on whatever tab you're on (no jump back to Overview).
+    window.apexRefreshClientPanels = function () {
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                ['tab-overview', 'tab-timeline', 'tab-activity'].forEach(function (id) {
+                    var fresh = doc.getElementById(id), cur = document.getElementById(id);
+                    if (fresh && cur) { cur.innerHTML = fresh.innerHTML; }
+                });
+                // Update the tab-label counts in place — the click handlers live on
+                // the buttons themselves, so setting innerHTML keeps them working.
+                var freshTabs = doc.querySelectorAll('.tabs .tab');
+                document.querySelectorAll('.tabs .tab').forEach(function (ct) {
+                    for (var i = 0; i < freshTabs.length; i++) {
+                        if (freshTabs[i].getAttribute('data-target') === ct.getAttribute('data-target')) {
+                            ct.innerHTML = freshTabs[i].innerHTML; break;
+                        }
+                    }
+                });
+                syncNextWorkable();
+            })
+            .catch(function () { window.location.reload(); });
+    };
+
     const stepForm = document.querySelector('#addStepModal form');
     if (stepForm) {
         stepForm.addEventListener('submit', function (e) {
+            e.preventDefault();
             if (selected.size === 0) {
-                e.preventDefault();
                 mselHint.className = 'msel-hint warn';
                 mselHint.textContent = 'Select at least one process step before saving.';
                 mselSearch.focus();
+                return;
             }
+            var saveBtn = stepForm.querySelector('button[type="submit"]');
+            if (saveBtn) { saveBtn.disabled = true; }
+            fetch(stepForm.action, {
+                method: 'POST', body: new FormData(stepForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }).catch(function () { return { ok: r.ok, data: {} }; }); })
+            .then(function (res) {
+                if (saveBtn) { saveBtn.disabled = false; }
+                if (res.ok) {
+                    closeModal('addStepModal');
+                    if (window.apexConfirm) { window.apexConfirm('Process step(s) logged.'); }
+                    apexRefreshClientPanels();
+                } else {
+                    var msg = (res.data.errors && res.data.errors.step_types && res.data.errors.step_types[0]) || res.data.message || 'Could not save the step.';
+                    mselHint.className = 'msel-hint warn';
+                    mselHint.textContent = msg;
+                }
+            })
+            .catch(function () { if (saveBtn) { saveBtn.disabled = false; } window.location.reload(); });
         });
     }
+
+    // Deleting a step: styled confirm + AJAX + in-place refresh (delegated, so it
+    // survives the panel swap above and stays on the current tab).
+    document.addEventListener('submit', function (e) {
+        var f = e.target;
+        if (! f.classList || ! f.classList.contains('timeline-delete')) return;
+        e.preventDefault();
+        window.apexConfirmDelete({
+            title: 'Delete this process step?',
+            message: 'This removes the logged step. You can log it again if needed.',
+            okLabel: 'Delete',
+            onConfirm: function () {
+                fetch(f.action, { method: 'POST', body: new FormData(f), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function () { apexRefreshClientPanels(); if (window.apexConfirm) { window.apexConfirm('Step deleted.'); } })
+                    .catch(function () { window.location.reload(); });
+            }
+        });
+    });
 
     sync();
 
