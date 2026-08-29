@@ -150,6 +150,9 @@ html, body { height: 100%; }
     transition: background .14s, color .14s;
 }
 .pro-nav a svg { width: 22px; height: 22px; flex-shrink: 0; }
+/* Long two-line labels: take the remaining width and wrap tidily after the
+   icon, keeping the count badge aligned to the right. */
+.pro-nav .pro-nav-label { flex: 1; min-width: 0; line-height: 1.2; }
 .i-dash { color: #a5b4fc; }
 .pro-nav a:hover { background: rgba(255,255,255,.055); color: #e6ebf7; }
 .pro-nav a.active {

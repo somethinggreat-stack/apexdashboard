@@ -29,40 +29,56 @@
 
     function inlineStop(e) { e.preventDefault(); e.stopPropagation(); }
 
-    /* --------- inline status edit --------- */
+    /* --------- generic field-edit popup (no more inline editing) --------- */
+    var feModal = document.getElementById('fieldEditModal');
+    var feId = null, feField = null, feExtra = {};
+    window.openFieldEdit = function (opts) {
+        if (!feModal) return;
+        feId = opts.id; feField = opts.field; feExtra = opts.extra || {};
+        document.getElementById('feTitle').textContent = opts.title || 'Edit';
+        document.getElementById('feWho').textContent = opts.name || '';
+        document.getElementById('feLabel').textContent = opts.label || 'Value';
+        var dateEl = document.getElementById('feDate');
+        var selEl  = document.getElementById('feSelect');
+        var hintEl = document.getElementById('feHint');
+        dateEl.style.display = 'none'; selEl.style.display = 'none'; hintEl.style.display = 'none';
+        if (opts.kind === 'select') {
+            selEl.innerHTML = (opts.options || []).map(function (o) {
+                return '<option value="'+o.value+'"'+(o.value===opts.value?' selected':'')+'>'+o.label+'</option>';
+            }).join('');
+            selEl.style.display = '';
+        } else {
+            dateEl.value = opts.value || '';
+            dateEl.style.display = '';
+            if (opts.hint) { hintEl.textContent = opts.hint; hintEl.style.display = ''; }
+        }
+        openModal('fieldEditModal');
+    };
+    if (feModal) {
+        document.getElementById('feSave').addEventListener('click', function () {
+            if (!feId || !feField) return;
+            var selEl = document.getElementById('feSelect');
+            var val = selEl.style.display !== 'none' ? selEl.value : document.getElementById('feDate').value;
+            var fd = new FormData();
+            fd.append('_method', 'PUT');
+            fd.append('_token', csrf);
+            fd.append(feField, val);
+            Object.keys(feExtra).forEach(function (k) { fd.append(k, feExtra[k]); });
+            fetch(updateUrlTpl.replace('__ID__', feId), {
+                method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function (r) { if (r.ok) window.location.reload(); else alert('Could not save.'); });
+        });
+    }
+
+    /* --------- status → popup --------- */
     document.querySelectorAll('.inline-edit-status').forEach(function (el) {
         el.addEventListener('click', function (e) {
-            if (el.classList.contains('editing')) return;
             inlineStop(e);
-            var current = el.dataset.current;
-            el.classList.add('editing');
-            el.innerHTML =
-                '<select>' + STATUSES.map(function (s) {
-                    return '<option value="'+s+'"'+(s===current?' selected':'')+'>'+s+'</option>';
-                }).join('') + '</select>' +
-                '<button class="inline-save" type="button">Save</button>' +
-                '<button class="inline-cancel" type="button">×</button>';
-
-            var sel = el.querySelector('select');
-            sel.addEventListener('click', inlineStop);
-            sel.focus();
-
-            el.querySelector('.inline-cancel').addEventListener('click', function (e2) {
-                inlineStop(e2); window.location.reload();
-            });
-            el.querySelector('.inline-save').addEventListener('click', function (e2) {
-                inlineStop(e2);
-                var newStatus = sel.value;
-                var fd = new FormData();
-                fd.append('_method', 'PUT');
-                fd.append('_token', csrf);
-                fd.append('status', newStatus);
-                fetch(updateUrlTpl.replace('__ID__', el.dataset.id), {
-                    method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function (r) {
-                    if (r.ok) window.location.reload();
-                    else alert('Could not save status.');
-                });
+            openFieldEdit({
+                id: el.dataset.id, name: el.dataset.name || '',
+                title: 'Change Status', label: 'Status', kind: 'select',
+                field: 'status', value: el.dataset.current,
+                options: STATUSES.map(function (s) { return { value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }; })
             });
         });
     });
@@ -192,41 +208,30 @@
     };
 
     /* --------- inline date edits: Round Started + Next Round Date --------- */
-    function inlineDateEdit(selector, field) {
-        document.querySelectorAll(selector).forEach(function (el) {
-            el.addEventListener('click', function (e) {
-                if (el.classList.contains('editing')) return;
-                inlineStop(e);
-                var current = el.dataset.current || '';
-                el.classList.add('editing');
-                el.innerHTML =
-                    '<input type="date" value="' + current + '">' +
-                    '<button class="inline-save" type="button">Save</button>' +
-                    '<button class="inline-cancel" type="button">×</button>';
-                var input = el.querySelector('input');
-                input.addEventListener('click', inlineStop);
-                input.focus();
-                el.querySelector('.inline-cancel').addEventListener('click', function (e2) {
-                    inlineStop(e2); window.location.reload();
-                });
-                el.querySelector('.inline-save').addEventListener('click', function (e2) {
-                    inlineStop(e2);
-                    var fd = new FormData();
-                    fd.append('_method', 'PUT');
-                    fd.append('_token', csrf);
-                    fd.append(field, input.value);   // blank clears / reverts to auto
-                    fetch(updateUrlTpl.replace('__ID__', el.dataset.id), {
-                        method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                    }).then(function (r) {
-                        if (r.ok) window.location.reload();
-                        else alert('Could not save the date.');
-                    });
-                });
+    /* --------- date edits → popup --------- */
+    document.querySelectorAll('.inline-edit-round-started').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            inlineStop(e);
+            openFieldEdit({
+                id: el.dataset.id, name: el.dataset.name || '',
+                title: el.dataset.title || 'Edit round start date',
+                label: 'Round start date', kind: 'date',
+                field: 'round_started', value: el.dataset.current
             });
         });
-    }
-    inlineDateEdit('.inline-edit-round-started', 'round_started');
-    inlineDateEdit('.inline-edit-next', 'next_round_override');
+    });
+    document.querySelectorAll('.inline-edit-next').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            inlineStop(e);
+            openFieldEdit({
+                id: el.dataset.id, name: el.dataset.name || '',
+                title: 'Edit next round date',
+                label: 'Next round date', kind: 'date',
+                field: 'next_round_override', value: el.dataset.current,
+                hint: 'Leave blank to auto-calculate (one cycle after the current round start).'
+            });
+        });
+    });
 
     /* --------- Hold/Pause or Move to New Clients, with a reason --------- */
     window.openMoveReason = function (euId, name, kind) {

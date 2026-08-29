@@ -222,6 +222,8 @@
                         <td>
                             <span class="inline-edit inline-edit-round-started"
                                   data-id="{{ $eu->id }}"
+                                  data-name="{{ $eu->full_name }}"
+                                  data-title="Edit {{ $eu->current_round_label }} start date"
                                   data-current="{{ $eu->current_round_start_date ?? '' }}"
                                   title="Edit {{ $eu->current_round_label }} start date">
                                 <span class="pro-round-dates">
@@ -241,6 +243,7 @@
                         <td>
                             <span class="inline-edit inline-edit-next"
                                   data-id="{{ $eu->id }}"
+                                  data-name="{{ $eu->full_name }}"
                                   data-current="{{ $eu->next_round_date ?? '' }}"
                                   title="Edit next round date{{ $eu->next_round_override ? ' (manually set)' : '' }}">
                                 <span class="pro-next {{ $dl !== null && $dl < 0 ? 'over' : '' }}">
@@ -260,6 +263,7 @@
                         <td>
                             <span class="inline-edit inline-edit-status"
                                   data-id="{{ $eu->id }}"
+                                  data-name="{{ $eu->full_name }}"
                                   data-current="{{ $eu->status }}">
                                 <span class="pro-pill {{ $eu->status }}">{{ $eu->status }}</span>
                                 <span class="inline-pencil" aria-hidden="true">✎</span>

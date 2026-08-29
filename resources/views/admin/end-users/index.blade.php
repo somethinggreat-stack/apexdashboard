@@ -79,6 +79,7 @@
                     <td class="no-link">
                         <span class="inline-edit inline-edit-status"
                               data-id="{{ $eu->id }}"
+                              data-name="{{ $eu->full_name }}"
                               data-current="{{ $eu->status }}">
                             <span class="pill pill-{{ $eu->status }}">{{ $eu->status }}</span>
                             <span class="inline-pencil" aria-hidden="true">✎</span>

@@ -171,3 +171,25 @@
     @media (max-width:520px){ #roundPickerModal .rp-grid { grid-template-columns:repeat(3, 1fr); } }
 </style>
 @endpush
+
+{{-- ===== Generic field-edit popup — replaces ALL inline edits (status, round
+     start date, next round date). Opened via window.openFieldEdit(...). ===== --}}
+<div id="fieldEditModal" class="modal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-header">
+            <h3 id="feTitle">Edit</h3>
+            <button type="button" class="modal-close" onclick="closeModal('fieldEditModal')">&times;</button>
+        </div>
+        <p class="muted" id="feWho" style="margin:0 0 12px; font-size:13px;"></p>
+        <div class="form-group">
+            <label id="feLabel">Value</label>
+            <input type="date" id="feDate" style="display:none; width:100%;">
+            <select id="feSelect" style="display:none; width:100%;"></select>
+            <small class="muted" id="feHint" style="display:none; margin-top:6px;"></small>
+        </div>
+        <div class="form-actions" style="margin-top:16px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('fieldEditModal')">Cancel</button>
+            <button type="button" class="btn btn-primary" id="feSave">Save</button>
+        </div>
+    </div>
+</div>

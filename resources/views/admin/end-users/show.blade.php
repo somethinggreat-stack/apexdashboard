@@ -191,6 +191,29 @@
     @endpush
 </div>
 
+{{-- Status edit popup (replaces the header's inline status edit) --}}
+<div id="statusEditModal" class="modal">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h3>Change Status</h3>
+            <button type="button" class="modal-close" onclick="closeModal('statusEditModal')">&times;</button>
+        </div>
+        <p class="muted" style="margin:0 0 12px; font-size:13px;">{{ $endUser->full_name }}</p>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="seSelect" style="width:100%;">
+                @foreach (['active','paused','graduated','cancelled'] as $s)
+                    <option value="{{ $s }}" @selected($endUser->status === $s)>{{ ucfirst($s) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="form-actions" style="margin-top:16px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('statusEditModal')">Cancel</button>
+            <button type="button" class="btn btn-primary" id="seSave">Save</button>
+        </div>
+    </div>
+</div>
+
 <div class="tabs">
     <button class="tab active" data-target="tab-overview">Overview</button>
     <button class="tab" data-target="tab-profile">Profile</button>
@@ -817,41 +840,31 @@
         var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
         var updateUrl = @json(route('admin.end-users.update', $endUser));
 
+        // Header status → popup (no inline editing).
         document.querySelectorAll('.client-header-row .inline-edit-status').forEach(function (el) {
             el.addEventListener('click', function (e) {
-                if (el.classList.contains('editing')) return;
                 e.preventDefault(); e.stopPropagation();
-                var current = el.dataset.current;
-                el.classList.add('editing');
-                el.innerHTML =
-                    '<select>' + STATUSES.map(function (s) {
-                        return '<option value="'+s+'"'+(s===current?' selected':'')+'>'+s+'</option>';
-                    }).join('') + '</select>' +
-                    '<button class="inline-save" type="button">Save</button>' +
-                    '<button class="inline-cancel" type="button">×</button>';
-                var sel = el.querySelector('select');
-                sel.focus();
-                sel.addEventListener('click', function (ev) { ev.stopPropagation(); });
-                el.querySelector('.inline-cancel').addEventListener('click', function (ev) {
-                    ev.preventDefault(); ev.stopPropagation();
-                    window.location.reload();
-                });
-                el.querySelector('.inline-save').addEventListener('click', function (ev) {
-                    ev.preventDefault(); ev.stopPropagation();
-                    var fd = new FormData();
-                    fd.append('_method', 'PUT');
-                    fd.append('_token', csrf);
-                    fd.append('status', sel.value);
-                    fetch(updateUrl, {
-                        method: 'POST', body: fd,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                    }).then(function (r) {
-                        if (r.ok) window.location.reload();
-                        else alert('Could not save status.');
-                    });
-                });
+                var sel = document.getElementById('seSelect');
+                if (sel) { sel.value = el.dataset.current; }
+                openModal('statusEditModal');
             });
         });
+        var seSave = document.getElementById('seSave');
+        if (seSave) {
+            seSave.addEventListener('click', function () {
+                var fd = new FormData();
+                fd.append('_method', 'PUT');
+                fd.append('_token', csrf);
+                fd.append('status', document.getElementById('seSelect').value);
+                fetch(updateUrl, {
+                    method: 'POST', body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                }).then(function (r) {
+                    if (r.ok) window.location.reload();
+                    else alert('Could not save status.');
+                });
+            });
+        }
     })();
 
     /* ===== Multi-select Process Step Type ===== */
