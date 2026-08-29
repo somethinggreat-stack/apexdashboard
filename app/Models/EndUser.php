@@ -681,7 +681,8 @@ class EndUser extends Model
                 }
             }
         }
-        return ['round' => max(1, $this->current_round), 'week' => 1];
+        // Nothing left to do (everything complete) — sit on the current round's last week.
+        return ['round' => max(1, $this->current_round), 'week' => $count];
     }
 
     /** True when every step type that belongs to (round, week) has been logged. */

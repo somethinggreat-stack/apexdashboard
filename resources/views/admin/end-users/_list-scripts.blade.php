@@ -38,6 +38,11 @@
             .then(function (r) { return r.text(); })
             .then(function (html) {
                 var doc = new DOMParser().parseFromString(html, 'text/html');
+                // Refresh the whole list region (stat tiles, count and pager too,
+                // not just the rows) so nothing goes stale after an inline edit.
+                var region = doc.querySelector('[data-clients-refresh]');
+                var cur = document.querySelector('[data-clients-refresh]');
+                if (region && cur) { cur.innerHTML = region.innerHTML; return; }
                 var newBody = doc.querySelector('[data-clients-table] tbody');
                 var curBody = document.querySelector('[data-clients-table] tbody');
                 if (newBody && curBody) { curBody.innerHTML = newBody.innerHTML; }

@@ -258,7 +258,7 @@ class PaymentController extends Controller
 
         $endUsers = EndUser::forClient($client->id)
             ->billableList()
-            ->with('payments')
+            ->with(['payments', 'processSteps:id,end_user_id,round,step_date'])   // round start dates without an N+1
             ->get();
         $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
 

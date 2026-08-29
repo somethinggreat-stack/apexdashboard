@@ -5,6 +5,7 @@
 @php $statusOptions = ['active','paused','graduated','cancelled']; @endphp
 
 @section('content')
+<div data-clients-refresh>
 <div class="card">
     <div class="card-header">
         <h2>{{ ($bucket ?? 'in_progress') === 'clients' ? 'Clients' : 'In Progress' }} — {{ $selectedClient->business_name }}</h2>
@@ -119,6 +120,7 @@
     </table></div>
 </div>
 
+</div>{{-- /data-clients-refresh --}}
 @include('admin.end-users._list-modals')
 
 @push('head')

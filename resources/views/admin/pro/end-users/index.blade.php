@@ -60,6 +60,7 @@
 @php
     $pct = fn ($n) => $stats['total'] ? round($n / $stats['total'] * 100, 1) . '% of total' : '0% of total';
 @endphp
+<div data-clients-refresh>
 <div class="pro-stats">
     <div class="pro-stat s-indigo">
         <span class="pro-stat-icon">
@@ -361,6 +362,7 @@
     @endif
 </div>
 
+</div>{{-- /data-clients-refresh --}}
 @include('admin.end-users._list-modals')
 @include('admin.end-users._list-scripts')
 @endsection
