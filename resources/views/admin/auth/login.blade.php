@@ -214,18 +214,19 @@ input:focus{
 }
 /* starfield + rings */
 .stage::before{
-  content:"";position:absolute;inset:0;
+  content:"";position:absolute;inset:-14%;
   background-image:
     radial-gradient(circle, rgba(140,190,255,.55) .9px, transparent 1.1px),
     radial-gradient(circle, rgba(120,170,255,.28) .8px, transparent 1px);
   background-size:64px 64px, 27px 27px;
   background-position:0 0, 13px 9px;
   opacity:.5;
-  animation:drift 90s linear infinite;
+  will-change:transform;
+  animation:drift 26s ease-in-out infinite alternate;
 }
 @keyframes drift{
-  from{background-position:0 0, 13px 9px}
-  to{background-position:256px 192px, 148px 117px}
+  from{transform:translate(0,0)}
+  to{transform:translate(2.4%,3.4%)}
 }
 .stage::after{
   content:"";position:absolute;
@@ -233,7 +234,8 @@ input:focus{
   transform:translate(-50%,-50%);
   background:repeating-radial-gradient(circle, rgba(96,160,255,.075) 0 1px, transparent 1px 92px);
   opacity:.85;pointer-events:none;
-  animation:spin 160s linear infinite;
+  will-change:transform;
+  animation:spin 200s linear infinite;
 }
 @keyframes spin{
   from{transform:translate(-50%,-50%) rotate(0)}
@@ -272,7 +274,6 @@ input:focus{
   border-radius:18px;
   background:linear-gradient(150deg, rgba(24,54,120,.55), rgba(8,20,52,.42));
   box-shadow:0 0 0 1px rgba(6,15,40,.5) inset, 0 18px 40px -26px rgba(0,0,0,.9);
-  backdrop-filter:blur(2px);
   transition:border-color .2s, transform .2s;
 }
 .stat:hover{border-color:rgba(120,185,255,.55);transform:translateY(-2px)}
@@ -314,7 +315,7 @@ input:focus{
 }
 .n1{left:37%;top:25%} .n2{left:63%;top:25%}
 .n3{left:37%;top:75%} .n4{left:63%;top:75%}
-@keyframes nodePulse{0%,100%{box-shadow:0 0 11px 2px rgba(90,160,255,.7)}50%{box-shadow:0 0 22px 6px rgba(130,190,255,1)}}
+@keyframes nodePulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.16)}}
 
 /* pulses — light travelling from each card into the core */
 .pulse{
