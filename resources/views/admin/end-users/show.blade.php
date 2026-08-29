@@ -188,6 +188,23 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+
+        /* Round picker pills — matches the round popup on the client/list views,
+           replaces the old "hold Ctrl to multi-select" box. The checkbox is the
+           real form control (submits rounds[]); the pill just styles it. */
+        .round-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
+        .round-pick-pill {
+            position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+            padding: 9px 6px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700;
+            background: var(--surface-2); color: var(--muted); border: 1.5px solid var(--border);
+            transition: background .12s, color .12s, border-color .12s; user-select: none;
+        }
+        .round-pick-pill input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .round-pick-check { opacity: 0; font-size: 11px; transition: opacity .12s; }
+        .round-pick-pill:hover { border-color: #4f46e5; }
+        .round-pick-pill.is-on, .round-pick-pill:has(input:checked) { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+        .round-pick-pill.is-on .round-pick-check, .round-pick-pill:has(input:checked) .round-pick-check { opacity: 1; }
+        @media (max-width: 520px) { .round-pick { grid-template-columns: repeat(3, 1fr); } }
     </style>
     @endpush
 </div>
@@ -794,13 +811,17 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Round <span class="muted">(hold Ctrl / Cmd to pick multiple)</span></label>
+                        <label>Round <span class="muted">(click each round this client has reached)</span></label>
                         @php $selectedRounds = old('rounds', $endUser->rounds ?? []); @endphp
-                        <select name="rounds[]" multiple size="5">
-                            @foreach (\App\Models\EndUser::ROUND_OPTIONS as $round)
-                                <option value="{{ $round }}" @selected(in_array($round, $selectedRounds, true))>{{ $round }}</option>
+                        <div class="round-pick">
+                            @foreach (\App\Models\EndUser::ROUND_OPTIONS as $i => $round)
+                                <label class="round-pick-pill">
+                                    <input type="checkbox" name="rounds[]" value="{{ $round }}" @checked(in_array($round, $selectedRounds, true))>
+                                    <span class="round-pick-check">✓</span>
+                                    <span>Round {{ $i + 1 }}</span>
+                                </label>
                             @endforeach
-                        </select>
+                        </div>
                         @error('rounds')<small class="field-error">{{ $message }}</small>@enderror
                         @error('rounds.*')<small class="field-error">{{ $message }}</small>@enderror
                     </div>
@@ -1348,6 +1369,20 @@
                 return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
             });
         }
+
+        // Round picker pills — mirror each checkbox's state onto its pill via an
+        // .is-on class, so the highlight also works where CSS :has() isn't
+        // available. Delegated, so it survives the profile panel being re-rendered.
+        function syncRoundPill(cb) {
+            var pill = cb.closest('.round-pick-pill');
+            if (pill) { pill.classList.toggle('is-on', cb.checked); }
+        }
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.matches('.round-pick-pill input[type="checkbox"]')) {
+                syncRoundPill(e.target);
+            }
+        });
+        document.querySelectorAll('.round-pick-pill input[type="checkbox"]').forEach(syncRoundPill);
     })();
 </script>
 @endpush
