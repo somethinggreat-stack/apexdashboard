@@ -20,7 +20,7 @@
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name">
         <button class="btn btn-secondary">Filter</button>
     </form>
-    <div class="table-scroll"><table class="data-table">
+    <div class="table-scroll"><table class="data-table" data-clients-table>
         <thead>
             <tr>
                 <th>Name</th>

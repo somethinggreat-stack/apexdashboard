@@ -29,6 +29,23 @@
 
     function inlineStop(e) { e.preventDefault(); e.stopPropagation(); }
 
+    // Snappy saves: swap just the clients table body after an edit instead of a
+    // full-page reload (no flash, no scroll jump). Row pencils are delegated and
+    // action buttons use inline onclick / delegated confirm, so the fresh rows
+    // keep working. Falls back to a reload if the table can't be found.
+    window.apexRefreshTable = function () {
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newBody = doc.querySelector('[data-clients-table] tbody');
+                var curBody = document.querySelector('[data-clients-table] tbody');
+                if (newBody && curBody) { curBody.innerHTML = newBody.innerHTML; }
+                else { window.location.reload(); }
+            })
+            .catch(function () { window.location.reload(); });
+    };
+
     /* --------- generic field-edit popup (no more inline editing) --------- */
     var feModal = document.getElementById('fieldEditModal');
     var feId = null, feField = null, feExtra = {};
@@ -66,39 +83,64 @@
             Object.keys(feExtra).forEach(function (k) { fd.append(k, feExtra[k]); });
             fetch(updateUrlTpl.replace('__ID__', feId), {
                 method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-            }).then(function (r) { if (r.ok) window.location.reload(); else alert('Could not save.'); });
+            }).then(function (r) {
+                if (r.ok) { closeModal('fieldEditModal'); apexRefreshTable(); }
+                else alert('Could not save.');
+            });
         });
     }
 
-    /* --------- status → popup --------- */
-    document.querySelectorAll('.inline-edit-status').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            inlineStop(e);
-            openFieldEdit({
-                id: el.dataset.id, name: el.dataset.name || '',
-                title: 'Change Status', label: 'Status', kind: 'select',
-                field: 'status', value: el.dataset.current,
-                options: STATUSES.map(function (s) { return { value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }; })
-            });
-        });
-    });
-
-    /* --------- round edit — proper popup (shared with the client page data) --------- */
+    /* --------- inline pencils → popups (delegated, so swapped rows keep working) --------- */
     var rpModal = document.getElementById('roundPickerModal');
     var rpEditingId = null;
-    document.querySelectorAll('.inline-edit-round').forEach(function (el) {
-        el.addEventListener('click', function (e) {
+    document.addEventListener('click', function (e) {
+        var st = e.target.closest('.inline-edit-status');
+        if (st) {
             inlineStop(e);
-            if (!rpModal) return;
+            openFieldEdit({
+                id: st.dataset.id, name: st.dataset.name || '',
+                title: 'Change Status', label: 'Status', kind: 'select',
+                field: 'status', value: st.dataset.current,
+                options: STATUSES.map(function (s) { return { value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }; })
+            });
+            return;
+        }
+        var rd = e.target.closest('.inline-edit-round');
+        if (rd && rpModal) {
+            inlineStop(e);
             var current = [];
-            try { current = JSON.parse(el.dataset.current || '[]'); } catch (_) {}
-            rpEditingId = el.dataset.id;
-            document.getElementById('rpName').textContent = el.dataset.name || 'client';
+            try { current = JSON.parse(rd.dataset.current || '[]'); } catch (_) {}
+            rpEditingId = rd.dataset.id;
+            document.getElementById('rpName').textContent = rd.dataset.name || 'client';
             rpModal.querySelectorAll('.rp-pill').forEach(function (p) {
                 p.classList.toggle('on', current.indexOf(p.dataset.round) !== -1);
             });
             openModal('roundPickerModal');
-        });
+            return;
+        }
+        var rs = e.target.closest('.inline-edit-round-started');
+        if (rs) {
+            inlineStop(e);
+            openFieldEdit({
+                id: rs.dataset.id, name: rs.dataset.name || '',
+                title: rs.dataset.title || 'Edit round start date',
+                label: 'Round start date', kind: 'date',
+                field: 'round_started', value: rs.dataset.current
+            });
+            return;
+        }
+        var nx = e.target.closest('.inline-edit-next');
+        if (nx) {
+            inlineStop(e);
+            openFieldEdit({
+                id: nx.dataset.id, name: nx.dataset.name || '',
+                title: 'Edit next round date',
+                label: 'Next round date', kind: 'date',
+                field: 'next_round_override', value: nx.dataset.current,
+                hint: 'Leave blank to auto-calculate (one cycle after the current round start).'
+            });
+            return;
+        }
     });
     if (rpModal) {
         rpModal.querySelectorAll('.rp-pill').forEach(function (p) {
@@ -115,7 +157,7 @@
             fetch(updateUrlTpl.replace('__ID__', rpEditingId), {
                 method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
             }).then(function (r) {
-                if (r.ok) window.location.reload();
+                if (r.ok) { closeModal('roundPickerModal'); apexRefreshTable(); }
                 else alert('Could not save rounds.');
             });
         });
@@ -207,31 +249,8 @@
         openModal('quickNoteModal');
     };
 
-    /* --------- inline date edits: Round Started + Next Round Date --------- */
-    /* --------- date edits → popup --------- */
-    document.querySelectorAll('.inline-edit-round-started').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            inlineStop(e);
-            openFieldEdit({
-                id: el.dataset.id, name: el.dataset.name || '',
-                title: el.dataset.title || 'Edit round start date',
-                label: 'Round start date', kind: 'date',
-                field: 'round_started', value: el.dataset.current
-            });
-        });
-    });
-    document.querySelectorAll('.inline-edit-next').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            inlineStop(e);
-            openFieldEdit({
-                id: el.dataset.id, name: el.dataset.name || '',
-                title: 'Edit next round date',
-                label: 'Next round date', kind: 'date',
-                field: 'next_round_override', value: el.dataset.current,
-                hint: 'Leave blank to auto-calculate (one cycle after the current round start).'
-            });
-        });
-    });
+    /* Round Started + Next Round Date pencils are handled by the delegated
+       listener above, so they keep working after a table-body swap. */
 
     /* --------- Hold/Pause or Move to New Clients, with a reason --------- */
     window.openMoveReason = function (euId, name, kind) {

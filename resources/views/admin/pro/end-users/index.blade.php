@@ -154,7 +154,7 @@
     </div>
 
     <div class="pro-table-scroll">
-        <table class="pro-table">
+        <table class="pro-table" data-clients-table>
             <thead>
                 <tr>
                     @php
