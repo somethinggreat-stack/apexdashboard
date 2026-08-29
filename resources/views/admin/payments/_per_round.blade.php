@@ -20,6 +20,7 @@
     $invoiceText .= "TOTAL UNPAID: \$" . number_format($data['totalUnpaid'], 2);
 @endphp
 
+<div data-payments-refresh>
 <div class="pay-stats">
     <div class="pay-stat-card">
         <div class="pay-stat-label">Rate per Round</div>
@@ -225,6 +226,7 @@
     (paid) square opens the edit / undo box. The little <strong>✎</strong> (top-right on hover) sets a
     custom amount for just that round. Select clients (checkboxes) to mark a batch paid for the same round.
 </p>
+</div>{{-- /data-payments-refresh --}}
 
 {{-- Invoice list modal — copy-paste into ChatGPT / invoice tool --}}
 <div id="invoiceListModal" class="modal">
@@ -582,9 +584,12 @@ window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
     document.getElementById('pe-method').value = method || '';
     document.getElementById('pe-notes').value = notes || '';
     document.getElementById('pe-delete').onclick = function () {
-        if (confirm('Mark this round unpaid?')) {
-            document.getElementById('payDeleteForm').submit();
-        }
+        if (!confirm('Mark this round unpaid?')) return;
+        var f = document.getElementById('payDeleteForm');
+        var fd = new FormData(f);
+        fetch(f.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function () { closeModal('payEditModal'); apexRefreshPayments(); })
+            .catch(function () { window.location.reload(); });
     };
     openModal('payEditModal');
 };
@@ -601,6 +606,39 @@ document.addEventListener('click', function (e) {
     } else if ((b = e.target.closest('[data-round-rate-edit]'))) {
         window.openRoundRateEdit(b.dataset.eu, b.dataset.name, b.dataset.round, b.dataset.custom === '' ? null : parseFloat(b.dataset.custom), parseFloat(b.dataset.default));
     }
+});
+
+/* ---- Snappy payment actions: mark paid / free / save update the page in place
+   instead of a full reload (no flash, no jump to the top). The refresh swaps the
+   whole payments region so the stat cards and totals stay correct too. ---- */
+window.apexRefreshPayments = function () {
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var region = doc.querySelector('[data-payments-refresh]');
+            var cur = document.querySelector('[data-payments-refresh]');
+            if (region && cur) { cur.innerHTML = region.innerHTML; }
+            else { window.location.reload(); }
+        })
+        .catch(function () { window.location.reload(); });
+};
+
+document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.matches) return;
+    var isPaycell = form.matches('form.paycell');   // mark paid / free (square + Free)
+    var isPayEdit = form.id === 'payEditForm';        // save changes to a payment
+    if (!isPaycell && !isPayEdit) return;
+    e.preventDefault();
+    var fd = new FormData(form);
+    if (e.submitter && e.submitter.name) { fd.append(e.submitter.name, e.submitter.value); }
+    fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function () {
+            if (isPayEdit) { closeModal('payEditModal'); }
+            apexRefreshPayments();
+        })
+        .catch(function () { window.location.reload(); });
 });
 </script>
 @endpush
