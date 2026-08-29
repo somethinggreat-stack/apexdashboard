@@ -65,7 +65,7 @@ class ProcessStep extends Model
     public static function rounds(): array
     {
         $out = [];
-        foreach (range(1, 8) as $n) {
+        foreach (range(1, count(EndUser::ROUND_OPTIONS)) as $n) {
             $out[$n] = "Round {$n}";
         }
         return $out;
