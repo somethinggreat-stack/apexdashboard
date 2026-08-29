@@ -769,6 +769,14 @@ class EndUser extends Model
         return $out;
     }
 
+    /** Short comma list of the rounds actually started, e.g. "R1, R2, R3". */
+    public function getStartedRoundsShortAttribute(): string
+    {
+        return collect(array_keys($this->round_timeline))
+            ->map(fn ($l) => 'R' . (array_search($l, self::ROUND_OPTIONS, true) + 1))
+            ->implode(', ');
+    }
+
     /**
      * The marked start date of the round the client is currently on, or null if
      * that round hasn't been started yet (no step logged for it). Every

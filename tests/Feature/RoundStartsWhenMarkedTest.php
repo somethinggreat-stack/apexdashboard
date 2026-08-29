@@ -126,6 +126,18 @@ class RoundStartsWhenMarkedTest extends TestCase
         $this->assertSame(['1st Round', '2nd Round', '3rd Round'], array_keys($eu->round_timeline));
     }
 
+    public function test_started_rounds_short_label(): void
+    {
+        $eu = $this->reload($this->client([
+            'rounds' => ['1st Round', '2nd Round'],
+            'round_dates' => ['1st Round' => '2026-06-13', '2nd Round' => '2026-07-01'],
+        ])->id);
+        $this->assertSame('R1, R2', $eu->started_rounds_short);
+
+        // A never-started client has no short label (shows "Not started" in views).
+        $this->assertSame('', $this->reload($this->client()->id)->started_rounds_short);
+    }
+
     public function test_second_round_does_not_count_until_its_week1_is_marked(): void
     {
         // Round 1 was worked 40 days ago; round 2 has been reached (advanced) but

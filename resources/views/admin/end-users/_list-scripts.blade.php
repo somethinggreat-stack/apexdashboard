@@ -67,47 +67,43 @@
         });
     });
 
-    /* --------- inline round edit --------- */
+    /* --------- round edit — proper popup (shared with the client page data) --------- */
+    var rpModal = document.getElementById('roundPickerModal');
+    var rpEditingId = null;
     document.querySelectorAll('.inline-edit-round').forEach(function (el) {
         el.addEventListener('click', function (e) {
-            if (el.classList.contains('editing')) return;
             inlineStop(e);
+            if (!rpModal) return;
             var current = [];
             try { current = JSON.parse(el.dataset.current || '[]'); } catch (_) {}
-            el.classList.add('editing');
-            el.innerHTML =
-                '<select multiple size="3" style="min-width:140px;">' +
-                ROUNDS.map(function (r) {
-                    var sel = current.indexOf(r) !== -1 ? ' selected' : '';
-                    return '<option value="'+r+'"'+sel+'>'+r+'</option>';
-                }).join('') + '</select>' +
-                '<button class="inline-save" type="button">Save</button>' +
-                '<button class="inline-cancel" type="button">×</button>';
-
-            var sel = el.querySelector('select');
-            sel.addEventListener('click', inlineStop);
-            sel.focus();
-
-            el.querySelector('.inline-cancel').addEventListener('click', function (e2) {
-                inlineStop(e2); window.location.reload();
+            rpEditingId = el.dataset.id;
+            document.getElementById('rpName').textContent = el.dataset.name || 'client';
+            rpModal.querySelectorAll('.rp-pill').forEach(function (p) {
+                p.classList.toggle('on', current.indexOf(p.dataset.round) !== -1);
             });
-            el.querySelector('.inline-save').addEventListener('click', function (e2) {
-                inlineStop(e2);
-                var picked = Array.from(sel.selectedOptions).map(function (o) { return o.value; });
-                var fd = new FormData();
-                fd.append('_method', 'PUT');
-                fd.append('_token', csrf);
-                fd.append('rounds_present', '1');
-                picked.forEach(function (r) { fd.append('rounds[]', r); });
-                fetch(updateUrlTpl.replace('__ID__', el.dataset.id), {
-                    method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function (r) {
-                    if (r.ok) window.location.reload();
-                    else alert('Could not save rounds.');
-                });
-            });
+            openModal('roundPickerModal');
         });
     });
+    if (rpModal) {
+        rpModal.querySelectorAll('.rp-pill').forEach(function (p) {
+            p.addEventListener('click', function () { p.classList.toggle('on'); });
+        });
+        document.getElementById('rpSave').addEventListener('click', function () {
+            if (!rpEditingId) return;
+            var picked = Array.from(rpModal.querySelectorAll('.rp-pill.on')).map(function (p) { return p.dataset.round; });
+            var fd = new FormData();
+            fd.append('_method', 'PUT');
+            fd.append('_token', csrf);
+            fd.append('rounds_present', '1');
+            picked.forEach(function (r) { fd.append('rounds[]', r); });
+            fetch(updateUrlTpl.replace('__ID__', rpEditingId), {
+                method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function (r) {
+                if (r.ok) window.location.reload();
+                else alert('Could not save rounds.');
+            });
+        });
+    }
 
     /* --------- quick-log modal --------- */
     // Labels for the closeout steps (past-due-only) so the hint reads well.

@@ -84,10 +84,9 @@
         </div>
         <div>
             <label>Round</label>
-            <div>
-                @php $startedRounds = array_keys($endUser->round_timeline); @endphp
+            <div class="round-hero-cell">
                 <span class="round-hero-edit" onclick="openModal('roundScheduleModal')" role="button" tabindex="0" title="Manage rounds — start the next round or fix dates">
-                    {{ $startedRounds ? implode(', ', $startedRounds) : 'Not started' }}
+                    <span class="round-hero-text">{{ $endUser->started_rounds_short ?: 'Not started' }}</span>
                     <span class="rhe-pencil" aria-hidden="true">✎</span>
                 </span>
             </div>
@@ -96,8 +95,11 @@
     @push('head')
     <style>
         /* Round field in the header — click to open the round editor */
-        .round-hero-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:1px 5px; margin:-1px -5px; transition:background .15s; }
+        .round-hero-edit { cursor:pointer; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:1px 5px; margin:-1px -5px; transition:background .15s; flex-wrap:wrap; }
         .round-hero-edit:hover { background:var(--selected); }
+        /* Let the round list wrap instead of truncating with an ellipsis. */
+        .round-hero-cell { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; }
+        .round-hero-text { white-space:normal; }
         .rhe-pencil { opacity:0; font-size:11px; color:#4f46e5; transition:opacity .15s; }
         .round-hero-edit:hover .rhe-pencil { opacity:1; }
 
