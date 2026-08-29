@@ -87,7 +87,7 @@
             <label>Round</label>
             <div class="round-hero-cell">
                 <span class="round-hero-edit" onclick="openModal('roundScheduleModal')" role="button" tabindex="0" title="Manage rounds — start the next round or fix dates">
-                    <span class="round-hero-text">{{ $endUser->started_rounds_short ?: 'Not started' }}</span>
+                    <span class="round-hero-text">{{ $endUser->started_rounds_full ?: 'Not started' }}</span>
                     <span class="rhe-pencil" aria-hidden="true">✎</span>
                 </span>
             </div>

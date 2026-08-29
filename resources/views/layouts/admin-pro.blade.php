@@ -385,7 +385,7 @@
     document.addEventListener('click', function (e) {
         var row = e.target.closest('tr[data-href]');
         if (!row) return;
-        if (e.target.closest('a, button, form, input, select, textarea, label')) return;
+        if (e.target.closest('a, button, form, input, select, textarea, label, .inline-edit, .no-link')) return;
         var url = row.getAttribute('data-href');
         if (e.metaKey || e.ctrlKey) { window.open(url, '_blank'); }
         else { window.location = url; }

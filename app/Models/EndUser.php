@@ -830,6 +830,12 @@ class EndUser extends Model
             ->implode(', ');
     }
 
+    /** Full comma list of the rounds actually started, e.g. "1st Round, 2nd Round". */
+    public function getStartedRoundsFullAttribute(): string
+    {
+        return implode(', ', array_keys($this->round_timeline));
+    }
+
     /**
      * The marked start date of the round the client is currently on, or null if
      * that round hasn't been started yet (no step logged for it). Every

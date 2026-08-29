@@ -43,7 +43,7 @@
                                 <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
                             </div>
                         </td>
-                        <td>{{ $eu->started_rounds_short ?: 'Not started' }}</td>
+                        <td>{{ $eu->started_rounds_full ?: 'Not started' }}</td>
                         <td><span class="re-type">{{ $eu->error_type ?: '—' }}</span></td>
                         <td>
                             <span class="re-resolved-at">

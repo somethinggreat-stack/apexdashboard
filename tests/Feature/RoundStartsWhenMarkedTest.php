@@ -164,6 +164,7 @@ class RoundStartsWhenMarkedTest extends TestCase
             'round_dates' => ['1st Round' => '2026-06-13', '2nd Round' => '2026-07-01'],
         ])->id);
         $this->assertSame('R1, R2', $eu->started_rounds_short);
+        $this->assertSame('1st Round, 2nd Round', $eu->started_rounds_full);
 
         // A never-started client has no short label (shows "Not started" in views).
         $this->assertSame('', $this->reload($this->client()->id)->started_rounds_short);

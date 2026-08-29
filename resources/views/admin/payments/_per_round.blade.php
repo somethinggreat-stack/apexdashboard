@@ -510,11 +510,15 @@
     // Confirm bulk action
     form.addEventListener('submit', function (e) {
         if (apply.disabled) { e.preventDefault(); return; }
+        e.preventDefault();
         var n = document.querySelectorAll('.row-check:checked').length;
         var round = roundPicker.value;
-        if (!confirm('Mark ' + n + ' client(s) paid for Round ' + round + '?')) {
-            e.preventDefault();
-        }
+        window.apexConfirmAction({
+            title: 'Mark ' + n + ' client(s) paid?',
+            message: 'This marks the selected client(s) paid for Round ' + round + " at each client's rate.",
+            okLabel: 'Mark Paid',
+            onConfirm: function () { form.submit(); }
+        });
     });
 
     updateCount();
@@ -584,12 +588,18 @@ window.openPayEdit = function (paymentId, amount, paidAt, method, notes) {
     document.getElementById('pe-method').value = method || '';
     document.getElementById('pe-notes').value = notes || '';
     document.getElementById('pe-delete').onclick = function () {
-        if (!confirm('Mark this round unpaid?')) return;
-        var f = document.getElementById('payDeleteForm');
-        var fd = new FormData(f);
-        fetch(f.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function () { closeModal('payEditModal'); apexRefreshPayments(); })
-            .catch(function () { window.location.reload(); });
+        window.apexConfirmDelete({
+            title: 'Mark this round unpaid?',
+            message: 'This removes the payment for this round. You can mark it paid again anytime.',
+            okLabel: 'Mark Unpaid',
+            onConfirm: function () {
+                var f = document.getElementById('payDeleteForm');
+                var fd = new FormData(f);
+                fetch(f.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function () { closeModal('payEditModal'); apexRefreshPayments(); })
+                    .catch(function () { window.location.reload(); });
+            }
+        });
     };
     openModal('payEditModal');
 };
@@ -616,10 +626,16 @@ window.apexRefreshPayments = function () {
         .then(function (r) { return r.text(); })
         .then(function (html) {
             var doc = new DOMParser().parseFromString(html, 'text/html');
-            var region = doc.querySelector('[data-payments-refresh]');
-            var cur = document.querySelector('[data-payments-refresh]');
-            if (region && cur) { cur.innerHTML = region.innerHTML; }
-            else { window.location.reload(); }
+            // Swap the stat cards (totals) and the matrix rows only — NOT the bulk
+            // bar, whose checkbox/select-all/apply listeners are bound per-element
+            // and would be lost. The row cells' forms and chip-edits are delegated,
+            // so the fresh squares keep working.
+            var ok = false;
+            ['.pay-stats', '.pay-matrix tbody'].forEach(function (sel) {
+                var nw = doc.querySelector(sel), cur = document.querySelector(sel);
+                if (nw && cur) { cur.innerHTML = nw.innerHTML; ok = true; }
+            });
+            if (! ok) { window.location.reload(); }
         })
         .catch(function () { window.location.reload(); });
 };
