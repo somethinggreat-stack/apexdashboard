@@ -141,7 +141,7 @@
                 <img class="brand-logo" src="{{ asset('Images/logo.png') }}" alt="Apex Growth Solutions">
                 <div class="portal-tag">VA Admin Portal</div>
                 <h1>Welcome back</h1>
-                <p class="sub">Sign in to continue to your workspace.</p>
+                <p class="sub">Sign in to your command center.</p>
 
                 @if (session('status'))
                     <div class="notice">
@@ -191,8 +191,8 @@
         <!-- RIGHT — brand / workspace preview -->
         <div class="pane-hero">
             <div class="hero-wrap">
-                <h2 class="hero-title">One workspace. <span>Complete control.</span></h2>
-                <p class="hero-sub">Manage clients, dispute rounds, tasks and results from one secure portal.</p>
+                <h2 class="hero-title">Every client. Every round. <span>Total control.</span></h2>
+                <p class="hero-sub">The command center for your whole team — track every client, dispute round and result in real time.</p>
 
                 <div class="cards">
                     <div class="glass">
@@ -226,8 +226,8 @@
                 </div>
 
                 <div class="pills">
-                    <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Centralized</span>
-                    <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Trackable</span>
+                    <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Organized</span>
+                    <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Real-time</span>
                     <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Secure</span>
                 </div>
             </div>
