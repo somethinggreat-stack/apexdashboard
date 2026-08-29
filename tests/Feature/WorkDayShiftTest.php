@@ -64,13 +64,18 @@ class WorkDayShiftTest extends TestCase
             'intake_token' => \Illuminate\Support\Str::random(20),
         ]);
 
-        // Three clients, each with a Week-1 step logged NOW (current shift).
+        // Three clients, each worked NOW (current shift): a round selected (drives
+        // the Daily Task) and its Week-1 dispute filed (drives the EOD "rounds
+        // sent"). Both signals land in the same shift window.
         foreach (['Alpha', 'Bravo', 'Charlie'] as $i => $name) {
             $eu = EndUser::create([
                 'client_id' => $bo->id, 'first_name' => $name, 'last_name' => 'C', 'suffix' => 'None',
                 'email' => strtolower($name) . '@t.com', 'current_address' => '1 St', 'city' => 'T',
                 'state' => 'ST', 'zipcode' => '12345', 'status' => 'active', 'start_date' => '2026-06-01',
                 'intake_status' => null, 'rounds' => ['1st Round'],
+            ]);
+            \App\Models\RoundSelection::create([
+                'end_user_id' => $eu->id, 'round' => 1, 'admin_id' => $super->id, 'created_at' => now(),
             ]);
             ProcessStep::create([
                 'end_user_id' => $eu->id, 'round' => 1, 'week' => 1,

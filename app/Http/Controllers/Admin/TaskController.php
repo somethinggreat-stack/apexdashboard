@@ -4,18 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EndUser;
-use App\Models\ProcessStep;
+use App\Models\RoundSelection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
  * Tasks View (internal) — the selected business owner's 30-day work log, built
- * from the same signal as the Daily Task page: a client counts on a day when a
- * Round-N Week-1 process step was logged (a round was started). Each task is
- * filed under the step's real logged time (created_at) in ET.
+ * from the same signal as the Daily Task page: a client counts on the day a VA
+ * SELECTED a new round for it (the round strip changed). Each entry is filed
+ * under the real selection time (created_at) in ET.
  *
- * This is the internal twin of the owner-facing Tasks View, and unlike that one
- * it DOES surface the VA who logged each step (super-admin/VA side only).
+ * Driven by round_selections, never process steps — so filling missing steps
+ * ("Mark All Incomplete Complete") never shows anyone as having worked a client.
+ * Unlike the owner-facing Tasks View, this one DOES surface the VA who selected
+ * each round (super-admin/VA side only).
  */
 class TaskController extends Controller
 {
@@ -35,35 +37,30 @@ class TaskController extends Controller
             return Str::before($label, ' Round') ?: "Round {$round}";
         };
 
-        ProcessStep::forClient($clientId)
+        RoundSelection::whereHas('endUser', fn ($q) => $q->where('client_id', $clientId))
             ->where('created_at', '>=', $cutoff)
-            ->where('week', 1)
-            ->with(['endUser', 'createdBy'])
+            ->with(['endUser', 'selectedBy'])
             ->orderBy('created_at')
             ->get()
-            ->each(function (ProcessStep $step) use (&$days, $roundWord) {
-                $eu = $step->endUser;
+            ->each(function (RoundSelection $sel) use (&$days, $roundWord) {
+                $eu = $sel->endUser;
                 if (!$eu) {
                     return;
                 }
-                $at     = $step->created_at->copy()->timezone(self::TZ);
+                $at     = $sel->created_at->copy()->timezone(self::TZ);
                 $dayKey = $at->format('Y-m-d');
                 $days[$dayKey] ??= ['date' => $at->copy()->startOfDay(), 'entries' => []];
 
-                $ek    = $eu->id . '-' . $step->round;
+                $ek    = $eu->id . '-' . $sel->round;
                 $entry = &$days[$dayKey]['entries'][$ek];
                 $entry ??= [
                     'eu'    => $eu->id,
                     'name'  => $eu->full_name,
-                    'round' => $roundWord((int) $step->round),
-                    'tasks' => [],
+                    'round' => $roundWord((int) $sel->round),
                     'vas'   => [],
                     'at'    => $at,
                 ];
-                if ($label = $step->step_type_label) {
-                    $entry['tasks'][$label] = true;
-                }
-                if ($va = $step->createdBy?->full_name) {
+                if ($va = $sel->selectedBy?->full_name) {
                     $entry['vas'][$va] = true;
                 }
                 if ($at->lt($entry['at'])) {
@@ -80,11 +77,9 @@ class TaskController extends Controller
 
         $clientIds     = [];
         $roundsStarted = 0;
-        $stepsLogged   = 0;
         foreach ($days as $d) {
             foreach ($d['entries'] as $e) {
                 $roundsStarted++;
-                $stepsLogged += count($e['tasks']);
                 $clientIds[$e['eu']] = true;
             }
         }
@@ -94,7 +89,6 @@ class TaskController extends Controller
             'windowDays'    => self::WINDOW_DAYS,
             'clientsWorked' => count($clientIds),
             'roundsStarted' => $roundsStarted,
-            'stepsLogged'   => $stepsLogged,
             'generatedAt'   => Carbon::now(),
         ]);
     }

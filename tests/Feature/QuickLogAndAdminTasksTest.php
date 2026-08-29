@@ -139,10 +139,10 @@ class QuickLogAndAdminTasksTest extends TestCase
         $bo = $this->bo($super, 30);
         $eu = $this->eu($bo);
 
-        ProcessStep::create([
-            'end_user_id' => $eu->id, 'round' => 2, 'week' => 1,
-            'step_type' => 'ex_tu_eq_letters_generated', 'step_date' => now()->toDateString(),
-            'created_by_admin_id' => $va->id,
+        // A round SELECTED by the VA (the round strip changed) — the signal the
+        // Tasks View is now built on, not process steps.
+        \App\Models\RoundSelection::create([
+            'end_user_id' => $eu->id, 'round' => 2, 'admin_id' => $va->id, 'created_at' => now(),
         ]);
 
         $resp = $this->actingAs($super, 'admin')

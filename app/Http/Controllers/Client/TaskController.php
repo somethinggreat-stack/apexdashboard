@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\EndUser;
-use App\Models\ProcessStep;
+use App\Models\RoundSelection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -12,12 +12,13 @@ use Illuminate\Support\Str;
 /**
  * Tasks View — the business owner's own 30-day work log, built from the exact
  * same signal as the internal Daily Task page: a client counts on a day when a
- * Round-N Week-1 process step was logged (i.e. a round was started). Each task
- * is filed under the step's real logged time (created_at) in ET, so it carries
- * the same day + timestamp it showed under on our side.
+ * VA SELECTED a new round for it (the round strip changed). Each entry is filed
+ * under the real selection time (created_at) in ET, so it carries the same day +
+ * timestamp it showed under on our side.
  *
- * Owner-facing, so VA/admin names are NEVER exposed here — only the client, the
- * round, the step performed, and when it was logged.
+ * Driven by round_selections, never process steps — so filling missing steps
+ * never shows up here. Owner-facing, so VA/admin names are NEVER exposed — only
+ * the client, the round, and when it was selected.
  */
 class TaskController extends Controller
 {
@@ -30,7 +31,6 @@ class TaskController extends Controller
         $cutoff   = Carbon::now()->subDays(self::WINDOW_DAYS);
 
         // 'Y-m-d' (ET) => ['date' => Carbon, 'entries' => [ euId-round => entry ]]
-        // entry = ['eu' => id, 'name' => , 'round' => '2nd', 'tasks' => [label=>true], 'at' => Carbon]
         $days = [];
 
         $roundWord = function (int $round) {
@@ -38,39 +38,31 @@ class TaskController extends Controller
             return Str::before($label, ' Round') ?: "Round {$round}";
         };
 
-        // Week-1 steps logged in the window (real created_at). Week 1 of any round
-        // = that round was started — the only thing that counts as a task, exactly
-        // like the internal Daily Task page.
-        ProcessStep::forClient($clientId)
+        RoundSelection::whereHas('endUser', fn ($q) => $q->where('client_id', $clientId))
             ->where('created_at', '>=', $cutoff)
-            ->where('week', 1)
             ->with('endUser')
             ->orderBy('created_at')
             ->get()
-            ->each(function (ProcessStep $step) use (&$days, $roundWord) {
-                $eu = $step->endUser;
+            ->each(function (RoundSelection $sel) use (&$days, $roundWord) {
+                $eu = $sel->endUser;
                 if (!$eu) {
                     return;
                 }
-                $at     = $step->created_at->copy()->timezone(self::TZ);
+                $at     = $sel->created_at->copy()->timezone(self::TZ);
                 $dayKey = $at->format('Y-m-d');
                 $days[$dayKey] ??= ['date' => $at->copy()->startOfDay(), 'entries' => []];
 
                 // One entry per (client, round) per day — a single round-start event.
-                $ek    = $eu->id . '-' . $step->round;
+                $ek    = $eu->id . '-' . $sel->round;
                 $entry = &$days[$dayKey]['entries'][$ek];
                 $entry ??= [
                     'eu'    => $eu->id,
                     'name'  => $eu->full_name,
-                    'round' => $roundWord((int) $step->round),
-                    'tasks' => [],
+                    'round' => $roundWord((int) $sel->round),
                     'at'    => $at,
                 ];
-                if ($label = $step->step_type_label) {
-                    $entry['tasks'][$label] = true;   // dedup identical step labels
-                }
                 if ($at->lt($entry['at'])) {
-                    $entry['at'] = $at;               // earliest logged time that day
+                    $entry['at'] = $at;               // earliest selection time that day
                 }
                 unset($entry);
             });
@@ -85,11 +77,9 @@ class TaskController extends Controller
         // Headline tiles for the window.
         $clientIds     = [];
         $roundsStarted = 0;
-        $stepsLogged   = 0;
         foreach ($days as $d) {
             foreach ($d['entries'] as $e) {
                 $roundsStarted++;
-                $stepsLogged += count($e['tasks']);
                 $clientIds[$e['eu']] = true;
             }
         }
@@ -99,7 +89,6 @@ class TaskController extends Controller
             'windowDays'    => self::WINDOW_DAYS,
             'clientsWorked' => count($clientIds),
             'roundsStarted' => $roundsStarted,
-            'stepsLogged'   => $stepsLogged,
             'generatedAt'   => Carbon::now(),
         ]);
     }

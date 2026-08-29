@@ -45,7 +45,7 @@
     </div>
     <p style="margin:0; padding:0 22px 6px; font-size:13px; color:var(--pro-muted);">
         {{ $isCurrent ? 'Current shift' : 'Shift of' }} <strong>{{ $workLabel }}</strong> — the 4 PM → 10 AM (PKT) work-day.
-        Clients a VA started a round for (a Round-N Week&nbsp;1 step logged).
+        Clients a VA selected a new round for (the round strip changed).
         Generated {{ $generatedAt->format('M j, Y g:i A') }} PKT.
     </p>
 </div>
@@ -104,7 +104,7 @@
             <span class="dt-stat-label">Clients Worked</span>
         </div>
         <div class="dt-stat-val">{{ number_format($clientCount) }}</div>
-        <div class="dt-stat-sub">Rounds started · this shift</div>
+        <div class="dt-stat-sub">Moved onto a new round this shift</div>
     </div>
     <div class="dt-stat dt-accent-green">
         <div class="dt-stat-top">
@@ -116,11 +116,11 @@
     </div>
     <div class="dt-stat dt-accent-amber">
         <div class="dt-stat-top">
-            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-            <span class="dt-stat-label">Process Steps Logged</span>
+            <span class="dt-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+            <span class="dt-stat-label">Rounds Selected</span>
         </div>
-        <div class="dt-stat-val">{{ number_format($stepCount) }}</div>
-        <div class="dt-stat-sub">Week-1 steps in the window</div>
+        <div class="dt-stat-val">{{ number_format($roundCount) }}</div>
+        <div class="dt-stat-sub">New rounds started this shift</div>
     </div>
 </div>
 

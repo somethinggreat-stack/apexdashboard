@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Admin;
 use App\Models\Client;
 use App\Models\EndUser;
-use App\Models\ProcessStep;
+use App\Models\RoundSelection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,60 +43,33 @@ class DailyTaskTest extends TestCase
     {
         $this->seedWorld();
 
-        // A VA who marks a Week-1 step in the window → the client + this VA appear.
+        // A VA who selects a round in the window → the client + this VA appear.
         $va = new Admin(['email' => 'bea@test.com', 'password' => 'secret', 'full_name' => 'Bea']);
         $va->role = 'va';
         $va->parent_admin_id = $this->super->id;
         $va->save();
 
-        // Recent Week-1 step, marked by a VA → client + VA + step appear.
+        // Round selected this shift, by a VA → client + VA + round appear.
         $worked = $this->eu('Recent Worked', 'approved', 'w@test.com');
-        ProcessStep::create([
-            'end_user_id' => $worked->id, 'round' => 1, 'week' => 1,
-            'step_type' => 'ex_tu_eq_letters_generated', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $va->id,
+        RoundSelection::create([
+            'end_user_id' => $worked->id, 'round' => 2, 'admin_id' => $va->id, 'created_at' => now(),
         ]);
 
-        // Moved to Clients/Done in the window, but its only Week-1 step is OLD
-        // (13h ago). Being listed is NOT work → must NOT appear.
-        $listed = $this->eu('Merely Listed', 'done', 'l@test.com');
-        $this->assertNotNull($listed->fresh()->listed_at);
-        $listedStep = ProcessStep::create([
-            'end_user_id' => $listed->id, 'round' => 1, 'week' => 1,
-            'step_type' => 'ftc_and_freezes', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $this->super->id,
-        ]);
-        ProcessStep::where('id', $listedStep->id)->update(['created_at' => now()->subDays(2)]);
-
-        // Old step (13h ago) → hidden.
+        // A round selected two days ago → outside this shift, must NOT appear.
         $old = $this->eu('Old Worked', 'approved', 'o@test.com');
-        $oldStep = ProcessStep::create([
-            'end_user_id' => $old->id, 'round' => 1, 'week' => 1,
-            'step_type' => 'phone_call_disputes', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $this->super->id,
-        ]);
-        ProcessStep::where('id', $oldStep->id)->update(['created_at' => now()->subDays(2)]);
-
-        // Recent step but NOT week 1 (a later-week CFPB, like the reported bug) → hidden.
-        $laterWeek = $this->eu('Later Week Only', 'approved', 'f@test.com');
-        ProcessStep::create([
-            'end_user_id' => $laterWeek->id, 'round' => 1, 'week' => 2,
-            'step_type' => 'cfpb_3b_and_innovis', 'step_date' => '2026-06-02',
-            'created_by_admin_id' => $this->super->id,
+        RoundSelection::create([
+            'end_user_id' => $old->id, 'round' => 1, 'admin_id' => $this->super->id,
+            'created_at' => now()->subDays(2),
         ]);
 
         $resp = $this->actingAs($this->super, 'admin')->get('/admin/daily-task')->assertOk();
 
         $resp->assertSee('Alin');            // business owner block
-        $resp->assertSee('Recent Worked');   // via in-window Week-1 step
-        $resp->assertSee('Bea');             // the VA who logged it
-        $resp->assertSee('EX, TU, EQ Letter Generated'); // what was marked
+        $resp->assertSee('Recent Worked');   // via in-window round selection
+        $resp->assertSee('Bea');             // the VA who selected it
+        $resp->assertSee('2nd Round');       // the round that was selected
 
-        $resp->assertDontSee('Merely Listed'); // moved to Done, no in-window step → excluded
-        $resp->assertDontSee('Old Worked');
-        $resp->assertDontSee('Later Week Only');     // week 2 step → excluded (only week 1 counts)
-        $resp->assertDontSee('Phone Call Disputes'); // the old step's label must not leak
-        $resp->assertDontSee('New to Clients');      // the listed concept is gone
+        $resp->assertDontSee('Old Worked');  // selection outside this shift → excluded
     }
 
     public function test_super_and_va_can_open_daily_task_but_leads_cannot(): void

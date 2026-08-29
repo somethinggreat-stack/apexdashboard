@@ -82,11 +82,10 @@ class EndUserController extends Controller
     /** Log each flagged client's missing regular weekly steps — never the closeout steps. Returns count logged. */
     private function logMissingWeeklySteps($clients, int $adminId): int
     {
-        $today  = now()->toDateString();
         $logged = 0;
 
         foreach ($clients as $eu) {
-            // Nothing to log for a round that hasn't been started (no Week 1 yet).
+            // Nothing to log for a round that hasn't been started (no start date yet).
             $start = $eu->current_round_start_date;
             if (! $start) {
                 continue;
@@ -99,10 +98,19 @@ class EndUserController extends Controller
             $byWeek = ProcessStep::stepTypesByWeek($eu->roundCycleDays());
             $steps  = $eu->relationLoaded('processSteps') ? $eu->processSteps : $eu->processSteps()->get();
 
-            // Fill in order, current round only. Each due week's missing regular
-            // steps are completed before the next week — so this can never create
-            // the out-of-order state the manual step-lock forbids, and it stays
-            // correct on Round 2+ (the old cross-round counter did neither).
+            // What's already logged for this round, by week, plus each week's existing
+            // step date — so a filled step lands on the SAME day as its siblings.
+            $done      = [];
+            $weekDates = [];
+            foreach ($steps->where('round', $round) as $s) {
+                $done[$s->week][$s->step_type] = true;
+                $weekDates[$s->week][] = \Carbon\Carbon::parse($s->step_date)->toDateString();
+            }
+
+            // Fill each DUE week's missing regular steps (closeout is never touched).
+            // A filled step is dated to that week's real date — the earliest date its
+            // sibling steps already carry, or the week's due-day for that round if the
+            // week is empty. Never "today": that's what split Week 1 across two dates.
             for ($w = 1; $w <= $count; $w++) {
                 $regular = array_values(array_diff(array_keys($byWeek[$w] ?? []), EndUser::CLOSEOUT_STEPS));
                 if (empty($regular)) {
@@ -110,12 +118,15 @@ class EndUserController extends Controller
                 }
                 $dueDay = (($w - 1) * $wk) + 1;
                 if ($days < $dueDay) {
-                    break;   // this week (and every later one) isn't due yet
+                    break;      // this week (and every later one) isn't due yet
                 }
 
-                $already = $steps->where('round', $round)->where('week', $w)->pluck('step_type')->all();
+                $stepDate = ! empty($weekDates[$w])
+                    ? min($weekDates[$w])                                   // match the siblings' day
+                    : $sd->copy()->addDays(($w - 1) * $wk)->toDateString(); // empty week → its due-day
+
                 foreach ($regular as $type) {
-                    if (in_array($type, $already, true)) {
+                    if (! empty($done[$w][$type])) {
                         continue;
                     }
                     ProcessStep::create([
@@ -123,9 +134,11 @@ class EndUserController extends Controller
                         'round'               => $round,
                         'week'                => $w,
                         'step_type'           => $type,
-                        'step_date'           => $today,
+                        'step_date'           => $stepDate,
                         'created_by_admin_id' => $adminId,
                     ]);
+                    $done[$w][$type]     = true;
+                    $weekDates[$w][]     = $stepDate;
                     $logged++;
                 }
             }

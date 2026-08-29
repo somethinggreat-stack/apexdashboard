@@ -10,8 +10,8 @@
         <span class="tv-count">{{ number_format($clientsWorked) }} {{ $clientsWorked === 1 ? 'client' : 'clients' }} · last {{ $windowDays }} days</span>
     </div>
     <p class="muted" style="margin:8px 0 0; font-size:13px;">
-        A day-by-day record of the rounds our team started for this owner's clients over the last {{ $windowDays }} days,
-        with the VA who logged each one and the exact time (ET). Same signal as the Daily Task page.
+        A day-by-day record of the rounds our team selected for this owner's clients over the last {{ $windowDays }} days,
+        with the VA who selected each one and the exact time (ET). Same signal as the Daily Task page.
         Generated {{ $generatedAt->timezone('America/New_York')->format('M j, Y g:i A') }} ET.
     </p>
 </div>
@@ -35,11 +35,11 @@
     </div>
     <div class="tv-stat tv-amber">
         <div class="tv-stat-top">
-            <span class="tv-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-            <span class="tv-stat-label">Process Steps Logged</span>
+            <span class="tv-stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
+            <span class="tv-stat-label">Active Days</span>
         </div>
-        <div class="tv-stat-val">{{ number_format($stepsLogged) }}</div>
-        <div class="tv-stat-sub">Week-1 steps in the window</div>
+        <div class="tv-stat-val">{{ number_format(count($days)) }}</div>
+        <div class="tv-stat-sub">Days with a round selected</div>
     </div>
 </div>
 
@@ -64,9 +64,6 @@
                             <span class="tv-round">{{ $e['round'] }} Round started</span>
                             @if (!empty($e['vas']))<span class="tv-va">{{ implode(', ', array_keys($e['vas'])) }}</span>@endif
                         </div>
-                        @if (!empty($e['tasks']))
-                            <div class="tv-tasks">{{ implode('  ·  ', array_keys($e['tasks'])) }}</div>
-                        @endif
                     </div>
                     <span class="tv-time">{{ $e['at']->format('g:i A') }} ET</span>
                 </li>

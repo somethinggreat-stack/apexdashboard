@@ -70,6 +70,25 @@ class EndUser extends Model
             \App\Models\ClientEvent::log($user, 'created', 'Client added to ' . \App\Models\ClientEvent::bucketLabel($user->intake_status, (bool) $user->held_at));
         });
         static::updated(function (EndUser $user) {
+            // Round selection — the ONLY signal the Daily Task / Tasks View trust.
+            // Every path that grows the rounds array runs through here (the round
+            // picker, a first step marking a round, a closeout advancing to the
+            // next), so each newly-reached round is stamped once with who selected
+            // it. Filling missing steps never grows rounds, so it credits no one.
+            if ($user->wasChanged('rounds')) {
+                $before = collect($user->getOriginal('rounds') ?? []);
+                foreach (collect($user->rounds ?? [])->diff($before) as $label) {
+                    $n = array_search($label, self::ROUND_OPTIONS, true);
+                    if ($n !== false) {
+                        \App\Models\RoundSelection::create([
+                            'end_user_id' => $user->id,
+                            'round'       => $n + 1,
+                            'admin_id'    => \Illuminate\Support\Facades\Auth::guard('admin')->id(),
+                        ]);
+                    }
+                }
+            }
+
             if ($user->wasChanged('intake_status')) {
                 $reason = $user->move_reason ? " — {$user->move_reason}" : '';
                 \App\Models\ClientEvent::log($user, 'moved', 'Moved to ' . \App\Models\ClientEvent::bucketLabel($user->intake_status, false) . $reason);
