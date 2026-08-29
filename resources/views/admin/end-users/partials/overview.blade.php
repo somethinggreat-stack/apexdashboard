@@ -99,28 +99,34 @@
         $statusMessage = "Time to log Week {$missingWeek} — keep the momentum going.";
     }
 
-    // Week 1 progress display — match the mockup's per-step list
-    $week1Types = $stepTypesByWeek[1] ?? [];
-    $week1Display = [];
-    $hitInProgress = false;
-    $stepIdx = 0;
-    foreach ($week1Types as $key => $label) {
-        $stepIdx++;
-        $done = in_array($key, $loggedTypes, true);
-        $cleanLabel = preg_replace('/^Step \d+:\s*/', '', $label);
-        if ($done) {
-            $state = 'completed';
-        } elseif (!$hitInProgress) {
-            $state = 'in_progress';
-            $hitInProgress = true;
-        } else {
-            $state = 'upcoming';
+    // Full current-round progress, week by week. Each week lists its steps with
+    // a status, shows its due date, and the NEXT week to work is flagged from the
+    // step-lock frontier — so this reads as the whole round, not just Week 1.
+    $nextStep = $endUser->nextWorkable();          // {round, week} the team should work
+    $timelineWeeks = [];
+    foreach ($stepTypesByWeek as $wk => $types) {
+        $rows = [];
+        $hitInProgress = false;
+        $isFrontierWeek = ($nextStep['round'] === $currentRoundNum && $nextStep['week'] === $wk);
+        foreach ($types as $key => $label) {
+            $done = in_array($key, $loggedTypes, true);
+            if ($done) {
+                $state = 'completed';
+            } elseif ($isFrontierWeek && ! $hitInProgress) {
+                $state = 'in_progress';
+                $hitInProgress = true;
+            } else {
+                $state = 'upcoming';
+            }
+            $rows[] = ['label' => preg_replace('/^Step \d+:\s*/', '', $label), 'state' => $state];
         }
-        $week1Display[] = [
-            'num'   => $stepIdx,
-            'label' => $cleanLabel,
-            'state' => $state,
-            'date'  => $markedStart ? \Carbon\Carbon::parse($markedStart)->copy()->addDays($stepIdx - 1)->format('M d, Y') : '—',
+        $dueDay = (($wk - 1) * $weekLen) + 1;
+        $timelineWeeks[] = [
+            'week'   => $wk,
+            'due'    => $markedStart ? \Carbon\Carbon::parse($markedStart)->copy()->addDays($dueDay - 1)->format('M d, Y') : '—',
+            'steps'  => $rows,
+            'isNext' => $isFrontierWeek,
+            'done'   => $endUser->weekFullyLogged($currentRoundNum, $wk),
         ];
     }
 
@@ -341,30 +347,44 @@
                     @endif
                 </div>
 
-                <div class="ov-round-chip">ROUND {{ $currentRoundNum }}</div>
+                <div class="ov-round-chip">ROUND {{ $currentRoundNum }}@if (!$everStarted) · NOT STARTED @endif</div>
 
-                <div class="ov-timeline">
-                    @foreach ($week1Display as $item)
-                        <div class="ov-tl-row">
-                            <div class="ov-tl-bubble ov-tl-{{ $item['state'] }}">
-                                @if ($item['state'] === 'completed')
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                @else
-                                    {{ $item['num'] }}
-                                @endif
-                            </div>
-                            <div class="ov-tl-label">{{ $item['label'] }}</div>
-                            <div class="ov-tl-pill ov-tl-pill-{{ $item['state'] }}">
-                                @switch($item['state'])
-                                    @case('completed') Completed @break
-                                    @case('in_progress') In Progress @break
-                                    @default Upcoming
-                                @endswitch
-                            </div>
-                            <div class="ov-tl-date">{{ $item['date'] }}</div>
+                @foreach ($timelineWeeks as $tw)
+                    <div class="ov-tl-week {{ $tw['isNext'] ? 'is-next' : '' }} {{ $tw['done'] ? 'is-done' : '' }}">
+                        <div class="ov-tl-week-head">
+                            <span class="ov-tl-week-name">Week {{ $tw['week'] }}</span>
+                            @if ($tw['done'])
+                                <span class="ov-tl-week-tag done">Complete</span>
+                            @elseif ($tw['isNext'])
+                                <span class="ov-tl-week-tag next">Work next</span>
+                            @else
+                                <span class="ov-tl-week-tag locked">Locked</span>
+                            @endif
+                            <span class="ov-tl-week-due">Due {{ $tw['due'] }}</span>
                         </div>
-                    @endforeach
-                </div>
+                        <div class="ov-timeline">
+                            @foreach ($tw['steps'] as $i => $item)
+                                <div class="ov-tl-row">
+                                    <div class="ov-tl-bubble ov-tl-{{ $item['state'] }}">
+                                        @if ($item['state'] === 'completed')
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        @else
+                                            {{ $i + 1 }}
+                                        @endif
+                                    </div>
+                                    <div class="ov-tl-label">{{ $item['label'] }}</div>
+                                    <div class="ov-tl-pill ov-tl-pill-{{ $item['state'] }}">
+                                        @switch($item['state'])
+                                            @case('completed') Completed @break
+                                            @case('in_progress') In Progress @break
+                                            @default Upcoming
+                                        @endswitch
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
 
                 <button class="ov-link-btn" type="button" onclick="document.querySelector('[data-target=tab-timeline]').click()">View All Steps &rarr;</button>
             </div>
@@ -709,12 +729,31 @@
         padding: 4px 12px; border-radius: 999px;
         margin-bottom: 12px;
     }
+    /* Per-week group in the current-round timeline. */
+    #tab-overview .ov-tl-week {
+        border: 1px solid var(--border); border-radius: 12px;
+        padding: 10px 14px 4px; margin-bottom: 10px; background: var(--surface);
+    }
+    #tab-overview .ov-tl-week.is-done { background: var(--surface-2); opacity: .92; }
+    #tab-overview .ov-tl-week.is-next { border-color: #c7d2fe; box-shadow: 0 0 0 1px #c7d2fe inset; }
+    #tab-overview .ov-tl-week-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    #tab-overview .ov-tl-week-name { font-size: 12.5px; font-weight: 800; color: var(--text); letter-spacing: .02em; }
+    #tab-overview .ov-tl-week-tag {
+        font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+        padding: 2px 8px; border-radius: 999px;
+    }
+    #tab-overview .ov-tl-week-tag.done   { background: #d1fae5; color: #065f46; }
+    #tab-overview .ov-tl-week-tag.next   { background: #eef2ff; color: #4338ca; }
+    #tab-overview .ov-tl-week-tag.locked { background: var(--surface-2); color: var(--muted); }
+    #tab-overview .ov-tl-week-due { margin-left: auto; font-size: 11px; color: var(--muted); }
+    #tab-overview .ov-tl-week.is-done .ov-tl-row .ov-tl-bubble.ov-tl-upcoming { opacity: .6; }
+
     #tab-overview .ov-timeline { display: flex; flex-direction: column; gap: 4px; }
     #tab-overview .ov-tl-row {
         display: grid;
-        grid-template-columns: 36px 1fr auto auto;
+        grid-template-columns: 36px 1fr auto;
         align-items: center; gap: 12px;
-        padding: 10px 4px;
+        padding: 8px 4px;
         border-bottom: 1px solid var(--surface-2);
     }
     #tab-overview .ov-tl-row:last-child { border-bottom: 0; }
