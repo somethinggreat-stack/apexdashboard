@@ -189,22 +189,46 @@
             }
         }
 
-        /* Round picker pills — matches the round popup on the client/list views,
-           replaces the old "hold Ctrl to multi-select" box. The checkbox is the
-           real form control (submits rounds[]); the pill just styles it. */
-        .round-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
+        /* Round picker — number-forward cards with a gradient selected state and a
+           corner check badge. The checkbox is the real form control (submits
+           rounds[]); the pill just styles it. Selection is driven by :has() with a
+           .is-on class fallback for older engines. */
+        .round-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
         .round-pick-pill {
-            position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-            padding: 9px 6px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700;
-            background: var(--surface-2); color: var(--muted); border: 1.5px solid var(--border);
-            transition: background .12s, color .12s, border-color .12s; user-select: none;
+            position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px; padding: 12px 8px 11px; border-radius: 14px; cursor: pointer; overflow: hidden;
+            background: var(--surface-2, #f8fafc); border: 1.5px solid var(--border, #e6ebf2);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .05); user-select: none;
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
         }
         .round-pick-pill input { position: absolute; opacity: 0; width: 0; height: 0; }
-        .round-pick-check { opacity: 0; font-size: 11px; transition: opacity .12s; }
-        .round-pick-pill:hover { border-color: #4f46e5; }
-        .round-pick-pill.is-on, .round-pick-pill:has(input:checked) { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
-        .round-pick-pill.is-on .round-pick-check, .round-pick-pill:has(input:checked) .round-pick-check { opacity: 1; }
-        @media (max-width: 520px) { .round-pick { grid-template-columns: repeat(3, 1fr); } }
+        .round-pick-pill .rp-lbl {
+            font-size: 9.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+            color: var(--muted, #94a3b8); transition: color .15s;
+        }
+        .round-pick-pill .rp-num {
+            font-size: 19px; font-weight: 800; line-height: 1; color: var(--text, #334155); transition: color .15s;
+        }
+        .round-pick-pill .rp-badge {
+            position: absolute; top: 6px; right: 6px; width: 17px; height: 17px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: #fff; color: #4338ca; box-shadow: 0 1px 4px rgba(67, 56, 202, .45);
+            opacity: 0; transform: scale(.4); transition: opacity .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1);
+        }
+        .round-pick-pill .rp-badge svg { width: 10px; height: 10px; }
+        .round-pick-pill:hover { transform: translateY(-2px); border-color: #a5b4fc; box-shadow: 0 6px 16px rgba(79, 70, 229, .15); }
+        .round-pick-pill:focus-within { outline: 2px solid #6366f1; outline-offset: 2px; }
+
+        .round-pick-pill.is-on, .round-pick-pill:has(input:checked) {
+            background: linear-gradient(140deg, #6366f1, #4338ca); border-color: transparent;
+            box-shadow: 0 8px 20px rgba(67, 56, 202, .32);
+        }
+        .round-pick-pill.is-on .rp-lbl, .round-pick-pill:has(input:checked) .rp-lbl { color: rgba(255, 255, 255, .82); }
+        .round-pick-pill.is-on .rp-num, .round-pick-pill:has(input:checked) .rp-num { color: #fff; }
+        .round-pick-pill.is-on .rp-badge, .round-pick-pill:has(input:checked) .rp-badge { opacity: 1; transform: scale(1); }
+        .round-pick-pill.is-on:hover, .round-pick-pill:has(input:checked):hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(67, 56, 202, .42); }
+
+        @media (max-width: 520px) { .round-pick { grid-template-columns: repeat(3, 1fr); gap: 8px; } }
     </style>
     @endpush
 </div>
@@ -817,8 +841,9 @@
                             @foreach (\App\Models\EndUser::ROUND_OPTIONS as $i => $round)
                                 <label class="round-pick-pill">
                                     <input type="checkbox" name="rounds[]" value="{{ $round }}" @checked(in_array($round, $selectedRounds, true))>
-                                    <span class="round-pick-check">✓</span>
-                                    <span>Round {{ $i + 1 }}</span>
+                                    <span class="rp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    <span class="rp-lbl">Round</span>
+                                    <span class="rp-num">{{ $i + 1 }}</span>
                                 </label>
                             @endforeach
                         </div>
