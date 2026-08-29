@@ -35,7 +35,7 @@ class ProcessStepController extends Controller
 
         $data = $request->validate([
             'end_user_id'                  => ['required', $endUserRule],
-            'round'                        => 'required|integer|between:1,8',
+            'round'                        => 'required|integer|between:1,15',
             'week'                         => "required|integer|between:1,{$weekCount}",
             'step_types'                   => 'required|array|min:1',
             'step_types.*'                 => ['string', Rule::in($allowedSteps ?: array_keys(ProcessStep::allStepTypes()))],
@@ -167,11 +167,7 @@ class ProcessStepController extends Controller
     private function advanceRoundFor(int $endUserId, int $completedRound): void
     {
         $nextRound = $completedRound + 1;
-        $labelMap  = [
-            1 => '1st Round', 2 => '2nd Round', 3 => '3rd Round', 4 => '4th Round',
-            5 => '5th Round', 6 => '6th Round', 7 => '7th Round', 8 => '8th Round',
-        ];
-        $nextLabel = $labelMap[$nextRound] ?? null;
+        $nextLabel = EndUser::ROUND_OPTIONS[$nextRound - 1] ?? null;
         if (!$nextLabel) return;
 
         $endUser = EndUser::find($endUserId);
@@ -220,7 +216,7 @@ class ProcessStepController extends Controller
 
         return $request->validate([
             'end_user_id' => $creating ? ['required', $endUserRule] : ['sometimes', $endUserRule],
-            'round' => "$required|integer|between:1,8",
+            'round' => "$required|integer|between:1,15",
             'week' => "$required|integer|between:1,{$weekCount}",
             'step_type' => [$creating ? 'required' : 'sometimes', 'string', Rule::in($allowedSteps ?: array_keys(ProcessStep::allStepTypes()))],
             'step_date' => "$required|date",

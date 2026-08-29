@@ -60,7 +60,7 @@ class NegativeItemController extends Controller
 
         $validated = $request->validate([
             'resolved_on'    => 'nullable|date',
-            'resolved_round' => 'nullable|integer|min:1|max:8',
+            'resolved_round' => 'nullable|integer|min:1|max:15',
         ]);
 
         $date  = !empty($validated['resolved_on']) ? Carbon::parse($validated['resolved_on']) : now();

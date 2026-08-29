@@ -1024,7 +1024,7 @@ class EndUserController extends Controller
             'error_type'                  => 'sometimes|nullable|string|max:120',
             'reason'                      => 'sometimes|nullable|string|max:1000',
             'status'                      => 'sometimes|in:active,paused,graduated,cancelled',
-            'rounds'                      => 'nullable|array|max:8',
+            'rounds'                      => 'nullable|array|max:15',
             'rounds.*'                    => 'in:' . implode(',', EndUser::ROUND_OPTIONS),
             'collage'                     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ];

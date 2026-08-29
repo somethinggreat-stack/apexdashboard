@@ -81,7 +81,7 @@ class PaymentController extends Controller
 
         $data = $request->validate([
             'end_user_id' => ['required', $endUserRule],
-            'round'       => 'required|integer|between:1,8',
+            'round'       => 'required|integer|between:1,15',
             'amount'      => 'nullable|numeric|min:0',
             'paid_at'     => 'nullable|date',
             'method'      => 'nullable|string|max:50',
@@ -214,7 +214,7 @@ class PaymentController extends Controller
         $data = $request->validate([
             'end_user_ids'   => 'required|array|min:1',
             'end_user_ids.*' => ['integer', Rule::exists('end_users', 'id')->where(fn ($q) => $q->where('client_id', $client->id))],
-            'round'          => 'required|integer|between:1,8',
+            'round'          => 'required|integer|between:1,15',
         ]);
 
         $today = now()->toDateString();
@@ -262,10 +262,7 @@ class PaymentController extends Controller
             ->get();
         $endUsers->each(fn ($eu) => $eu->setRelation('client', $client));
 
-        $roundLabelToNum = [
-            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
-            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
-        ];
+        $roundLabelToNum = array_map(fn ($i) => $i + 1, array_flip(\App\Models\EndUser::ROUND_OPTIONS));
 
         $today   = now()->toDateString();
         $adminId = Auth::guard('admin')->id();
@@ -344,7 +341,7 @@ class PaymentController extends Controller
         $endUser = EndUser::forClient($client->id)->findOrFail($id);
 
         $data = $request->validate([
-            'round'         => 'required|integer|between:1,8',
+            'round'         => 'required|integer|between:1,15',
             'per_round_fee' => 'nullable|numeric|min:0|max:100000',
             'apply_all'     => 'nullable|boolean',
         ]);
@@ -505,13 +502,10 @@ class PaymentController extends Controller
 
         $rate = (float) ($client->per_round_fee ?? 0);
 
-        $roundLabelToNum = [
-            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
-            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
-        ];
+        $roundLabelToNum = array_map(fn ($i) => $i + 1, array_flip(\App\Models\EndUser::ROUND_OPTIONS));
 
         $unpaidItems   = [];
-        $unpaidByRound = [1=>0, 2=>0, 3=>0, 4=>0, 5=>0, 6=>0, 7=>0, 8=>0];
+        $unpaidByRound = array_fill(1, count(EndUser::ROUND_OPTIONS), 0);   // R1..R15
         $totalUnpaid   = 0.0;
         // Rounds done free of charge. They're "paid" at $0 so they never show as
         // unpaid — but the BO should still see the round was delivered as a
@@ -534,7 +528,7 @@ class PaymentController extends Controller
             }
 
             $cells = [];
-            for ($r = 1; $r <= 8; $r++) {
+            for ($r = 1; $r <= count(EndUser::ROUND_OPTIONS); $r++) {
                 $isPaid = $paidByRound->has($r);
                 $cells[$r] = [
                     'state'   => $isPaid ? 'paid' : 'unpaid',

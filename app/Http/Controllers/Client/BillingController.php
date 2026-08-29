@@ -89,10 +89,7 @@ class BillingController extends Controller
      */
     private function buildPerRoundOutstanding($client): array
     {
-        $roundLabelToNum = [
-            '1st Round' => 1, '2nd Round' => 2, '3rd Round' => 3, '4th Round' => 4,
-            '5th Round' => 5, '6th Round' => 6, '7th Round' => 7, '8th Round' => 8,
-        ];
+        $roundLabelToNum = array_map(fn ($i) => $i + 1, array_flip(\App\Models\EndUser::ROUND_OPTIONS));
 
         $endUsers = EndUser::forClient($client->id)
             ->billableList()   // real Clients + Round Errors — bill rounds already done
