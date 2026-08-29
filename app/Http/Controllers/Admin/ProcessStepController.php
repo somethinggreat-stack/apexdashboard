@@ -118,7 +118,10 @@ class ProcessStepController extends Controller
             ProcessStep::create($shared + ['step_type' => $type]);
             $created++;
 
-            if ($type === 'record_deletions' && (int) $data['week'] === 4) {
+            // Closeout lives in the cycle's LAST week — Week 3 for a 20-day owner,
+            // Week 4 for a 30-day owner — so key on $weekCount, not a literal 4,
+            // or 20-day clients never auto-advance to the next round.
+            if ($type === 'record_deletions' && (int) $data['week'] === $weekCount) {
                 $this->advanceRoundFor((int) $data['end_user_id'], (int) $data['round']);
             }
         }

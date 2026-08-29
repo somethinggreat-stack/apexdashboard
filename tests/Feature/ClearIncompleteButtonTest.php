@@ -103,6 +103,49 @@ class ClearIncompleteButtonTest extends TestCase
         $this->assertTrue($eu->fresh()->closeout_due);
     }
 
+    public function test_button_never_logs_closeout_on_any_round_or_cycle(): void
+    {
+        $super = $this->world['super'];
+        // A 20-day BO — closeout lives in Week 3 (alongside the aggressive step).
+        $bo = Client::create([
+            'admin_id' => $super->id, 'business_name' => 'BO20', 'email' => 'bo20@t.com',
+            'password' => 'x', 'monthly_fee' => 0, 'status' => 'active',
+            'compensation_model' => 'per_round', 'per_round_fee' => 15, 'round_cycle_days' => 20,
+            'intake_token' => \Illuminate\Support\Str::random(20),
+        ]);
+        // On Round 2, well past due, Round 1 fully done (closeout included), Round 2 barely started.
+        $eu = EndUser::create([
+            'client_id' => $bo->id, 'first_name' => 'Two', 'last_name' => 'Round', 'suffix' => 'None',
+            'email' => 'tworound@t.com', 'current_address' => '1 St', 'city' => 'T', 'state' => 'ST',
+            'zipcode' => '12345', 'status' => 'active', 'start_date' => now()->subDays(60)->toDateString(),
+            'intake_status' => null, 'rounds' => ['1st Round', '2nd Round'],
+            'round_dates' => [
+                '1st Round' => now()->subDays(60)->toDateString(),
+                '2nd Round' => now()->subDays(30)->toDateString(),
+            ],
+        ]);
+        foreach (ProcessStep::stepTypesByWeek(20) as $w => $steps) {   // Round 1: everything
+            foreach (array_keys($steps) as $type) {
+                ProcessStep::create(['end_user_id' => $eu->id, 'round' => 1, 'week' => $w, 'step_type' => $type,
+                    'step_date' => now()->subDays(55)->toDateString(), 'created_by_admin_id' => $super->id]);
+            }
+        }
+        ProcessStep::create(['end_user_id' => $eu->id, 'round' => 2, 'week' => 1, 'step_type' => 'ex_tu_eq_letters_generated',
+            'step_date' => now()->subDays(30)->toDateString(), 'created_by_admin_id' => $super->id]);
+
+        $closeoutBefore = ProcessStep::where('end_user_id', $eu->id)->whereIn('step_type', EndUser::CLOSEOUT_STEPS)->count();
+
+        $this->actingAs($super, 'admin')->post(route('admin.end-users.clear-incomplete-all'))->assertRedirect();
+
+        // It DID fill missing Round-2 regular steps…
+        $this->assertGreaterThan(0, ProcessStep::where('end_user_id', $eu->id)->where('round', 2)->where('week', 2)->count());
+        // …but added ZERO closeout steps — on Round 1, Round 2, any round.
+        $closeoutAfter = ProcessStep::where('end_user_id', $eu->id)->whereIn('step_type', EndUser::CLOSEOUT_STEPS)->count();
+        $this->assertSame($closeoutBefore, $closeoutAfter, 'button must never log Pull Latest Report / Record Deletions on any round');
+        $this->assertSame(0, ProcessStep::where('end_user_id', $eu->id)->where('round', 2)
+            ->whereIn('step_type', EndUser::CLOSEOUT_STEPS)->count());
+    }
+
     public function test_non_super_is_forbidden(): void
     {
         $va = new Admin(['email' => 'va@t.com', 'password' => 'x', 'full_name' => 'Va']);

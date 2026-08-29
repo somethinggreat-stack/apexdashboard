@@ -28,6 +28,7 @@ class DashboardController extends Controller
         // 4-subquery SELECT per business owner. Same numbers, far fewer round
         // trips — the old loop was the dashboard's main slowdown.
         $eusByClient = EndUser::whereIn('client_id', $clients->pluck('id'))
+            ->with('processSteps:id,end_user_id,round,week,step_type,step_date')
             ->withCount([
                 'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
                 'processSteps as week2_count' => fn ($q) => $q->where('week', 2),

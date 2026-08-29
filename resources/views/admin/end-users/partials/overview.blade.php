@@ -65,9 +65,11 @@
     // is_incomplete reliable for the overview regardless of how endUser
     // was loaded.
     $weekCount  = $endUser->roundWeekCount();   // 30-day → 4 weeks, 20-day → 3
+    // Count the CURRENT round's steps only, so "behind this week" stays correct
+    // on Round 2, 3, 4 … (not counting steps from earlier rounds).
     $weekCounts = [];
     for ($w = 1; $w <= $weekCount; $w++) {
-        $weekCounts[$w] = $allSteps->where('week', $w)->count();
+        $weekCounts[$w] = $currentRoundSteps->where('week', $w)->count();
     }
     // Schedule pressure only exists once the round is marked, and days are
     // counted from the marked start — never the client's added date.

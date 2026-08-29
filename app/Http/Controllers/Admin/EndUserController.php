@@ -94,22 +94,26 @@ class EndUserController extends Controller
             $wk     = $eu->roundWeekLength();
             $count  = $eu->roundWeekCount();
             $round  = $eu->current_round;
-            $days   = (int) \Carbon\Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
+            $sd     = \Carbon\Carbon::parse($start)->startOfDay();
+            $days   = $sd->greaterThanOrEqualTo(now()->startOfDay()) ? 1 : (int) abs($sd->diffInDays(now()->startOfDay())) + 1;
             $byWeek = ProcessStep::stepTypesByWeek($eu->roundCycleDays());
+            $steps  = $eu->relationLoaded('processSteps') ? $eu->processSteps : $eu->processSteps()->get();
 
+            // Fill in order, current round only. Each due week's missing regular
+            // steps are completed before the next week — so this can never create
+            // the out-of-order state the manual step-lock forbids, and it stays
+            // correct on Round 2+ (the old cross-round counter did neither).
             for ($w = 1; $w <= $count; $w++) {
-                // Only the regular (non-closeout) steps — the closeout steps are
-                // deliberately never logged.
-                $regular = array_diff(array_keys($byWeek[$w] ?? []), EndUser::CLOSEOUT_STEPS);
+                $regular = array_values(array_diff(array_keys($byWeek[$w] ?? []), EndUser::CLOSEOUT_STEPS));
                 if (empty($regular)) {
-                    continue;
+                    continue;   // closeout-only week — never auto-logged
                 }
                 $dueDay = (($w - 1) * $wk) + 1;
-                if ($days < $dueDay || (int) ($eu->{"week{$w}_count"} ?? 0) !== 0) {
-                    continue;   // not due yet, or already has a step for this week
+                if ($days < $dueDay) {
+                    break;   // this week (and every later one) isn't due yet
                 }
 
-                $already = $eu->processSteps->where('round', $round)->where('week', $w)->pluck('step_type')->all();
+                $already = $steps->where('round', $round)->where('week', $w)->pluck('step_type')->all();
                 foreach ($regular as $type) {
                     if (in_array($type, $already, true)) {
                         continue;
@@ -767,7 +771,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
             ->notHeld()
-            ->with('client')          // round-cycle length for the date accessors
+            ->with(['client', 'processSteps:id,end_user_id,round,week,step_type,step_date'])   // cycle length + per-round progress
             ->roundErrorPending()
             ->orderByDesc('updated_at')
             ->get();
@@ -780,6 +784,7 @@ class EndUserController extends Controller
     {
         $endUsers = EndUser::forClient(session('selected_client_id'))
             ->notHeld()
+            ->with(['client', 'processSteps:id,end_user_id,round,week,step_type,step_date'])   // cycle length + per-round progress
             ->roundErrorResolvedByClient()
             ->orderByDesc('error_resolved_by_client_at')
             ->get();

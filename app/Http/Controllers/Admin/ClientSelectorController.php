@@ -42,6 +42,7 @@ class ClientSelectorController extends Controller
             }
 
             $eus = EndUser::forClient($client->id)
+                ->with('processSteps:id,end_user_id,round,week,step_type,step_date')
                 ->withCount([
                     'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
                     'processSteps as week2_count' => fn ($q) => $q->where('week', 2),

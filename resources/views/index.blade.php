@@ -3234,7 +3234,6 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 
     // Fill all bars
     card.querySelectorAll('.qual-bar').forEach(function(b) { b.classList.add('done'); });
-    console.log('Qualifier lead:', { name: name, email: email });
   };
 
   function goQualStep(step) {

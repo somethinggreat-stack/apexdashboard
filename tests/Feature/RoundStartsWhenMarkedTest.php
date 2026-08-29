@@ -126,6 +126,37 @@ class RoundStartsWhenMarkedTest extends TestCase
         $this->assertSame(['1st Round', '2nd Round', '3rd Round'], array_keys($eu->round_timeline));
     }
 
+    public function test_round_two_client_behind_is_flagged_incomplete(): void
+    {
+        // Round 1 fully complete; on Round 2 for 10 days but only Week 1 logged.
+        // The old cross-round counters treated every week as "done forever" once
+        // Round 1 had logged it, so this client silently fell off Needs Attention.
+        $eu = $this->client([
+            'rounds' => ['1st Round', '2nd Round'],
+            'round_dates' => [
+                '1st Round' => now()->subDays(40)->toDateString(),
+                '2nd Round' => now()->subDays(10)->toDateString(),
+            ],
+        ]);
+        foreach (ProcessStep::stepTypesByWeek(30) as $w => $steps) {
+            foreach (array_keys($steps) as $type) {
+                ProcessStep::create([
+                    'end_user_id' => $eu->id, 'round' => 1, 'week' => $w, 'step_type' => $type,
+                    'step_date' => now()->subDays(35)->toDateString(), 'created_by_admin_id' => $this->super->id,
+                ]);
+            }
+        }
+        ProcessStep::create([
+            'end_user_id' => $eu->id, 'round' => 2, 'week' => 1, 'step_type' => 'ex_tu_eq_letters_generated',
+            'step_date' => now()->subDays(10)->toDateString(), 'created_by_admin_id' => $this->super->id,
+        ]);
+
+        $eu = $this->reload($eu->id);
+        $this->assertSame(2, $eu->current_round);
+        $this->assertSame(2, $eu->missing_week, 'Round 2 Week 2 is overdue and must be flagged');
+        $this->assertTrue($eu->is_incomplete, 'behind on Round 2 → shows as incomplete');
+    }
+
     public function test_started_rounds_short_label(): void
     {
         $eu = $this->reload($this->client([

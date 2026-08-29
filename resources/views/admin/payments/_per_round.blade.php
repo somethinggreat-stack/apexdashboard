@@ -364,81 +364,6 @@
     .bulk-action button:disabled { background: var(--muted); cursor: not-allowed; }
     .bulk-action button:not(:disabled):hover { background: #1d4ed8; }
 
-    /* Round chips — the actionable cells */
-    .chip {
-        display: inline-flex; align-items: center; gap: 5px;
-        padding: 6px 12px; border-radius: 8px;
-        font-size: 12.5px; font-weight: 700;
-        border: 0; cursor: pointer;
-        min-width: 62px; justify-content: center;
-        transition: transform .1s, box-shadow .1s, background .1s;
-    }
-    .chip:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(15,23,42,.08); }
-
-    .chip-paid {
-        background: #d1fae5; color: #065f46;
-        border: 1px solid #a7f3d0;
-    }
-    .chip-paid:hover { background: #a7f3d0; }
-    .chip-paid svg { color: #059669; }
-
-    .chip-unpaid {
-        background: var(--surface); color: #2563eb;
-        border: 1.5px dashed var(--muted);
-    }
-    .chip-unpaid:hover { background: #eff6ff; border-color: #2563eb; border-style: solid; }
-
-    /* Unpaid chip carrying a custom per-round rate (purple, like the rate pill) */
-    .chip-unpaid.chip-custom {
-        background: #f5f3ff; color: #5b21b6;
-        border: 1.5px solid #ddd6fe;
-    }
-    .chip-unpaid.chip-custom:hover { background: #ede9fe; border-color: #8b5cf6; }
-
-    /* "Due" chip — this round is done but not marked paid yet. Gently pulses
-       amber to nudge the VA to collect for it. Turns plain green on click. */
-    .chip-unpaid.chip-due {
-        color: #b45309; border-style: solid; border-color: #fcd34d;
-        animation: chipDuePulse 1.35s ease-in-out infinite;
-    }
-    .chip-unpaid.chip-due:hover {
-        background: #fef3c7; border-color: #f59e0b;
-        animation: none;
-    }
-    @keyframes chipDuePulse {
-        0%, 100% { background: #fffbeb; border-color: #fcd34d; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-        50%      { background: #fef3c7; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .18); }
-    }
-    /* Respect users who prefer no motion — fall back to a static amber chip. */
-    @media (prefers-reduced-motion: reduce) {
-        .chip-unpaid.chip-due { animation: none; background: #fef3c7; border-color: #f59e0b; }
-    }
-
-    .inline-pay-form { display: inline; margin: 0; padding: 0; }
-
-    /* Unpaid cell: big $ chip on top, small "Free" + edit-rate beneath it. */
-    .chip-stack { display: inline-flex; flex-direction: column; gap: 4px; align-items: stretch; min-width: 62px; margin: 0; }
-    .chip-stack .chip { width: 100%; min-width: 0; padding: 7px 8px; }
-    .chip-actions { display: flex; gap: 4px; }
-    .chip-mini {
-        flex: 1; display: inline-flex; align-items: center; justify-content: center;
-        padding: 4px 6px; border-radius: 7px; font-size: 11px; font-weight: 700; line-height: 1;
-        cursor: pointer; transition: background .12s, color .12s, border-color .12s;
-    }
-    /* "Free / test" — mark a round done at $0 (no revenue, no commission) */
-    .chip-free { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
-    .chip-free:hover { background: var(--border); color: var(--text-soft); border-color: var(--muted); }
-    /* Edit this round's rate */
-    .chip-edit { background: var(--surface); color: #a3aec0; border: 1px solid var(--border); }
-    .chip-edit:hover { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
-    .chip-edit svg { width: 12px; height: 12px; }
-    /* Stronger affordance when a custom rate is already set on this round */
-    .chip-stack:has(.chip-custom) .chip-edit { color: #8b5cf6; border-color: #ddd6fe; }
-    .chip-stack:has(.chip-custom) .chip-edit:hover { color: #6d28d9; }
-
-    /* A round closed as free/test — slate instead of the green paid chip */
-    .chip-free-paid { background: var(--surface-2); color: var(--text-soft); border: 1.5px solid var(--muted); }
-    .chip-free-paid:hover { background: var(--border); border-color: var(--muted); }
 
     /* Per-client rate pill (next to client name) */
     .rate-pill {
@@ -515,6 +440,18 @@
     }
     .paycell:hover .paysq-edit { display: inline-flex; }
     .paysq-edit:hover { background: #f5f3ff; }
+
+    /* Narrower screens: shrink the round cells so all 15 still fit with no
+       horizontal scrollbar and nothing gets clipped. */
+    @media (max-width: 1400px) {
+        .pay-matrix .round-col { width: 40px; }
+        .pay-matrix .paysq { width: 32px; height: 32px; font-size: 10px; }
+    }
+    @media (max-width: 1200px) {
+        .pay-matrix .round-col { width: 34px; padding-left: 1px; padding-right: 1px; }
+        .pay-matrix .paysq { width: 28px; height: 28px; font-size: 9px; border-radius: 7px; }
+        .pay-matrix .payfree { font-size: 8.5px; }
+    }
 
     @media (max-width: 900px) {
         .bulk-bar { gap: 10px; }

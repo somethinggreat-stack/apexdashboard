@@ -518,7 +518,26 @@ class EndUser extends Model
         if (! $start) {
             return null;
         }
-        return (int) Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
+        return $this->daysElapsedSince($start);
+    }
+
+    /**
+     * Whole days from a start date up to today, inclusive (day 1 = the start
+     * day). A start today or in the future returns 1, so a hand-set future date
+     * can never produce a negative or nonsensical count. Version-safe: takes the
+     * magnitude of the diff rather than relying on Carbon's sign convention.
+     */
+    private function daysElapsedSince(?string $date): int
+    {
+        if (! $date) {
+            return 0;
+        }
+        $start = Carbon::parse($date)->startOfDay();
+        $today = now()->startOfDay();
+        if ($start->greaterThanOrEqualTo($today)) {
+            return 1;
+        }
+        return (int) abs($start->diffInDays($today)) + 1;
     }
 
     /**
@@ -544,10 +563,16 @@ class EndUser extends Model
         if (! $start) {
             return null;
         }
-        $days   = (int) Carbon::parse($start)->startOfDay()->diffInDays(now()->startOfDay()) + 1;
+        $days   = $this->daysElapsedSince($start);
         $wk     = $this->roundWeekLength();
         $count  = $this->roundWeekCount();
+        $round  = $this->current_round;
         $byWeek = \App\Models\ProcessStep::stepTypesByWeek($this->roundCycleDays());
+
+        // Count steps for the CURRENT round only, straight from the step log — so
+        // this stays correct on Round 2, 3, 4 … (the old cross-round week counts
+        // treated a week as "done" forever once any round had logged it).
+        $steps = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps()->get();
 
         for ($w = 1; $w <= $count; $w++) {
             // Skip a week with no regular (non-closeout) work — nothing is due on
@@ -557,7 +582,8 @@ class EndUser extends Model
                 continue;
             }
             $dueDay = (($w - 1) * $wk) + 1;
-            if ($days >= $dueDay && (int) ($this->{"week{$w}_count"} ?? 0) === 0) {
+            $loggedThisWeek = $steps->where('round', $round)->where('week', $w)->count();
+            if ($days >= $dueDay && $loggedThisWeek === 0) {
                 return $w;
             }
         }

@@ -139,7 +139,7 @@ class ResultsController extends Controller
         $boIds = $this->enabledOwnerIds();
 
         $clients = EndUser::whereIn('client_id', $boIds)
-            ->with('negativeItems')
+            ->with(['negativeItems', 'processSteps:id,end_user_id,round'])
             ->orderBy('first_name')->orderBy('last_name')
             ->get();
 

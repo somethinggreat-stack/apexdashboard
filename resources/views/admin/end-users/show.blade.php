@@ -56,7 +56,7 @@
             <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/>
         </svg>
         <div>
-            <strong>Round {{ $endUser->current_round }} is past its 30 days.</strong>
+            <strong>Round {{ $endUser->current_round }} is past its {{ $endUser->roundCycleDays() }} days.</strong>
             Worth pulling the latest report and recording deletions for this client.
         </div>
     </div>

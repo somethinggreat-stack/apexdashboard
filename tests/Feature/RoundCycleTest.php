@@ -123,20 +123,23 @@ class RoundCycleTest extends TestCase
         // Week 2 (week length 6) is due on day 7.
         $eu30 = $this->client($this->bo(30), now()->subDays(6)->toDateString()); // day 7
         $eu20 = $this->client($this->bo(20), now()->subDays(6)->toDateString());
+        $reload = fn ($eu) => \App\Models\EndUser::with('processSteps')->find($eu->id);
 
-        foreach (['week1_count', 'week2_count', 'week3_count', 'week4_count'] as $c) {
-            $eu30->setAttribute($c, 0);
-            $eu20->setAttribute($c, 0);
+        // No steps yet → Week 1 is the first thing due on both.
+        $this->assertSame(1, $reload($eu30)->missing_week, '30-day: Week 1 first missing');
+        $this->assertSame(1, $reload($eu20)->missing_week, '20-day: Week 1 first missing');
+
+        // Log a real Week 1 (round 1) step for both → the cycle difference shows.
+        $admin = \App\Models\Admin::first();
+        foreach ([$eu30, $eu20] as $eu) {
+            \App\Models\ProcessStep::create([
+                'end_user_id' => $eu->id, 'round' => 1, 'week' => 1,
+                'step_type' => 'ex_tu_eq_letters_generated',
+                'step_date' => now()->subDays(6)->toDateString(), 'created_by_admin_id' => $admin->id,
+            ]);
         }
-
-        $this->assertSame(1, $eu30->missing_week, '30-day: Week 1 first missing');
-        $this->assertSame(1, $eu20->missing_week, '20-day: Week 1 first missing');
-
-        // Log Week 1 for both, then the difference shows.
-        $eu30->setAttribute('week1_count', 1);
-        $eu20->setAttribute('week1_count', 1);
-        $this->assertNull($eu30->missing_week, '30-day: day 7 < 8 → on track');
-        $this->assertSame(2, $eu20->missing_week, '20-day: day 7 ≥ 7 → Week 2 due');
+        $this->assertNull($reload($eu30)->missing_week, '30-day: day 7 < 8 → on track');
+        $this->assertSame(2, $reload($eu20)->missing_week, '20-day: day 7 ≥ 7 → Week 2 due');
     }
 
     public function test_20_day_client_accepts_week3_closeout_step(): void

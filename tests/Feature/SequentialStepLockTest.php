@@ -113,6 +113,22 @@ class SequentialStepLockTest extends TestCase
         ]);
     }
 
+    public function test_20day_closeout_in_week3_advances_to_next_round(): void
+    {
+        $bo = $this->bo(20);   // closeout lives in Week 3 (the last week)
+        $eu = $this->eu($bo);
+        $this->completeWeek($eu, 20, 1, 1);
+        $this->completeWeek($eu, 20, 1, 2);
+
+        // Finish Round 1 — aggressive + both closeout steps in Week 3.
+        $this->log($bo, $eu, 1, 3, ['aggressive_bureau_followup', 'pull_latest_report', 'record_deletions'])
+            ->assertSessionHasNoErrors();
+
+        // Logging record_deletions in the cycle's LAST week auto-appends the next
+        // round (this used to only fire for 30-day clients / Week 4).
+        $this->assertContains('2nd Round', $eu->fresh()->rounds ?? []);
+    }
+
     public function test_in_order_logging_is_allowed(): void
     {
         $bo = $this->bo(30);
