@@ -109,9 +109,11 @@ class RoundStartsWhenMarkedTest extends TestCase
         // round date and days-left must come from the LATEST started round, not
         // an earlier one. Regression: a client showed next-round from round 2
         // (Aug 4 + 20) while the timeline showed round 3 started Aug 19.
+        // A hand-dated round is always on the strip too (Edit Rounds & Dates
+        // toggles it on when you set its date), so 3rd Round is included here.
         $this->bo->update(['round_cycle_days' => 20]);
         $eu = $this->client([
-            'rounds' => ['1st Round', '2nd Round'],
+            'rounds' => ['1st Round', '2nd Round', '3rd Round'],
             'round_dates' => [
                 '1st Round' => '2026-06-13',
                 '2nd Round' => '2026-08-04',
@@ -124,6 +126,28 @@ class RoundStartsWhenMarkedTest extends TestCase
         $this->assertSame('2026-08-19', $eu->current_round_start_date);
         $this->assertSame('2026-09-08', $eu->next_round_date, 'exactly 20 days after the 3rd round start');
         $this->assertSame(['1st Round', '2nd Round', '3rd Round'], array_keys($eu->round_timeline));
+    }
+
+    public function test_leftover_round_date_does_not_advance_a_client_not_on_that_round(): void
+    {
+        // Round 2 has a stale start date (its steps were deleted) but the client is
+        // only on Round 1 on the strip, with no Round-2 steps. Everything must read
+        // Round 1 — the leftover date must never resurrect Round 2.
+        $eu = $this->client([
+            'rounds' => ['1st Round'],
+            'round_dates' => ['1st Round' => '2026-08-10', '2nd Round' => '2026-08-11'],
+        ]);
+        ProcessStep::create([
+            'end_user_id' => $eu->id, 'round' => 1, 'week' => 1,
+            'step_type' => 'ex_tu_eq_letters_generated', 'step_date' => '2026-08-10',
+            'created_by_admin_id' => $this->super->id,
+        ]);
+        $eu = $this->reload($eu->id);
+
+        $this->assertSame(1, $eu->current_round, 'a leftover round-2 date must not make it round 2');
+        $this->assertNull($eu->roundStartDate(2), 'round 2 has no step and is off the strip → not started');
+        $this->assertSame(['1st Round'], array_keys($eu->round_timeline));
+        $this->assertSame('1st Round', $eu->started_rounds_full);
     }
 
     public function test_round_two_client_behind_is_flagged_incomplete(): void

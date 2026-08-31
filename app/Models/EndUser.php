@@ -750,26 +750,24 @@ class EndUser extends Model
 
     public function getCurrentRoundAttribute(): int
     {
-        // Reached rounds (in the rounds array) — a round can be reached before its
-        // first step, in which case it's the current round but not yet "started".
-        $byRounds = count($this->rounds ?? []);
-
-        // The highest round that actually has a MARKED start date (a hand-set
-        // round_dates entry or a logged step). This keeps current_round in step
-        // with round_timeline / the "Round Started" column, so the next-round
-        // date and days-left are always measured from the latest round shown.
-        $byDates = 0;
-        foreach (($this->round_dates ?? []) as $label => $date) {
+        // Highest round on the rounds strip — a round can be reached (toggled on)
+        // before its first step, in which case it's current but not yet "started".
+        $byRounds = 0;
+        foreach ($this->rounds ?? [] as $label) {
             $idx = array_search($label, self::ROUND_OPTIONS, true);
-            if ($idx !== false && ! empty($date)) {
-                $byDates = max($byDates, $idx + 1);
+            if ($idx !== false) {
+                $byRounds = max($byRounds, $idx + 1);
             }
         }
 
+        // Highest round that actually has a logged step.
         $steps   = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
         $bySteps = (int) $steps->max('round');
 
-        return max(1, $byRounds, $byDates, $bySteps);
+        // A round only advances the current round once it's on the strip or has a
+        // logged step. A leftover round_dates entry alone (e.g. after its steps
+        // were deleted) must NEVER resurrect a round the client hasn't reached.
+        return max(1, $byRounds, $bySteps);
     }
 
     /**
@@ -783,15 +781,25 @@ class EndUser extends Model
     public function roundStartDate(int $round): ?string
     {
         $label = self::ROUND_OPTIONS[$round - 1] ?? null;
-
-        // A hand-set date (Edit Rounds & Dates) wins.
-        if ($label && ! empty($this->round_dates[$label])) {
-            return Carbon::parse($this->round_dates[$label])->toDateString();
+        if (! $label) {
+            return null;
         }
 
-        // Otherwise the round starts on its earliest logged step.
-        $steps = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
+        $steps    = $this->relationLoaded('processSteps') ? $this->processSteps : $this->processSteps();
         $earliest = $steps->where('round', $round)->min('step_date');
+        $onStrip  = in_array($label, $this->rounds ?? [], true);
+
+        // A round is "started" only once it has a logged step or is on the rounds
+        // strip. A leftover round_dates entry alone (e.g. after its steps were
+        // deleted) must NOT resurrect a round the client hasn't really reached.
+        if (! $earliest && ! $onStrip) {
+            return null;
+        }
+
+        // A hand-set date (Edit Rounds & Dates) wins; otherwise the earliest step.
+        if (! empty($this->round_dates[$label])) {
+            return Carbon::parse($this->round_dates[$label])->toDateString();
+        }
 
         return $earliest ? Carbon::parse($earliest)->toDateString() : null;
     }
