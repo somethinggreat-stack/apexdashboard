@@ -147,7 +147,7 @@
                 <div class="fg"><label>Phone</label><input type="text" name="phone" value="{{ old('phone') }}" required></div>
             </div>
             <div class="row">
-                <div class="fg"><label>Date of Birth</label><input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" required></div>
+                <div class="fg"><label>Date of Birth</label><input type="text" name="date_of_birth" id="dobInput" value="{{ old('date_of_birth') }}" inputmode="numeric" autocomplete="bday" placeholder="MM/DD/YYYY" maxlength="10" pattern="(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/(19|20)\d\d" title="Enter your date of birth as MM/DD/YYYY" required></div>
                 <div class="fg"><label>Full SSN</label><input type="text" name="ssn" inputmode="numeric" placeholder="XXX-XX-XXXX" required></div>
             </div>
 
@@ -204,5 +204,23 @@
         </form>
     </div>
 </div>
+<script>
+(function () {
+    // Date of Birth: type digits and the slashes appear (MM/DD/YYYY); pasting a
+    // slashed date adopts the same format. Value posts as MM/DD/YYYY, which the
+    // server parses to a real date.
+    var el = document.getElementById('dobInput');
+    if (!el) return;
+    function fmt() {
+        var d = el.value.replace(/\D/g, '').slice(0, 8);   // digits only, MMDDYYYY
+        var out = d;
+        if (d.length > 4)      out = d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
+        else if (d.length > 2) out = d.slice(0, 2) + '/' + d.slice(2);
+        el.value = out;
+    }
+    el.addEventListener('input', fmt);
+    fmt();   // normalise any pre-filled value
+})();
+</script>
 </body>
 </html>
