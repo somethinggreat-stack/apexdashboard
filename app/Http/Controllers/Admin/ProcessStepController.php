@@ -117,21 +117,14 @@ class ProcessStepController extends Controller
 
             ProcessStep::create($shared + ['step_type' => $type]);
             $created++;
-
-            // Closeout lives in the cycle's LAST week — Week 3 for a 20-day owner,
-            // Week 4 for a 30-day owner — so key on $weekCount, not a literal 4,
-            // or 20-day clients never auto-advance to the next round.
-            if ($type === 'record_deletions' && (int) $data['week'] === $weekCount) {
-                $this->advanceRoundFor((int) $data['end_user_id'], (int) $data['round']);
-            }
         }
 
-        // Logging any step for a round marks that round as started — its start
-        // date is the earliest logged step (read live by the model), so all the
-        // day-counts for the round begin from here.
-        if ($created > 0) {
-            $this->markRoundStarted((int) $data['end_user_id'], (int) $data['round']);
-        }
+        // A step NEVER changes which round a client is on. Rounds advance ONLY when
+        // a human selects the round in one of the three editors (profile picker,
+        // list round-picker, Edit Rounds & Dates). VAs routinely log a round's steps
+        // before selecting that round, so auto-advancing here (whether on the first
+        // step or on closeout) would wrongly push clients forward and strand them on
+        // a round they never started. Selection is the single source of truth.
 
         $msg = match (true) {
             $created > 0 && $skipped > 0 => "Process step(s) logged. {$created} created, {$skipped} skipped (already existed for this round & week).",
@@ -160,49 +153,6 @@ class ProcessStepController extends Controller
     {
         ProcessStep::forClient(session('selected_client_id'))->findOrFail($id)->delete();
         return back()->with('status', 'Process step deleted.');
-    }
-
-    /**
-     * When Week 4 record_deletions is logged for round N, append the
-     * "(N+1)th Round" label to the end user's rounds array so the new
-     * round appears in their profile and the VA knows to start logging it.
-     */
-    private function advanceRoundFor(int $endUserId, int $completedRound): void
-    {
-        $nextRound = $completedRound + 1;
-        $nextLabel = EndUser::ROUND_OPTIONS[$nextRound - 1] ?? null;
-        if (!$nextLabel) return;
-
-        $endUser = EndUser::find($endUserId);
-        if (!$endUser) return;
-
-        $existing = $endUser->rounds ?? [];
-        if (in_array($nextLabel, $existing, true)) return;
-
-        $existing[] = $nextLabel;
-        $endUser->update(['rounds' => $existing]);
-    }
-
-    /**
-     * Add a round's label to the client's rounds array the first time a step is
-     * logged for it, in canonical order. This is what "marks" the round; the
-     * start date itself is derived live from the earliest logged step.
-     */
-    private function markRoundStarted(int $endUserId, int $round): void
-    {
-        $label = EndUser::ROUND_OPTIONS[$round - 1] ?? null;
-        if (! $label) return;
-
-        $endUser = EndUser::find($endUserId);
-        if (! $endUser) return;
-
-        $rounds = $endUser->rounds ?? [];
-        if (in_array($label, $rounds, true)) return;
-
-        $rounds[] = $label;
-        $endUser->update([
-            'rounds' => array_values(array_intersect(EndUser::ROUND_OPTIONS, $rounds)),
-        ]);
     }
 
     private function validatedPayload(Request $request, bool $creating): array

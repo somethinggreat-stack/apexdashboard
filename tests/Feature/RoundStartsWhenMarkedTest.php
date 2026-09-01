@@ -10,10 +10,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A round — and every day-count tied to it — starts ONLY when its first Week 1
- * step is logged. A freshly added client has no round marked, no start date, no
- * days active, no days left, no next-round date, and no "past due" warning until
- * then. Applies to every round (2nd+ included) and every business owner.
+ * A round — and every day-count tied to it — starts ONLY when the round is
+ * SELECTED on the strip (through one of the three round editors: the profile
+ * picker, the list round-picker, or Edit Rounds & Dates). A logged step never
+ * marks a round. A freshly added client, and one whose steps were pre-logged but
+ * whose round was never selected, has no round marked, no start date, no days
+ * active, no days left, no next-round date, and no "past due" warning until the
+ * round is selected. Applies to every round (2nd+ included) and every owner.
  */
 class RoundStartsWhenMarkedTest extends TestCase
 {
@@ -77,10 +80,12 @@ class RoundStartsWhenMarkedTest extends TestCase
         $this->assertNull($eu->days_active);
     }
 
-    public function test_logging_first_week1_step_marks_round_and_starts_the_clock(): void
+    public function test_logging_a_step_does_not_mark_or_start_a_round(): void
     {
+        // A logged step NEVER marks a round. Logging Week 1 leaves the client
+        // unstarted — no round on the strip, no start date, no counts — until a
+        // human selects the round. (VAs routinely pre-log steps before advancing.)
         $eu = $this->client();
-        $stepDate = now()->subDays(5)->toDateString();
 
         $this->actingAs($this->super, 'admin')
             ->withSession(['selected_client_id' => $this->bo->id])
@@ -89,16 +94,40 @@ class RoundStartsWhenMarkedTest extends TestCase
                 'round'       => 1,
                 'week'        => 1,
                 'step_types'  => ['ex_tu_eq_letters_generated'],
-                'step_date'   => $stepDate,
+                'step_date'   => now()->subDays(5)->toDateString(),
             ])->assertSessionHasNoErrors();
 
         $eu = $this->reload($eu->id);
 
-        $this->assertTrue($eu->ever_started, 'the Week 1 step marks the round');
-        $this->assertSame($stepDate, $eu->roundStartDate(1), 'start date = the step date, not the added date');
-        $this->assertSame($stepDate, $eu->current_round_start_date);
-        $this->assertSame(6, $eu->days_active, 'counts from the marked date (5 days ago, inclusive)');
-        $this->assertContains('1st Round', $eu->rounds, 'round label is now marked');
+        $this->assertFalse($eu->ever_started, 'a step must not mark the round');
+        $this->assertSame([], $eu->rounds ?? [], 'the strip is untouched by logging a step');
+        $this->assertNull($eu->roundStartDate(1));
+        $this->assertNull($eu->days_active);
+        $this->assertNull($eu->next_round_date);
+    }
+
+    public function test_selecting_a_round_marks_it_and_stamps_todays_date(): void
+    {
+        // Selecting a round (here through the profile / list round-picker) is what
+        // marks it and starts its clock — dated the day it is selected (today ET),
+        // independent of any pre-logged steps.
+        $eu = $this->client();
+
+        $this->actingAs($this->super, 'admin')
+            ->withSession(['selected_client_id' => $this->bo->id])
+            ->put(route('admin.end-users.update', $eu->id), [
+                'rounds_present' => '1',
+                'rounds'         => ['1st Round'],
+            ])->assertSessionHasNoErrors();
+
+        $eu = $this->reload($eu->id);
+        $today = \Carbon\Carbon::now('America/New_York')->toDateString();
+
+        $this->assertTrue($eu->ever_started, 'selecting the round marks it');
+        $this->assertContains('1st Round', $eu->rounds);
+        $this->assertSame($today, $eu->roundStartDate(1), 'dated the day it was selected');
+        $this->assertSame($today, $eu->current_round_start_date);
+        $this->assertSame(1, $eu->current_round);
         $this->assertNotNull($eu->next_round_date);
         $this->assertNotNull($eu->days_left_in_round);
     }

@@ -663,12 +663,12 @@ class EndUserController extends Controller
         // (hidden `rounds_present` flag). This lets the inline status-only form leave
         // existing rounds untouched, while allowing the edit modal to clear them.
         if ($request->has('rounds_present')) {
-            $newRounds = $request->input('rounds', []) ?: [];
+            $newRounds = array_values(array_intersect(EndUser::ROUND_OPTIONS, (array) $request->input('rounds', [])));
             $data['rounds'] = $newRounds ?: null;
-            // No date is stamped just for toggling a round on. A round's start
-            // date is derived from its first logged step (or set explicitly in
-            // Edit Rounds & Dates), so a round never begins counting until its
-            // Week 1 is actually marked.
+            // Selecting a round stamps its start date (today) the moment it's turned
+            // on; de-selecting drops it. The date is tied to the selection — never
+            // inferred from steps — and behaves identically in all three editors.
+            $data['round_dates'] = $this->syncRoundDates($endUser, $newRounds);
         } else {
             unset($data['rounds']);
         }
@@ -682,23 +682,9 @@ class EndUserController extends Controller
         if ($request->has('round_schedule_present')) {
             $newRounds = array_values(array_intersect(EndUser::ROUND_OPTIONS, (array) $request->input('rounds', [])));
             $data['rounds'] = $newRounds ?: null;
-
-            $inputDates = (array) $request->input('round_start_dates', []);
-            $dates = $endUser->round_dates ?? [];
-
-            foreach (EndUser::ROUND_OPTIONS as $label) {
-                $raw = trim((string) ($inputDates[$label] ?? ''));
-                if ($raw === '') {
-                    continue;   // no explicit date → derive from the first step
-                }
-                try {
-                    $dates[$label] = \Carbon\Carbon::parse($raw)->toDateString();
-                } catch (\Throwable $e) {
-                    // ignore an unparseable date
-                }
-            }
-
-            $data['round_dates'] = $dates ?: null;
+            $data['round_dates'] = $this->syncRoundDates(
+                $endUser, $newRounds, (array) $request->input('round_start_dates', [])
+            );
         }
 
         $files = $this->handleFileUploads($request, $endUser);
@@ -717,6 +703,52 @@ class EndUserController extends Controller
         // must not land the user on the homepage or picker after a save.
         return back(302, [], route('admin.end-users.show', $endUser->id))
             ->with('confirm', 'Client updated');
+    }
+
+    /**
+     * Reconcile round_dates against the newly-selected rounds — the ONE place all
+     * three round editors funnel through, so a round's start date is always tied to
+     * the selection and never to logged steps.
+     *
+     * For each selected round: an explicit date (from Edit Rounds & Dates) wins;
+     * otherwise its previously-stored date is kept; otherwise — if it's being
+     * selected for the first time now — it's stamped with today (ET). A round that
+     * was already selected but never had a stored date is left unstamped so it keeps
+     * deriving its start from the earliest logged step (legacy back-compat). Rounds
+     * no longer selected are dropped, so a stale date can never resurrect a round.
+     */
+    private function syncRoundDates(EndUser $endUser, array $newRounds, array $explicitDates = []): ?array
+    {
+        $today    = \Carbon\Carbon::now('America/New_York')->toDateString();
+        $existing = $endUser->round_dates ?? [];
+        $wasOn    = $endUser->rounds ?? [];
+        $out      = [];
+
+        foreach ($newRounds as $label) {
+            $explicit = trim((string) ($explicitDates[$label] ?? ''));
+            if ($explicit !== '') {
+                try {
+                    $out[$label] = \Carbon\Carbon::parse($explicit)->toDateString();
+                    continue;
+                } catch (\Throwable $e) {
+                    // unparseable → fall through to the stored/legacy/today logic
+                }
+            }
+
+            if (! in_array($label, $wasOn, true)) {
+                // Selected for the FIRST time now → stamp today. Any leftover
+                // round_dates entry for it is stale (from before it was de-selected,
+                // or a phantom left by the old step-driven code) and must NEVER
+                // resurrect as the new start date.
+                $out[$label] = $today;
+            } elseif (! empty($existing[$label])) {
+                $out[$label] = $existing[$label];               // already selected → keep its date
+            }
+            // else: already selected, no stored date → leave unstamped so it keeps
+            // deriving from the earliest logged step (legacy back-compat).
+        }
+
+        return $out ?: null;
     }
 
     public function destroy(string $id)

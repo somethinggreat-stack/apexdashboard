@@ -113,7 +113,7 @@ class SequentialStepLockTest extends TestCase
         ]);
     }
 
-    public function test_20day_closeout_in_week3_advances_to_next_round(): void
+    public function test_closeout_does_not_advance_the_round(): void
     {
         $bo = $this->bo(20);   // closeout lives in Week 3 (the last week)
         $eu = $this->eu($bo);
@@ -124,9 +124,10 @@ class SequentialStepLockTest extends TestCase
         $this->log($bo, $eu, 1, 3, ['aggressive_bureau_followup', 'pull_latest_report', 'record_deletions'])
             ->assertSessionHasNoErrors();
 
-        // Logging record_deletions in the cycle's LAST week auto-appends the next
-        // round (this used to only fire for 30-day clients / Week 4).
-        $this->assertContains('2nd Round', $eu->fresh()->rounds ?? []);
+        // A step NEVER touches the rounds strip. Completing Round 1 (closeout
+        // included) must NOT auto-append Round 2 — the team advances the client only
+        // by selecting the next round in one of the three round editors.
+        $this->assertNotContains('2nd Round', $eu->fresh()->rounds ?? [], 'closeout must not auto-advance the round');
     }
 
     public function test_next_workable_points_at_the_frontier(): void

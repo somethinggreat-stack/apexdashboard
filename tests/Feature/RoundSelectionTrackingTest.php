@@ -12,10 +12,11 @@ use Tests\TestCase;
 
 /**
  * Round selection is the ONLY signal the Daily Task / Tasks View trust. A row is
- * written when a round is added to the rounds strip (picker, first step marking a
- * round, closeout advancing) and attributed to whoever did it. Filling missing
- * process steps — the "Mark All Incomplete Complete" button — must never write
- * one, so the super admin is never credited as having worked a client.
+ * written when a round is added to the rounds strip through one of the three round
+ * editors (profile picker, list round-picker, Edit Rounds & Dates) and attributed
+ * to whoever did it. Logging a step never marks a round, so it writes no selection;
+ * neither does filling missing steps (the "Mark All Incomplete Complete" button),
+ * so the super admin is never credited as having worked a client.
  */
 class RoundSelectionTrackingTest extends TestCase
 {
@@ -70,10 +71,11 @@ class RoundSelectionTrackingTest extends TestCase
         $this->assertSame($this->va->id, $sel->first()->admin_id);
     }
 
-    public function test_logging_the_first_step_of_a_new_round_records_a_selection(): void
+    public function test_logging_a_step_records_no_selection_but_picking_the_round_does(): void
     {
         $eu = $this->client(['rounds' => []]);
 
+        // Logging a step must NOT record a selection — a step never marks a round.
         $this->actingAs($this->va, 'admin')
             ->withSession(['selected_client_id' => $this->bo->id])
             ->post(route('admin.process-steps.store'), [
@@ -82,6 +84,15 @@ class RoundSelectionTrackingTest extends TestCase
                 'week'        => 1,
                 'step_types'  => ['ex_tu_eq_letters_generated'],
                 'step_date'   => now()->toDateString(),
+            ])->assertSessionHasNoErrors();
+        $this->assertSame(0, RoundSelection::where('end_user_id', $eu->id)->count(), 'a step records no selection');
+
+        // Selecting the round on the strip (the round picker) is what records it.
+        $this->actingAs($this->va, 'admin')
+            ->withSession(['selected_client_id' => $this->bo->id])
+            ->put(route('admin.end-users.update', $eu->id), [
+                'rounds_present' => '1',
+                'rounds'         => ['1st Round'],
             ])->assertSessionHasNoErrors();
 
         $sel = RoundSelection::where('end_user_id', $eu->id)->get();
