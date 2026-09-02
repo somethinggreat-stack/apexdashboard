@@ -2,6 +2,9 @@
 
 @php
     $isDone = ($bucket ?? 'in_progress') === 'clients';
+    $isSentForApproval = ($bucket ?? '') === 'sent_for_approval';
+    // "Sent for Approval" action shows only on the Clients list for a results-tracking owner (Clinecea).
+    $canApprove = $isDone && ($selectedClient?->resultsTrackingEnabled() ?? false);
     $isSuper = Auth::guard('admin')->user()?->isSuper();
     $statusOptions = ['active','paused','graduated','cancelled'];
 
@@ -19,7 +22,7 @@
     $curSort = request('sort');
 @endphp
 
-@section('title', $isDone ? 'Clients' : 'In Progress')
+@section('title', $isSentForApproval ? 'Sent for Approval' : ($isDone ? 'Clients' : 'In Progress'))
 @section('subtitle', 'Manage and monitor all your clients in one place.')
 
 @section('topbar-action')
@@ -268,6 +271,18 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
+                                @if ($isSentForApproval)
+                                    {{-- Sent for Approval list: the only action is to move them back. --}}
+                                    <form method="POST" action="{{ route('admin.end-users.clear-approval', $eu->id) }}"
+                                          data-confirm-action
+                                          data-confirm-title="Move back to Clients?"
+                                          data-confirm-message="{{ $eu->full_name }} moves back to the Clients list. Nothing else about the client changes."
+                                          data-confirm-ok="Move to Clients">
+                                        @csrf
+                                        <button class="pro-act done">Move back to Clients</button>
+                                    </form>
+                                @else
+
                                 @unless ($isDone)
                                     <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}"
                                           data-confirm-action
@@ -278,6 +293,18 @@
                                         <button class="pro-act done">Move to Clients</button>
                                     </form>
                                 @endunless
+
+                                @if ($canApprove)
+                                    {{-- Clinecea only: park the client awaiting the owner's sign-off. No dates change. --}}
+                                    <form method="POST" action="{{ route('admin.end-users.request-approval', $eu->id) }}"
+                                          data-confirm-action
+                                          data-confirm-title="Send for approval?"
+                                          data-confirm-message="{{ $eu->full_name }} moves to the Sent for Approval list. No dates or anything else on the client change."
+                                          data-confirm-ok="Sent for Approval">
+                                        @csrf
+                                        <button class="pro-act send-approval">Sent for Approval</button>
+                                    </form>
+                                @endif
 
                                 @if ($isDone)
                                     {{-- Clients list (past round 1): a later-round problem goes to Round Errors with a type + reason. --}}
@@ -305,6 +332,7 @@
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
                                 </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

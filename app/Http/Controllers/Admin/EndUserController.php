@@ -30,6 +30,19 @@ class EndUserController extends Controller
     }
 
     /**
+     * "Sent for Approval" (Clinecea only) — done clients parked awaiting the owner's
+     * sign-off (round_approval_status = 'awaiting'). Same table as the Clients list,
+     * only the row action differs (Move back to Clients). They also surface in the
+     * EOD's "Waiting for approval" list.
+     */
+    public function sentForApproval(Request $request)
+    {
+        abort_unless(Client::find(session('selected_client_id'))?->resultsTrackingEnabled(), 403);
+
+        return $this->listView($request, 'sent_for_approval');
+    }
+
+    /**
      * Super-admin bulk fix: log the missing WEEKLY steps for every flagged
      * (incomplete-log) client so the nags clear. It NEVER logs the closeout steps
      * (Pull Latest Report / Record Deletions) — those stay a manual, past-due-only
@@ -68,6 +81,7 @@ class EndUserController extends Controller
     private function incompleteCandidates()
     {
         return EndUser::notHeld()
+            ->notAwaitingApproval()   // parked for approval → off the nag lists
             ->where(fn ($q) => $q->whereNull('intake_status')
                 ->orWhereNotIn('intake_status', ['pending_review', 'error', 'round_error']))
             ->with('processSteps:id,end_user_id,round,week,step_type,step_date')
@@ -160,7 +174,11 @@ class EndUserController extends Controller
 
         $query = EndUser::forClient($clientId)
             ->notHeld()
-            ->when($bucket === 'clients', fn ($q) => $q->done(), fn ($q) => $q->inProgress())
+            // Clients list drops anyone parked for approval; the Sent for Approval
+            // list shows exactly those; everything else is the In Progress set.
+            ->when($bucket === 'clients', fn ($q) => $q->done()->notAwaitingApproval())
+            ->when($bucket === 'sent_for_approval', fn ($q) => $q->done()->awaitingApproval())
+            ->when(! in_array($bucket, ['clients', 'sent_for_approval'], true), fn ($q) => $q->inProgress())
             // progress % is derived from the step log — eager load it so the
             // accessor doesn't fire a query per row; client carries the round
             // cycle length the date accessors read.
@@ -407,8 +425,9 @@ class EndUserController extends Controller
             'round_approval_round'  => $round,
             'round_approval_at'     => now(),
         ]);
+        \App\Models\ClientEvent::log($endUser, 'approval', "Sent for approval (Round {$round})");
 
-        return back()->with('confirm', "Marked awaiting approval for Round {$round}.");
+        return back()->with('confirm', "Sent for approval (Round {$round}).");
     }
 
     /** Record that the owner approved the next round. */
@@ -427,13 +446,17 @@ class EndUserController extends Controller
     public function clearRoundApproval(string $id)
     {
         $endUser = $this->resultsScopedEndUser($id);
+        $wasAwaiting = $endUser->round_approval_status === 'awaiting';
         $endUser->update([
             'round_approval_status' => null,
             'round_approval_round'  => null,
             'round_approval_at'     => null,
         ]);
+        if ($wasAwaiting) {
+            \App\Models\ClientEvent::log($endUser, 'approval', 'Moved back to Clients from Sent for Approval');
+        }
 
-        return back()->with('confirm', 'Approval status cleared.');
+        return back()->with('confirm', 'Moved back to Clients.');
     }
 
     /** An end user in this org whose owner has results tracking on, or 404. */

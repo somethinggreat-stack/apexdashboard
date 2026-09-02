@@ -220,6 +220,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('errors-resolved-new-clients', [Admin\EndUserController::class, 'errorsResolvedNewClients'])->name('errors-resolved-new');
             // The main Clients list (1st round done; remaining rounds worked here)
             Route::get('client-list', [Admin\EndUserController::class, 'activeClients'])->name('client-list');
+            // Sent for Approval (Clinecea only) — done clients parked awaiting owner sign-off
+            Route::get('sent-for-approval', [Admin\EndUserController::class, 'sentForApproval'])->name('sent-for-approval');
             // Bulk credential exports (CSV) — super admin only, never VAs
             Route::get('client-list/cfpb-export', [Admin\EndUserController::class, 'exportCfpb'])
                 ->middleware('admin.super')->name('client-list.cfpb-export');

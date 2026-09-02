@@ -329,6 +329,24 @@ class EndUser extends Model
         return $query->where('intake_status', 'done');
     }
 
+    /**
+     * "Sent for Approval" (Clinecea only) — a done client parked awaiting the
+     * owner's sign-off for the next round (round_approval_status = 'awaiting').
+     * These clients are pulled OUT of the Clients list and every active-work view
+     * and live only in the Sent for Approval list until they're moved back.
+     */
+    public function scopeAwaitingApproval($query)
+    {
+        return $query->where('round_approval_status', 'awaiting');
+    }
+
+    /** Everything NOT parked awaiting approval (nulls included) — the active set. */
+    public function scopeNotAwaitingApproval($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('round_approval_status')
+            ->orWhere('round_approval_status', '!=', 'awaiting'));
+    }
+
     /** "Round Errors" — clients past round 1 pulled out with an import problem. */
     public function scopeRoundError($query)
     {

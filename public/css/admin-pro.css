@@ -557,6 +557,7 @@ html, body { height: 100%; }
 .pro-act.move { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
 .pro-act.del  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 .pro-act.hold { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.pro-act.send-approval { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
 
 /* incomplete + review-note flags carried over from the old table */
 .pro-flag {
@@ -760,6 +761,7 @@ html, body { height: 100%; }
 :root[data-theme="dark"] .pro-act.move { background: rgba(99,102,241,.18); color: #c7d2fe; border-color: rgba(99,102,241,.40); }
 :root[data-theme="dark"] .pro-act.del  { background: rgba(239,68,68,.16);  color: #fca5a5; border-color: rgba(239,68,68,.35); }
 :root[data-theme="dark"] .pro-act.hold { background: rgba(148,163,184,.16); color: #cbd5e1; border-color: rgba(148,163,184,.32); }
+:root[data-theme="dark"] .pro-act.send-approval { background: rgba(6,182,212,.16); color: #67e8f9; border-color: rgba(6,182,212,.35); }
 
 /* Status pills + count badges: keep the colour, drop the bright light fill. */
 :root[data-theme="dark"] .pro-pill.active    { background: rgba(16,185,129,.18); color: #6ee7b7; }

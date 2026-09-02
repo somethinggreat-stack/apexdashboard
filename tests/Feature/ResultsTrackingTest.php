@@ -283,6 +283,39 @@ class ResultsTrackingTest extends TestCase
         $this->assertSame('approved', $eu->refresh()->round_approval_status);
     }
 
+    public function test_sent_for_approval_moves_a_client_between_the_two_lists(): void
+    {
+        $this->seedWorld();
+        $eu   = $this->eu($this->clinecea, 'Jane');   // intake_status = done
+        $sess = ['selected_client_id' => $this->clinecea->id];
+        $as   = fn () => $this->actingAs($this->super, 'admin')->withSession($sess);
+
+        // Starts on the Clients list; the Sent for Approval list is empty.
+        $as()->get('/admin/client-list')->assertOk()->assertSee('Jane');
+        $as()->get('/admin/sent-for-approval')->assertOk()->assertDontSee('Jane');
+
+        // Send for approval → leaves Clients, appears in Sent for Approval, logged.
+        $as()->post("/admin/end-users/{$eu->id}/request-approval")->assertRedirect();
+        $this->assertSame('awaiting', $eu->refresh()->round_approval_status);
+        $as()->get('/admin/client-list')->assertOk()->assertDontSee('Jane');
+        $as()->get('/admin/sent-for-approval')->assertOk()->assertSee('Jane');
+        $this->assertDatabaseHas('client_events', ['end_user_id' => $eu->id, 'event' => 'approval']);
+
+        // Move back → returns to Clients, gone from Sent for Approval.
+        $as()->post("/admin/end-users/{$eu->id}/clear-approval")->assertRedirect();
+        $this->assertNull($eu->refresh()->round_approval_status);
+        $as()->get('/admin/client-list')->assertOk()->assertSee('Jane');
+        $as()->get('/admin/sent-for-approval')->assertOk()->assertDontSee('Jane');
+    }
+
+    public function test_sent_for_approval_list_is_clinecea_only(): void
+    {
+        $this->seedWorld();
+        // A non-results-tracking owner cannot reach the list.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->other->id])
+            ->get('/admin/sent-for-approval')->assertForbidden();
+    }
+
     public function test_client_show_page_renders_results_tab_only_when_enabled(): void
     {
         $this->seedWorld();

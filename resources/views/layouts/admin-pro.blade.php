@@ -132,6 +132,15 @@
                     @if ($nav['round_errors'] > 0)<span class="pro-count">{{ $nav['round_errors'] }}</span>@endif
                 </a>
 
+                {{-- Sent for Approval — only for a results-tracking owner (Clinecea) --}}
+                @if ($selectedClient->resultsTrackingEnabled())
+                <a href="{{ route('admin.sent-for-approval') }}" class="{{ request()->routeIs('admin.sent-for-approval') ? 'active' : '' }}">
+                    <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <span class="pro-nav-label">Sent for Approval</span>
+                    @if ($nav['sent_for_approval'] > 0)<span class="pro-count">{{ $nav['sent_for_approval'] }}</span>@endif
+                </a>
+                @endif
+
                 <a href="{{ route('admin.errors-resolved') }}" class="{{ request()->routeIs('admin.errors-resolved') ? 'active' : '' }}">
                     <svg class="i-sup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                     <span class="pro-nav-label">Next Round Error Resolved</span>
