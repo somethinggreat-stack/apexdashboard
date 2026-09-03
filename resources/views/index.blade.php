@@ -6,6 +6,7 @@
     <link rel="apple-touch-icon" href="/Images/logo.png">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="facebook-domain-verification" content="y1dk6klawxgk5dafue8fvhyj3grd02" />
 <meta name="description" content="Apex Growth Solutions — backend credit repair fulfillment partner. Dispute prep, bureau follow-up calls, CFPB / FTC documentation, Innovis disputes, and weekly client reporting for credit repair businesses." />
 <title>Apex Growth Solutions | Credit Repair Fulfillment Partner For Credit Repair Businesses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
