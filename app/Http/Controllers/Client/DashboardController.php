@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers\Client;
 
-use App\Http\Controllers\Concerns\BuildsEodReport;
 use App\Http\Controllers\Controller;
 use App\Models\ClientPayment;
 use App\Models\Document;
 use App\Models\EndUser;
-use App\Models\NegativeItem;
 use App\Models\ProcessStep;
 use App\Models\TimePayout;
-use App\Support\WorkDay;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    use BuildsEodReport;
-
     public function index()
     {
         $client = Auth::guard('client')->user();
@@ -59,42 +54,6 @@ class DashboardController extends Controller
             ->limit(15)
             ->get();
 
-        // Results & EOD snapshot — Clinecea only (results-tracking owners). Gives
-        // her the same figures the EOD carries, right on the dashboard, for peace
-        // of mind: what was done this shift + lifetime deletions/updates + what's
-        // waiting on her.
-        $results = null;
-        if ($client->resultsTrackingEnabled()) {
-            $eod = $this->eodReportData(collect([$clientId]), WorkDay::normalise(null));
-
-            $ni = NegativeItem::whereIn('end_user_id', $endUserIds)
-                ->selectRaw("
-                    SUM(CASE WHEN status = 'reporting' THEN 1 ELSE 0 END) AS reporting,
-                    SUM(CASE WHEN status = 'deleted'   THEN 1 ELSE 0 END) AS deleted,
-                    SUM(CASE WHEN status = 'updated'   THEN 1 ELSE 0 END) AS updated
-                ")->first();
-
-            $totalItems = (int) $ni->reporting + (int) $ni->deleted + (int) $ni->updated;
-            $resolved   = (int) $ni->deleted + (int) $ni->updated;
-
-            $results = [
-                'reporting'        => (int) $ni->reporting,
-                'deleted'          => (int) $ni->deleted,
-                'updated'          => (int) $ni->updated,
-                'resolved'         => $resolved,
-                'success_rate'     => $totalItems > 0 ? (int) round($resolved / $totalItems * 100) : 0,
-                'worked_today'     => count($eod['worked']),
-                'rounds_sent'      => $eod['roundsSent'],
-                'new_today'        => $eod['newClientsCount'],
-                'awaiting'         => $eod['waitingApproval']->count(),
-                'nearing'          => $eod['nearing']->count(),
-                'on_hold'          => $eod['onHold']->count(),
-                'issues'           => $eod['issues']->count(),
-                'shift_label'      => $eod['workLabel'],
-                'is_current'       => $eod['isCurrent'],
-            ];
-        }
-
-        return view('client.dashboard.index', compact('stats', 'recentSteps', 'client', 'results'));
+        return view('client.dashboard.index', compact('stats', 'recentSteps', 'client'));
     }
 }
