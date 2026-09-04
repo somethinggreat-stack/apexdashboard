@@ -348,6 +348,25 @@ class ResultsTrackingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_business_owner_dashboard_shows_results_panel_only_when_enabled(): void
+    {
+        $this->seedWorld();
+        $jane = $this->eu($this->clinecea, 'Jane');
+        $this->item($jane, 'Portfolio Recovery', 'delete', '2026-08-15'); // deleted
+        $this->item($jane, 'Capital One', 'update', null);                // reporting
+
+        $this->actingAs($this->clinecea, 'client')->get('/business-owner/dashboard')
+            ->assertOk()
+            ->assertSee('Your Results at a Glance')
+            ->assertSee('Items Deleted')
+            ->assertSee('Updated to Positive');
+
+        // A non-results-tracking owner never sees the panel.
+        $this->actingAs($this->other, 'client')->get('/business-owner/dashboard')
+            ->assertOk()
+            ->assertDontSee('Your Results at a Glance');
+    }
+
     public function test_client_show_page_renders_results_tab_only_when_enabled(): void
     {
         $this->seedWorld();
