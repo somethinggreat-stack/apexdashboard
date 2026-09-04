@@ -316,6 +316,38 @@ class ResultsTrackingTest extends TestCase
             ->get('/admin/sent-for-approval')->assertForbidden();
     }
 
+    public function test_business_owner_gets_view_only_results_tab_and_eod_when_enabled(): void
+    {
+        $this->seedWorld();
+        $jane = $this->eu($this->clinecea, 'Jane');
+        $this->item($jane, 'Portfolio Recovery', 'delete', null);
+
+        // Clinecea owner (results tracking on): Results tab + EOD nav, and NO edit controls.
+        $this->actingAs($this->clinecea, 'client')
+            ->get("/business-owner/end-users/{$jane->id}")
+            ->assertOk()
+            ->assertSee('Negative Items')
+            ->assertSee('Portfolio Recovery')
+            ->assertSee('EOD Report')          // sidebar nav
+            ->assertDontSee('Mark Deleted')    // view only — no resolve buttons
+            ->assertDontSee('Mark Updated');
+
+        $this->actingAs($this->clinecea, 'client')
+            ->get('/business-owner/results/eod')
+            ->assertOk()
+            ->assertSee('EOD Report');
+
+        // Non-tracking owner: no Results tab, EOD forbidden.
+        $ben = $this->eu($this->other, 'Ben');
+        $this->actingAs($this->other, 'client')
+            ->get("/business-owner/end-users/{$ben->id}")
+            ->assertOk()
+            ->assertDontSee('Negative Items &amp; Results');
+        $this->actingAs($this->other, 'client')
+            ->get('/business-owner/results/eod')
+            ->assertForbidden();
+    }
+
     public function test_client_show_page_renders_results_tab_only_when_enabled(): void
     {
         $this->seedWorld();

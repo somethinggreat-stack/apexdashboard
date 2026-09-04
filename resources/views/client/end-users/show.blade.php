@@ -113,9 +113,18 @@
     <button class="tab" data-target="tab-docs">All Documents ({{ $totalDocs }})</button>
     <button class="tab" data-target="tab-notes">Comments ({{ $endUser->notes->count() }})</button>
     <button class="tab" data-target="tab-status-report">Status Report</button>
+    @if (Auth::guard('client')->user()?->resultsTrackingEnabled())
+        <button class="tab" data-target="tab-results">Results ({{ $endUser->negativeItems->count() }})</button>
+    @endif
 </div>
 
 @include('admin.end-users.partials.overview', ['endUser' => $endUser, 'totalDocs' => $totalDocs, 'portal' => 'client'])
+
+@if (Auth::guard('client')->user()?->resultsTrackingEnabled())
+<div id="tab-results" class="tab-panel">
+    @include('client.end-users.partials.results-view')
+</div>
+@endif
 
 <div id="tab-profile" class="tab-panel">
     <div class="card">

@@ -334,6 +334,9 @@ Route::prefix('business-owner')->name('client.')->group(function () {
         // mirroring the internal Daily Task signal. Read-only, no VA names.
         Route::get('tasks', [Client\TaskController::class, 'index'])->name('tasks');
 
+        // EOD Report — read-only, results-tracking owners only (Clinecea)
+        Route::get('results/eod', [Client\ResultsController::class, 'eod'])->name('results.eod');
+
         // New Clients — intake submissions pending VA review (BOs can view only)
         Route::get('new-clients', [Client\EndUserController::class, 'newClients'])->name('new-clients');
 

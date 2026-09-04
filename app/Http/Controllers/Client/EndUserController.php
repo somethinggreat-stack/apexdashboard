@@ -71,6 +71,7 @@ class EndUserController extends Controller
                 'documents',
                 'scoreHistory',
                 'notes.createdBy',
+                'negativeItems',   // read-only Results tab (results-tracking owners only)
             ])
             ->findOrFail($id);
 

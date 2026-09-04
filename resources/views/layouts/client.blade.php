@@ -248,6 +248,12 @@
                 <span>Tasks View</span>
             </a>
             @php $bo = Auth::guard('client')->user(); @endphp
+            @if ($bo?->resultsTrackingEnabled())
+            <a href="{{ route('client.results.eod') }}" class="{{ request()->routeIs('client.results.eod') ? 'active' : '' }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+                <span>EOD Report</span>
+            </a>
+            @endif
             @if ($bo?->intake_enabled)
                 @php $pendingIntake = \App\Models\EndUser::forClient($bo->id)->notHeld()->where('intake_status', 'pending_review')->count(); @endphp
                 <a href="{{ route('client.new-clients') }}" class="{{ request()->routeIs('client.new-clients*') ? 'active' : '' }}">
