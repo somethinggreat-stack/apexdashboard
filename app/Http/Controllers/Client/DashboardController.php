@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Http\Controllers\Concerns\BuildsEodReport;
 use App\Http\Controllers\Controller;
 use App\Models\ClientPayment;
 use App\Models\Document;
 use App\Models\EndUser;
 use App\Models\ProcessStep;
 use App\Models\TimePayout;
+use App\Support\WorkDay;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
+    use BuildsEodReport;
+
     public function index()
     {
         $client = Auth::guard('client')->user();
@@ -54,6 +58,23 @@ class DashboardController extends Controller
             ->limit(15)
             ->get();
 
-        return view('client.dashboard.index', compact('stats', 'recentSteps', 'client'));
+        // This-shift snapshot — Clinecea only. Same figures the EOD carries, shown
+        // as boxes on the dashboard so she can see the current shift at a glance.
+        $shift = null;
+        if ($client->resultsTrackingEnabled()) {
+            $eod = $this->eodReportData(collect([$clientId]), WorkDay::normalise(null));
+            $shift = [
+                'worked'     => count($eod['worked']),
+                'rounds'     => $eod['roundsSent'],
+                'new'        => $eod['newClientsCount'],
+                'awaiting'   => $eod['waitingApproval']->count(),
+                'nearing'    => $eod['nearing']->count(),
+                'issues'     => $eod['issues']->count(),
+                'label'      => $eod['workLabel'],
+                'is_current' => $eod['isCurrent'],
+            ];
+        }
+
+        return view('client.dashboard.index', compact('stats', 'recentSteps', 'client', 'shift'));
     }
 }

@@ -348,6 +348,28 @@ class ResultsTrackingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_dashboard_shows_this_shift_panel_for_clinecea_only(): void
+    {
+        $this->seedWorld();
+        $this->eu($this->clinecea, 'Jane');
+        $this->eu($this->other, 'Ben');
+
+        // Clinecea (tracking on) sees the This Shift snapshot boxes.
+        $this->actingAs($this->clinecea, 'client')
+            ->get('/business-owner/dashboard')
+            ->assertOk()
+            ->assertSee('This Shift')
+            ->assertSee('Clients Worked')
+            ->assertSee('Waiting Your Approval');
+
+        // A non-tracking owner never sees it.
+        $this->actingAs($this->other, 'client')
+            ->get('/business-owner/dashboard')
+            ->assertOk()
+            ->assertDontSee('This Shift')
+            ->assertDontSee('Clients Worked');
+    }
+
     public function test_client_show_page_renders_results_tab_only_when_enabled(): void
     {
         $this->seedWorld();

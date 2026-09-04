@@ -80,6 +80,37 @@
 </style>
 @endpush
 
+@if ($shift)
+<div class="card shift-panel">
+    <div class="card-header">
+        <h2 style="margin:0;">{{ $shift['is_current'] ? 'This Shift' : $shift['label'] }}</h2>
+    </div>
+    <div class="shift-grid">
+        <div class="shift-box"><div class="shift-val">{{ $shift['worked'] }}</div><div class="shift-label">Clients Worked</div></div>
+        <div class="shift-box"><div class="shift-val">{{ $shift['rounds'] }}</div><div class="shift-label">Rounds Sent</div></div>
+        <div class="shift-box"><div class="shift-val">{{ $shift['new'] }}</div><div class="shift-label">New Clients</div></div>
+        <div class="shift-box shift-wait"><div class="shift-val">{{ $shift['awaiting'] }}</div><div class="shift-label">Waiting Your Approval</div></div>
+        <div class="shift-box shift-near"><div class="shift-val">{{ $shift['nearing'] }}</div><div class="shift-label">Nearing Completion</div></div>
+        <div class="shift-box shift-issue"><div class="shift-val">{{ $shift['issues'] }}</div><div class="shift-label">Need a Fix</div></div>
+    </div>
+</div>
+
+@push('head')
+<style>
+    .shift-panel { margin-bottom:18px; }
+    .shift-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-top:6px; }
+    @media (max-width:1100px){ .shift-grid { grid-template-columns:repeat(3,1fr); } }
+    @media (max-width:560px){ .shift-grid { grid-template-columns:repeat(2,1fr); } }
+    .shift-box { padding:22px 18px; border-radius:14px; border:1px solid var(--border,#e6ebf2); background:var(--surface,#fff); text-align:left; }
+    .shift-val { font-size:38px; font-weight:800; line-height:1; letter-spacing:-1px; color:var(--text,#0f172a); }
+    .shift-label { margin-top:8px; font-size:12.5px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:var(--muted,#64748b); }
+    .shift-wait  { background:#fffbeb; border-color:#fde68a; } .shift-wait .shift-val  { color:#b45309; }
+    .shift-near  { background:#ecfdf5; border-color:#a7f3d0; } .shift-near .shift-val  { color:#047857; }
+    .shift-issue { background:#fef2f2; border-color:#fecaca; } .shift-issue .shift-val { color:#b91c1c; }
+</style>
+@endpush
+@endif
+
 <div class="card">
     <div class="card-header">
         <h2>What Your VA Has Been Doing</h2>
