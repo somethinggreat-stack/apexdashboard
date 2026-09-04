@@ -111,8 +111,14 @@ class ResultsController extends Controller
         $onHold = $clients->whereNotNull('held_at')
             ->map(fn ($eu) => ['name' => $eu->full_name, 'reason' => $eu->move_reason])->values();
 
+        // Show the SPECIFIC error type (e.g. "billing error - Account deactivated"),
+        // falling back to the generic bucket label ("Round Error"/"Error") only when
+        // a client has no error_type recorded.
         $issues = $clients->whereIn('intake_status', ['error', 'round_error'])
-            ->map(fn ($eu) => ['name' => $eu->full_name, 'type' => $eu->resultsStatusLabel()])->values();
+            ->map(fn ($eu) => [
+                'name' => $eu->full_name,
+                'type' => trim((string) $eu->error_type) !== '' ? $eu->error_type : $eu->resultsStatusLabel(),
+            ])->values();
 
         ksort($worked);
 
