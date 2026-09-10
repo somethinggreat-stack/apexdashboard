@@ -15,7 +15,7 @@
                 documents. Anyone already pulled is skipped, so it is safe to press twice.
             </p>
         </div>
-        <form method="POST" action="{{ route('admin.ghl-clients.sync') }}" style="margin:0;">
+        <form method="POST" action="{{ route('admin.ghl-clients.sync') }}" style="margin:0;" data-ghl-sync>
             @csrf
             <button class="btn btn-primary">Sync now</button>
         </form>
@@ -117,6 +117,8 @@
     </table></div>
 </div>
 @endif
+
+@include('admin.end-users._ghl-sync-modal')
 
 @endsection
 

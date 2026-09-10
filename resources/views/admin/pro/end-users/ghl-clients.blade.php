@@ -19,7 +19,7 @@
                 skipped, so it is safe to press as often as you like.
             </p>
         </div>
-        <form method="POST" action="{{ route('admin.ghl-clients.sync') }}" style="margin:0;">
+        <form method="POST" action="{{ route('admin.ghl-clients.sync') }}" style="margin:0;" data-ghl-sync>
             @csrf
             <button class="pro-act done">Sync now</button>
         </form>
@@ -142,6 +142,8 @@
     </div>
 </div>
 @endif
+
+@include('admin.end-users._ghl-sync-modal')
 
 @endsection
 

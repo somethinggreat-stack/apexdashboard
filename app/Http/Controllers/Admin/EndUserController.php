@@ -855,7 +855,11 @@ class EndUserController extends Controller
         $sync = \App\Services\Ghl\GhlIntakeSync::fromConfig();
 
         if (!$sync->isConfigured()) {
-            return back()->with('status', 'GoHighLevel sync is not configured on the server.');
+            $message = 'GoHighLevel sync is not configured on the server.';
+
+            return request()->wantsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->with('status', $message);
         }
 
         $result = $sync->run();
@@ -863,7 +867,19 @@ class EndUserController extends Controller
         $message = "Sync finished — imported {$result['imported']}, linked {$result['linked']}, already had {$result['skipped']}.";
 
         if ($result['failed'] > 0) {
-            return back()->with('status', $message . " {$result['failed']} failed: " . implode(' | ', array_slice($result['errors'], 0, 3)));
+            $message .= " {$result['failed']} failed: " . implode(' | ', array_slice($result['errors'], 0, 3));
+        }
+
+        // The Sync now button reads these counts straight off the response.
+        if (request()->wantsJson()) {
+            return response()->json([
+                'ok'       => true,
+                'imported' => $result['imported'],
+                'linked'   => $result['linked'],
+                'skipped'  => $result['skipped'],
+                'failed'   => $result['failed'],
+                'message'  => $message,
+            ]);
         }
 
         return back()->with('status', $message);

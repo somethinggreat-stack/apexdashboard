@@ -198,6 +198,9 @@ class GhlIntakeSync
         $existing->ghl_synced_at     = now();
 
         $candidates = [
+            // We know when they submitted in GHL; a hand-keyed record usually has
+            // no submission date at all, which leaves the history column blank.
+            'intake_submitted_at'                 => $this->parseSubmittedAt($submission['createdAt'] ?? null),
             'phone'                               => $this->str($answers['phone'] ?? ''),
             'date_of_birth'                       => $this->parseDob($answers['date_of_birth'] ?? null),
             'ssn'                                 => preg_replace('/\D/', '', (string) ($answers[self::F_SSN] ?? '')),
