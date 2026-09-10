@@ -55,6 +55,9 @@ class GhlIntakeSync
         'image/webp'      => 'webp',
     ];
 
+    /** false = not looked up yet, null = looked and found nothing. */
+    private string|null|false $dateFormat = false;
+
     public function __construct(
         private readonly string $apiKey,
         private readonly string $locationId,
@@ -451,12 +454,15 @@ class GhlIntakeSync
     }
 
     /**
-     * The GHL form is mm-dd-yyyy and sends "07-04-1985".
+     * Store the date the client actually picked, not a rearrangement of it.
      *
-     * This must never be handed straight to Laravel's `date` rule or to
-     * strtotime: PHP reads a dash-separated date as dd-mm-yyyy, so 07-04-1985
-     * silently becomes 7 April instead of 4 July. A wrong date of birth
-     * invalidates a dispute, and nothing would have flagged it.
+     * The value must never reach strtotime or Laravel's `date` rule: PHP reads a
+     * dash-separated date as dd-mm-yyyy, so the form's 07-04-1985 would quietly
+     * become 7 April instead of 4 July. A wrong date of birth invalidates a
+     * dispute and nothing downstream would question it.
+     *
+     * The order tried starts with whatever the form itself declares, so changing
+     * the date format in the GHL builder cannot silently break this.
      */
     private function parseDob(mixed $raw): ?string
     {
@@ -465,16 +471,74 @@ class GhlIntakeSync
             return null;
         }
 
-        foreach (['m-d-Y', 'm/d/Y', 'Y-m-d'] as $format) {
-            $date = Carbon::createFromFormat($format, $raw);
+        $formats = array_values(array_unique(array_filter([
+            $this->formDateFormat(),
+            'm-d-Y', 'm/d/Y', 'd-m-Y', 'Y-m-d', 'Y/m/d',
+        ])));
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $raw);
+            } catch (Throwable) {
+                // Carbon throws rather than returning false when the value does
+                // not match, so each attempt has to be guarded or the first miss
+                // would abort the whole import.
+                continue;
+            }
+
+            // Round-trip check: rejects a value that merely coerced into shape.
             if ($date && $date->format($format) === $raw) {
                 return $date->toDateString();
             }
         }
 
-        Log::warning('GHL intake: unrecognised date of birth format', ['value' => $raw]);
+        Log::warning('GHL intake: unrecognised date of birth', ['value' => $raw, 'tried' => $formats]);
 
         return null;
+    }
+
+    /**
+     * The date format the GHL form is configured with, e.g. "MM-DD-YYYY" becomes
+     * "m-d-Y". Read once per run; a failure here is not fatal, it just falls back
+     * to the standard list.
+     */
+    private function formDateFormat(): ?string
+    {
+        if ($this->dateFormat !== false) {
+            return $this->dateFormat;
+        }
+
+        $this->dateFormat = null;
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Version'       => $this->apiVersion,
+                'Accept'        => 'application/json',
+            ])->timeout(20)->get($this->baseUrl . '/surveys/' . $this->surveyId);
+
+            foreach ($response->json('survey.formData.slides') ?? [] as $slide) {
+                foreach ($slide['slideData'] ?? [] as $field) {
+                    if (($field['tag'] ?? null) !== 'date_of_birth' || empty($field['format'])) {
+                        continue;
+                    }
+
+                    $this->dateFormat = str_replace(
+                        ['YYYY', 'MM', 'DD'],
+                        ['Y', 'm', 'd'],
+                        strtoupper((string) $field['format'])
+                    );
+
+                    return $this->dateFormat;
+                }
+            }
+        } catch (Throwable $e) {
+            Log::info('GHL intake: could not read the form date format, using defaults', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this->dateFormat;
     }
 
     private function parseSubmittedAt(mixed $raw): ?Carbon
