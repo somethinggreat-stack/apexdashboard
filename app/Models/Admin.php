@@ -39,6 +39,15 @@ class Admin extends Authenticatable
     }
 
     /**
+     * May this account open the business owner Credentials vault? Super admins
+     * always can; a VA only when granted the flag. Leads agents never can.
+     */
+    public function canManageCredentials(): bool
+    {
+        return $this->isSuper() || ($this->isVa() && (bool) $this->can_manage_credentials);
+    }
+
+    /**
      * The admin whose data (business owners, clients) this user operates on.
      * VAs share their parent super admin's data; a super admin owns their own.
      */

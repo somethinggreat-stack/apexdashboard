@@ -88,6 +88,25 @@ class UserController extends Controller
         return back()->with('status', "Password updated for {$user->full_name}.");
     }
 
+    /** Grant or revoke a VA's access to the business owner Credentials vault. */
+    public function toggleCredentials(string $id)
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $user    = $this->orgScope($ownerId)->findOrFail($id);
+
+        // Only VAs carry this flag — super admins always have access, leads never.
+        if (! $user->isVa()) {
+            return back()->withErrors(['user' => 'Credentials access applies to VAs only.']);
+        }
+
+        $user->can_manage_credentials = ! $user->can_manage_credentials;
+        $user->save();
+
+        $state = $user->can_manage_credentials ? 'granted' : 'revoked';
+
+        return back()->with('status', "Credentials access {$state} for {$user->full_name}.");
+    }
+
     public function destroy(string $id)
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();

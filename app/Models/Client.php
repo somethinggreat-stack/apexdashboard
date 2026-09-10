@@ -202,6 +202,12 @@ class Client extends Authenticatable
         return $this->hasMany(Message::class)->orderBy('created_at');
     }
 
+    /** CRM / software logins and resource links (Google Sheets, Jotform, …). */
+    public function credentials()
+    {
+        return $this->hasMany(BusinessOwnerCredential::class);
+    }
+
     public function unreadCountForAdmin(): int
     {
         return $this->messages()

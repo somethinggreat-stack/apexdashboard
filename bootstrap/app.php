@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.super'     => \App\Http\Middleware\RoleSuper::class,
             'admin.leads'     => \App\Http\Middleware\RoleLeads::class,
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,
+            'admin.credentials' => \App\Http\Middleware\RoleCredentials::class,
         ]);
 
         // Defense-in-depth security response headers on every request.

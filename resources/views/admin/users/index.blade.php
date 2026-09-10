@@ -9,6 +9,7 @@
             <h2 style="margin:0;">Users</h2>
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 VAs can work on all business owners (New Clients, Errors, Clients, Messages, Today's Queue) but can't see payments or leads.
+                Grant <strong>Credentials Access</strong> to let a VA open a business owner's saved CRM / software logins.
             </p>
         </div>
         <button class="btn btn-primary" onclick="openModal('addUserModal')">+ Add User</button>
@@ -30,6 +31,9 @@
                             <span class="role-badge role-leads">Leads Agent</span>
                         @else
                             <span class="role-badge role-va">VA</span>
+                            @if ($u->can_manage_credentials)
+                                <span class="role-badge role-cred">Credentials</span>
+                            @endif
                         @endif
                     </td>
                     <td class="no-link">
@@ -39,6 +43,12 @@
                                 <input type="hidden" name="password" value="">
                                 <button type="button" class="btn btn-sm" onclick="resetPw(this, '{{ addslashes($u->full_name) }}')">Reset Password</button>
                             </form>
+                            @if ($u->isVa())
+                                <form method="POST" action="{{ route('admin.users.credentials-access', $u->id) }}">
+                                    @csrf @method('PUT')
+                                    <button class="btn btn-sm">{{ $u->can_manage_credentials ? 'Revoke Credentials Access' : 'Grant Credentials Access' }}</button>
+                                </form>
+                            @endif
                             @if (!$u->isSuper() && $u->id !== Auth::guard('admin')->id())
                                 <form method="POST" action="{{ route('admin.users.destroy', $u->id) }}"
                                       data-confirm-delete data-confirm-message="Remove {{ $u->full_name }}? They will no longer be able to log in.">
@@ -128,6 +138,7 @@
     .role-super { background:#ede9fe; color:#5b21b6; }
     .role-va { background:#e0f2fe; color:#075985; }
     .role-leads { background:#dcfce7; color:#166534; }
+    .role-cred { background:#fef3c7; color:#92400e; margin-left:4px; }
     .u-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
     .u-actions form { display:inline; margin:0; }
     .u-actions .btn { white-space:nowrap; }

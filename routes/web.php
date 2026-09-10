@@ -93,6 +93,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
             Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
+            Route::put('users/{id}/credentials-access', [Admin\UserController::class, 'toggleCredentials'])->name('users.credentials-access');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
             // Referral commissions — each referrer earns per real client payment of their referred BOs
@@ -204,6 +205,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('messages/{id}/pin', [Admin\MessageController::class, 'togglePin'])->name('messages.pin');
             Route::post('messages/{id}/star', [Admin\MessageController::class, 'toggleStar'])->name('messages.star');
             Route::post('messages/{id}/note', [Admin\MessageController::class, 'saveNote'])->name('messages.note');
+
+            // Credentials — the selected owner's CRM / software logins and resource
+            // links (Google Sheets, Jotform, …). Super admin always; a VA only when
+            // granted (admin.credentials middleware). Sits just above Tasks View.
+            Route::middleware('admin.credentials')->group(function () {
+                Route::get('credentials', [Admin\CredentialController::class, 'index'])->name('credentials.index');
+                Route::post('credentials', [Admin\CredentialController::class, 'store'])->name('credentials.store');
+                Route::put('credentials/{id}', [Admin\CredentialController::class, 'update'])->whereNumber('id')->name('credentials.update');
+                Route::delete('credentials/{id}', [Admin\CredentialController::class, 'destroy'])->whereNumber('id')->name('credentials.destroy');
+            });
 
             // Tasks View — the selected BO's own 30-day work log (rounds started
             // per day), the internal twin of the owner's Tasks View but WITH the
