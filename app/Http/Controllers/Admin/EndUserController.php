@@ -804,10 +804,77 @@ class EndUserController extends Controller
         $endUsers = EndUser::forClient($client->id)
             ->notHeld()
             ->where('intake_status', 'pending_review')
+            // Arrivals from GoHighLevel are reviewed in their own list.
+            ->where('from_ghl', false)
             ->orderByDesc('intake_submitted_at')
             ->get();
 
         return view($this->adminView('admin.end-users.new-clients'), ['endUsers' => $endUsers, 'client' => $client]);
+    }
+
+    /**
+     * GHL Clients — onboarding submissions pulled from GoHighLevel, awaiting
+     * review. Only exists for the one business owner whose GHL sub-account is
+     * configured; every other BO 404s here.
+     */
+    public function ghlClients()
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($this->ghlSyncEnabledFor($client), 404);
+
+        $endUsers = EndUser::forClient($client->id)
+            ->notHeld()
+            ->where('from_ghl', true)
+            ->where('intake_status', 'pending_review')
+            ->orderByDesc('intake_submitted_at')
+            ->get();
+
+        // Everything ever pulled from GoHighLevel, newest pull first. This is the
+        // history the team reads to answer "did we already bring this person in",
+        // and it is why a second pull cannot duplicate anybody.
+        $recent = EndUser::forClient($client->id)
+            ->where('from_ghl', true)
+            ->orderByDesc('ghl_synced_at')
+            ->limit(50)
+            ->get();
+
+        return view($this->adminView('admin.end-users.ghl-clients'), compact('endUsers', 'recent', 'client'));
+    }
+
+    /**
+     * Run the GoHighLevel pull on demand. The scheduler already does this every
+     * five minutes; this button exists because there is no terminal on the
+     * hosting, and waiting five minutes to find out whether it worked is a poor
+     * way to debug.
+     */
+    public function syncGhlNow()
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($this->ghlSyncEnabledFor($client), 404);
+
+        $sync = \App\Services\Ghl\GhlIntakeSync::fromConfig();
+
+        if (!$sync->isConfigured()) {
+            return back()->with('status', 'GoHighLevel sync is not configured on the server.');
+        }
+
+        $result = $sync->run();
+
+        $message = "Sync finished — imported {$result['imported']}, linked {$result['linked']}, already had {$result['skipped']}.";
+
+        if ($result['failed'] > 0) {
+            return back()->with('status', $message . " {$result['failed']} failed: " . implode(' | ', array_slice($result['errors'], 0, 3)));
+        }
+
+        return back()->with('status', $message);
+    }
+
+    /** The GHL list belongs to exactly one business owner. */
+    private function ghlSyncEnabledFor(Client $client): bool
+    {
+        $configured = (int) config('services.ghl.client_id');
+
+        return $configured > 0 && $client->id === $configured;
     }
 
     /** New Client Errors still awaiting a fix (business owner hasn't resolved). */

@@ -109,6 +109,16 @@
                     </a>
                 @endif
 
+                {{-- GHL Clients: only for the business owner whose GoHighLevel account is wired up. --}}
+                @php $ghlClientId = (int) config('services.ghl.client_id'); @endphp
+                @if ($ghlClientId > 0 && $selectedClient->id === $ghlClientId)
+                    <a href="{{ route('admin.ghl-clients') }}" class="{{ request()->routeIs('admin.ghl-clients*') ? 'active' : '' }}">
+                        <svg class="i-int" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        GHL Clients
+                        @if ($nav['ghl_pending'] > 0)<span class="pro-count">{{ $nav['ghl_pending'] }}</span>@endif
+                    </a>
+                @endif
+
                 <a href="{{ route('admin.errors') }}" class="{{ request()->routeIs('admin.errors') ? 'active' : '' }}">
                     <svg class="i-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
                     New Client Errors

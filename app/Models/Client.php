@@ -229,7 +229,8 @@ class Client extends Authenticatable
     {
         $row = EndUser::where('client_id', $this->id)
             ->selectRaw(
-                "SUM(CASE WHEN held_at IS NULL AND intake_status = 'pending_review' THEN 1 ELSE 0 END) AS pending,
+                "SUM(CASE WHEN held_at IS NULL AND intake_status = 'pending_review' AND from_ghl = 0 THEN 1 ELSE 0 END) AS pending,
+                 SUM(CASE WHEN held_at IS NULL AND intake_status = 'pending_review' AND from_ghl = 1 THEN 1 ELSE 0 END) AS ghl_pending,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'error' AND error_resolved_by_client_at IS NULL     THEN 1 ELSE 0 END) AS errors,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS new_errors_resolved,
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NULL     THEN 1 ELSE 0 END) AS round_errors,
@@ -242,6 +243,7 @@ class Client extends Authenticatable
 
         return [
             'pending'             => (int) ($row->pending ?? 0),
+            'ghl_pending'         => (int) ($row->ghl_pending ?? 0),
             'errors'              => (int) ($row->errors ?? 0),
             'new_errors_resolved' => (int) ($row->new_errors_resolved ?? 0),
             'round_errors'        => (int) ($row->round_errors ?? 0),

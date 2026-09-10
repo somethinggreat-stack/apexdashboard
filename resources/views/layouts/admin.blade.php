@@ -163,9 +163,17 @@
             @isset($selectedClient)
                 <a href="{{ route('admin.tasks') }}" class="{{ request()->routeIs('admin.tasks') ? 'active' : '' }}">Tasks View</a>
                 @if ($selectedClient->intake_enabled)
-                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'pending_review')->count(); @endphp
+                    @php $pendingIntake = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'pending_review')->where('from_ghl', false)->count(); @endphp
                     <a href="{{ route('admin.new-clients') }}" class="{{ request()->routeIs('admin.new-clients*') ? 'active' : '' }}">
                         New Clients @if ($pendingIntake > 0)<span class="badge-portal" style="background:#dc2626;">{{ $pendingIntake }}</span>@endif
+                    </a>
+                @endif
+                {{-- GHL Clients: only the business owner whose GoHighLevel account is wired up. --}}
+                @php $ghlClientId = (int) config('services.ghl.client_id'); @endphp
+                @if ($ghlClientId > 0 && $selectedClient->id === $ghlClientId)
+                    @php $pendingGhl = \App\Models\EndUser::forClient($selectedClient->id)->where('from_ghl', true)->where('intake_status', 'pending_review')->count(); @endphp
+                    <a href="{{ route('admin.ghl-clients') }}" class="{{ request()->routeIs('admin.ghl-clients*') ? 'active' : '' }}">
+                        GHL Clients @if ($pendingGhl > 0)<span class="badge-portal" style="background:#7c3aed;">{{ $pendingGhl }}</span>@endif
                     </a>
                 @endif
                 @php $errorCount = \App\Models\EndUser::forClient($selectedClient->id)->where('intake_status', 'error')->count(); @endphp

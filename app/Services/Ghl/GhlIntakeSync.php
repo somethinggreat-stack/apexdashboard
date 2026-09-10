@@ -15,11 +15,11 @@ use Throwable;
  * Pulls Credit Repair Onboarding submissions out of Benny's GoHighLevel
  * sub-account and turns them into EndUsers here.
  *
- * This is a pull, not a webhook, on purpose: a missed webhook is missed
- * forever, whereas a poll that fails at 10:05 simply picks the same record up
- * at 10:10. The only state it keeps is end_users.ghl_submission_id — that
- * column IS the "already imported" record, so the job is safe to re-run by hand
- * at any time.
+ * A pull, not a webhook, and run on demand from the Sync now button so clients
+ * arrive when a VA is actually there to review them. A missed webhook is missed
+ * forever; a pull that fails is simply run again. The only state it keeps is
+ * end_users.ghl_submission_id — that column IS the record of what has already
+ * been pulled, so running it twice costs nothing and can never duplicate.
  *
  * Scope: Benny only. Nothing here touches the existing intake path or any other
  * business owner.
@@ -195,6 +195,7 @@ class GhlIntakeSync
         $existing->from_ghl          = true;
         $existing->ghl_contact_id    = $submission['contactId'] ?? $existing->ghl_contact_id;
         $existing->ghl_submission_id = $submission['id'];
+        $existing->ghl_synced_at     = now();
 
         $candidates = [
             'phone'                               => $this->str($answers['phone'] ?? ''),
@@ -249,6 +250,7 @@ class GhlIntakeSync
 
             'ghl_contact_id'    => $submission['contactId'] ?? null,
             'ghl_submission_id' => $submission['id'],
+            'ghl_synced_at'     => now(),
 
             'first_name'      => $this->str($answers['first_name'] ?? ''),
             'last_name'       => $this->str($answers['last_name'] ?? ''),

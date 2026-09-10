@@ -227,6 +227,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Intake link + API key management — super admin only (VAs must not see/change it)
             Route::post('new-clients/regenerate-link', [Admin\EndUserController::class, 'regenerateIntake'])->middleware('admin.super')->name('new-clients.regenerate');
             Route::post('new-clients/api-key', [Admin\EndUserController::class, 'regenerateApiKey'])->middleware('admin.super')->name('new-clients.api-key');
+            // GHL Clients — onboarding pulled from GoHighLevel, reviewed apart from
+            // the normal intake queue. 404s for every BO except the configured one.
+            Route::get('ghl-clients', [Admin\EndUserController::class, 'ghlClients'])->name('ghl-clients');
+            Route::post('ghl-clients/sync', [Admin\EndUserController::class, 'syncGhlNow'])->name('ghl-clients.sync');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
             Route::get('errors-resolved-new-clients', [Admin\EndUserController::class, 'errorsResolvedNewClients'])->name('errors-resolved-new');
             // The main Clients list (1st round done; remaining rounds worked here)
