@@ -838,7 +838,14 @@ class EndUserController extends Controller
             ->limit(50)
             ->get();
 
-        return view($this->adminView('admin.end-users.ghl-clients'), compact('endUsers', 'recent', 'client'));
+        $pulledTotal = EndUser::forClient($client->id)->where('from_ghl', true)->count();
+        $lastPull    = EndUser::forClient($client->id)->where('from_ghl', true)->max('ghl_synced_at');
+        $lastPull    = $lastPull ? \Illuminate\Support\Carbon::parse($lastPull) : null;
+
+        return view(
+            $this->adminView('admin.end-users.ghl-clients'),
+            compact('endUsers', 'recent', 'client', 'pulledTotal', 'lastPull')
+        );
     }
 
     /**
