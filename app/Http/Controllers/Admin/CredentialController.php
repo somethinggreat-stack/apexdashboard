@@ -19,9 +19,12 @@ class CredentialController extends Controller
     {
         $client = $this->selectedClient();
 
-        $credentials = $client->credentials()->orderBy('sort_order')->orderBy('id')->get();
+        $all = $client->credentials()->orderBy('sort_order')->orderBy('id')->get();
 
-        return view($this->adminView('admin.credentials.index'), compact('client', 'credentials'));
+        $credentials = $all->where('type', '!=', 'link')->values();  // CRM / software logins
+        $links       = $all->where('type', 'link')->values();        // plain resource links
+
+        return view($this->adminView('admin.credentials.index'), compact('client', 'credentials', 'links'));
     }
 
     public function store(Request $request)
@@ -51,17 +54,34 @@ class CredentialController extends Controller
         return back()->with('status', "{$name} removed.");
     }
 
-    /** Validate the shared add/edit payload. */
+    /**
+     * Validate the add/edit payload. A 'link' only carries a name, a link and
+     * notes — it never asks for login details; a 'credential' carries the lot.
+     */
     private function validated(Request $request): array
     {
-        return $request->validate([
-            'software_name' => 'required|string|max:120',
-            'login_url'     => 'nullable|string|max:255',
-            'username'      => 'nullable|string|max:255',
-            'email'         => 'nullable|string|max:255',
-            'password'      => 'nullable|string|max:1000',
-            'notes'         => 'nullable|string|max:2000',
-        ]);
+        $type = $request->input('type') === 'link' ? 'link' : 'credential';
+
+        if ($type === 'link') {
+            $data = $request->validate([
+                'software_name' => 'required|string|max:120',
+                'login_url'     => 'required|string|max:255',
+                'notes'         => 'nullable|string|max:2000',
+            ]);
+        } else {
+            $data = $request->validate([
+                'software_name' => 'required|string|max:120',
+                'login_url'     => 'nullable|string|max:255',
+                'username'      => 'nullable|string|max:255',
+                'email'         => 'nullable|string|max:255',
+                'password'      => 'nullable|string|max:1000',
+                'notes'         => 'nullable|string|max:2000',
+            ]);
+        }
+
+        $data['type'] = $type;
+
+        return $data;
     }
 
     /** The owner in session — the vault is always scoped to them. */

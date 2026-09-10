@@ -65,13 +65,39 @@ class CredentialsTest extends TestCase
 
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->bo->id])
             ->post('/admin/credentials', [
+                'type'          => 'link',
                 'software_name' => 'Intake Google Sheet',
                 'login_url'     => 'https://docs.google.com/spreadsheets/d/abc',
             ])->assertRedirect();
 
         $cred = BusinessOwnerCredential::where('software_name', 'Intake Google Sheet')->firstOrFail();
+        $this->assertSame('link', $cred->type);
         $this->assertNull($cred->password);
         $this->assertNull($cred->email);
+    }
+
+    public function test_a_link_requires_a_url(): void
+    {
+        $this->seedWorld();
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->bo->id])
+            ->post('/admin/credentials', ['type' => 'link', 'software_name' => 'Jotform', 'login_url' => ''])
+            ->assertSessionHasErrors('login_url');
+
+        $this->assertSame(0, BusinessOwnerCredential::count());
+    }
+
+    public function test_credentials_and_links_are_listed_separately(): void
+    {
+        $this->seedWorld();
+        $this->bo->credentials()->create(['type' => 'credential', 'software_name' => 'GoHighLevel', 'password' => 'x']);
+        $this->bo->credentials()->create(['type' => 'link', 'software_name' => 'Jotform', 'login_url' => 'https://jotform.com/x']);
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->bo->id])
+            ->get('/admin/credentials')
+            ->assertOk()
+            ->assertViewHas('credentials', fn ($c) => $c->count() === 1 && $c->first()->software_name === 'GoHighLevel')
+            ->assertViewHas('links', fn ($l) => $l->count() === 1 && $l->first()->software_name === 'Jotform');
     }
 
     public function test_name_is_required(): void
