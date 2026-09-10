@@ -92,6 +92,26 @@
                                     'Address'  => $eu->proof_of_address_path,
                                     'SSN card' => $eu->ssn_picture_path,
                                 ])->filter(fn ($path) => blank($path))->keys();
+
+                                // The GHL form cannot enforce any of this, so the
+                                // reviewer is the last line of defence. Flag it where
+                                // they are already looking rather than in a log.
+                                $flags = [];
+                                $age = $eu->date_of_birth?->age;
+                                if (!$eu->date_of_birth) {
+                                    $flags[] = 'No date of birth';
+                                } elseif ($age < 18 || $age > 100) {
+                                    $flags[] = 'Date of birth looks wrong (' . $age . ')';
+                                }
+                                if (blank($eu->ssn) || strlen(preg_replace('/\D/', '', (string) $eu->ssn)) !== 9) {
+                                    $flags[] = 'SSN not 9 digits';
+                                }
+                                if (blank($eu->cfpb_email)) {
+                                    $flags[] = 'No CFPB login';
+                                }
+                                if (blank($eu->credit_monitoring_security_question)) {
+                                    $flags[] = 'No security question';
+                                }
                             @endphp
                             <tr>
                                 <td>
@@ -102,6 +122,13 @@
                                             <span class="ghl-tag">GHL</span>
                                             @if ($eu->intake_review_note)
                                                 <div class="ghl-note-line">⚠ Sent back: {{ $eu->intake_review_note }}</div>
+                                            @endif
+                                            @if ($flags)
+                                                <div class="ghl-flags">
+                                                    @foreach ($flags as $flag)
+                                                        <span class="ghl-flag">{{ $flag }}</span>
+                                                    @endforeach
+                                                </div>
                                             @endif
                                         </div>
                                     </div>
@@ -294,6 +321,11 @@
     .ghl-person-name { font-weight:650; color:var(--ink); text-decoration:none; }
     .ghl-person-name:hover { color:#4f46e5; }
     .ghl-note-line { margin-top:3px; font-size:11.5px; color:#b45309; }
+    .ghl-flags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+    .ghl-flag {
+        padding:2px 7px; border-radius:5px; font-size:10.5px; font-weight:650;
+        background:#fff7ed; color:#c2410c; border:1px solid #fde3c8;
+    }
 
     .ghl-tag {
         display:inline-block; margin-left:7px; padding:2px 7px; border-radius:5px; vertical-align:1px;

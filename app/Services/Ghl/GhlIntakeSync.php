@@ -213,8 +213,8 @@ class GhlIntakeSync
             'credit_monitoring_password'          => $this->str($answers[self::F_MON_PASS] ?? ''),
             'credit_monitoring_security_question' => (string) $question,
             'credit_monitoring_security_answer'   => (string) $answer,
-            'cfpb_email'                          => $this->str($answers[self::F_CFPB_USER] ?? ''),
-            'cfpb_password'                       => $this->str($answers[self::F_CFPB_PASS] ?? ''),
+            'cfpb_email'                          => $this->realOrBlank($answers[self::F_CFPB_USER] ?? ''),
+            'cfpb_password'                       => $this->realOrBlank($answers[self::F_CFPB_PASS] ?? ''),
         ];
 
         $filled = [];
@@ -274,8 +274,8 @@ class GhlIntakeSync
             'credit_monitoring_security_question' => $question,
             'credit_monitoring_security_answer'   => $answer,
 
-            'cfpb_email'    => $this->str($answers[self::F_CFPB_USER] ?? ''),
-            'cfpb_password' => $this->str($answers[self::F_CFPB_PASS] ?? ''),
+            'cfpb_email'    => $this->realOrBlank($answers[self::F_CFPB_USER] ?? ''),
+            'cfpb_password' => $this->realOrBlank($answers[self::F_CFPB_PASS] ?? ''),
 
             'status'       => 'active',
             // The day the client actually onboarded, not the day this job ran.
@@ -425,6 +425,22 @@ class GhlIntakeSync
         return (string) (Client::find($this->clientId)?->intake_monitoring_provider ?? '');
     }
 
+    /**
+     * "I don't have" is a real answer people give, because CFPB Username and
+     * CFPB Password are both marked required on the GHL form — someone without a
+     * CFPB account cannot submit without typing something into them. Storing that
+     * sentence in an email column helps nobody, so placeholders become empty and
+     * the field simply reads as missing.
+     */
+    private function realOrBlank(mixed $value): string
+    {
+        $text = $this->str($value);
+
+        $placeholder = '/^(i\s*(do\s*not|don.?t)\s*have(\s*(one|any|it))?|n\.?\/?a\.?|none|nil|nothing|no|null|-+|\.+)$/iu';
+
+        return preg_match($placeholder, $text) ? '' : $text;
+    }
+
     private function str(mixed $value): string
     {
         if (is_array($value)) {
@@ -487,14 +503,19 @@ class GhlIntakeSync
             return [null, null];
         }
 
+        // Preferred separator, matching the field label "Security Word / Answer".
         $position = strrpos($raw, ' / ');
-        if ($position === false) {
-            return [null, $raw];
+        if ($position !== false) {
+            return [trim(substr($raw, 0, $position)), trim(substr($raw, $position + 3))];
         }
 
-        return [
-            trim(substr($raw, 0, $position)),
-            trim(substr($raw, $position + 3)),
-        ];
+        // Plenty of people type the question out instead: "What was my first pet? Jack".
+        if (preg_match('/^(.*\?)\s*(.+)$/u', $raw, $m)) {
+            return [trim($m[1]), trim($m[2])];
+        }
+
+        // No separator at all — keep the whole thing as the answer rather than
+        // guessing, and let the reviewer see there is no question recorded.
+        return [null, $raw];
     }
 }
