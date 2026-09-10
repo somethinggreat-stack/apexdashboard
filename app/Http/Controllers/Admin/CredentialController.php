@@ -71,8 +71,6 @@ class CredentialController extends Controller
         } else {
             $data = $request->validate([
                 'software_name' => 'required|string|max:120',
-                'login_url'     => 'nullable|string|max:255',
-                'username'      => 'nullable|string|max:255',
                 'email'         => 'nullable|string|max:255',
                 'password'      => 'nullable|string|max:1000',
                 'notes'         => 'nullable|string|max:2000',

@@ -46,17 +46,16 @@ class CredentialsTest extends TestCase
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->bo->id])
             ->post('/admin/credentials', [
                 'software_name' => 'GoHighLevel',
-                'login_url'     => 'app.gohighlevel.com',
-                'username'      => 'alin',
                 'email'         => 'alin@crm.com',
                 'password'      => 'sup3r-secret',
                 'notes'         => '2FA: 555-1234',
             ])->assertRedirect();
 
         $cred = BusinessOwnerCredential::where('client_id', $this->bo->id)->firstOrFail();
+        $this->assertSame('credential', $cred->type);
         $this->assertSame('GoHighLevel', $cred->software_name);
+        $this->assertSame('alin@crm.com', $cred->email);
         $this->assertSame('sup3r-secret', $cred->password);
-        $this->assertSame('app.gohighlevel.com', $cred->login_url);
     }
 
     public function test_a_link_only_resource_needs_no_login(): void
