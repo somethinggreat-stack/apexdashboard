@@ -31,4 +31,16 @@ return [
         ],
     ],
 
+
+    /*
+     * Benny's GoHighLevel sub-account. Leave any of these empty to keep the
+     * intake sync switched off — the command exits quietly when unconfigured.
+     */
+    'ghl' => [
+        'api_key'                  => env('GHL_API_KEY'),
+        'location_id'              => env('GHL_LOCATION_ID'),
+        'credit_repair_survey_id'  => env('GHL_CREDIT_REPAIR_SURVEY_ID'),
+        'client_id'                => env('GHL_SYNC_CLIENT_ID'),
+    ],
+
 ];

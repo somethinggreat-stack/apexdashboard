@@ -13,3 +13,8 @@ Schedule::command('activity:prune')->dailyAt('03:00');
 
 // Empty the Recycle Bin of anything past its 10-day retention (rows + files).
 Schedule::command('recyclebin:purge')->dailyAt('03:15');
+
+// Pull Benny's GoHighLevel onboarding submissions into New Clients. A pull, not
+// a webhook, so a failed run simply retries five minutes later instead of
+// dropping the client. No-ops when the GHL_* config is absent.
+Schedule::command('ghl:sync-intake')->everyFiveMinutes()->withoutOverlapping();

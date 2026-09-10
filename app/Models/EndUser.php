@@ -137,6 +137,7 @@ class EndUser extends Model
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
+        'from_ghl', 'ghl_contact_id', 'ghl_submission_id',
         'round_approval_status', 'round_approval_round', 'round_approval_at',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
@@ -144,6 +145,7 @@ class EndUser extends Model
         'start_date' => 'date',
         'next_round_override' => 'date',
         'deleted_with_owner' => 'boolean',
+        'from_ghl' => 'boolean',
         'held_at' => 'datetime',
         'listed_at' => 'datetime',
         'cfpb_logged_at' => 'datetime',
