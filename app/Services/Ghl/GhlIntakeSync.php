@@ -35,6 +35,7 @@ class GhlIntakeSync
     private const F_CFPB_USER      = '2GNdDEKehMpTrz6Wzgj7';
     private const F_CFPB_PASS      = '8ZqrULT8BkT1HcXHQfBi';
     private const F_SMS_CONSENT    = 'Yu8b3f9k5t5QEYjRf83T';
+    private const F_TERMS          = 'terms_and_conditions';
     private const F_DOC_LICENSE    = 'VbH2tpIKyayB4wCDrUhW';
     private const F_DOC_ADDRESS    = 'FHv3p7wit90sTdeFQ73d';
     private const F_DOC_SSN_CARD   = 'wnpfqKWgJWi6MJzVeqBv';
@@ -205,6 +206,7 @@ class GhlIntakeSync
             // no submission date at all, which leaves the history column blank.
             'intake_submitted_at'                 => $this->parseSubmittedAt($submission['createdAt'] ?? null),
             'ghl_dob_raw'                         => $this->str($answers['date_of_birth'] ?? ''),
+            'ghl_consent'                         => $this->consentRecord($submission, $answers),
             'phone'                               => $this->str($answers['phone'] ?? ''),
             'date_of_birth'                       => $this->parseDob($answers['date_of_birth'] ?? null),
             'ssn'                                 => preg_replace('/\D/', '', (string) ($answers[self::F_SSN] ?? '')),
@@ -266,6 +268,7 @@ class GhlIntakeSync
             'phone'           => $this->str($answers['phone'] ?? ''),
             'date_of_birth'   => $this->parseDob($answers['date_of_birth'] ?? null),
             'ghl_dob_raw'     => $this->str($answers['date_of_birth'] ?? ''),
+            'ghl_consent'     => $this->consentRecord($submission, $answers),
             'ssn'             => preg_replace('/\D/', '', (string) ($answers[self::F_SSN] ?? '')),
 
             'current_address' => $this->str($answers['address'] ?? ''),
@@ -303,6 +306,50 @@ class GhlIntakeSync
         );
 
         return $endUser;
+    }
+
+    /**
+     * The consent evidence, written the way somebody would want to read it back
+     * months later: what they ticked, in their own words, and when and from where.
+     */
+    private function consentRecord(array $submission, array $answers): string
+    {
+        $lines = [];
+
+        $submitted = $this->parseSubmittedAt($submission['createdAt'] ?? null);
+        $lines[] = 'Submitted: ' . ($submitted?->format('j M Y, H:i') ?? 'unknown') . ' UTC';
+
+        if ($timezone = $this->str($answers['Timezone'] ?? '')) {
+            $lines[] = 'Client timezone: ' . $timezone;
+        }
+        if ($ip = $this->str($answers['ip'] ?? '')) {
+            $lines[] = 'IP address: ' . $ip;
+        }
+
+        $lines[] = 'Submission id: ' . ($submission['id'] ?? '?');
+        $lines[] = '';
+
+        if ($terms = $this->str($answers[self::F_TERMS] ?? '')) {
+            $lines[] = 'Terms accepted:';
+            $lines[] = '  ' . $terms;
+        }
+
+        $consent = $answers[self::F_SMS_CONSENT] ?? null;
+        $consent = is_array($consent) ? $consent : array_filter([$this->str($consent)]);
+
+        if ($consent) {
+            $lines[] = 'Consent given:';
+            foreach ($consent as $item) {
+                $lines[] = '  ' . trim((string) $item);
+            }
+        }
+
+        if (!$terms && !$consent) {
+            $lines[] = 'No consent boxes were recorded on this submission.';
+        }
+
+        return implode("
+", $lines);
     }
 
     /* ------------------------------------------------------------ documents */

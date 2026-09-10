@@ -310,6 +310,17 @@
             <div><label>Zipcode</label><div>{{ $endUser->zipcode ?? '—' }}</div></div>
         </div>
 
+        @if (filled($endUser->ghl_consent))
+            <h4 class="profile-section-head">Consent &amp; Agreement</h4>
+            <div class="consent-record">
+                <div class="consent-head">
+                    <span class="consent-tick">&#10003;</span>
+                    Captured on the GoHighLevel onboarding form
+                </div>
+                <pre>{{ $endUser->ghl_consent }}</pre>
+            </div>
+        @endif
+
         <h4 class="profile-section-head">Identity Document</h4>
         <div class="info-grid">
             <div>
@@ -1373,3 +1384,15 @@
 </script>
 @endpush
 @endsection
+
+@push('head')
+<style>
+    .consent-record { border:1px solid #e6f0e9; background:#f7fdfa; border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+    .consent-head { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:650; color:#047857; margin-bottom:8px; }
+    .consent-tick { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; background:#d1fae5; font-size:11px; }
+    .consent-record pre {
+        margin:0; font-size:12px; line-height:1.65; color:#374151; white-space:pre-wrap; word-break:break-word;
+        font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+</style>
+@endpush

@@ -153,7 +153,7 @@ class EndUser extends Model
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
-        'from_ghl', 'ghl_contact_id', 'ghl_submission_id', 'ghl_synced_at', 'ghl_dob_raw',
+        'from_ghl', 'ghl_contact_id', 'ghl_submission_id', 'ghl_synced_at', 'ghl_dob_raw', 'ghl_consent',
         'round_approval_status', 'round_approval_round', 'round_approval_at',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
