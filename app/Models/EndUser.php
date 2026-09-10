@@ -124,6 +124,22 @@ class EndUser extends Model
         });
     }
 
+    /**
+     * Date of birth as it should be shown on the profile.
+     *
+     * A client pulled from GoHighLevel shows the value exactly as they typed it,
+     * so what is on screen matches their submission character for character.
+     * Everyone else keeps the formatted date, unchanged.
+     */
+    public function getDobDisplayAttribute(): string
+    {
+        if (filled($this->ghl_dob_raw)) {
+            return $this->ghl_dob_raw;
+        }
+
+        return $this->date_of_birth?->format('M d, Y') ?? '—';
+    }
+
     protected $fillable = [
         'client_id',
         'first_name', 'middle_name', 'last_name', 'suffix', 'email', 'phone', 'date_of_birth',
@@ -137,7 +153,7 @@ class EndUser extends Model
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
-        'from_ghl', 'ghl_contact_id', 'ghl_submission_id', 'ghl_synced_at',
+        'from_ghl', 'ghl_contact_id', 'ghl_submission_id', 'ghl_synced_at', 'ghl_dob_raw',
         'round_approval_status', 'round_approval_round', 'round_approval_at',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];

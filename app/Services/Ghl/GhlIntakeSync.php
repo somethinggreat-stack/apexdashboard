@@ -204,6 +204,7 @@ class GhlIntakeSync
             // We know when they submitted in GHL; a hand-keyed record usually has
             // no submission date at all, which leaves the history column blank.
             'intake_submitted_at'                 => $this->parseSubmittedAt($submission['createdAt'] ?? null),
+            'ghl_dob_raw'                         => $this->str($answers['date_of_birth'] ?? ''),
             'phone'                               => $this->str($answers['phone'] ?? ''),
             'date_of_birth'                       => $this->parseDob($answers['date_of_birth'] ?? null),
             'ssn'                                 => preg_replace('/\D/', '', (string) ($answers[self::F_SSN] ?? '')),
@@ -216,8 +217,8 @@ class GhlIntakeSync
             'credit_monitoring_password'          => $this->str($answers[self::F_MON_PASS] ?? ''),
             'credit_monitoring_security_question' => (string) $question,
             'credit_monitoring_security_answer'   => (string) $answer,
-            'cfpb_email'                          => $this->realOrBlank($answers[self::F_CFPB_USER] ?? ''),
-            'cfpb_password'                       => $this->realOrBlank($answers[self::F_CFPB_PASS] ?? ''),
+            'cfpb_email'                          => $this->str($answers[self::F_CFPB_USER] ?? ''),
+            'cfpb_password'                       => $this->str($answers[self::F_CFPB_PASS] ?? ''),
         ];
 
         $filled = [];
@@ -264,6 +265,7 @@ class GhlIntakeSync
             'email'           => $this->str($answers['email'] ?? ($submission['email'] ?? '')),
             'phone'           => $this->str($answers['phone'] ?? ''),
             'date_of_birth'   => $this->parseDob($answers['date_of_birth'] ?? null),
+            'ghl_dob_raw'     => $this->str($answers['date_of_birth'] ?? ''),
             'ssn'             => preg_replace('/\D/', '', (string) ($answers[self::F_SSN] ?? '')),
 
             'current_address' => $this->str($answers['address'] ?? ''),
@@ -277,8 +279,8 @@ class GhlIntakeSync
             'credit_monitoring_security_question' => $question,
             'credit_monitoring_security_answer'   => $answer,
 
-            'cfpb_email'    => $this->realOrBlank($answers[self::F_CFPB_USER] ?? ''),
-            'cfpb_password' => $this->realOrBlank($answers[self::F_CFPB_PASS] ?? ''),
+            'cfpb_email'    => $this->str($answers[self::F_CFPB_USER] ?? ''),
+            'cfpb_password' => $this->str($answers[self::F_CFPB_PASS] ?? ''),
 
             'status'       => 'active',
             // The day the client actually onboarded, not the day this job ran.
@@ -426,22 +428,6 @@ class GhlIntakeSync
         }
 
         return (string) (Client::find($this->clientId)?->intake_monitoring_provider ?? '');
-    }
-
-    /**
-     * "I don't have" is a real answer people give, because CFPB Username and
-     * CFPB Password are both marked required on the GHL form — someone without a
-     * CFPB account cannot submit without typing something into them. Storing that
-     * sentence in an email column helps nobody, so placeholders become empty and
-     * the field simply reads as missing.
-     */
-    private function realOrBlank(mixed $value): string
-    {
-        $text = $this->str($value);
-
-        $placeholder = '/^(i\s*(do\s*not|don.?t)\s*have(\s*(one|any|it))?|n\.?\/?a\.?|none|nil|nothing|no|null|-+|\.+)$/iu';
-
-        return preg_match($placeholder, $text) ? '' : $text;
     }
 
     private function str(mixed $value): string

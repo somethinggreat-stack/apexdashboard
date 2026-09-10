@@ -97,11 +97,8 @@
                                 // reviewer is the last line of defence. Flag it where
                                 // they are already looking rather than in a log.
                                 $flags = [];
-                                $age = $eu->date_of_birth?->age;
-                                if (!$eu->date_of_birth) {
+                                if (blank($eu->ghl_dob_raw) && !$eu->date_of_birth) {
                                     $flags[] = 'No date of birth';
-                                } elseif ($age < 18 || $age > 100) {
-                                    $flags[] = 'Date of birth looks wrong (' . $age . ')';
                                 }
                                 if (blank($eu->ssn) || strlen(preg_replace('/\D/', '', (string) $eu->ssn)) !== 9) {
                                     $flags[] = 'SSN not 9 digits';
@@ -109,8 +106,8 @@
                                 if (blank($eu->cfpb_email)) {
                                     $flags[] = 'No CFPB login';
                                 }
-                                if (blank($eu->credit_monitoring_security_question)) {
-                                    $flags[] = 'No security question';
+                                if (blank($eu->credit_monitoring_username)) {
+                                    $flags[] = 'No monitoring login';
                                 }
                             @endphp
                             <tr>

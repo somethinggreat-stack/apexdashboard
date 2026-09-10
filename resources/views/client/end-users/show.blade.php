@@ -137,7 +137,7 @@
             <div><label>Suffix</label><div>{{ $endUser->suffix && $endUser->suffix !== 'None' ? $endUser->suffix : '—' }}</div></div>
             <div><label>Email Address</label><div>{{ $endUser->email }}</div></div>
             <div><label>Phone Number</label><div>{{ $endUser->phone ?? '—' }}</div></div>
-            <div><label>Date of Birth</label><div>{{ $endUser->date_of_birth?->format('M d, Y') ?? '—' }}</div></div>
+            <div><label>Date of Birth</label><div>{{ $endUser->dob_display }}</div></div>
             <div><label>SSN</label><div>{{ $endUser->masked_ssn ?? '—' }}</div></div>
         </div>
 
