@@ -57,11 +57,44 @@
         </div>
     </section>
 
+    {{-- The three panels below are one sequence. Spelling it out here saves a VA
+         guessing which list a client should be in, and in what order. --}}
+    <section class="ghl-steps">
+        <div class="ghl-step">
+            <span class="ghl-step-no">1</span>
+            <div>
+                <strong>Bring them in</strong>
+                <p>Press <em>Sync now</em>. Anyone who filled in the onboarding form arrives with all their details and documents.</p>
+            </div>
+        </div>
+        <span class="ghl-step-arrow">→</span>
+        <div class="ghl-step">
+            <span class="ghl-step-no">2</span>
+            <div>
+                <strong>Check the file</strong>
+                <p>Open <em>Review</em>, make sure the details and documents are right, then <em>Move to In Progress</em>.</p>
+            </div>
+        </div>
+        <span class="ghl-step-arrow">→</span>
+        <div class="ghl-step">
+            <span class="ghl-step-no">3</span>
+            <div>
+                <strong>Send to DisputeFox</strong>
+                <p>Tick the client and press <em>Push to DisputeFox</em>. Their file is created there, ready to work.</p>
+            </div>
+        </div>
+    </section>
+
     {{-- ------------------------------------------------------ awaiting review --}}
     <section class="ghl-card">
         <header class="ghl-card-head">
-            <h3>Awaiting review</h3>
+            <span class="ghl-step-badge">Step 2</span>
+            <h3>Check these files</h3>
             <span class="ghl-pill {{ $endUsers->count() ? 'hot' : 'calm' }}">{{ $endUsers->count() }}</span>
+            <p class="ghl-card-sub">
+                Just arrived from GoHighLevel and nobody has looked at them yet. Open each one, check the
+                details and documents look right, then move them on. Anything wrong — send it to Errors.
+            </p>
         </header>
 
         @if ($endUsers->isEmpty())
@@ -167,6 +200,13 @@
                                             @csrf
                                             <button class="ghl-act hold">Hold</button>
                                         </form>
+                                        <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
+                                              data-confirm-delete
+                                              data-confirm-title="Delete this client?"
+                                              data-confirm-message="{{ $eu->full_name }} and their uploaded documents go to the Recycle Bin, where they can be restored for 10 days. The next sync will not bring them back — it remembers the submission even after deletion.">
+                                            @csrf @method('DELETE')
+                                            <button class="ghl-act danger">Delete</button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -180,13 +220,19 @@
     {{-- --------------------------------------------------- push to disputefox --}}
     <section class="ghl-card">
         <header class="ghl-card-head">
-            <h3>Push to DisputeFox</h3>
+            <span class="ghl-step-badge">Step 3</span>
+            <h3>Send to DisputeFox</h3>
             <span class="ghl-pill {{ $pushable->count() ? 'info' : 'calm' }}">{{ $pushable->count() }}</span>
             <p class="ghl-card-sub">
-                Tick the clients to send, then push. DisputeFox has no duplicate check of its own,
-                so there is no "send everything" button — each client is chosen on purpose, and
-                anyone already sent drops off this list.
-                @if ($pushedTotal) <strong>{{ $pushedTotal }}</strong> already sent. @endif
+                Not in DisputeFox yet. Tick the ones you want to send and press the button — their
+                details and documents are created over there automatically. You will be asked to
+                confirm the names first.
+                <br>
+                There is no "send everyone" button on purpose: DisputeFox cannot spot a duplicate,
+                so a client sent twice becomes two files someone has to clean up.
+                @if ($pushedTotal)
+                    <strong>{{ $pushedTotal }}</strong> {{ $pushedTotal === 1 ? 'client has' : 'clients have' }} already been sent.
+                @endif
             </p>
         </header>
 
@@ -209,8 +255,8 @@
                                 <th>Client</th>
                                 <th>Email</th>
                                 <th>Documents</th>
-                                <th>Status in Apex</th>
-                                <th>Last attempt</th>
+                                <th>Where they are in Apex</th>
+                                <th>Last time we tried</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -262,15 +308,22 @@
     @if ($recent->isNotEmpty())
         <section class="ghl-card">
             <header class="ghl-card-head">
-                <h3>Pull history</h3>
+                <h3>Everyone from GoHighLevel</h3>
                 <span class="ghl-pill calm">{{ $pulledTotal }}</span>
-                <p class="ghl-card-sub">Everyone brought in from GoHighLevel. These are skipped on future syncs, so nobody arrives twice.</p>
+                <p class="ghl-card-sub">
+                    The full record of who has been brought in, where they are now, and whether they
+                    have reached DisputeFox. Nobody on this list can arrive twice — a repeat sync skips them.
+                </p>
             </header>
 
             <div class="ghl-table-wrap">
                 <table class="ghl-table">
                     <thead>
-                        <tr><th>Client</th><th>Email</th><th>Status</th><th>Onboarded</th><th>Pulled</th></tr>
+                        <tr>
+                            <th>Client</th><th>Email</th><th>Where they are</th>
+                            <th>In DisputeFox</th><th>Onboarded</th><th>Brought in</th>
+                            <th class="ghl-th-actions">Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
                         @foreach ($recent as $eu)
@@ -292,8 +345,29 @@
                                 </td>
                                 <td class="ghl-muted">{{ $eu->email }}</td>
                                 <td><span class="ghl-chip {{ $tone }}">{{ ucfirst(str_replace('_', ' ', $status ?: 'in progress')) }}</span></td>
+                                <td>
+                                    @if ($eu->disputefox_pushed_at)
+                                        <span class="ghl-chip ok" title="Sent {{ $eu->disputefox_pushed_at->format('M j, Y g:ia') }}">
+                                            Sent {{ $eu->disputefox_pushed_at->format('M j') }}
+                                        </span>
+                                    @else
+                                        <span class="ghl-chip calm">Not sent yet</span>
+                                    @endif
+                                </td>
                                 <td class="ghl-muted">{{ $eu->intake_submitted_at?->format('M j, Y') ?: '—' }}</td>
                                 <td class="ghl-muted">{{ $eu->ghl_synced_at?->format('M j, g:ia') ?: '—' }}</td>
+                                <td>
+                                    <div class="ghl-actions">
+                                        <a href="{{ route('admin.end-users.show', $eu) }}" class="ghl-act view">Open</a>
+                                        <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
+                                              data-confirm-delete
+                                              data-confirm-title="Delete this client?"
+                                              data-confirm-message="{{ $eu->full_name }} and their uploaded documents go to the Recycle Bin, where they can be restored for 10 days. The next sync will not bring them back.{{ $eu->disputefox_pushed_at ? ' Note: their file in DisputeFox is NOT removed — delete it there separately.' : '' }}">
+                                            @csrf @method('DELETE')
+                                            <button class="ghl-act danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -399,6 +473,29 @@
     .ghl-person-name { font-weight:650; color:var(--ink); text-decoration:none; }
     .ghl-person-name:hover { color:#4f46e5; }
     .ghl-note-line { margin-top:3px; font-size:11.5px; color:#b45309; }
+    /* ------------------------------------------------------- the three steps */
+    .ghl-steps {
+        display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;
+        background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px;
+        box-shadow:0 1px 2px rgba(16,24,40,.04);
+    }
+    .ghl-step { display:flex; gap:11px; align-items:flex-start; flex:1 1 220px; min-width:0; }
+    .ghl-step-no {
+        flex:none; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+        background:linear-gradient(140deg, var(--g1), var(--g2)); color:#fff;
+        font-size:12px; font-weight:700; margin-top:1px;
+    }
+    .ghl-step strong { display:block; font-size:13.5px; color:var(--ink); margin-bottom:2px; }
+    .ghl-step p { margin:0; font-size:12.5px; line-height:1.5; color:var(--soft); }
+    .ghl-step em { font-style:normal; font-weight:650; color:#4f46e5; }
+    .ghl-step-arrow { align-self:center; color:#c9ccd8; font-size:17px; }
+    @media (max-width:900px) { .ghl-step-arrow { display:none; } }
+
+    .ghl-step-badge {
+        padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:800; letter-spacing:.05em;
+        text-transform:uppercase; background:#eef2ff; color:#4338ca; border:1px solid #dcdffb;
+    }
+
     /* ------------------------------------------------------ disputefox push */
     .ghl-th-tick { width:42px; text-align:center; }
     .df-tick, #dfAll { width:16px; height:16px; accent-color:#6366f1; cursor:pointer; }
@@ -444,6 +541,7 @@
     .ghl-act.go   { background:#ecfdf5; color:#047857; border-color:#c7f0dd; }
     .ghl-act.warn { background:#fffbeb; color:#b45309; border-color:#fde9b8; }
     .ghl-act.hold { background:#f4f5f9; color:#5a6072; border-color:#e8eaf1; }
+    .ghl-act.danger { background:#fef2f2; color:#b91c1c; border-color:#fbd5d5; }
 
     /* ---------------------------------------------------------------- empty */
     .ghl-empty { padding:52px 24px; text-align:center; }
