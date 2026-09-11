@@ -379,6 +379,7 @@
 </div>
 
 @include('admin.end-users._ghl-sync-modal')
+@include('admin.end-users._df-push-modal')
 
 @endsection
 
@@ -600,26 +601,7 @@
     }
     refresh();
 
-    // Creating a client file in someone else's live system deserves a name check.
-    form.addEventListener('submit', function (e) {
-        var chosen = selected();
-        if (!chosen.length) { e.preventDefault(); return; }
-
-        var names = chosen.map(function (t) {
-            var row = t.closest('tr');
-            var link = row ? row.querySelector('.ghl-person-name') : null;
-            return link ? link.textContent.trim() : 'this client';
-        });
-
-        var list = names.length > 6
-            ? names.slice(0, 6).join('\n') + '\nand ' + (names.length - 6) + ' more'
-            : names.join('\n');
-
-        if (!window.confirm('Push these ' + names.length + ' client(s) into DisputeFox?\n\n' + list
-            + '\n\nThis creates their file in DisputeFox. It cannot be undone from here.')) {
-            e.preventDefault();
-        }
-    });
+    // The confirmation, progress and result all live in _df-push-modal.
 })();
 
 window.moveToErrors = function (btn, name) {

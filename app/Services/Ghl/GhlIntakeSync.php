@@ -525,7 +525,12 @@ class GhlIntakeSync
             }
         }
 
-        Log::warning('GHL intake: unrecognised date of birth', ['value' => $raw, 'tried' => $formats]);
+        // The value is a client's date of birth, so only its shape is recorded —
+        // enough to fix the parsing without putting PII into a log file.
+        Log::warning('GHL intake: unrecognised date of birth', [
+            'shape' => preg_replace('/\d/', '9', $raw),
+            'tried' => $formats,
+        ]);
 
         return null;
     }

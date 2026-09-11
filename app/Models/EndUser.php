@@ -154,7 +154,10 @@ class EndUser extends Model
         'error_resolved_by_client_at',
         'next_round_override', 'custom_list',
         'from_ghl', 'ghl_contact_id', 'ghl_submission_id', 'ghl_synced_at', 'ghl_dob_raw', 'ghl_consent',
-        'disputefox_pushed_at', 'disputefox_result',
+        // disputefox_pushed_at and disputefox_result are deliberately absent.
+        // They are the only record that a client was sent, and the thing that
+        // stops a second send, so the push writes them with forceFill and no
+        // incoming request can set them by carrying those keys.
         'round_approval_status', 'round_approval_round', 'round_approval_at',
         'deleted_by_admin_id', 'deleted_with_owner',
     ];
