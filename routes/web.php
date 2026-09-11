@@ -231,6 +231,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // the normal intake queue. 404s for every BO except the configured one.
             Route::get('ghl-clients', [Admin\EndUserController::class, 'ghlClients'])->name('ghl-clients');
             Route::post('ghl-clients/sync', [Admin\EndUserController::class, 'syncGhlNow'])->name('ghl-clients.sync');
+            // Push selected clients into DisputeFox. Selected, never all — see the controller.
+            Route::post('ghl-clients/push-disputefox', [Admin\EndUserController::class, 'pushToDisputeFox'])->name('ghl-clients.push-df');
             Route::get('errors', [Admin\EndUserController::class, 'errors'])->name('errors');
             Route::get('errors-resolved-new-clients', [Admin\EndUserController::class, 'errorsResolvedNewClients'])->name('errors-resolved-new');
             // The main Clients list (1st round done; remaining rounds worked here)

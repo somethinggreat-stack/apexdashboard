@@ -177,6 +177,87 @@
         @endif
     </section>
 
+    {{-- --------------------------------------------------- push to disputefox --}}
+    <section class="ghl-card">
+        <header class="ghl-card-head">
+            <h3>Push to DisputeFox</h3>
+            <span class="ghl-pill {{ $pushable->count() ? 'info' : 'calm' }}">{{ $pushable->count() }}</span>
+            <p class="ghl-card-sub">
+                Tick the clients to send, then push. DisputeFox has no duplicate check of its own,
+                so there is no "send everything" button — each client is chosen on purpose, and
+                anyone already sent drops off this list.
+                @if ($pushedTotal) <strong>{{ $pushedTotal }}</strong> already sent. @endif
+            </p>
+        </header>
+
+        @if ($pushable->isEmpty())
+            <div class="ghl-empty">
+                <span class="ghl-empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <p class="ghl-empty-title">Everyone has been sent</p>
+                <p class="ghl-empty-sub">Every client pulled from GoHighLevel is already in DisputeFox.</p>
+            </div>
+        @else
+            <form method="POST" action="{{ route('admin.ghl-clients.push-df') }}" data-df-push>
+                @csrf
+                <div class="ghl-table-wrap">
+                    <table class="ghl-table">
+                        <thead>
+                            <tr>
+                                <th class="ghl-th-tick"><input type="checkbox" id="dfAll" aria-label="Select all"></th>
+                                <th>Client</th>
+                                <th>Email</th>
+                                <th>Documents</th>
+                                <th>Status in Apex</th>
+                                <th>Last attempt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($pushable as $eu)
+                                @php
+                                    $docCount = collect([$eu->photo_id_path, $eu->proof_of_address_path, $eu->ssn_picture_path])
+                                        ->filter()->count();
+                                @endphp
+                                <tr>
+                                    <td class="ghl-th-tick">
+                                        <input type="checkbox" name="end_user_ids[]" value="{{ $eu->id }}" class="df-tick">
+                                    </td>
+                                    <td>
+                                        <div class="ghl-person">
+                                            <span class="ghl-avatar sm">{{ mb_strtoupper(mb_substr($eu->first_name, 0, 1) . mb_substr($eu->last_name, 0, 1)) }}</span>
+                                            <a href="{{ route('admin.end-users.show', $eu) }}" class="ghl-person-name">{{ $eu->full_name }}</a>
+                                        </div>
+                                    </td>
+                                    <td class="ghl-muted">{{ $eu->email }}</td>
+                                    <td>
+                                        <span class="ghl-chip {{ $docCount === 3 ? 'ok' : 'warn' }}">{{ $docCount }} of 3</span>
+                                    </td>
+                                    <td class="ghl-muted">{{ ucfirst(str_replace('_', ' ', (string) $eu->intake_status ?: 'in progress')) }}</td>
+                                    <td class="ghl-muted">
+                                        @if ($eu->disputefox_result)
+                                            <span class="ghl-flag">{{ Str::limit($eu->disputefox_result, 60) }}</span>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="df-bar">
+                    <span class="df-count" id="dfCount">None selected</span>
+                    <button class="ghl-sync-btn" id="dfPushBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        Push to DisputeFox
+                    </button>
+                </div>
+            </form>
+        @endif
+    </section>
+
     {{-- --------------------------------------------------------- pull history --}}
     @if ($recent->isNotEmpty())
         <section class="ghl-card">
@@ -318,6 +399,16 @@
     .ghl-person-name { font-weight:650; color:var(--ink); text-decoration:none; }
     .ghl-person-name:hover { color:#4f46e5; }
     .ghl-note-line { margin-top:3px; font-size:11.5px; color:#b45309; }
+    /* ------------------------------------------------------ disputefox push */
+    .ghl-th-tick { width:42px; text-align:center; }
+    .df-tick, #dfAll { width:16px; height:16px; accent-color:#6366f1; cursor:pointer; }
+    .df-bar {
+        display:flex; align-items:center; justify-content:flex-end; gap:14px;
+        padding:16px 22px; border-top:1px solid var(--line); background:#fbfbfd; flex-wrap:wrap;
+    }
+    .df-count { font-size:12.5px; color:var(--soft); font-weight:600; }
+    #dfPushBtn:disabled { opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+
     .ghl-flags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
     .ghl-flag {
         padding:2px 7px; border-radius:5px; font-size:10.5px; font-weight:650;
@@ -377,6 +468,62 @@
 
 @push('scripts')
 <script>
+// ---- DisputeFox: selection, and a confirm naming who is about to be sent ----
+(function () {
+    var form = document.querySelector('[data-df-push]');
+    if (!form) return;
+
+    var all    = document.getElementById('dfAll');
+    var ticks  = Array.prototype.slice.call(form.querySelectorAll('.df-tick'));
+    var count  = document.getElementById('dfCount');
+    var button = document.getElementById('dfPushBtn');
+
+    function selected() {
+        return ticks.filter(function (t) { return t.checked; });
+    }
+
+    function refresh() {
+        var n = selected().length;
+        button.disabled = n === 0;
+        count.textContent = n === 0 ? 'None selected'
+            : n + (n === 1 ? ' client selected' : ' clients selected');
+        if (all) {
+            all.checked = n === ticks.length && n > 0;
+            all.indeterminate = n > 0 && n < ticks.length;
+        }
+    }
+
+    ticks.forEach(function (t) { t.addEventListener('change', refresh); });
+    if (all) {
+        all.addEventListener('change', function () {
+            ticks.forEach(function (t) { t.checked = all.checked; });
+            refresh();
+        });
+    }
+    refresh();
+
+    // Creating a client file in someone else's live system deserves a name check.
+    form.addEventListener('submit', function (e) {
+        var chosen = selected();
+        if (!chosen.length) { e.preventDefault(); return; }
+
+        var names = chosen.map(function (t) {
+            var row = t.closest('tr');
+            var link = row ? row.querySelector('.ghl-person-name') : null;
+            return link ? link.textContent.trim() : 'this client';
+        });
+
+        var list = names.length > 6
+            ? names.slice(0, 6).join('\n') + '\nand ' + (names.length - 6) + ' more'
+            : names.join('\n');
+
+        if (!window.confirm('Push these ' + names.length + ' client(s) into DisputeFox?\n\n' + list
+            + '\n\nThis creates their file in DisputeFox. It cannot be undone from here.')) {
+            e.preventDefault();
+        }
+    });
+})();
+
 window.moveToErrors = function (btn, name) {
     var note = prompt('What is the error for ' + name + '?', '');
     if (note === null) return;            // cancelled

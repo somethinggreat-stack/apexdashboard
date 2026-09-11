@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\EndUser;
+use App\Models\Message;
 use App\Models\NegativeItem;
 use App\Models\ProcessStep;
+use App\Services\DisputeFox\DisputeFoxPush;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -842,9 +844,23 @@ class EndUserController extends Controller
         $lastPull    = EndUser::forClient($client->id)->where('from_ghl', true)->max('ghl_synced_at');
         $lastPull    = $lastPull ? \Illuminate\Support\Carbon::parse($lastPull) : null;
 
+        // Anyone from GoHighLevel who has not been sent to DisputeFox yet. They
+        // stay listed after review, because the push happens once the file has
+        // been checked, not when it arrives.
+        $pushable = EndUser::forClient($client->id)
+            ->where('from_ghl', true)
+            ->whereNull('disputefox_pushed_at')
+            ->orderByDesc('ghl_synced_at')
+            ->get();
+
+        $pushedTotal = EndUser::forClient($client->id)
+            ->where('from_ghl', true)
+            ->whereNotNull('disputefox_pushed_at')
+            ->count();
+
         return view(
             $this->adminView('admin.end-users.ghl-clients'),
-            compact('endUsers', 'recent', 'client', 'pulledTotal', 'lastPull')
+            compact('endUsers', 'recent', 'client', 'pulledTotal', 'lastPull', 'pushable', 'pushedTotal')
         );
     }
 
@@ -890,6 +906,84 @@ class EndUserController extends Controller
         }
 
         return back()->with('status', $message);
+    }
+
+    /**
+     * Push the selected clients into DisputeFox.
+     *
+     * Selection is required and there is deliberately no "push everything"
+     * option. DisputeFox returns no client id and has no duplicate check of its
+     * own, so an accidental bulk send would create a pile of duplicate client
+     * files that somebody has to unpick by hand.
+     */
+    public function pushToDisputeFox(Request $request, DisputeFoxPush $pusher)
+    {
+        $client = Client::findOrFail(session('selected_client_id'));
+        abort_unless($this->ghlSyncEnabledFor($client), 404);
+
+        $ids = array_filter((array) $request->input('end_user_ids', []));
+
+        if (empty($ids)) {
+            return $this->disputeFoxResponse(false, 'Tick at least one client to push.', []);
+        }
+
+        $endUsers = EndUser::forClient($client->id)
+            ->where('from_ghl', true)
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($endUsers->isEmpty()) {
+            return $this->disputeFoxResponse(false, 'Those clients could not be found.', []);
+        }
+
+        $sent = 0;
+        $failed = 0;
+        $lines = [];
+
+        foreach ($endUsers as $endUser) {
+            // Already sent once: skip rather than create a second file over there.
+            if ($endUser->disputefox_pushed_at) {
+                $lines[] = "{$endUser->full_name}: already pushed on {$endUser->disputefox_pushed_at->format('M j, g:ia')}.";
+                continue;
+            }
+
+            $result = $pusher->push($endUser);
+
+            if ($result['ok']) {
+                $sent++;
+                $endUser->forceFill([
+                    'disputefox_pushed_at' => now(),
+                    'disputefox_result'    => $result['message'],
+                ])->save();
+
+                Message::postSystem($client->id, "{$endUser->full_name} was pushed to DisputeFox.");
+            } else {
+                $failed++;
+                $endUser->forceFill(['disputefox_result' => 'Failed: ' . $result['message']])->save();
+            }
+
+            $lines[] = "{$endUser->full_name}: {$result['message']}";
+        }
+
+        $summary = "Pushed {$sent}" . ($failed ? ", {$failed} failed" : '') . '.';
+
+        return $this->disputeFoxResponse($failed === 0, $summary, $lines, $sent, $failed);
+    }
+
+    /** @param array<string> $lines */
+    private function disputeFoxResponse(bool $ok, string $summary, array $lines, int $sent = 0, int $failed = 0)
+    {
+        if (request()->wantsJson()) {
+            return response()->json([
+                'ok'      => $ok,
+                'sent'    => $sent,
+                'failed'  => $failed,
+                'message' => $summary,
+                'lines'   => $lines,
+            ], $ok ? 200 : 422);
+        }
+
+        return back()->with('status', trim($summary . ' ' . implode(' ', $lines)));
     }
 
     /** The GHL list belongs to exactly one business owner. */
