@@ -86,11 +86,11 @@ class GhlIntakeSync
     }
 
     /**
-     * @return array{imported:int, linked:int, skipped:int, failed:int, errors:array<string>}
+     * @return array{imported:int, linked:int, skipped:int, removed:int, failed:int, errors:array<string>}
      */
     public function run(bool $dryRun = false): array
     {
-        $result = ['imported' => 0, 'linked' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []];
+        $result = ['imported' => 0, 'linked' => 0, 'skipped' => 0, 'removed' => 0, 'failed' => 0, 'errors' => []];
 
         foreach ($this->fetchSubmissions() as $submission) {
             $submissionId = (string) ($submission['id'] ?? '');
@@ -99,8 +99,14 @@ class GhlIntakeSync
                 continue;
             }
 
-            if (EndUser::withTrashed()->where('ghl_submission_id', $submissionId)->exists()) {
-                $result['skipped']++;
+            $seen = EndUser::withTrashed()->where('ghl_submission_id', $submissionId)->first();
+
+            if ($seen) {
+                // A client deleted here was deleted on purpose, so they are still
+                // never re-imported — but they are counted separately, because
+                // reporting them as "already had" makes the total disagree with
+                // the list on screen and reads as a miscount.
+                $result[$seen->trashed() ? 'removed' : 'skipped']++;
                 continue;
             }
 

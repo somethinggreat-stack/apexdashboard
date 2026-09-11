@@ -865,10 +865,8 @@ class EndUserController extends Controller
     }
 
     /**
-     * Run the GoHighLevel pull on demand. The scheduler already does this every
-     * five minutes; this button exists because there is no terminal on the
-     * hosting, and waiting five minutes to find out whether it worked is a poor
-     * way to debug.
+     * Run the GoHighLevel pull on demand, from the Sync now button. The pull is
+     * not scheduled — clients arrive when a VA is there to work them.
      */
     public function syncGhlNow()
     {
@@ -887,7 +885,8 @@ class EndUserController extends Controller
 
         $result = $sync->run();
 
-        $message = "Sync finished — imported {$result['imported']}, linked {$result['linked']}, already had {$result['skipped']}.";
+        $message = "Sync finished — imported {$result['imported']}, linked {$result['linked']}, already had {$result['skipped']}."
+            . ($result['removed'] ? " {$result['removed']} previously deleted and left alone." : '');
 
         if ($result['failed'] > 0) {
             $message .= " {$result['failed']} failed: " . implode(' | ', array_slice($result['errors'], 0, 3));
@@ -900,6 +899,7 @@ class EndUserController extends Controller
                 'imported' => $result['imported'],
                 'linked'   => $result['linked'],
                 'skipped'  => $result['skipped'],
+                'removed'  => $result['removed'],
                 'failed'   => $result['failed'],
                 'message'  => $message,
             ]);

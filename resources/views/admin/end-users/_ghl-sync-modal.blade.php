@@ -336,6 +336,11 @@
         } else {
             note = d.imported + (d.imported === 1 ? ' client is' : ' clients are') + ' ready for review below.';
         }
+        // Deleted clients are not counted above, so say why the totals are short.
+        if (d.removed) {
+            note += ' ' + d.removed + (d.removed === 1 ? ' deleted client was' : ' deleted clients were')
+                + ' left alone rather than brought back.';
+        }
         if (d.failed) {
             note = d.failed + ' submission(s) could not be pulled. They will be retried on the next sync.';
         }

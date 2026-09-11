@@ -32,11 +32,12 @@ class SyncGhlIntake extends Command
         $result = $sync->run($dryRun);
 
         $summary = sprintf(
-            '%simported %d, linked %d, skipped %d, failed %d',
+            '%simported %d, linked %d, already had %d, previously deleted %d, failed %d',
             $dryRun ? '[dry run] would have ' : '',
             $result['imported'],
             $result['linked'],
             $result['skipped'],
+            $result['removed'],
             $result['failed'],
         );
 
