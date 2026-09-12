@@ -37,7 +37,6 @@
     <input type="hidden" name="redirect_to" id="cmdkRedirect">
 </form>
 
-@push('head')
 <style>
     .cmdk { position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-start; justify-content:center; }
     .cmdk[hidden] { display:none; }
@@ -70,9 +69,7 @@
     :root[data-theme="dark"] .cmdk-item.active { background:#182444; }
     :root[data-theme="dark"] .cmdk-esc, :root[data-theme="dark"] .cmdk-pill, :root[data-theme="dark"] .cmdk-foot kbd { background:#1a2440; border-color:#2b3b5e; color:#94a3b8; }
 </style>
-@endpush
 
-@push('scripts')
 <script>
 (function () {
     var el      = document.getElementById('cmdk');
@@ -204,5 +201,4 @@
     el.addEventListener('click', function (e) { if (e.target.closest('[data-cmdk-close]')) close(); });
 })();
 </script>
-@endpush
 @endif
