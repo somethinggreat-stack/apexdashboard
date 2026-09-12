@@ -199,6 +199,18 @@
                 <div class="fg"><label>Security Question Answer <span class="opt">(optional)</span></label><input type="text" name="credit_monitoring_security_answer" value="{{ old('credit_monitoring_security_answer') }}"></div>
             @endif
 
+            <div class="sec-title">CFPB Logins <span class="opt">(optional)</span></div>
+            <div class="fg">
+                <div class="hint">
+                    If you don&rsquo;t have a CFPB account yet, register here:
+                    <a href="https://portal.consumerfinance.gov/consumer/s/login/SelfRegister" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600;">Create a CFPB account &rarr;</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="fg"><label>CFPB Username <span class="opt">(optional)</span></label><input type="text" name="cfpb_email" value="{{ old('cfpb_email') }}" autocomplete="off"></div>
+                <div class="fg"><label>CFPB Password <span class="opt">(optional)</span></label><input type="text" name="cfpb_password" autocomplete="off"></div>
+            </div>
+
             <button type="submit" class="submit">Submit Securely</button>
             <div class="secure">🔒 Encrypted submission · Your documents are stored privately.</div>
         </form>

@@ -166,6 +166,9 @@ class IntakeController extends Controller
             'credit_monitoring_security_answer'   => 'nullable|string|max:255',
             'credit_monitoring_security_question' => 'nullable|string|max:255',
             'credit_monitoring_pin'               => 'nullable|digits:4',
+            // CFPB portal login — optional; the client may not have an account yet.
+            'cfpb_email'                        => 'nullable|string|max:255',
+            'cfpb_password'                     => 'nullable|string|max:255',
             'drivers_license'                   => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'ssn_card'                          => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'proof_of_address'                  => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
@@ -200,6 +203,9 @@ class IntakeController extends Controller
             'credit_monitoring_security_answer'   => $data['credit_monitoring_security_answer'] ?? null,
             'credit_monitoring_security_question' => $data['credit_monitoring_security_question'] ?? null,
             'credit_monitoring_pin'               => $data['credit_monitoring_pin'] ?? null,
+            // Optional CFPB portal login (username stored in cfpb_email).
+            'cfpb_email'                        => ($data['cfpb_email'] ?? null) ?: null,
+            'cfpb_password'                     => ($data['cfpb_password'] ?? null) ?: null,
             'status'                            => 'active',
             'start_date'                        => now()->toDateString(),
             // No round is marked on intake. The 1st round starts only when the
