@@ -69,7 +69,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login', [Admin\AuthController::class, 'login']);
     });
 
-    Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class])->group(function () {
+    Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
 
         // Self-service profile — any authenticated admin (super, VA, leads agent)
@@ -167,6 +167,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages', [Admin\TeamMessageController::class, 'index'])->name('team-messages.index');
         Route::post('team-messages', [Admin\TeamMessageController::class, 'store'])->name('team-messages.store');
         Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
+        Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
+        Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
         Route::post('team-messages/forward', [Admin\TeamMessageController::class, 'forward'])->name('team-messages.forward');

@@ -45,7 +45,7 @@
                     @if ($it['is_group'])
                         <span class="tc-avatar tc-avatar--group">{{ $it['icon'] }}</span>
                     @else
-                        {!! $avatar($it['peer']) !!}
+                        <span class="tc-av">{!! $avatar($it['peer']) !!}<i class="tc-dot {{ $it['online'] ? 'on' : '' }}" data-dot="{{ $it['peer_id'] }}"></i></span>
                     @endif
                     <span class="tc-c-body">
                         <span class="tc-c-top">
@@ -81,17 +81,17 @@
                     <span class="tc-avatar sm tc-avatar--group">{{ $active->icon ?: '💬' }}</span>
                     <div class="tc-th-info">
                         <div class="tc-th-name">{{ $active->name }}</div>
-                        <div class="tc-th-role">{{ $members->count() }} members</div>
+                        <div class="tc-th-role">{{ $members->count() }} members<span id="tcOnlineCount">{{ $onlineCount > 0 ? ' · '.$onlineCount.' online' : '' }}</span></div>
                     </div>
                     <button type="button" class="tc-th-btn" id="tcMembersBtn" title="Members">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span>{{ $members->count() }}</span>
                     </button>
                 @else
-                    {!! $avatar($peer, 'sm') !!}
+                    <span class="tc-av">{!! $avatar($peer, 'sm') !!}<i class="tc-dot {{ $peerOnline ? 'on' : '' }}" id="tcHeaderDot"></i></span>
                     <div class="tc-th-info">
                         <div class="tc-th-name">{{ $peer->full_name }}</div>
-                        <div class="tc-th-role">{{ $peer->isSuper() ? 'Super Admin' : 'VA' }} · {{ $peer->email }}</div>
+                        <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $peerSeen }}</div>
                     </div>
                 @endif
             </div>
@@ -121,6 +121,12 @@
                         <p>{{ $isGroup ? 'Group created — say hello to the team!' : 'No messages yet — say hello!' }}</p>
                     </div>
                 @endforelse
+            </div>
+
+            <div class="tc-seen" id="tcSeen" hidden></div>
+            <div class="tc-typing" id="tcTyping" hidden>
+                <span class="tc-typing-dots"><i></i><i></i><i></i></span>
+                <span id="tcTypingText"></span>
             </div>
 
             <div class="tc-reply-bar" id="tcReply" hidden>
@@ -339,7 +345,28 @@
     /* These elements set their own display in the class, which would otherwise
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
-    .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden] { display:none !important; }
+    .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
+    .tc-typing[hidden], .tc-seen[hidden] { display:none !important; }
+
+    /* Presence dots */
+    .tc-av { position:relative; flex:none; display:inline-flex; }
+    .tc-dot { position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background:#cbd5e1; border:2.5px solid var(--pro-surface,#fff); box-shadow:0 0 0 .5px rgba(15,23,42,.06); }
+    .tc-dot.on { background:#22c55e; }
+    .tc-presence { display:flex; align-items:center; }
+    .tc-presence.online { color:#16a34a; font-weight:700; }
+
+    /* Typing indicator */
+    .tc-typing { align-items:center; gap:9px; padding:6px 20px; position:relative; z-index:1; font-size:12.5px; font-weight:600; color:#6366f1; }
+    .tc-typing-dots { display:inline-flex; gap:3px; }
+    .tc-typing-dots i { width:6px; height:6px; border-radius:50%; background:#6366f1; opacity:.5; animation:tcTypeBounce 1.2s infinite; }
+    .tc-typing-dots i:nth-child(2){ animation-delay:.2s; } .tc-typing-dots i:nth-child(3){ animation-delay:.4s; }
+    @keyframes tcTypeBounce { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+
+    /* "Seen by" read receipts (groups) */
+    .tc-seen { justify-content:flex-end; align-items:center; gap:6px; padding:4px 20px 0; position:relative; z-index:1; font-size:11px; font-weight:600; color:#94a3b8; }
+    .tc-seen .tc-seen-avs { display:inline-flex; }
+    .tc-seen .tc-avatar { width:18px; height:18px; border-radius:50%; font-size:8px; margin-left:-5px; border:2px solid var(--pro-surface,#fff); box-shadow:none; }
+    .tc-seen .tc-avatar:first-child { margin-left:0; }
 
     /* Quoted reply inside a bubble */
     .tc-quote { display:flex; flex-direction:column; gap:1px; padding:5px 9px; margin:-2px 0 6px; border-left:3px solid rgba(79,70,229,.7); border-radius:7px; background:rgba(79,70,229,.08); font-size:12.5px; }
@@ -643,6 +670,8 @@
     var STORE  = @js(route('admin.team-messages.store'));
     var GBASE  = @js(url('admin/team-messages/group'));
     var TC_PEERS = @js($teammates->map(fn ($t) => ['id' => $t->id, 'name' => $t->full_name, 'avatar' => $t->avatarUrl()])->values());
+    var WATERMARKS = @js($watermarks ?? []);
+    var TYPING_URL = @js(route('admin.team-messages.typing'));
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
     var DOTS = '<button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
@@ -782,12 +811,68 @@
         }
     }
 
+    // ---------- Presence / typing / read receipts ----------
+    var typingEl = document.getElementById('tcTyping');
+    var typingText = document.getElementById('tcTypingText');
+    var seenEl = document.getElementById('tcSeen');
+    var lastTypingPing = 0;
+
+    function pingTyping(){
+        if (!CONV) return;
+        var now = Date.now(); if (now - lastTypingPing < 2500) return; lastTypingPing = now;
+        var fd = new FormData(); fd.append('_token', csrf); fd.append('conversation_id', CONV);
+        fetch(TYPING_URL, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).catch(function () {});
+    }
+    function updateTyping(list){
+        if (!typingEl) return;
+        if (!list || !list.length){ typingEl.hidden = true; return; }
+        var t;
+        if (!IS_GROUP) t = 'typing…';
+        else if (list.length === 1) t = list[0] + ' is typing…';
+        else if (list.length === 2) t = list[0] + ' and ' + list[1] + ' are typing…';
+        else t = 'Several people are typing…';
+        var stick = atBottom();
+        typingText.textContent = t; typingEl.hidden = false;
+        if (stick) toBottom();
+    }
+    function setDot(peerId, online){
+        var d = document.querySelector('.tc-dot[data-dot="' + peerId + '"]'); if (d) d.classList.toggle('on', !!online);
+    }
+    function updateHeaderPresence(presence){
+        if (!presence) return;
+        if (IS_GROUP){
+            var n = presence.filter(function (p) { return p.online; }).length;
+            var el = document.getElementById('tcOnlineCount'); if (el) el.textContent = n > 0 ? ' · ' + n + ' online' : '';
+        } else if (PEER_ID){
+            var p = presence.filter(function (x) { return String(x.id) === String(PEER_ID); })[0];
+            if (p){
+                var dot = document.getElementById('tcHeaderDot'); if (dot) dot.classList.toggle('on', p.online);
+                var seen = document.getElementById('tcHeaderSeen'); if (seen){ seen.textContent = p.seen; seen.classList.toggle('online', p.online); }
+                setDot(PEER_ID, p.online);
+            }
+        }
+    }
+    function updateSeen(){
+        if (!seenEl || !IS_GROUP) return;
+        var mine = box.querySelectorAll('.tc-msg.mine'); if (!mine.length){ seenEl.hidden = true; return; }
+        var mid = parseInt(mine[mine.length - 1].dataset.id, 10) || 0;
+        var readers = WATERMARKS.filter(function (w) { return w.upTo >= mid; });
+        if (!readers.length){ seenEl.hidden = true; return; }
+        var avs = readers.slice(0, 6).map(function (w) {
+            return w.avatar ? '<span class="tc-avatar has-img"><img src="' + w.avatar + '"></span>'
+                : '<span class="tc-avatar" style="background:' + w.color + '">' + esc(w.mono) + '</span>';
+        }).join('');
+        seenEl.innerHTML = 'Seen by <span class="tc-seen-avs">' + avs + '</span>' + (readers.length > 6 ? ' +' + (readers.length - 6) : '');
+        seenEl.hidden = false;
+    }
+
     toBottom();
     if (input) input.focus(); // ready to type the moment the chat opens
+    updateSeen();
 
     // Auto-grow + Enter to send.
     function grow(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
-    input.addEventListener('input', grow);
+    input.addEventListener('input', function () { grow(); pingTyping(); });
     input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
     });
@@ -877,7 +962,7 @@
                     CONV = String(res.conversation_id); box.dataset.conversation = CONV;
                     var r = activeRow(); if (r) r.dataset.conversation = CONV;
                 }
-                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); toBottom(); input.focus();
+                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); updateSeen(); toBottom(); input.focus();
             } else {
                 toast(res && res.message ? res.message : 'Could not send message');
             }
@@ -902,6 +987,9 @@
                 }
                 applyReadReceipts(res.readUpTo);
                 applyStates(res.states);
+                updateTyping(res.typing);
+                if (res.watermarks) { WATERMARKS = res.watermarks; updateSeen(); }
+                updateHeaderPresence(res.presence);
             })
             .catch(function () {});
     }
@@ -1158,6 +1246,21 @@
             .then(function (r) { return r.json(); })
             .then(function (res) { if (res && res.ok) location.href = '?c=' + res.conversation_id; else toast('Could not create group'); });
     });
+})();
+
+// Global presence poll — keeps every sidebar online dot fresh, even with no chat open.
+(function () {
+    if (!document.querySelector('.tc-contact')) return;
+    var URL = @js(route('admin.team-messages.presence'));
+    function tick(){
+        fetch(URL + '?_=' + Date.now(), { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res || !res.presence) return;
+                res.presence.forEach(function (p) { var d = document.querySelector('.tc-dot[data-dot="' + p.id + '"]'); if (d) d.classList.toggle('on', !!p.online); });
+            }).catch(function () {});
+    }
+    setInterval(tick, 20000);
 })();
 </script>
 @endpush

@@ -106,6 +106,12 @@ class TeamMessageController extends Controller
             'messages' => $messages, 'members' => $members, 'addable' => $addable,
             'teammates' => $teammates, 'emoji' => self::EMOJI, 'groupIcons' => self::GROUP_ICONS,
             'readUpTo' => $active ? $this->readUpTo($active, $me->id) : 0,
+            'watermarks' => $active ? $this->watermarks($active, $me->id) : [],
+            'peerOnline' => $peer ? $peer->isOnline() : false,
+            'peerSeen' => $peer ? ($peer->isOnline() ? 'Online' : ($peer->lastSeenHuman() ?? 'Offline')) : null,
+            'onlineCount' => $active && $active->isGroup()
+                ? $active->participants->filter(fn ($p) => $p->admin_id !== $me->id && optional($p->admin)->isOnline())->count()
+                : 0,
             'tz' => self::TZ,
         ]);
     }
@@ -163,6 +169,7 @@ class TeamMessageController extends Controller
         $this->storeAttachments($msg, $files, $conv->data_owner_id);
         $this->touchConversation($conv, $msg);
         $this->markReadTo($conv, $me->id, $msg->id);   // I've read my own message
+        $conv->participants()->where('admin_id', $me->id)->update(['typing_at' => null]);
 
         $msg->load('sender', 'replyTo.sender', 'attachments');
 
@@ -173,7 +180,7 @@ class TeamMessageController extends Controller
         return redirect()->route('admin.team-messages.index', ['c' => $conv->id]);
     }
 
-    /** Poll: new messages after an id, read watermark, and live reaction/deletion state. */
+    /** Poll: new messages, read watermarks, reaction/deletion state, typing + presence. */
     public function thread(Request $request)
     {
         $me   = Auth::guard('admin')->user();
@@ -190,11 +197,64 @@ class TeamMessageController extends Controller
                 'id' => $m->id, 'deleted' => (bool) $m->deleted_at, 'reactions' => $this->reactionsOf($m, $me->id),
             ])->values();
 
+        $others = $conv->participants->where('admin_id', '!=', $me->id);
+
+        $typing = $others
+            ->filter(fn ($p) => $p->typing_at && $p->typing_at->gt(now()->subSeconds(6)))
+            ->map(fn ($p) => $this->senderInfo($p->admin)['first'])->values();
+
         return response()->json([
-            'messages' => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
-            'readUpTo' => $this->readUpTo($conv, $me->id),
-            'states'   => $states,
+            'messages'   => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
+            'readUpTo'   => $this->readUpTo($conv, $me->id),
+            'states'     => $states,
+            'typing'     => $typing,
+            'watermarks' => $this->watermarks($conv, $me->id),
+            'presence'   => $this->presenceOf($others),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /** I'm typing in this conversation — refresh my typing timestamp (poll-driven). */
+    public function typing(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->input('conversation_id'));
+        $conv->participants()->where('admin_id', $me->id)->update(['typing_at' => now()]);
+
+        return response()->json(['ok' => true])->header('Cache-Control', 'no-store');
+    }
+
+    /** Presence for all my teammates — drives the sidebar online dots. */
+    public function presence(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $mates = $this->teammates($me)->get();
+
+        return response()->json([
+            'presence' => $mates->map(fn ($a) => [
+                'id' => $a->id, 'online' => $a->isOnline(),
+                'seen' => $a->isOnline() ? 'Online' : ($a->lastSeenHuman() ?? 'Offline'),
+            ])->values(),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /** Other participants' read watermarks (for "Seen by" + blue ticks). */
+    private function watermarks(Conversation $conv, int $meId): array
+    {
+        return $conv->participants->where('admin_id', '!=', $meId)->map(function ($p) {
+            $s = $this->senderInfo($p->admin);
+            return ['id' => $p->admin_id, 'name' => $s['name'], 'first' => $s['first'],
+                    'avatar' => $s['avatar'], 'mono' => $s['mono'], 'color' => $s['color'],
+                    'upTo' => (int) $p->last_read_message_id];
+        })->values()->all();
+    }
+
+    private function presenceOf($participants): array
+    {
+        return $participants->map(fn ($p) => [
+            'id' => $p->admin_id,
+            'online' => optional($p->admin)->isOnline() ?? false,
+            'seen' => optional($p->admin)->isOnline() ? 'Online' : (optional($p->admin)->lastSeenHuman() ?? 'Offline'),
+        ])->values()->all();
     }
 
     public function react(Request $request)
@@ -476,6 +536,7 @@ class TeamMessageController extends Controller
             'is_group'        => false,
             'icon'            => null,
             'peer'            => $peer,
+            'online'          => $peer->isOnline(),
             'href'            => $c ? ['c' => $c->id] : ['with' => $peer->id],
             'preview'         => $last ? $this->previewOf($me, $c, $last, false) : null,
             'unread'          => $c ? ($unread[$c->id] ?? 0) : 0,

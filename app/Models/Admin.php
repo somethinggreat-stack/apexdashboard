@@ -15,7 +15,19 @@ class Admin extends Authenticatable
     // create()/update() can never escalate an account. Security invariant.
     protected $fillable = ['email', 'password', 'full_name'];
     protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['password' => 'hashed'];
+    protected $casts = ['password' => 'hashed', 'last_seen_at' => 'datetime'];
+
+    /** Considered online if seen within the last minute (poll-based presence). */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->gt(now()->subSeconds(60));
+    }
+
+    /** "last seen 5 min ago" style text, or null if never seen. */
+    public function lastSeenHuman(): ?string
+    {
+        return $this->last_seen_at ? $this->last_seen_at->diffForHumans() : null;
+    }
 
     /**
      * Roles: 'super' (sees everything), 'va' (business-owner workflow only),
