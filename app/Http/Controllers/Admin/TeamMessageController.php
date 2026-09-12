@@ -28,6 +28,20 @@ class TeamMessageController extends Controller
         $unread = TeamMessage::where('recipient_id', $me->id)->whereNull('read_at')
             ->selectRaw('sender_id, COUNT(*) AS c')->groupBy('sender_id')->pluck('c', 'sender_id');
 
+        // Last message in each thread — the WhatsApp-style contact preview.
+        $previews = [];
+        foreach ($members as $m) {
+            $last = TeamMessage::between($me->id, $m->id)->latest('id')->first();
+            if ($last) {
+                $previews[$m->id] = $this->preview($last, $me->id);
+            }
+        }
+
+        // Order contacts like a messenger: most recent conversation first,
+        // teammates with no messages yet fall to the bottom (kept alphabetical).
+        $members = $members->sortBy(fn ($m) => isset($previews[$m->id])
+            ? -$previews[$m->id]['ts'] : PHP_INT_MAX)->values();
+
         $withId   = (int) $request->query('with');
         $active   = $withId ? $members->firstWhere('id', $withId) : null;
         $messages = collect();
@@ -38,7 +52,7 @@ class TeamMessageController extends Controller
         }
 
         return view($this->adminView('admin.team-messages.index'), [
-            'me' => $me, 'members' => $members, 'unread' => $unread,
+            'me' => $me, 'members' => $members, 'unread' => $unread, 'previews' => $previews,
             'active' => $active, 'messages' => $messages, 'tz' => self::TZ,
         ]);
     }
@@ -94,6 +108,33 @@ class TeamMessageController extends Controller
             'body' => $m->body,
             'at'   => $m->created_at->timezone(self::TZ)->format('M j · g:i A'),
         ];
+    }
+
+    /** Contact-list preview: last line, when, mine?, and (if mine) whether they've read it. */
+    private function preview(TeamMessage $m, int $meId): array
+    {
+        $mine = $m->sender_id === $meId;
+
+        return [
+            'body' => $m->body,
+            'mine' => $mine,
+            'read' => $mine ? ! is_null($m->read_at) : true,
+            'ts'   => $m->created_at->timestamp,
+            'at'   => $this->shortTime($m->created_at),
+        ];
+    }
+
+    /** Messenger-style short timestamp: time today, "Yesterday", weekday this week, else date. */
+    private function shortTime(\Illuminate\Support\Carbon $dt): string
+    {
+        $dt  = $dt->copy()->timezone(self::TZ);
+        $now = now(self::TZ);
+
+        if ($dt->isSameDay($now))                    return $dt->format('g:i A');
+        if ($dt->isSameDay($now->copy()->subDay()))  return 'Yesterday';
+        if ($dt->greaterThan($now->copy()->subDays(6)->startOfDay())) return $dt->format('l');
+
+        return $dt->format('M j');
     }
 
     private function markRead(int $meId, int $fromId): void

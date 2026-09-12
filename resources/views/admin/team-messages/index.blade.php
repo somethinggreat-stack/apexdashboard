@@ -20,13 +20,26 @@
         </div>
         <div class="tc-contacts">
             @forelse ($members as $m)
-                <a href="{{ route('admin.team-messages.index', ['with' => $m->id]) }}" class="tc-contact {{ $active && $active->id === $m->id ? 'active' : '' }}">
+                @php $p = $previews[$m->id] ?? null; $u = $unread[$m->id] ?? 0; @endphp
+                <a href="{{ route('admin.team-messages.index', ['with' => $m->id]) }}" class="tc-contact {{ $active && $active->id === $m->id ? 'active' : '' }}" data-contact="{{ $m->id }}">
                     <span class="tc-avatar" style="background:{{ $color($m->full_name) }}">{{ $mono($m->full_name) }}</span>
                     <span class="tc-c-body">
-                        <span class="tc-c-name">{{ $m->full_name }}</span>
-                        <span class="tc-c-role">{{ $m->isSuper() ? 'Super Admin' : 'VA' }}</span>
+                        <span class="tc-c-top">
+                            <span class="tc-c-name">{{ $m->full_name }}</span>
+                            <span class="tc-c-time {{ $u > 0 ? 'unread' : '' }}" data-time="{{ $m->id }}">{{ $p['at'] ?? '' }}</span>
+                        </span>
+                        <span class="tc-c-sub">
+                            <span class="tc-c-preview {{ $u > 0 ? 'unread' : '' }}" data-preview="{{ $m->id }}">
+                                @if ($p)
+                                    @if ($p['mine'])<span class="tc-tick {{ $p['read'] ? 'read' : '' }}" data-tick>@include('partials.tick')</span>@endif
+                                    <span data-preview-text>{{ Str::limit($p['body'], 38) }}</span>
+                                @else
+                                    <span class="tc-c-muted">{{ $m->isSuper() ? 'Super Admin' : 'VA' }} · Tap to message</span>
+                                @endif
+                            </span>
+                            @if ($u > 0)<span class="tc-unread" data-badge="{{ $m->id }}">{{ $u }}</span>@endif
+                        </span>
                     </span>
-                    @if (($unread[$m->id] ?? 0) > 0)<span class="tc-unread">{{ $unread[$m->id] }}</span>@endif
                 </a>
             @empty
                 <div class="tc-empty">No teammates to message yet.</div>
@@ -85,11 +98,21 @@
     .tc-contact { display:flex; align-items:center; gap:12px; padding:10px 11px; border-radius:12px; text-decoration:none; }
     .tc-contact:hover { background:var(--pro-soft,#f5f7fb); }
     .tc-contact.active { background:linear-gradient(90deg, rgba(79,70,229,.12), rgba(37,99,235,.05)); }
-    .tc-avatar { flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; box-shadow:0 4px 10px rgba(15,23,42,.16); }
-    .tc-avatar.sm { width:38px; height:38px; }
-    .tc-c-body { min-width:0; flex:1; display:flex; flex-direction:column; }
-    .tc-c-name { font-size:14px; font-weight:700; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .tc-c-role { font-size:11.5px; color:#94a3b8; }
+    .tc-avatar { flex:none; width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; box-shadow:0 4px 10px rgba(15,23,42,.16); }
+    .tc-avatar.sm { width:38px; height:38px; border-radius:12px; }
+    .tc-c-body { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+    .tc-c-top { display:flex; align-items:center; gap:8px; }
+    .tc-c-name { flex:1; min-width:0; font-size:14px; font-weight:700; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-c-time { flex:none; font-size:11px; color:#94a3b8; }
+    .tc-c-time.unread { color:#4f46e5; font-weight:700; }
+    .tc-c-sub { display:flex; align-items:center; gap:8px; }
+    .tc-c-preview { flex:1; min-width:0; display:flex; align-items:center; gap:4px; font-size:12.5px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-c-preview [data-preview-text] { overflow:hidden; text-overflow:ellipsis; }
+    .tc-c-preview.unread { color:var(--pro-text,#0f172a); font-weight:600; }
+    .tc-c-muted { overflow:hidden; text-overflow:ellipsis; }
+    .tc-tick { flex:none; display:inline-flex; width:16px; color:#9aa7b8; }
+    .tc-tick svg { width:16px; height:auto; }
+    .tc-tick.read { color:#2563eb; }
     .tc-unread { flex:none; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#4f46e5; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
     .tc-empty { padding:26px 14px; text-align:center; color:#94a3b8; font-size:13px; }
 
@@ -137,9 +160,32 @@
     var THREAD = @js(route('admin.team-messages.thread'));
     var STORE  = @js(route('admin.team-messages.store'));
 
+    var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
+
     function esc(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     function atBottom(){ return box.scrollHeight - box.scrollTop - box.clientHeight < 80; }
     function toBottom(){ box.scrollTop = box.scrollHeight; }
+
+    function nowShort(){
+        var d = new Date(), h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? 'PM' : 'AM';
+        h = h % 12; if (h === 0) h = 12;
+        return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
+    }
+
+    // Keep the left contact row's preview line in sync, WhatsApp-style.
+    function updatePreview(m){
+        var row = document.querySelector('.tc-contact[data-contact="' + withId + '"]');
+        if (!row) return;
+        var time = row.querySelector('[data-time]');
+        if (time){ time.textContent = nowShort(); time.classList.remove('unread'); }
+        var prev = row.querySelector('[data-preview]');
+        if (prev){
+            prev.classList.remove('unread');
+            prev.innerHTML = (m.mine ? '<span class="tc-tick" data-tick>' + TICK + '</span>' : '')
+                + '<span data-preview-text>' + esc(m.body).slice(0, 80) + '</span>';
+        }
+        var badge = row.querySelector('[data-badge]'); if (badge) badge.remove();
+    }
 
     function append(m){
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
@@ -148,6 +194,7 @@
         el.innerHTML = '<div class="tc-bubble">' + esc(m.body) + '</div><div class="tc-time">' + esc(m.at) + '</div>';
         box.appendChild(el);
         if (m.id > lastId) lastId = m.id;
+        updatePreview(m);
     }
 
     toBottom();

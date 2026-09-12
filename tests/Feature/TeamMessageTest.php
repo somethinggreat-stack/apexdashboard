@@ -121,6 +121,23 @@ class TeamMessageTest extends TestCase
         $this->assertNotNull(TeamMessage::first()->read_at);
     }
 
+    public function test_contact_list_carries_a_last_message_preview_with_read_state(): void
+    {
+        $va = $this->va('VA Sam');
+        // I sent the last message and they have NOT read it yet.
+        TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'ping you']);
+
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
+            ->assertOk()
+            ->assertViewHas('previews', function ($p) use ($va) {
+                return isset($p[$va->id])
+                    && $p[$va->id]['body'] === 'ping you'
+                    && $p[$va->id]['mine'] === true
+                    && $p[$va->id]['read'] === false;
+            })
+            ->assertSee('ping you');
+    }
+
     public function test_thread_poll_returns_only_messages_after_the_given_id(): void
     {
         $va = $this->va();
