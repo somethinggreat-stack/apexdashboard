@@ -158,6 +158,9 @@
                 </button>
             </form>
 
+            {{-- Full emoji picker for reactions (moved to <body> by JS) --}}
+            <div class="tc-emoji-picker" id="tcEmojiPicker" hidden></div>
+
             {{-- Image lightbox (moved to <body> by JS) --}}
             <div class="tc-lightbox" id="tcLightbox" hidden>
                 <button type="button" class="tc-lb-x" id="tcLbClose" aria-label="Close">&times;</button>
@@ -166,11 +169,7 @@
 
             {{-- Message action menu (WhatsApp-style). Moved to <body> by JS so position:fixed is exact. --}}
             <div class="tc-menu" id="tcMenu" hidden>
-                <div class="tc-menu-emoji">
-                    @foreach ($emoji as $e)
-                        <button type="button" data-emoji="{{ $e }}">{{ $e }}</button>
-                    @endforeach
-                </div>
+                <div class="tc-menu-emoji" id="tcMenuEmoji"></div>
                 <button type="button" class="tc-menu-item" data-act="reply">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg> Reply
                 </button>
@@ -336,17 +335,29 @@
     .tc-bubble { cursor:default; }
 
     /* Three-dots action trigger on each message (hover on desktop, always on touch). */
-    .tc-dots { position:absolute; top:0; opacity:0; width:26px; height:26px; padding:0; border:1px solid var(--pro-line,#e6ebf2); background:var(--pro-surface,#fff); color:#64748b; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(15,23,42,.14); transition:opacity .12s; }
-    .tc-dots svg { width:15px; height:15px; }
+    .tc-dots { position:absolute; top:2px; opacity:.55; width:24px; height:24px; padding:0; border:1px solid var(--pro-line,#e6ebf2); background:var(--pro-surface,#fff); color:#64748b; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(15,23,42,.12); transition:opacity .12s, transform .1s; }
+    .tc-dots svg { width:14px; height:14px; }
     .tc-msg:hover .tc-dots, .tc-dots:focus-visible { opacity:1; }
-    .tc-msg.mine .tc-dots { left:-34px; }
-    .tc-msg:not(.mine) .tc-dots { right:-34px; }
-    @media (hover:none){ .tc-dots { opacity:1; } }
+    .tc-dots:hover { transform:scale(1.08); }
+    .tc-msg.mine .tc-dots { left:-32px; }
+    .tc-msg:not(.mine) .tc-dots { right:-32px; }
     /* These elements set their own display in the class, which would otherwise
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
-    .tc-typing[hidden], .tc-seen[hidden] { display:none !important; }
+    .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden] { display:none !important; }
+
+    /* Emoji reaction quick bar + full picker */
+    .tc-menu-emoji button { position:relative; }
+    .tc-emoji-more { font-size:16px !important; color:#6366f1; font-weight:800; }
+    .tc-emoji-picker { position:fixed; z-index:1003; width:308px; max-height:320px; overflow-y:auto; padding:10px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:16px; box-shadow:0 20px 50px rgba(15,23,42,.28); }
+    .tc-emoji-cat { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; margin:8px 4px 4px; }
+    .tc-emoji-cat:first-child { margin-top:2px; }
+    .tc-emoji-grid { display:grid; grid-template-columns:repeat(8, 1fr); gap:2px; }
+    .tc-emoji-grid button { border:0; background:transparent; font-size:20px; line-height:1; padding:5px 0; border-radius:8px; cursor:pointer; }
+    .tc-emoji-grid button:hover { background:var(--pro-soft,#f1f5f9); transform:scale(1.15); }
+    :root[data-theme="dark"] .tc-emoji-picker { background:#0f1629; border-color:#233150; }
+    :root[data-theme="dark"] .tc-emoji-grid button:hover { background:#182444; }
 
     /* Presence dots */
     .tc-av { position:relative; flex:none; display:inline-flex; }
@@ -1001,7 +1012,35 @@
     var replyBar = document.getElementById('tcReply');
     if (menu) document.body.appendChild(menu);         // detach so position:fixed is exact
     if (fwdModal) document.body.appendChild(fwdModal);
-    var menuMsg = null, replyId = null, forwardId = null, guardUntil = 0;
+    var menuMsg = null, replyId = null, forwardId = null, guardUntil = 0, emojiTargetId = null;
+
+    // ---------- Emoji reactions: recent quick-bar + full picker ----------
+    var DEFAULT_EMOJI = ['👍','❤️','😂','😮','😢','🙏'];
+    var EMOJI_ALL = {
+        'Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','💩','🤡','👻','👽','🤖'],
+        'Gestures': ['👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🙏','✍️','💅','🤳','💪','🔥','💯','✔️','➕','✖️','🎉','🎊','⭐','🌟','✨','⚡','💥','💫','💦'],
+        'Hearts': ['❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💔','❣️','💕','💞','💓','💗','💖','💘','💝'],
+        'Animals & Food': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐷','🐸','🐵','🐔','🐧','🦄','🐝','🦋','🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🍔','🍟','🍕','🌭','🍿','🎂','🍰','🍩','🍪','☕','🍺','🥂'],
+        'Objects & Symbols': ['💬','📌','📎','✅','❌','❗','❓','💡','📁','📣','🛠️','🏆','🎯','💼','🚀','⏰','📅','🔒','🔑','💸','💰','📈','📉','✏️','📝','🔔','⚠️','🚫','♻️','✔️','☑️','🆗','🆕','🔝','💤']
+    };
+
+    function getRecent(){
+        try { var r = JSON.parse(localStorage.getItem('tc-recent-emoji') || '[]'); return (r && r.length) ? r : DEFAULT_EMOJI.slice(); }
+        catch (e) { return DEFAULT_EMOJI.slice(); }
+    }
+    function recordRecent(emoji){
+        try {
+            var r = getRecent().filter(function (x) { return x !== emoji; });
+            r.unshift(emoji); r = r.slice(0, 8);
+            localStorage.setItem('tc-recent-emoji', JSON.stringify(r));
+        } catch (e) {}
+    }
+    function renderQuickEmojis(){
+        var row = document.getElementById('tcMenuEmoji'); if (!row) return;
+        row.innerHTML = getRecent().slice(0, 6).map(function (e) {
+            return '<button type="button" data-emoji="' + e + '">' + e + '</button>';
+        }).join('') + '<button type="button" class="tc-emoji-more" data-more title="More emojis">＋</button>';
+    }
 
     // ---------- Image lightbox ----------
     var lightbox = document.getElementById('tcLightbox');
@@ -1036,6 +1075,7 @@
         menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'),
                     text: txtEl ? txtEl.textContent : '', author: nameEl ? nameEl.textContent : '' };
         menu.querySelector('[data-act="delete"]').hidden = !menuMsg.mine;
+        renderQuickEmojis();
         menu.hidden = false;
         var mw = menu.offsetWidth, mh = menu.offsetHeight;
         menu.style.left = Math.max(8, Math.min(x, window.innerWidth  - mw - 8)) + 'px';
@@ -1140,9 +1180,47 @@
         var el = pill.closest('.tc-msg'); if (el) react(parseInt(el.dataset.id, 10), pill.dataset.emoji);
     });
 
+    // Full emoji picker (built once, moved to body).
+    var picker = document.getElementById('tcEmojiPicker');
+    if (picker) document.body.appendChild(picker);
+    var pickerBuilt = false;
+    function buildPicker(){
+        if (pickerBuilt || !picker) return; pickerBuilt = true;
+        var html = '';
+        Object.keys(EMOJI_ALL).forEach(function (cat) {
+            html += '<div class="tc-emoji-cat">' + cat + '</div><div class="tc-emoji-grid">'
+                + EMOJI_ALL[cat].map(function (e) { return '<button type="button" data-emoji="' + e + '">' + e + '</button>'; }).join('')
+                + '</div>';
+        });
+        picker.innerHTML = html;
+    }
+    function openPicker(anchor){
+        buildPicker(); picker.hidden = false;
+        var r = anchor.getBoundingClientRect(), pw = picker.offsetWidth, ph = picker.offsetHeight;
+        picker.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
+        picker.style.top  = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - ph - 8)) + 'px';
+    }
+    function closePicker(){ if (picker) picker.hidden = true; emojiTargetId = null; }
+    if (picker){
+        picker.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-emoji]'); if (!b) return;
+            if (emojiTargetId){ react(emojiTargetId, b.dataset.emoji); recordRecent(b.dataset.emoji); }
+            closePicker();
+        });
+        document.addEventListener('click', function (e) {
+            if (picker.hidden) return;
+            if (!picker.contains(e.target) && !e.target.closest('[data-more]')) closePicker();
+        });
+    }
+
     if (menu){
-        menu.querySelectorAll('.tc-menu-emoji button').forEach(function (b) {
-            b.addEventListener('click', function () { if (menuMsg) react(menuMsg.id, b.dataset.emoji); closeMenu(); });
+        // Quick-bar emoji (recent) + the "＋" that opens the full picker.
+        var emojiRow = menu.querySelector('.tc-menu-emoji');
+        emojiRow.addEventListener('click', function (e) {
+            var more = e.target.closest('[data-more]');
+            if (more){ emojiTargetId = menuMsg ? menuMsg.id : null; closeMenu(); openPicker(more); return; }
+            var b = e.target.closest('[data-emoji]');
+            if (b){ if (menuMsg){ react(menuMsg.id, b.dataset.emoji); recordRecent(b.dataset.emoji); } closeMenu(); }
         });
         menu.addEventListener('click', function (e) {
             var it = e.target.closest('.tc-menu-item'); if (!it) return;
@@ -1162,7 +1240,7 @@
     });
     box.addEventListener('scroll', function () { if (menu && !menu.hidden) closeMenu(); });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; closeLightbox(); }
+        if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; closeLightbox(); closePicker(); }
     });
 
     var rc = document.getElementById('tcReplyCancel'); if (rc) rc.addEventListener('click', cancelReply);

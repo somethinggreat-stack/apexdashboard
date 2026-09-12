@@ -262,7 +262,7 @@ class TeamMessageController extends Controller
         $me = Auth::guard('admin')->user();
         $data = $request->validate([
             'message_id' => ['required', 'integer'],
-            'emoji'      => ['nullable', 'string', Rule::in(self::EMOJI)],
+            'emoji'      => ['nullable', 'string', 'max:32'],   // any emoji, one per person
         ]);
 
         $msg = $this->participantMessage($me, $data['message_id']);
