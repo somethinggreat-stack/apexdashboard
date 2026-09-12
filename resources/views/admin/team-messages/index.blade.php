@@ -83,7 +83,22 @@
                         <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $peerSeen }}</div>
                     </div>
                 @endif
+                <button type="button" class="tc-bell {{ $notifyLevel === 'none' ? 'muted' : '' }}" id="tcBell" data-level="{{ $notifyLevel }}" title="Notifications">
+                    @if ($notifyLevel === 'none')
+                        @include('partials.mute-icon')
+                    @else
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    @endif
+                </button>
             </div>
+
+            <div class="tc-bell-pop" id="tcBellPop" hidden>
+                <button type="button" class="tc-bell-opt" data-level="all">All messages</button>
+                <button type="button" class="tc-bell-opt" data-level="mentions">Only @mentions</button>
+                <button type="button" class="tc-bell-opt" data-level="none">Off</button>
+            </div>
+
+            <div class="tc-mention-pop" id="tcMentionPop" hidden></div>
 
             @if ($pinned->isNotEmpty())
                 <div class="tc-pinned" id="tcPinned">
@@ -379,7 +394,8 @@
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
     .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden],
-    .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden] { display:none !important; }
+    .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden],
+    .tc-bell-pop[hidden], .tc-mention-pop[hidden] { display:none !important; }
 
     /* Search + filters */
     .tc-search { position:relative; display:flex; align-items:center; margin-top:12px; }
@@ -753,6 +769,34 @@
     :root[data-theme="dark"] .tc-confirm-card { background:#0f1629; }
     :root[data-theme="dark"] .tc-btn-cancel:hover, :root[data-theme="dark"] .tc-del-cancel:hover { background:#182444; }
 
+    /* @mentions */
+    .tc-mention { color:#4f46e5; font-weight:700; background:rgba(99,102,241,.13); border-radius:5px; padding:0 3px; }
+    .tc-msg.mine .tc-mention { color:#fff; background:rgba(255,255,255,.24); }
+    .tc-mentions-me .tc-bubble { border-color:rgba(245,158,11,.55) !important; box-shadow:0 0 0 1.5px rgba(245,158,11,.45), 0 8px 20px -10px rgba(30,41,59,.32) !important; }
+    .tc-mention-badge { flex:none; min-width:20px; height:20px; padding:0 5px; border-radius:999px; background:linear-gradient(135deg,#f59e0b,#f97316); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+
+    /* @autocomplete popup */
+    .tc-mention-pop { position:fixed; z-index:1004; width:260px; max-height:230px; overflow-y:auto; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:14px; box-shadow:0 18px 44px rgba(15,23,42,.24); padding:6px; }
+    .tc-mention-opt { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; cursor:pointer; }
+    .tc-mention-opt.active, .tc-mention-opt:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-mention-opt .tc-avatar { width:30px; height:30px; font-size:11px; }
+    .tc-mention-opt .tc-me-name { font-size:13.5px; font-weight:700; color:var(--pro-text,#0f172a); }
+    .tc-mention-opt .tc-me-ev { width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
+
+    /* Notify bell */
+    .tc-bell { flex:none; width:38px; height:38px; border-radius:11px; border:1px solid rgba(148,163,184,.3); background:var(--pro-surface,#fff); color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .tc-bell:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-bell.muted { color:#ef4444; }
+    .tc-bell svg { width:18px; height:18px; }
+    .tc-bell-pop { position:fixed; z-index:1004; width:210px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:13px; box-shadow:0 18px 44px rgba(15,23,42,.24); padding:6px; }
+    .tc-bell-opt { display:flex; align-items:center; justify-content:space-between; width:100%; border:0; background:transparent; padding:9px 11px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:600; color:var(--pro-text,#0f172a); cursor:pointer; text-align:left; }
+    .tc-bell-opt:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-bell-opt.sel { color:#4f46e5; }
+    .tc-bell-opt.sel::after { content:'✓'; font-weight:800; }
+
+    :root[data-theme="dark"] .tc-mention-pop, :root[data-theme="dark"] .tc-bell-pop, :root[data-theme="dark"] .tc-bell { background:#0f1629; border-color:#233150; }
+    :root[data-theme="dark"] .tc-mention-opt:hover, :root[data-theme="dark"] .tc-mention-opt.active, :root[data-theme="dark"] .tc-bell-opt:hover { background:#182444; }
+
     .tc-msg.tc-flash .tc-bubble { animation:tcFlash 1.3s ease; }
     @keyframes tcFlash { 0%,100%{ box-shadow:0 8px 20px -10px rgba(30,41,59,.32); } 30%{ box-shadow:0 0 0 3px rgba(99,102,241,.5); } }
     @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
@@ -790,6 +834,7 @@
     var TC_PEERS = @js($teammates->map(fn ($t) => ['id' => $t->id, 'name' => $t->full_name, 'avatar' => $t->avatarUrl()])->values());
     var WATERMARKS = @js($watermarks ?? []);
     var TYPING_URL = @js(route('admin.team-messages.typing'));
+    var MENTIONABLES = @js($mentionables ?? []);
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
     var DOTS = '<button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
@@ -835,6 +880,17 @@
         return by === 'You' ? 'You deleted this message' : 'This message was deleted by ' + esc(by || 'Someone');
     }
 
+    function highlightBody(body, labels){
+        var h = esc(body);
+        if (labels && labels.length){
+            labels.slice().sort(function (a, b) { return b.length - a.length; }).forEach(function (l) {
+                var tok = '@' + esc(l);
+                h = h.split(tok).join('<span class="tc-mention">' + tok + '</span>');
+            });
+        }
+        return h;
+    }
+
     function attsHtml(list){
         if (!list || !list.length) return '';
         return '<div class="tc-atts">' + list.map(function (a) {
@@ -856,7 +912,7 @@
         if (m.forwarded && !m.deleted) h += '<div class="tc-fwd">↪ Forwarded</div>';
         h += attsHtml(atts);
         if (m.deleted) h += '<div class="tc-text tc-deleted-text">🚫 ' + deletedLabel(m.deletedBy) + '</div>';
-        else if (m.body) h += '<div class="tc-text">' + esc(m.body) + '</div>';
+        else if (m.body) h += '<div class="tc-text">' + highlightBody(m.body, m.mentionLabels) + '</div>';
         h += '</div>';
         var tick = (m.mine && !m.deleted) ? '<span class="tc-btick">' + TICK + '</span>' : '';
         h += '<div class="tc-time">' + esc(m.at) + tick + '</div>';
@@ -890,7 +946,7 @@
             box.appendChild(el); if (m.id > lastId) lastId = m.id;
             return;
         }
-        el.className = 'tc-msg' + (m.mine ? ' mine' : '') + (IS_GROUP && !m.mine ? ' tc-msg--grp' : '');
+        el.className = 'tc-msg' + (m.mine ? ' mine' : '') + (IS_GROUP && !m.mine ? ' tc-msg--grp' : '') + (m.mentionsMe ? ' tc-mentions-me' : '');
         el.dataset.id = m.id;
         el.dataset.pinned = m.pinned ? 1 : 0;
         el.innerHTML = senderChip(m) + bubbleInner(m);
@@ -994,12 +1050,101 @@
     if (input) input.focus(); // ready to type the moment the chat opens
     updateSeen();
 
-    // Auto-grow + Enter to send.
+    // ---------- @mention autocomplete ----------
+    var mentionPop = document.getElementById('tcMentionPop');
+    if (mentionPop) document.body.appendChild(mentionPop);
+    var pendingMentions = [], mentionState = null, mentionActive = 0, lastMentionOpts = [];
+
+    function mentionOptions(query){
+        var q = query.toLowerCase();
+        var opts = MENTIONABLES.filter(function (x) { return x.name.toLowerCase().indexOf(q) >= 0; })
+            .map(function (x) { return { key: String(x.id), label: x.name, avatar: x.avatar }; });
+        if (IS_GROUP && ('everyone'.indexOf(q) === 0)) opts.unshift({ key: 'everyone', label: 'everyone', ev: true });
+        return opts.slice(0, 8);
+    }
+    function currentMention(){
+        var pos = input.selectionStart, upto = input.value.slice(0, pos);
+        var m = upto.match(/(^|\s)@([^\s@]{0,30})$/);
+        return m ? { query: m[2], start: pos - m[2].length - 1 } : null;
+    }
+    function mentionOnInput(){
+        var st = currentMention();
+        if (!st){ hideMentions(); return; }
+        var opts = mentionOptions(st.query);
+        if (!opts.length){ hideMentions(); return; }
+        mentionState = st; mentionActive = 0; renderMentions(opts);
+    }
+    function renderMentions(opts){
+        lastMentionOpts = opts;
+        mentionPop.innerHTML = opts.map(function (o, i) {
+            var av = o.ev ? '<span class="tc-me-ev">@</span>'
+                : (o.avatar ? '<span class="tc-avatar has-img"><img src="' + o.avatar + '"></span>'
+                            : '<span class="tc-avatar" style="background:#6366f1">' + esc((o.label[0] || '?').toUpperCase()) + '</span>');
+            return '<div class="tc-mention-opt' + (i === mentionActive ? ' active' : '') + '" data-i="' + i + '">' + av
+                + '<span class="tc-me-name">' + (o.ev ? 'Everyone' : esc(o.label)) + '</span></div>';
+        }).join('');
+        var r = input.getBoundingClientRect();
+        mentionPop.style.left = '0px'; mentionPop.style.top = '0px'; mentionPop.hidden = false;
+        var pr = mentionPop.getBoundingClientRect();
+        var wantL = r.left, wantT = r.top - pr.height - 6;
+        mentionPop.style.left = wantL + 'px'; mentionPop.style.top = wantT + 'px';
+        var act = mentionPop.getBoundingClientRect();
+        mentionPop.style.left = (2 * wantL - act.left) + 'px';
+        mentionPop.style.top = (2 * wantT - act.top) + 'px';
+    }
+    function hideMentions(){ if (mentionPop) mentionPop.hidden = true; mentionState = null; }
+    function pickMention(o){
+        if (!mentionState || !o) return;
+        var val = input.value, pos = input.selectionStart;
+        var before = val.slice(0, mentionState.start), after = val.slice(pos);
+        var insert = '@' + o.label + ' ';
+        input.value = before + insert + after;
+        var caret = (before + insert).length; input.setSelectionRange(caret, caret);
+        if (!pendingMentions.some(function (p) { return p.key === o.key; })) pendingMentions.push({ key: o.key, label: o.label });
+        hideMentions(); input.focus(); grow();
+    }
+    if (mentionPop) mentionPop.addEventListener('mousedown', function (e) {
+        var it = e.target.closest('.tc-mention-opt'); if (!it) return;
+        e.preventDefault(); pickMention(lastMentionOpts[+it.dataset.i]);
+    });
+
+    // Auto-grow + Enter to send (with mention-aware keys).
     function grow(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
-    input.addEventListener('input', function () { grow(); pingTyping(); });
+    input.addEventListener('input', function () { grow(); pingTyping(); mentionOnInput(); });
     input.addEventListener('keydown', function (e) {
+        if (mentionPop && !mentionPop.hidden && lastMentionOpts.length){
+            if (e.key === 'ArrowDown'){ e.preventDefault(); mentionActive = (mentionActive + 1) % lastMentionOpts.length; renderMentions(lastMentionOpts); return; }
+            if (e.key === 'ArrowUp'){ e.preventDefault(); mentionActive = (mentionActive - 1 + lastMentionOpts.length) % lastMentionOpts.length; renderMentions(lastMentionOpts); return; }
+            if (e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); pickMention(lastMentionOpts[mentionActive]); return; }
+            if (e.key === 'Escape'){ hideMentions(); return; }
+        }
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
     });
+
+    // ---------- Per-chat notification setting (bell) ----------
+    var bell = document.getElementById('tcBell'), bellPop = document.getElementById('tcBellPop');
+    if (bell && bellPop){
+        document.body.appendChild(bellPop);
+        bell.addEventListener('click', function (e) {
+            e.stopPropagation();
+            bellPop.querySelectorAll('.tc-bell-opt').forEach(function (o) { o.classList.toggle('sel', o.dataset.level === bell.dataset.level); });
+            var r = bell.getBoundingClientRect();
+            bellPop.style.left = '0px'; bellPop.style.top = '0px'; bellPop.hidden = false;
+            var pr = bellPop.getBoundingClientRect();
+            var wl = Math.min(r.left, window.innerWidth - pr.width - 8), wt = r.bottom + 6;
+            bellPop.style.left = wl + 'px'; bellPop.style.top = wt + 'px';
+            var a = bellPop.getBoundingClientRect();
+            bellPop.style.left = (2 * wl - a.left) + 'px'; bellPop.style.top = (2 * wt - a.top) + 'px';
+        });
+        bellPop.addEventListener('click', function (e) {
+            var o = e.target.closest('.tc-bell-opt'); if (!o) return;
+            var lvl = o.dataset.level; bell.dataset.level = lvl; bell.classList.toggle('muted', lvl === 'none'); bellPop.hidden = true;
+            if (!CONV) return;
+            var fd = new FormData(); fd.append('_token', csrf); fd.append('conversation_id', CONV); fd.append('level', lvl);
+            fetch(@js(route('admin.team-messages.notify')), { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).catch(function () {});
+        });
+        document.addEventListener('click', function (e) { if (!bellPop.hidden && !bellPop.contains(e.target) && !bell.contains(e.target)) bellPop.hidden = true; });
+    }
 
     // ---------- Attachments ----------
     var fileInput = document.getElementById('tcFile');
@@ -1070,6 +1215,7 @@
         if (body) fd.append('body', body);
         if (replyId) fd.append('reply_to_id', replyId);
         pending.forEach(function (it) { fd.append('attachments[]', it.file, it.file.name); });
+        pendingMentions.forEach(function (pm) { if (body.indexOf('@' + pm.label) >= 0) fd.append('mentions[]', pm.key); });
 
         var xhr = new XMLHttpRequest();
         xhr.open('POST', STORE);
@@ -1086,7 +1232,7 @@
                     CONV = String(res.conversation_id); box.dataset.conversation = CONV;
                     var r = activeRow(); if (r) r.dataset.conversation = CONV;
                 }
-                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); updateSeen(); toBottom(); input.focus();
+                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
             } else {
                 toast(res && res.message ? res.message : 'Could not send message');
             }

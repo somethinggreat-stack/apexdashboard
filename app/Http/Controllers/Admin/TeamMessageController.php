@@ -57,15 +57,16 @@ class TeamMessageController extends Controller
             : collect();
 
         $unread = $this->unreadPerConversation($me);
+        $mentions = $this->unreadMentionsPerConversation($me);
 
         // Build the unified sidebar: every teammate as a DM + every group I'm in.
         $items = [];
         foreach ($teammates as $t) {
             $c = $dmByPeer[$t->id] ?? null;
-            $items[] = $this->dmItem($me, $t, $c, $lastMsgs, $unread);
+            $items[] = $this->dmItem($me, $t, $c, $lastMsgs, $unread, $mentions);
         }
         foreach ($convos as $c) {
-            if ($c->isGroup()) $items[] = $this->groupItem($me, $c, $lastMsgs, $unread);
+            if ($c->isGroup()) $items[] = $this->groupItem($me, $c, $lastMsgs, $unread, $mentions);
         }
 
         // Most recent conversation first; never-used DMs fall to the bottom by name.
@@ -91,21 +92,28 @@ class TeamMessageController extends Controller
             if ($peer) $active = $dmByPeer[$peer->id] ?? null;   // may be null → virtual DM
         }
 
-        $pinned = collect();
+        $pinned = collect(); $mentionables = []; $notifyLevel = 'all';
 
         if ($active) {
             $messages = $active->messages()->visibleTo($me->id)
-                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin')->orderBy('id')->get();
+                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')->orderBy('id')->get();
             $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
+            $notifyLevel = optional($active->participantFor($me->id))->notify_level ?: 'all';
 
             if ($active->isDm()) {
                 $peer = $active->otherAdmin($me->id);
+                if ($peer) $mentionables[] = ['id' => $peer->id, 'name' => $peer->full_name, 'avatar' => $peer->avatarUrl()];
             } else {
                 $members = $active->participants->load('admin');
                 $inIds   = $active->participants->pluck('admin_id')->all();
                 $addable = $teammates->whereNotIn('id', $inIds)->values();
+                foreach ($members as $p) {
+                    if ($p->admin_id !== $me->id && $p->admin) {
+                        $mentionables[] = ['id' => $p->admin_id, 'name' => $p->admin->full_name, 'avatar' => $p->admin->avatarUrl()];
+                    }
+                }
             }
         }
 
@@ -120,6 +128,7 @@ class TeamMessageController extends Controller
             'onlineCount' => $active && $active->isGroup()
                 ? $active->participants->filter(fn ($p) => $p->admin_id !== $me->id && optional($p->admin)->isOnline())->count()
                 : 0,
+            'mentionables' => $mentionables, 'notifyLevel' => $notifyLevel,
             'tz' => self::TZ,
         ]);
     }
@@ -137,6 +146,8 @@ class TeamMessageController extends Controller
             'reply_to_id'     => ['nullable', 'integer'],
             'attachments'     => ['nullable', 'array', 'max:' . self::MAX_FILES],
             'attachments.*'   => ['file', 'max:' . self::MAX_KB],
+            'mentions'        => ['nullable', 'array', 'max:50'],
+            'mentions.*'      => ['string', 'max:20'],
         ]);
 
         // Resolve (or start) the conversation.
@@ -175,11 +186,12 @@ class TeamMessageController extends Controller
             'body'            => $body,
         ]);
         $this->storeAttachments($msg, $files, $conv->data_owner_id);
+        $this->syncMentions($msg, $conv, $me, $request->input('mentions', []));
         $this->touchConversation($conv, $msg);
         $this->markReadTo($conv, $me->id, $msg->id);   // I've read my own message
         $conv->participants()->where('admin_id', $me->id)->update(['typing_at' => null]);
 
-        $msg->load('sender', 'replyTo.sender', 'attachments');
+        $msg->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins');
 
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'message' => $this->present($msg, $me->id), 'conversation_id' => $conv->id]);
@@ -195,7 +207,7 @@ class TeamMessageController extends Controller
         $conv = $this->findConversation($me, (int) $request->query('c'));
         $after = (int) $request->query('after', 0);
 
-        $msgs = $conv->messages()->visibleTo($me->id)->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin')
+        $msgs = $conv->messages()->visibleTo($me->id)->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
             ->where('id', '>', $after)->orderBy('id')->get();
 
         $this->markRead($conv, $me);
@@ -352,6 +364,106 @@ class TeamMessageController extends Controller
                 'at'      => $m->created_at->timezone(self::TZ)->format('M j'),
             ])->values(),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /** Record who a message @mentions (ids that are participants, plus @everyone). */
+    private function syncMentions(TeamMessage $msg, Conversation $conv, Admin $me, array $mentions): void
+    {
+        $memberIds = $conv->participants->pluck('admin_id')->all();
+        $all = false; $ids = [];
+
+        foreach ($mentions as $mn) {
+            if ($mn === 'everyone') { $all = true; continue; }
+            $id = (int) $mn;
+            if ($id && $id !== $me->id && in_array($id, $memberIds, true)) $ids[] = $id;
+        }
+
+        if ($all) $msg->forceFill(['mentions_all' => true])->save();
+        if ($ids) $msg->mentionedAdmins()->sync(array_unique($ids));
+    }
+
+    private function mentionLabels(TeamMessage $m): array
+    {
+        $labels = $m->relationLoaded('mentionedAdmins') ? $m->mentionedAdmins->pluck('full_name')->all()
+            : $m->mentionedAdmins()->pluck('full_name')->all();
+        if ($m->mentions_all) $labels[] = 'everyone';
+
+        return array_values($labels);
+    }
+
+    private function mentionsMe(TeamMessage $m, int $meId): bool
+    {
+        if ($m->mentions_all) return true;
+
+        return $m->relationLoaded('mentionedAdmins')
+            ? $m->mentionedAdmins->contains('id', $meId)
+            : $m->mentionedAdmins()->where('admin_id', $meId)->exists();
+    }
+
+    /** Per-chat notification preference: all | mentions | none. */
+    public function notify(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->input('conversation_id'));
+        $level = in_array($request->input('level'), ['all', 'mentions', 'none'], true) ? $request->input('level') : 'all';
+        $conv->participants()->where('admin_id', $me->id)->update(['notify_level' => $level]);
+
+        return response()->json(['ok' => true, 'level' => $level]);
+    }
+
+    /** Global poll for desktop notifications — new messages I should be pinged about. */
+    public function notifications(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $after = (int) $request->query('after', 0);
+        $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
+
+        $rows = TeamMessage::whereIn('conversation_id', $convIds)
+            ->where('type', 'text')->whereNull('deleted_at')->where('sender_id', '!=', $me->id)
+            ->where('id', '>', $after)->visibleTo($me->id)
+            ->with('sender', 'conversation.participants.admin', 'mentionedAdmins')
+            ->orderBy('id')->limit(30)->get();
+
+        $out = []; $maxId = $after;
+        foreach ($rows as $m) {
+            $maxId = max($maxId, $m->id);
+            $part = $m->conversation->participants->firstWhere('admin_id', $me->id);
+            $level = $part->notify_level ?? 'all';
+            $muted = (bool) ($part->muted ?? false);
+            $mention = $this->mentionsMe($m, $me->id);
+
+            $should = $mention ? ($level !== 'none') : (! $muted && $level === 'all');
+            if (! $should) continue;
+
+            $out[] = [
+                'id' => $m->id, 'conversation_id' => $m->conversation_id,
+                'title' => $this->convTitle($m->conversation, $me->id),
+                'sender' => $this->senderInfo($m->sender)['first'],
+                'snippet' => $m->body !== '' ? Str::limit($m->body, 60) : 'Sent a file',
+                'mention' => $mention,
+            ];
+        }
+
+        return response()->json(['messages' => $out, 'lastId' => $maxId])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /** Unread @mentions of me, per conversation (for the "@" badge). */
+    private function unreadMentionsPerConversation(Admin $me): array
+    {
+        return DB::table('team_messages as m')
+            ->join('conversation_participants as p', 'p.conversation_id', '=', 'm.conversation_id')
+            ->where('p.admin_id', $me->id)->where('m.type', 'text')->where('m.sender_id', '!=', $me->id)
+            ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')
+            ->whereNull('m.deleted_at')
+            ->where(function ($q) use ($me) {
+                $q->where('m.mentions_all', true)
+                  ->orWhereExists(fn ($s) => $s->select(DB::raw(1))->from('message_mentions as mm')
+                        ->whereColumn('mm.team_message_id', 'm.id')->where('mm.admin_id', $me->id));
+            })
+            ->groupBy('m.conversation_id')
+            ->selectRaw('m.conversation_id, COUNT(*) AS c')
+            ->pluck('c', 'm.conversation_id')->all();
     }
 
     private function convTitle(Conversation $conv, int $meId): string
@@ -566,6 +678,8 @@ class TeamMessageController extends Controller
             'sender'      => $this->senderInfo($m->sender),
             'pinned'      => (bool) $m->pinned_at,
             'deletedBy'   => $m->deleted_at ? ($m->deleted_by === $meId ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
+            'mentionsMe'  => ! $m->deleted_at && $this->mentionsMe($m, $meId),
+            'mentionLabels' => $m->deleted_at ? [] : $this->mentionLabels($m),
         ];
     }
 
@@ -616,13 +730,14 @@ class TeamMessageController extends Controller
 
     // ---------------------------------------------------------------- sidebar items
 
-    private function dmItem(Admin $me, Admin $peer, ?Conversation $c, $lastMsgs, array $unread): array
+    private function dmItem(Admin $me, Admin $peer, ?Conversation $c, $lastMsgs, array $unread, array $mentions = []): array
     {
         $last = $c && $c->last_message_id ? $lastMsgs->get($c->last_message_id) : null;
         $part = $c ? $c->participantFor($me->id) : null;
 
         return [
             'kind'            => 'dm',
+            'mentions'        => $c ? ($mentions[$c->id] ?? 0) : 0,
             'conversation_id' => $c?->id,
             'peer_id'         => $peer->id,
             'name'            => $peer->full_name,
@@ -640,13 +755,14 @@ class TeamMessageController extends Controller
         ];
     }
 
-    private function groupItem(Admin $me, Conversation $c, $lastMsgs, array $unread): array
+    private function groupItem(Admin $me, Conversation $c, $lastMsgs, array $unread, array $mentions = []): array
     {
         $last = $c->last_message_id ? $lastMsgs->get($c->last_message_id) : null;
         $part = $c->participantFor($me->id);
 
         return [
             'kind'            => 'group',
+            'mentions'        => $mentions[$c->id] ?? 0,
             'conversation_id' => $c->id,
             'peer_id'         => null,
             'name'            => $c->name,

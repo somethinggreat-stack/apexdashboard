@@ -14,7 +14,14 @@ class TeamMessage extends Model
         'pinned_at'  => 'datetime',
         'reactions'    => 'array',
         'forwarded'    => 'boolean',
+        'mentions_all' => 'boolean',
     ];
+
+    /** Admins explicitly @mentioned in this message. */
+    public function mentionedAdmins()
+    {
+        return $this->belongsToMany(Admin::class, 'message_mentions', 'team_message_id', 'admin_id');
+    }
 
     /** Admins who "deleted for me" (message hidden for them only). */
     public function hiddenFor()

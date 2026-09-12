@@ -29,6 +29,16 @@
         ];
     }
 
+    // @mentions — highlight tokens + flag if it mentions me.
+    $mentionsMe = $msg->mentions_all || $msg->mentionedAdmins->contains('id', $me->id);
+    $mLabels = $msg->mentionedAdmins->pluck('full_name')->all();
+    if ($msg->mentions_all) $mLabels[] = 'everyone';
+    $bodyHtml = e($msg->body);
+    foreach (collect($mLabels)->sortByDesc(fn ($l) => mb_strlen($l))->all() as $lab) {
+        $tok = '@' . e($lab);
+        $bodyHtml = str_replace($tok, '<span class="tc-mention">' . $tok . '</span>', $bodyHtml);
+    }
+
     // Sender chip (group, incoming only).
     $s = $msg->sender;
     $sName = $s->full_name ?? 'Someone';
@@ -39,7 +49,7 @@
     $sColor = $sPalette[$sN % count($sPalette)];
     $sAvatar = $s ? $s->avatarUrl() : null;
 @endphp
-<div class="tc-msg {{ $mine ? 'mine' : '' }} {{ $isGroup && ! $mine ? 'tc-msg--grp' : '' }}" data-id="{{ $msg->id }}" data-pinned="{{ $msg->pinned_at ? 1 : 0 }}">
+<div class="tc-msg {{ $mine ? 'mine' : '' }} {{ $isGroup && ! $mine ? 'tc-msg--grp' : '' }} {{ $mentionsMe && ! $del ? 'tc-mentions-me' : '' }}" data-id="{{ $msg->id }}" data-pinned="{{ $msg->pinned_at ? 1 : 0 }}">
     @if ($isGroup && ! $mine && $showSender)
         <div class="tc-sender">
             @if ($sAvatar)
@@ -80,7 +90,7 @@
             @endphp
             <div class="tc-text tc-deleted-text">🚫 {{ $delText }}</div>
         @elseif ($msg->body !== '')
-            <div class="tc-text">{{ $msg->body }}</div>
+            <div class="tc-text">{!! $bodyHtml !!}</div>
         @endif
     </div>
     <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($mine && ! $del)<span class="tc-btick {{ ($readUpTo ?? 0) >= $msg->id ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>

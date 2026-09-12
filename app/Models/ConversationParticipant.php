@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ConversationParticipant extends Model
 {
-    protected $fillable = ['conversation_id', 'admin_id', 'role', 'last_read_message_id', 'typing_at', 'muted', 'favorite', 'joined_at'];
+    protected $fillable = ['conversation_id', 'admin_id', 'role', 'last_read_message_id', 'typing_at', 'muted', 'favorite', 'notify_level', 'joined_at'];
 
     protected $casts = [
         'muted'                => 'boolean',

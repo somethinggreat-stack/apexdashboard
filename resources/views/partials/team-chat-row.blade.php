@@ -36,6 +36,7 @@
                 @endif
             </span>
             @if ($it['muted'])<span class="tc-mute-ic" title="Muted">@include('partials.mute-icon')</span>@endif
+            @if (($it['mentions'] ?? 0) > 0)<span class="tc-mention-badge" title="You were mentioned">@</span>@endif
             @if ($u > 0)<span class="tc-unread" data-badge>{{ $u }}</span>@endif
         </span>
     </span>

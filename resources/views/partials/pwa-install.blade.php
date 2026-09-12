@@ -133,4 +133,68 @@
     });
 })();
 </script>
+
+{{-- Team Chat desktop notifications — pings you about new messages / @mentions, anywhere in the app. --}}
+<script>
+(function () {
+    'use strict';
+    if (!('Notification' in window)) { return; }
+
+    var POLL_URL = @json(route('admin.team-messages.notifications'));
+    var OPEN_URL = @json(route('admin.team-messages.index'));
+    var KEY = 'apex-team-last-msg';
+    var POLL_MS = 20000;
+    var lastId = parseInt(localStorage.getItem(KEY) || '0', 10) || 0;
+    var primed = lastId > 0;   // suppress the backlog until we know a baseline
+
+    if (Notification.permission === 'default') {
+        var ask = function () { try { Notification.requestPermission(); } catch (e) {} };
+        window.addEventListener('pointerdown', ask, { once: true });
+        window.addEventListener('keydown', ask, { once: true });
+    }
+
+    function chime() {
+        try {
+            var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+            var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine'; o.frequency.value = 920; g.gain.value = 0.04;
+            o.connect(g); g.connect(ctx.destination); o.start();
+            g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.28); o.stop(ctx.currentTime + 0.3);
+            setTimeout(function () { try { ctx.close(); } catch (e) {} }, 600);
+        } catch (e) {}
+    }
+
+    function show(m) {
+        if (Notification.permission !== 'granted') return;
+        try {
+            var n = new Notification(m.title, {
+                body: (m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet,
+                icon: '/Images/pwa/icon-192.png', badge: '/Images/pwa/icon-192.png',
+                tag: 'apex-team-' + m.conversation_id, renotify: true
+            });
+            n.onclick = function () { window.focus(); location.href = OPEN_URL + '?c=' + m.conversation_id; n.close(); };
+        } catch (e) {}
+    }
+
+    function poll() {
+        fetch(POLL_URL + '?after=' + lastId, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data) return;
+                if (Array.isArray(data.messages) && data.messages.length && primed) {
+                    data.messages.forEach(show); chime();
+                }
+                if (data.lastId && data.lastId > lastId) {
+                    lastId = data.lastId; try { localStorage.setItem(KEY, String(lastId)); } catch (e) {}
+                }
+                primed = true;
+            })
+            .catch(function () {});
+    }
+
+    poll();
+    setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') poll(); });
+})();
+</script>
 @endif

@@ -169,6 +169,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
         Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
+        Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');
+        Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
         Route::get('team-messages/search', [Admin\TeamMessageController::class, 'search'])->name('team-messages.search');
