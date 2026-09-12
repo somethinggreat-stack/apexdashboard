@@ -802,7 +802,7 @@ class EndUserController extends Controller
         abort_unless($client->intake_enabled, 404);
 
         if (empty($client->intake_token)) {
-            $client->update(['intake_token' => Client::generateIntakeToken()]);
+            $client->update(['intake_token' => $client->generateIntakeSlug()]);
         }
 
         $endUsers = EndUser::forClient($client->id)
@@ -1188,7 +1188,7 @@ class EndUserController extends Controller
         $client = Client::findOrFail(session('selected_client_id'));
         abort_unless($client->intake_enabled, 404);
 
-        $client->update(['intake_token' => Client::generateIntakeToken()]);
+        $client->update(['intake_token' => $client->generateIntakeSlug()]);
 
         return redirect()->route('admin.new-clients')
             ->with('status', 'Intake link regenerated — the old link no longer works.');

@@ -83,7 +83,8 @@ class Client extends Authenticatable
     {
         static::creating(function (Client $client) {
             if (empty($client->intake_token)) {
-                $client->intake_token = self::generateIntakeToken();
+                // Name-based slug link for new owners (e.g. "clear-rise-co-7f").
+                $client->intake_token = $client->generateIntakeSlug();
             }
             // New business owners get the intake link + New Clients by default.
             if ($client->intake_enabled === null) {
@@ -135,6 +136,25 @@ class Client extends Authenticatable
         // 14 base62 chars (~83 bits) — still unguessable, but a much shorter,
         // cleaner link to share. Alphanumeric, matching the /intake/{token} route.
         return Str::random(14);
+    }
+
+    /**
+     * A readable, unguessable intake token built from the owner's name, e.g.
+     * "clear-rise-co-7f". The 2-char suffix keeps it unpredictable and lets a
+     * Regenerate produce a fresh link; retries on the (rare) collision. Falls
+     * back to a random token if the name has no usable letters.
+     */
+    public function generateIntakeSlug(): string
+    {
+        $base = Str::slug((string) $this->business_name);
+        if ($base === '') {
+            return self::generateIntakeToken();
+        }
+        do {
+            $token = $base . '-' . Str::lower(Str::random(2));
+        } while (static::where('intake_token', $token)->where('id', '!=', $this->id ?? 0)->exists());
+
+        return $token;
     }
 
     /** Server-to-server intake API key (prefixed so it's recognisable in logs). */

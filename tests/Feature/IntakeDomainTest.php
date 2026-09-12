@@ -68,6 +68,48 @@ class IntakeDomainTest extends TestCase
         $this->assertSame('intake.victorialovecredit.com', $c->fresh()->intake_domain);
     }
 
+    public function test_new_owner_gets_a_readable_name_slug_token(): void
+    {
+        $super = $this->super();
+        $c = Client::create([
+            'admin_id' => $super->id, 'business_name' => 'Clear Rise CO', 'email' => 'cr@test.com',
+            'password' => 'secret', 'monthly_fee' => 0, 'status' => 'active',
+            'compensation_model' => 'per_round', 'per_round_fee' => 15,
+        ]);
+        $this->assertMatchesRegularExpression('/^clear-rise-co-[a-z0-9]{2}$/', $c->intake_token);
+    }
+
+    public function test_regenerate_produces_a_fresh_name_slug(): void
+    {
+        $super = $this->super();
+        $c = Client::create([
+            'admin_id' => $super->id, 'business_name' => 'Benny', 'email' => 'benny@test.com',
+            'password' => 'secret', 'monthly_fee' => 0, 'status' => 'active',
+            'compensation_model' => 'per_round', 'per_round_fee' => 15,
+        ]);
+        $old = $c->intake_token;
+
+        $this->actingAs($super, 'admin')->withSession(['selected_client_id' => $c->id])
+            ->post('/admin/new-clients/regenerate-link')->assertRedirect();
+
+        $c->refresh();
+        $this->assertStringStartsWith('benny-', $c->intake_token);
+        $this->assertNotSame($old, $c->intake_token);
+    }
+
+    public function test_export_intake_links_csv(): void
+    {
+        $super = $this->super();
+        $this->client($super, ['business_name' => 'Victoria', 'intake_domain' => 'intake.victorialovecredit.com']);
+
+        $resp = $this->actingAs($super, 'admin')->get('/admin/select-business-owner/intake-links');
+        $resp->assertOk();
+        $body = $resp->streamedContent();
+        $this->assertStringContainsString('Business Owner', $body);
+        $this->assertStringContainsString('Victoria', $body);
+        $this->assertStringContainsString('https://intake.victorialovecredit.com/intake/', $body);
+    }
+
     public function test_blank_domain_clears_it(): void
     {
         $super = $this->super();

@@ -47,12 +47,18 @@
             <h2>Select a Business Owner to Work On</h2>
             <p class="sbo-sub">Choose a business owner to view and manage their account.</p>
         </div>
-        @if ($isSuper)
-            <a href="{{ route('admin.clients.index') }}" class="sbo-manage">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Manage Business Owners
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="{{ route('admin.client-selector.intake-links') }}" class="sbo-manage">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export intake links
             </a>
-        @endif
+            @if ($isSuper)
+                <a href="{{ route('admin.clients.index') }}" class="sbo-manage">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Manage Business Owners
+                </a>
+            @endif
+        </div>
     </div>
 
     @if ($clients->isEmpty())

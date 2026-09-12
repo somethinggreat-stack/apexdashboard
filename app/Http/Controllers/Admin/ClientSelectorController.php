@@ -140,6 +140,28 @@ class ClientSelectorController extends Controller
         ]);
     }
 
+    /**
+     * Download a CSV of every owner's Secure Intake Link — name + the branded
+     * link exactly as shown in the app (per-owner domain honoured). Scoped to
+     * this admin's own business owners.
+     */
+    public function exportIntakeLinks()
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $clients = Client::forAdmin($ownerId)->active()->orderBy('business_name')->get();
+
+        $filename = 'intake-links-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($clients) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Business Owner', 'Secure Intake Link']);
+            foreach ($clients as $client) {
+                fputcsv($out, [$client->business_name, $client->intakeUrl()]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function select(Request $request, string $id)
     {
         $client = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())->findOrFail($id);

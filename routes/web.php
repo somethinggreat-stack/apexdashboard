@@ -159,6 +159,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('cfpb-logins', [Admin\CfpbLoginController::class, 'index'])->name('cfpb-logins');
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
+        // One-click CSV of every owner's Secure Intake Link (name + branded link).
+        Route::get('select-business-owner/intake-links', [Admin\ClientSelectorController::class, 'exportIntakeLinks'])
+            ->name('client-selector.intake-links');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])
