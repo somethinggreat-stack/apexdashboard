@@ -4,7 +4,7 @@
 @section('subtitle', 'New / 1st-round clients pulled out because something needs fixing.')
 
 @section('content')
-<div class="pro-panel">
+<div class="pro-panel" data-page-refresh>
     <div class="pro-panel-head">
         <div class="pro-panel-title">
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#f87171,#ef4444);">
@@ -50,23 +50,23 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Review</a>
 
-                                <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.new-clients.approve', $eu->id) }}"
                                       data-confirm-action data-confirm-message="Are you sure you want to move {{ $eu->full_name }} to In Progress?">
                                     @csrf
                                     <button class="pro-act done">Move to In Progress</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.to-new-clients', $eu->id) }}">
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.to-new-clients', $eu->id) }}">
                                     @csrf
                                     <button class="pro-act move">Move to New Clients</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.hold', $eu->id) }}">
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.hold', $eu->id) }}">
                                     @csrf
                                     <button class="pro-act hold">Hold/Pause</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete data-confirm-message="Delete {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>

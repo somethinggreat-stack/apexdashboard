@@ -322,6 +322,7 @@
 <script src="{{ asset('js/toast.js') }}"></script>
 <script src="{{ asset('js/confirm-modal.js') }}"></script>
 <script src="{{ asset('js/interactions.js') }}"></script>
+<script src="{{ asset('js/inplace.js') }}?v={{ @filemtime(public_path('js/inplace.js')) ?: '1' }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script>
 /* Make any <tr data-href> fully clickable, while leaving real

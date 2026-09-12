@@ -101,7 +101,7 @@
 @endunless
 @endif {{-- $isSuper: intake link + API key --}}
 
-<div class="pro-panel">
+<div class="pro-panel" data-page-refresh>
     <div class="pro-panel-head">
         <div class="pro-panel-title">
             <span class="pro-panel-chip">
@@ -148,7 +148,7 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Review</a>
 
-                                <form method="POST" action="{{ route('admin.new-clients.approve', $eu->id) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.new-clients.approve', $eu->id) }}"
                                       data-confirm-action data-confirm-message="Are you sure you want to move {{ $eu->full_name }} to In Progress?">
                                     @csrf
                                     <button class="pro-act done">Move to In Progress</button>
@@ -160,12 +160,12 @@
                                     <button type="button" class="pro-act warn" onclick="moveToErrors(this, '{{ addslashes($eu->full_name) }}')">Move to Errors</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.hold', $eu->id) }}">
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.hold', $eu->id) }}">
                                     @csrf
                                     <button class="pro-act hold">Hold/Pause</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.destroy', $eu->id) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu->id) }}"
                                       data-confirm-delete data-confirm-message="Delete {{ $eu->full_name }} and all their uploaded documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>

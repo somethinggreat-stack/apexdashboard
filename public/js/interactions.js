@@ -117,7 +117,12 @@
         if (!isDelete && !isAction) return;
         if (form.dataset.confirmed === '1') return;   // already approved — let it through
         e.preventDefault();
-        var go = function () { form.dataset.confirmed = '1'; form.submit(); };
+        var go = function () {
+            form.dataset.confirmed = '1';
+            // In-place forms refresh the region instead of reloading the page.
+            if (form.hasAttribute('data-inplace') && window.apexSubmitInPlace) window.apexSubmitInPlace(form);
+            else form.submit();
+        };
         var opts = {
             title:   form.getAttribute('data-confirm-title')   || 'Are you sure?',
             message: form.getAttribute('data-confirm-message') || (isDelete ? 'This action cannot be undone.' : ''),

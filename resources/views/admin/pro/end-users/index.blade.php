@@ -273,7 +273,7 @@
 
                                 @if ($isSentForApproval)
                                     {{-- Sent for Approval list: the only action is to move them back. --}}
-                                    <form method="POST" action="{{ route('admin.end-users.clear-approval', $eu->id) }}"
+                                    <form method="POST" data-inplace action="{{ route('admin.end-users.clear-approval', $eu->id) }}"
                                           data-confirm-action
                                           data-confirm-title="Move back to Clients?"
                                           data-confirm-message="{{ $eu->full_name }} moves back to the Clients list. Nothing else about the client changes."
@@ -284,7 +284,7 @@
                                 @else
 
                                 @unless ($isDone)
-                                    <form method="POST" action="{{ route('admin.end-users.to-done', $eu->id) }}"
+                                    <form method="POST" data-inplace action="{{ route('admin.end-users.to-done', $eu->id) }}"
                                           data-confirm-action
                                           data-confirm-title="Move to Clients?"
                                           data-confirm-message="{{ $eu->full_name }} will move to the Clients list and the round clock starts today."
@@ -296,7 +296,7 @@
 
                                 @if ($canApprove)
                                     {{-- Clinecea only: park the client awaiting the owner's sign-off. No dates change. --}}
-                                    <form method="POST" action="{{ route('admin.end-users.request-approval', $eu->id) }}"
+                                    <form method="POST" data-inplace action="{{ route('admin.end-users.request-approval', $eu->id) }}"
                                           data-confirm-action
                                           data-confirm-title="Send for approval?"
                                           data-confirm-message="{{ $eu->full_name }} moves to the Sent for Approval list. No dates or anything else on the client change."
@@ -325,7 +325,7 @@
                                 <button type="button" class="pro-act hold"
                                         onclick="openMoveReason({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', 'hold')">Hold/Pause</button>
 
-                                <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete
                                       data-confirm-title="Delete this client?"
                                       data-confirm-message="{{ $eu->full_name }} and all their documents will be moved to the Recycle Bin. You can restore them there for 10 days.">

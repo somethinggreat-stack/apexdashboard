@@ -4,7 +4,7 @@
 @section('subtitle', 'Clients parked out of the workflow until you resume them.')
 
 @section('content')
-<div class="pro-panel">
+<div class="pro-panel" data-page-refresh>
     <div class="pro-panel-head">
         <div class="pro-panel-title">
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#94a3b8,#64748b);">
@@ -51,12 +51,12 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
-                                <form method="POST" action="{{ route('admin.end-users.resume', $eu->id) }}">
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.resume', $eu->id) }}">
                                     @csrf
                                     <button class="pro-act done">Resume</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete data-confirm-message="Delete {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>

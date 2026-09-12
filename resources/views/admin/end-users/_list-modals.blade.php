@@ -80,7 +80,7 @@
             <h3 id="moveReasonTitle">Reason</h3>
             <button class="modal-close" onclick="closeModal('moveReasonModal')">&times;</button>
         </div>
-        <form method="POST" id="moveReasonForm" action="">
+        <form method="POST" data-inplace id="moveReasonForm" action="">
             @csrf
             <p class="muted" id="moveReasonWho" style="margin:0 0 12px; font-size:13px;"></p>
             <div class="form-group">
@@ -102,7 +102,7 @@
             <h3>Move to Round Errors</h3>
             <button class="modal-close" onclick="closeModal('roundErrorModal')">&times;</button>
         </div>
-        <form method="POST" id="roundErrorForm" action="">
+        <form method="POST" data-inplace id="roundErrorForm" action="">
             @csrf
             <p class="muted" id="roundErrorWho" style="margin:0 0 12px; font-size:13px;"></p>
             <div class="form-group">

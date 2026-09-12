@@ -429,7 +429,7 @@ class EndUserController extends Controller
         ]);
         \App\Models\ClientEvent::log($endUser, 'approval', "Sent for approval (Round {$round})");
 
-        return back()->with('confirm', "Sent for approval (Round {$round}).");
+        return $this->inPlace("Sent for approval (Round {$round}).", null, 'confirm');
     }
 
     /** Record that the owner approved the next round. */
@@ -458,7 +458,7 @@ class EndUserController extends Controller
             \App\Models\ClientEvent::log($endUser, 'approval', 'Moved back to Clients from Sent for Approval');
         }
 
-        return back()->with('confirm', 'Moved back to Clients.');
+        return $this->inPlace('Moved back to Clients.', null, 'confirm');
     }
 
     /** An end user in this org whose owner has results tracking on, or 404. */
@@ -788,8 +788,10 @@ class EndUserController extends Controller
         ])->save();
         $endUser->delete();
 
-        return redirect()->route('admin.end-users.index')
-            ->with('status', "Client {$name} moved to the Recycle Bin.");
+        return $this->inPlace(
+            "Client {$name} moved to the Recycle Bin.",
+            fn () => redirect()->route('admin.end-users.index')->with('status', "Client {$name} moved to the Recycle Bin.")
+        );
     }
 
     /* ---------------- New Clients (intake submissions) ---------------- */
@@ -1061,8 +1063,7 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} moved to Round Errors.");
+        return $this->inPlace("{$endUser->full_name} moved to Round Errors.");
     }
 
     /** Resolve a round error — send the client back to the Clients list. */
@@ -1076,8 +1077,7 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} resolved — back in Clients.");
+        return $this->inPlace("{$endUser->full_name} resolved — back in Clients.");
     }
 
     /** Hold / Pause — clients parked out of the normal buckets. */
@@ -1101,8 +1101,7 @@ class EndUserController extends Controller
             'move_reason' => $reason !== '' ? $reason : null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} placed on Hold/Pause.");
+        return $this->inPlace("{$endUser->full_name} placed on Hold/Pause.");
     }
 
     /** Resume a held client — drops them back into their normal bucket. */
@@ -1111,8 +1110,7 @@ class EndUserController extends Controller
         $endUser = $this->scoped()->findOrFail($id);
         $endUser->update(['held_at' => null, 'move_reason' => null]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} resumed.");
+        return $this->inPlace("{$endUser->full_name} resumed.");
     }
 
     public function approveIntake(string $id)
@@ -1128,8 +1126,7 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} moved to In Progress.");
+        return $this->inPlace("{$endUser->full_name} moved to In Progress.");
     }
 
     /**
@@ -1149,8 +1146,7 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} moved to Clients — round clock started.");
+        return $this->inPlace("{$endUser->full_name} moved to Clients — round clock started.");
     }
 
     /** Move a client back into the New Clients (pending review) list, with a reason. */
@@ -1165,8 +1161,7 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->back()
-            ->with('status', "{$endUser->full_name} moved to New Clients.");
+        return $this->inPlace("{$endUser->full_name} moved to New Clients.");
     }
 
     /** Move a client into the Errors bucket with a VA-entered error note. */
@@ -1182,8 +1177,10 @@ class EndUserController extends Controller
             'error_resolved_by_client_at' => null,
         ]);
 
-        return redirect()->route('admin.errors')
-            ->with('status', "{$endUser->full_name} moved to Errors.");
+        return $this->inPlace(
+            "{$endUser->full_name} moved to Errors.",
+            fn () => redirect()->route('admin.errors')->with('status', "{$endUser->full_name} moved to Errors.")
+        );
     }
 
     public function regenerateIntake()
@@ -1239,6 +1236,20 @@ class EndUserController extends Controller
     private function scoped()
     {
         return EndUser::forClient(session('selected_client_id'));
+    }
+
+    /**
+     * Answer a work-list row action. When the request is AJAX (the in-place list
+     * actions), return a tiny JSON payload the front-end turns into a toast +
+     * region refresh; otherwise fall back to the normal redirect. `$kind` is
+     * 'status' (toast) or 'confirm' (success modal, e.g. approvals).
+     */
+    private function inPlace(string $message, ?\Closure $redirect = null, string $kind = 'status')
+    {
+        if (request()->wantsJson()) {
+            return response()->json([$kind => $message]);
+        }
+        return $redirect ? $redirect() : back()->with($kind, $message);
     }
 
     private function validatedPayload(Request $request, bool $creating): array

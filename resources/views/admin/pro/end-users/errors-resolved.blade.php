@@ -4,7 +4,7 @@
 @section('subtitle', 'Round errors the business owner fixed — updated login is ready, process and send back to Clients.')
 
 @section('content')
-<div class="pro-panel">
+<div class="pro-panel" data-page-refresh>
     <div class="pro-panel-head">
         <div class="pro-panel-title">
             <span class="pro-panel-chip" style="background:linear-gradient(140deg,#34d399,#059669);">
@@ -82,13 +82,13 @@
                             <div class="pro-actions">
                                 <a href="{{ route('admin.end-users.show', $eu) }}" class="pro-act view">Open</a>
 
-                                <form method="POST" action="{{ route('admin.end-users.resolve-round-error', $eu->id) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.resolve-round-error', $eu->id) }}"
                                       data-confirm-action data-confirm-message="Mark {{ $eu->full_name }} processed and move them back to the Clients list?">
                                     @csrf
                                     <button class="pro-act done">Resolve → Clients</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.end-users.destroy', $eu) }}"
+                                <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete data-confirm-message="Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')
                                     <button class="pro-act del">Delete</button>
