@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Admin;
+use App\Models\Conversation;
 use App\Models\TeamMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -32,43 +33,53 @@ class TeamMessageTest extends TestCase
         return $va;
     }
 
-    public function test_va_can_message_the_super_admin(): void
+    /** A dm conversation between two admins in my org, with a message. */
+    private function dm(Admin $a, Admin $b): Conversation
+    {
+        $c = Conversation::create(['type' => 'dm', 'data_owner_id' => $this->super->id, 'created_by' => $a->id]);
+        $c->participants()->createMany([
+            ['admin_id' => $a->id, 'role' => 'member', 'joined_at' => now()],
+            ['admin_id' => $b->id, 'role' => 'member', 'joined_at' => now()],
+        ]);
+
+        return $c;
+    }
+
+    private function msg(Conversation $c, Admin $sender, array $attr = []): TeamMessage
+    {
+        $m = TeamMessage::create(array_merge(
+            ['conversation_id' => $c->id, 'type' => 'text', 'sender_id' => $sender->id, 'body' => 'hi'], $attr
+        ));
+        $c->update(['last_message_id' => $m->id, 'last_message_at' => $m->created_at]);
+
+        return $m;
+    }
+
+    // ---------------------------------------------------------------- DMs
+
+    public function test_a_va_can_message_the_super_admin_and_it_creates_a_dm(): void
     {
         $va = $this->va();
 
-        $this->actingAs($va, 'admin')
+        $res = $this->actingAs($va, 'admin')
             ->postJson('/admin/team-messages', ['recipient_id' => $this->super->id, 'body' => 'Hi boss'])
-            ->assertOk()
-            ->assertJson(['ok' => true]);
+            ->assertOk()->assertJson(['ok' => true]);
 
-        $this->assertDatabaseHas('team_messages', [
-            'sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'Hi boss',
-        ]);
+        $convId = $res->json('conversation_id');
+        $this->assertDatabaseHas('team_messages', ['conversation_id' => $convId, 'sender_id' => $va->id, 'body' => 'Hi boss']);
+        $this->assertDatabaseHas('conversation_participants', ['conversation_id' => $convId, 'admin_id' => $this->super->id]);
+        $this->assertDatabaseHas('conversation_participants', ['conversation_id' => $convId, 'admin_id' => $va->id]);
     }
 
-    public function test_super_can_message_a_va(): void
+    public function test_messaging_the_same_person_twice_reuses_one_conversation(): void
     {
         $va = $this->va();
 
-        $this->actingAs($this->super, 'admin')
-            ->post('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'Good work'])
-            ->assertRedirect();
+        $a = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'one'])->json('conversation_id');
+        $b = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'two'])->json('conversation_id');
 
-        $this->assertDatabaseHas('team_messages', [
-            'sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'Good work',
-        ]);
-    }
-
-    public function test_a_va_can_message_another_va_in_the_same_org(): void
-    {
-        $a = $this->va('VA A');
-        $b = $this->va('VA B');
-
-        $this->actingAs($a, 'admin')
-            ->postJson('/admin/team-messages', ['recipient_id' => $b->id, 'body' => 'hey'])
-            ->assertOk();
-
-        $this->assertDatabaseHas('team_messages', ['sender_id' => $a->id, 'recipient_id' => $b->id]);
+        $this->assertSame($a, $b);
+        $this->assertSame(1, Conversation::where('type', 'dm')->count());
     }
 
     public function test_cannot_message_an_admin_outside_my_org(): void
@@ -85,7 +96,7 @@ class TeamMessageTest extends TestCase
         $this->assertSame(0, TeamMessage::count());
     }
 
-    public function test_leads_are_not_messageable_teammates(): void
+    public function test_leads_are_not_messageable(): void
     {
         $lead = new Admin(['email' => 'lead@test.com', 'password' => 'secret', 'full_name' => 'Lead Gen']);
         $lead->role = 'leads';
@@ -96,212 +107,182 @@ class TeamMessageTest extends TestCase
             ->postJson('/admin/team-messages', ['recipient_id' => $lead->id, 'body' => 'hi'])
             ->assertNotFound();
 
-        // And they don't appear in the contacts list.
         $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
             ->assertOk()
-            ->assertViewHas('members', fn ($m) => $m->doesntContain('id', $lead->id));
+            ->assertViewHas('teammates', fn ($t) => $t->doesntContain('id', $lead->id));
     }
 
-    public function test_index_lists_teammates_and_opening_a_thread_marks_incoming_read(): void
+    public function test_opening_a_thread_marks_incoming_read_and_shows_unread_before(): void
     {
         $va = $this->va('VA Sam');
-        TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'ping']);
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $va, ['body' => 'ping']);
 
-        // Unread shows before opening.
+        // Unread badge shows in the sidebar item before opening.
         $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
             ->assertOk()
-            ->assertSee('VA Sam')
-            ->assertViewHas('unread', fn ($u) => ($u[$va->id] ?? 0) === 1);
+            ->assertViewHas('items', function ($items) use ($va) {
+                foreach ($items as $it) if (($it['peer_id'] ?? null) === $va->id) return $it['unread'] === 1;
+                return false;
+            });
 
-        // Opening the thread marks it read.
-        $this->actingAs($this->super, 'admin')->get('/admin/team-messages?with=' . $va->id)
-            ->assertOk()
-            ->assertSee('ping');
+        // Opening it marks it read.
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages?c=' . $c->id)
+            ->assertOk()->assertSee('ping');
 
-        $this->assertNotNull(TeamMessage::first()->read_at);
+        $this->assertSame($m->id, $c->participants()->where('admin_id', $this->super->id)->first()->last_read_message_id);
     }
 
-    public function test_contact_list_carries_a_last_message_preview_with_read_state(): void
-    {
-        $va = $this->va('VA Sam');
-        // I sent the last message and they have NOT read it yet.
-        TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'ping you']);
-
-        $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
-            ->assertOk()
-            ->assertViewHas('previews', function ($p) use ($va) {
-                return isset($p[$va->id])
-                    && $p[$va->id]['body'] === 'ping you'
-                    && $p[$va->id]['mine'] === true
-                    && $p[$va->id]['read'] === false;
-            })
-            ->assertSee('ping you');
-    }
-
-    public function test_thread_poll_returns_only_messages_after_the_given_id(): void
+    public function test_thread_poll_returns_messages_after_an_id_with_read_watermark(): void
     {
         $va = $this->va();
-        $m1 = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'first']);
-        $m2 = TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'second']);
+        $c  = $this->dm($va, $this->super);
+        $m1 = $this->msg($c, $va, ['body' => 'first']);
+        $m2 = $this->msg($c, $this->super, ['body' => 'second']);
 
         $this->actingAs($this->super, 'admin')
-            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=' . $m1->id)
+            ->getJson('/admin/team-messages/thread?c=' . $c->id . '&after=' . $m1->id)
             ->assertOk()
             ->assertJsonCount(1, 'messages')
             ->assertJsonPath('messages.0.body', 'second')
             ->assertJsonPath('messages.0.mine', true);
     }
 
-    public function test_thread_poll_reports_read_state_of_my_sent_messages(): void
+    public function test_blue_tick_watermark_reflects_the_other_person_reading(): void
     {
         $va = $this->va();
-        $m  = TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'seen soon']);
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $this->super, ['body' => 'seen soon']);
 
-        // Before they open it, nothing is read.
         $this->actingAs($this->super, 'admin')
-            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
+            ->getJson('/admin/team-messages/thread?c=' . $c->id . '&after=999')
             ->assertOk()->assertJsonPath('readUpTo', 0);
 
-        // The VA opens the thread, which marks my message read.
-        $this->actingAs($va, 'admin')->get('/admin/team-messages?with=' . $this->super->id)->assertOk();
+        // The VA opens the thread → marks it read.
+        $this->actingAs($va, 'admin')->get('/admin/team-messages?c=' . $c->id)->assertOk();
 
-        // Now my poll reports the read watermark.
         $this->actingAs($this->super, 'admin')
-            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
+            ->getJson('/admin/team-messages/thread?c=' . $c->id . '&after=999')
             ->assertOk()->assertJsonPath('readUpTo', $m->id);
     }
 
-    public function test_a_participant_can_react_and_toggle_off(): void
+    public function test_react_and_delete_work_within_a_conversation(): void
     {
         $va = $this->va();
-        $m  = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'yo']);
+        $c  = $this->dm($va, $this->super);
+        $mine   = $this->msg($c, $this->super, ['body' => 'mine']);
+        $theirs = $this->msg($c, $va, ['body' => 'yours']);
 
         $this->actingAs($this->super, 'admin')
-            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
-            ->assertOk()
-            ->assertJsonPath('reactions.0.emoji', '👍')
-            ->assertJsonPath('reactions.0.count', 1)
-            ->assertJsonPath('reactions.0.mine', true);
+            ->postJson('/admin/team-messages/react', ['message_id' => $theirs->id, 'emoji' => '👍'])
+            ->assertOk()->assertJsonPath('reactions.0.emoji', '👍');
 
-        $this->assertSame(['👍'], array_values($m->fresh()->reactions));
-
-        // Tapping the same emoji again clears my reaction.
-        $this->actingAs($this->super, 'admin')
-            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
-            ->assertOk()->assertJsonCount(0, 'reactions');
-
-        $this->assertNull($m->fresh()->reactions);
+        // Only the sender may delete their message.
+        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $theirs->id)->assertForbidden();
+        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $mine->id)->assertOk();
+        $this->assertNotNull($mine->fresh()->deleted_at);
     }
 
-    public function test_a_non_participant_cannot_react(): void
-    {
-        $va    = $this->va('Sam');
-        $other = $this->va('Jo');
-        $m = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'hi']);
+    // ---------------------------------------------------------------- groups
 
-        $this->actingAs($other, 'admin')
-            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
-            ->assertNotFound();
-    }
-
-    public function test_forward_sends_the_text_to_another_teammate(): void
+    public function test_super_can_create_a_group_with_teammates(): void
     {
         $a = $this->va('A');
         $b = $this->va('B');
-        $m = TeamMessage::create(['sender_id' => $a->id, 'recipient_id' => $this->super->id, 'body' => 'ship it']);
 
-        $this->actingAs($this->super, 'admin')
-            ->postJson('/admin/team-messages/forward', ['message_id' => $m->id, 'recipient_id' => $b->id])
-            ->assertOk()->assertJsonPath('with', $b->id);
+        $res = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Credit Repair CFPB', 'icon' => '🔥', 'members' => [$a->id, $b->id],
+        ])->assertOk()->assertJson(['ok' => true]);
 
-        $this->assertDatabaseHas('team_messages', [
-            'sender_id' => $this->super->id, 'recipient_id' => $b->id, 'body' => 'ship it', 'forwarded' => true,
-        ]);
+        $conv = Conversation::where('type', 'group')->firstOrFail();
+        $this->assertSame('Credit Repair CFPB', $conv->name);
+        $this->assertSame(3, $conv->participants()->count());   // creator + 2
+        $this->assertSame('admin', $conv->participants()->where('admin_id', $this->super->id)->first()->role);
+        // A "created the group" system message exists.
+        $this->assertDatabaseHas('team_messages', ['conversation_id' => $conv->id, 'type' => 'system']);
     }
 
-    public function test_only_the_sender_can_delete_and_it_becomes_a_tombstone(): void
+    public function test_a_group_cannot_include_admins_from_another_org(): void
     {
-        $va     = $this->va();
-        $mine   = TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'secret']);
-        $theirs = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'yours']);
+        $otherSuper = new Admin(['email' => 'o2@test.com', 'password' => 'x', 'full_name' => 'O2']);
+        $otherSuper->role = 'super';
+        $otherSuper->save();
+        $rival = $this->va('Rival', $otherSuper->id);
+        $mine  = $this->va('Mine');
 
-        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $theirs->id)->assertForbidden();
+        $res = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Mixed', 'members' => [$mine->id, $rival->id],
+        ])->assertOk();
 
-        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $mine->id)->assertOk();
-        $fresh = $mine->fresh();
-        $this->assertNotNull($fresh->deleted_at);
-        $this->assertSame('', $fresh->body);
+        $conv = Conversation::where('type', 'group')->firstOrFail();
+        $ids = $conv->participants()->pluck('admin_id')->all();
+        $this->assertContains($mine->id, $ids);
+        $this->assertNotContains($rival->id, $ids);
     }
 
-    public function test_reply_links_to_a_message_in_the_same_thread(): void
+    public function test_group_admin_can_add_and_remove_members_but_a_member_cannot(): void
     {
-        $va   = $this->va();
-        $orig = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'question?']);
+        $a = $this->va('A');
+        $b = $this->va('B');
+        $convId = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Team', 'members' => [$a->id],
+        ])->json('conversation_id');
+        $conv = Conversation::find($convId);
 
-        $this->actingAs($this->super, 'admin')
-            ->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'answer', 'reply_to_id' => $orig->id])
-            ->assertOk()->assertJsonPath('message.reply.text', 'question?');
+        // A plain member (a) cannot add.
+        $this->actingAs($a, 'admin')->postJson("/admin/team-messages/group/{$convId}/members", ['members' => [$b->id]])
+            ->assertForbidden();
 
-        $this->assertDatabaseHas('team_messages', [
-            'sender_id' => $this->super->id, 'recipient_id' => $va->id, 'reply_to_id' => $orig->id,
-        ]);
-    }
-
-    public function test_reply_to_a_message_outside_the_thread_is_ignored(): void
-    {
-        $va      = $this->va('Sam');
-        $other   = $this->va('Jo');
-        $foreign = TeamMessage::create(['sender_id' => $other->id, 'recipient_id' => $this->super->id, 'body' => 'elsewhere']);
-
-        $this->actingAs($this->super, 'admin')
-            ->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'hi', 'reply_to_id' => $foreign->id])
+        // The admin (super) can.
+        $this->actingAs($this->super, 'admin')->postJson("/admin/team-messages/group/{$convId}/members", ['members' => [$b->id]])
             ->assertOk();
+        $this->assertTrue($conv->participants()->where('admin_id', $b->id)->exists());
 
-        $this->assertDatabaseHas('team_messages', [
-            'sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'hi', 'reply_to_id' => null,
-        ]);
+        // And can remove.
+        $this->actingAs($this->super, 'admin')->deleteJson("/admin/team-messages/group/{$convId}/members/{$b->id}")
+            ->assertOk();
+        $this->assertFalse($conv->fresh()->participants()->where('admin_id', $b->id)->exists());
     }
 
-    public function test_thread_poll_reports_reaction_and_deletion_state(): void
+    public function test_leaving_a_group_removes_you_and_promotes_an_admin_if_needed(): void
     {
-        $va = $this->va();
-        $m  = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'hi']);
-        $m->reactions = [$this->super->id => '❤️'];
-        $m->save();
+        $a = $this->va('A');
+        $convId = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Team', 'members' => [$a->id],
+        ])->json('conversation_id');
 
-        $this->actingAs($this->super, 'admin')
-            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
-            ->assertOk()
-            ->assertJsonPath('states.0.id', $m->id)
-            ->assertJsonPath('states.0.reactions.0.emoji', '❤️');
+        // The only admin (super) leaves → the remaining member is promoted.
+        $this->actingAs($this->super, 'admin')->postJson("/admin/team-messages/group/{$convId}/leave")->assertOk();
+
+        $conv = Conversation::find($convId);
+        $this->assertFalse($conv->participants()->where('admin_id', $this->super->id)->exists());
+        $this->assertSame('admin', $conv->participants()->where('admin_id', $a->id)->first()->role);
     }
 
-    public function test_team_photos_resolve_by_name(): void
+    public function test_a_non_member_cannot_see_or_post_to_a_group(): void
     {
-        $this->assertStringContainsString('/img/team/abid.jpg', (new Admin(['full_name' => 'Abid Hussain']))->avatarUrl());
-        $this->assertStringContainsString('/img/team/rajakhuram.jpg', (new Admin(['full_name' => 'Raja Khuram']))->avatarUrl());
-        $this->assertStringContainsString('/img/team/umairarshad.jpg', (new Admin(['full_name' => 'Mr. Muhammad Umair Arshad']))->avatarUrl());
-        $this->assertStringContainsString('/img/team/mujeeburrehman.jpg', (new Admin(['full_name' => 'Mujeeb']))->avatarUrl());
-        $this->assertNull((new Admin(['full_name' => 'Someone Random']))->avatarUrl());
+        $a = $this->va('A');
+        $outsider = $this->va('Out');
+        $convId = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Private', 'members' => [$a->id],
+        ])->json('conversation_id');
+
+        $this->actingAs($outsider, 'admin')->get('/admin/team-messages?c=' . $convId)->assertOk()
+            ->assertViewHas('active', null);   // not resolved for a non-member
+        $this->actingAs($outsider, 'admin')->postJson('/admin/team-messages', ['conversation_id' => $convId, 'body' => 'hi'])
+            ->assertNotFound();
     }
 
-    public function test_the_contact_photo_renders_when_the_name_matches(): void
+    public function test_group_message_shows_the_sender_and_body(): void
     {
-        $this->va('Abid Hussain');
+        $a = $this->va('Abid Hussain');
+        $convId = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages/group', [
+            'name' => 'Team', 'members' => [$a->id],
+        ])->json('conversation_id');
 
-        $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
-            ->assertOk()
-            ->assertSee('img/team/abid.jpg', false);
-    }
+        $this->actingAs($a, 'admin')->postJson('/admin/team-messages', ['conversation_id' => $convId, 'body' => 'hello team'])->assertOk();
 
-    public function test_body_is_required(): void
-    {
-        $va = $this->va();
-
-        $this->actingAs($this->super, 'admin')
-            ->post('/admin/team-messages', ['recipient_id' => $va->id, 'body' => ''])
-            ->assertSessionHasErrors('body');
-
-        $this->assertSame(0, TeamMessage::count());
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages?c=' . $convId)
+            ->assertOk()->assertSee('hello team')->assertSee('Abid Hussain');
     }
 }

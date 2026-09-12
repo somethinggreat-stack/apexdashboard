@@ -170,6 +170,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
         Route::post('team-messages/forward', [Admin\TeamMessageController::class, 'forward'])->name('team-messages.forward');
+        // Groups
+        Route::post('team-messages/group', [Admin\TeamMessageController::class, 'storeGroup'])->name('team-messages.group.store');
+        Route::post('team-messages/group/{conversation}/members', [Admin\TeamMessageController::class, 'addMembers'])->name('team-messages.group.members.add');
+        Route::delete('team-messages/group/{conversation}/members/{admin}', [Admin\TeamMessageController::class, 'removeMember'])->name('team-messages.group.members.remove');
+        Route::post('team-messages/group/{conversation}/leave', [Admin\TeamMessageController::class, 'leaveGroup'])->name('team-messages.group.leave');
+        Route::post('team-messages/group/{conversation}/rename', [Admin\TeamMessageController::class, 'renameGroup'])->name('team-messages.group.rename');
         Route::delete('team-messages/{message}', [Admin\TeamMessageController::class, 'destroy'])->name('team-messages.destroy');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');

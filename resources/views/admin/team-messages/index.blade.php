@@ -23,29 +23,47 @@
 <div class="tc-wrap">
     <aside class="tc-list">
         <div class="tc-list-head">
-            <h2>Team Chat</h2>
-            <p>Message any teammate directly.</p>
+            <div class="tc-list-head-row">
+                <h2>Team Chat</h2>
+                <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                    <span>New group</span>
+                </button>
+            </div>
+            <p>Message any teammate or start a group.</p>
         </div>
         <div class="tc-contacts">
-            @forelse ($members as $m)
-                @php $p = $previews[$m->id] ?? null; $u = $unread[$m->id] ?? 0; @endphp
-                <a href="{{ route('admin.team-messages.index', ['with' => $m->id]) }}" class="tc-contact {{ $active && $active->id === $m->id ? 'active' : '' }}" data-contact="{{ $m->id }}">
-                    {!! $avatar($m) !!}
+            @forelse ($items as $it)
+                @php $key = $it['active_key']; $u = $it['unread']; $p = $it['preview'];
+                     $isActive = $active
+                        ? ($it['conversation_id'] && $active->id === $it['conversation_id'])
+                        : ($peer && ! $it['is_group'] && $it['peer_id'] === ($peer->id ?? null) && ! $it['conversation_id']);
+                @endphp
+                <a href="{{ route('admin.team-messages.index', $it['href']) }}"
+                   class="tc-contact {{ $isActive ? 'active' : '' }}"
+                   data-key="{{ $key }}" @if ($it['conversation_id']) data-conversation="{{ $it['conversation_id'] }}" @endif @if ($it['peer_id']) data-peer="{{ $it['peer_id'] }}" @endif>
+                    @if ($it['is_group'])
+                        <span class="tc-avatar tc-avatar--group">{{ $it['icon'] }}</span>
+                    @else
+                        {!! $avatar($it['peer']) !!}
+                    @endif
                     <span class="tc-c-body">
                         <span class="tc-c-top">
-                            <span class="tc-c-name">{{ $m->full_name }}</span>
-                            <span class="tc-c-time {{ $u > 0 ? 'unread' : '' }}" data-time="{{ $m->id }}">{{ $p['at'] ?? '' }}</span>
+                            <span class="tc-c-name">{{ $it['name'] }}</span>
+                            <span class="tc-c-time {{ $u > 0 ? 'unread' : '' }}" data-time>{{ $p['at'] ?? '' }}</span>
                         </span>
                         <span class="tc-c-sub">
-                            <span class="tc-c-preview {{ $u > 0 ? 'unread' : '' }}" data-preview="{{ $m->id }}">
+                            <span class="tc-c-preview {{ $u > 0 ? 'unread' : '' }}" data-preview>
                                 @if ($p)
                                     @if ($p['mine'])<span class="tc-tick {{ $p['read'] ? 'read' : '' }}" data-tick>@include('partials.tick')</span>@endif
-                                    <span data-preview-text>{{ Str::limit($p['body'], 38) }}</span>
+                                    <span data-preview-text>{{ Str::limit($p['text'], 40) }}</span>
+                                @elseif ($it['is_group'])
+                                    <span class="tc-c-muted">{{ $it['members_count'] }} members</span>
                                 @else
-                                    <span class="tc-c-muted">{{ $m->isSuper() ? 'Super Admin' : 'VA' }} · Tap to message</span>
+                                    <span class="tc-c-muted">{{ $it['peer']->isSuper() ? 'Super Admin' : 'VA' }} · Tap to message</span>
                                 @endif
                             </span>
-                            @if ($u > 0)<span class="tc-unread" data-badge="{{ $m->id }}">{{ $u }}</span>@endif
+                            @if ($u > 0)<span class="tc-unread" data-badge>{{ $u }}</span>@endif
                         </span>
                     </span>
                 </a>
@@ -56,32 +74,51 @@
     </aside>
 
     <section class="tc-thread">
-        @if ($active)
+        @if ($active || $peer)
+            @php $isGroup = $active && $active->isGroup(); @endphp
             <div class="tc-thread-head">
-                {!! $avatar($active, 'sm') !!}
-                <div>
-                    <div class="tc-th-name">{{ $active->full_name }}</div>
-                    <div class="tc-th-role">{{ $active->isSuper() ? 'Super Admin' : 'VA' }} · {{ $active->email }}</div>
-                </div>
+                @if ($isGroup)
+                    <span class="tc-avatar sm tc-avatar--group">{{ $active->icon ?: '💬' }}</span>
+                    <div class="tc-th-info">
+                        <div class="tc-th-name">{{ $active->name }}</div>
+                        <div class="tc-th-role">{{ $members->count() }} members</div>
+                    </div>
+                    <button type="button" class="tc-th-btn" id="tcMembersBtn" title="Members">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span>{{ $members->count() }}</span>
+                    </button>
+                @else
+                    {!! $avatar($peer, 'sm') !!}
+                    <div class="tc-th-info">
+                        <div class="tc-th-name">{{ $peer->full_name }}</div>
+                        <div class="tc-th-role">{{ $peer->isSuper() ? 'Super Admin' : 'VA' }} · {{ $peer->email }}</div>
+                    </div>
+                @endif
             </div>
 
-            <div class="tc-messages" id="tcMessages" data-with="{{ $active->id }}" data-last="{{ $messages->last()->id ?? 0 }}">
-                @php $tcLastDay = null; $tcNow = \Illuminate\Support\Carbon::now($tz); @endphp
+            <div class="tc-messages" id="tcMessages"
+                 @if ($active) data-conversation="{{ $active->id }}" @endif
+                 @if ($peer && ! $active) data-peer="{{ $peer->id }}" @endif
+                 data-group="{{ $isGroup ? 1 : 0 }}" data-last="{{ $messages->last()->id ?? 0 }}">
+                @php $tcLastDay = null; $tcPrevSender = null; $tcNow = \Illuminate\Support\Carbon::now($tz); @endphp
                 @forelse ($messages as $msg)
                     @php
                         $d = $msg->created_at->timezone($tz);
                         $dayKey = $d->format('Y-m-d');
                         $dayLabel = $d->isSameDay($tcNow) ? 'Today' : ($d->isSameDay($tcNow->copy()->subDay()) ? 'Yesterday' : $d->format('F j, Y'));
+                        $dayChanged = $dayKey !== $tcLastDay;
+                        $showSender = $isGroup && ! $msg->isSystem() && ($dayChanged || $tcPrevSender !== $msg->sender_id);
+                        $tcPrevSender = $msg->isSystem() ? null : $msg->sender_id;
                     @endphp
-                    @if ($dayKey !== $tcLastDay)
+                    @if ($dayChanged)
                         <div class="tc-daysep"><span>{{ $dayLabel }}</span></div>
                         @php $tcLastDay = $dayKey; @endphp
                     @endif
-                    @include('partials.team-message', ['msg' => $msg])
+                    @include('partials.team-message', ['msg' => $msg, 'isGroup' => $isGroup, 'showSender' => $showSender, 'readUpTo' => $readUpTo])
                 @empty
                     <div class="tc-thread-empty">
-                        <div class="tc-thread-empty-emoji">👋</div>
-                        <p>No messages yet — say hello!</p>
+                        <div class="tc-thread-empty-emoji">{{ $isGroup ? '🎉' : '👋' }}</div>
+                        <p>{{ $isGroup ? 'Group created — say hello to the team!' : 'No messages yet — say hello!' }}</p>
                     </div>
                 @endforelse
             </div>
@@ -100,12 +137,16 @@
 
             <form class="tc-composer" id="tcForm" method="POST" action="{{ route('admin.team-messages.store') }}" enctype="multipart/form-data">
                 @csrf
-                <input type="hidden" name="recipient_id" value="{{ $active->id }}">
+                @if ($active)
+                    <input type="hidden" name="conversation_id" value="{{ $active->id }}">
+                @else
+                    <input type="hidden" name="recipient_id" value="{{ $peer->id }}">
+                @endif
                 <input type="file" id="tcFile" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx">
                 <button type="button" class="tc-attach" id="tcAttach" aria-label="Attach a file">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
-                <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $active->full_name }}…" maxlength="5000"></textarea>
+                <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $isGroup ? $active->name : $peer->full_name }}…" maxlength="5000"></textarea>
                 <button type="submit" class="tc-send" aria-label="Send">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
@@ -148,6 +189,52 @@
                     <div class="tc-modal-list" id="tcFwdList"></div>
                 </div>
             </div>
+
+            @if ($isGroup)
+                @php $iAmAdmin = optional($members->firstWhere('admin_id', $me->id))->role === 'admin'; @endphp
+                <div class="tc-modal" id="tcMembers" hidden data-group="{{ $active->id }}" data-admin="{{ $iAmAdmin ? 1 : 0 }}">
+                    <div class="tc-modal-card">
+                        <div class="tc-modal-head">
+                            <span>{{ $active->name }} · {{ $members->count() }} members</span>
+                            <button type="button" id="tcMembersClose" aria-label="Close">&times;</button>
+                        </div>
+                        @if ($iAmAdmin)
+                            <div class="tc-member-tools">
+                                <input type="text" id="tcRenameName" class="tc-inp" value="{{ $active->name }}" maxlength="80" placeholder="Group name">
+                                <button type="button" class="tc-btn-mini" id="tcRenameBtn">Rename</button>
+                            </div>
+                        @endif
+                        <div class="tc-modal-list">
+                            @foreach ($members->sortByDesc('role') as $mp)
+                                <div class="tc-member-row" data-admin="{{ $mp->admin_id }}">
+                                    @if ($mp->admin && $mp->admin->avatarUrl())
+                                        <span class="tc-avatar sm has-img"><img src="{{ $mp->admin->avatarUrl() }}" alt=""></span>
+                                    @else
+                                        <span class="tc-avatar sm" style="background:{{ $color(optional($mp->admin)->full_name) }}">{{ $mono(optional($mp->admin)->full_name) }}</span>
+                                    @endif
+                                    <span class="tc-member-name">{{ optional($mp->admin)->full_name }}{{ $mp->admin_id === $me->id ? ' (you)' : '' }}</span>
+                                    @if ($mp->role === 'admin')<span class="tc-member-badge">Admin</span>@endif
+                                    @if ($iAmAdmin && $mp->admin_id !== $me->id)
+                                        <button type="button" class="tc-member-remove" data-admin="{{ $mp->admin_id }}" title="Remove">&times;</button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                        @if ($iAmAdmin && $addable->isNotEmpty())
+                            <div class="tc-member-add">
+                                <div class="tc-member-add-title">Add members</div>
+                                <div class="tc-member-add-list">
+                                    @foreach ($addable as $t)
+                                        <label class="tc-addable"><input type="checkbox" value="{{ $t->id }}"> {{ $t->full_name }}</label>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="tc-btn-mini" id="tcAddMembersBtn">Add selected</button>
+                            </div>
+                        @endif
+                        <button type="button" class="tc-leave-btn" id="tcLeaveBtn">Leave group</button>
+                    </div>
+                </div>
+            @endif
         @else
             <div class="tc-placeholder">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -155,6 +242,41 @@
             </div>
         @endif
     </section>
+</div>
+
+{{-- New group modal (always available from the sidebar button) --}}
+<div class="tc-modal" id="tcGroupModal" hidden>
+    <div class="tc-modal-card">
+        <div class="tc-modal-head">
+            <span>New group</span>
+            <button type="button" id="tcGroupClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="tc-group-form">
+            <div class="tc-group-top">
+                <button type="button" class="tc-icon-pick" id="tcIconPick">💬</button>
+                <input type="text" id="tcGroupName" class="tc-inp" placeholder="Group name" maxlength="80">
+            </div>
+            <div class="tc-icon-row" id="tcIconRow">
+                @foreach ($groupIcons as $gi)
+                    <button type="button" class="tc-icon-opt {{ $loop->first ? 'sel' : '' }}" data-icon="{{ $gi }}">{{ $gi }}</button>
+                @endforeach
+            </div>
+            <div class="tc-group-members-title">Add people</div>
+            <div class="tc-modal-list tc-group-members">
+                @foreach ($teammates as $t)
+                    <label class="tc-addable"><input type="checkbox" value="{{ $t->id }}">
+                        @if ($t->avatarUrl())
+                            <span class="tc-avatar sm has-img"><img src="{{ $t->avatarUrl() }}" alt=""></span>
+                        @else
+                            <span class="tc-avatar sm" style="background:{{ $color($t->full_name) }}">{{ $mono($t->full_name) }}</span>
+                        @endif
+                        <span>{{ $t->full_name }}</span>
+                    </label>
+                @endforeach
+            </div>
+            <button type="button" class="tc-btn-primary" id="tcGroupCreate">Create group</button>
+        </div>
+    </div>
 </div>
 
 @push('head')
@@ -434,6 +556,60 @@
     :root[data-theme="dark"] .tc-pending-chip { background:#141d33; border-color:#233150; }
     :root[data-theme="dark"] .tc-attach { background:rgba(148,163,184,.12); }
 
+    /* Groups: sidebar icon, header, sender chips, system messages */
+    .tc-list-head-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .tc-newgroup { display:inline-flex; align-items:center; gap:6px; border:0; cursor:pointer; padding:6px 11px; border-radius:999px; font:inherit; font-size:12px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 6px 14px -5px rgba(99,102,241,.6); }
+    .tc-newgroup:hover { filter:brightness(1.05); transform:translateY(-1px); }
+    .tc-newgroup svg { width:15px; height:15px; }
+    .tc-avatar--group { background:linear-gradient(135deg,#4f46e5,#7c3aed) !important; font-size:20px; }
+    .tc-avatar.sm.tc-avatar--group { font-size:17px; }
+    .tc-avatar.xs { width:26px; height:26px; border-radius:8px; font-size:10px; box-shadow:0 3px 8px -3px rgba(15,23,42,.35); }
+    .tc-avatar.xs.has-img { overflow:hidden; } .tc-avatar.xs.has-img img { width:100%; height:100%; object-fit:cover; }
+    .tc-th-info { flex:1; min-width:0; }
+    .tc-th-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(148,163,184,.3); background:var(--pro-surface,#fff); color:#475569; cursor:pointer; padding:7px 12px; border-radius:11px; font:inherit; font-size:12.5px; font-weight:700; }
+    .tc-th-btn:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-th-btn svg { width:16px; height:16px; }
+
+    .tc-sender { display:flex; align-items:center; gap:7px; margin:2px 0 3px; }
+    .tc-sender-name { font-size:12px; font-weight:800; }
+
+    .tc-sys { align-self:center; z-index:1; margin:6px 0; max-width:80%; }
+    .tc-sys span { display:inline-block; padding:5px 13px; border-radius:999px; font-size:11.5px; font-weight:600; color:#64748b; background:rgba(255,255,255,.7); border:1px solid rgba(148,163,184,.18); backdrop-filter:blur(6px); }
+
+    /* Member panel + group form */
+    .tc-inp { flex:1; min-width:0; border:1.5px solid rgba(148,163,184,.3); border-radius:11px; padding:9px 12px; font:inherit; font-size:14px; background:var(--pro-surface,#fff); color:var(--pro-text,#0f172a); outline:none; }
+    .tc-inp:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+    .tc-member-tools { display:flex; gap:8px; padding:12px 16px 4px; }
+    .tc-btn-mini { flex:none; border:0; cursor:pointer; padding:0 14px; border-radius:11px; font:inherit; font-size:12.5px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); }
+    .tc-member-row { display:flex; align-items:center; gap:11px; padding:8px 10px; border-radius:11px; }
+    .tc-member-row:hover { background:var(--pro-soft,#f5f7fb); }
+    .tc-member-name { flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-member-badge { flex:none; font-size:10.5px; font-weight:800; color:#4f46e5; background:rgba(99,102,241,.12); padding:2px 8px; border-radius:999px; }
+    .tc-member-remove { flex:none; border:0; background:transparent; color:#94a3b8; font-size:19px; line-height:1; cursor:pointer; padding:0 4px; }
+    .tc-member-remove:hover { color:#ef4444; }
+    .tc-member-add { border-top:1px solid rgba(148,163,184,.16); padding:12px 16px; }
+    .tc-member-add-title, .tc-group-members-title { font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+    .tc-member-add-list { display:flex; flex-direction:column; gap:2px; max-height:150px; overflow-y:auto; margin-bottom:10px; }
+    .tc-addable { display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:9px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--pro-text,#0f172a); }
+    .tc-addable:hover { background:var(--pro-soft,#f5f7fb); }
+    .tc-addable input { width:16px; height:16px; accent-color:#6366f1; }
+    .tc-leave-btn { margin:6px 16px 16px; border:1px solid rgba(239,68,68,.3); background:rgba(239,68,68,.06); color:#ef4444; cursor:pointer; padding:9px; border-radius:11px; font:inherit; font-size:13px; font-weight:700; }
+    .tc-leave-btn:hover { background:rgba(239,68,68,.12); }
+
+    .tc-group-form { padding:16px; }
+    .tc-group-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .tc-icon-pick { flex:none; width:46px; height:46px; border-radius:13px; border:0; cursor:pointer; font-size:24px; background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+    .tc-icon-row { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; }
+    .tc-icon-opt { width:36px; height:36px; border-radius:10px; border:1.5px solid transparent; background:var(--pro-soft,#f1f5f9); cursor:pointer; font-size:18px; }
+    .tc-icon-opt.sel { border-color:#6366f1; background:rgba(99,102,241,.12); }
+    .tc-group-members { max-height:230px; }
+    .tc-btn-primary { width:100%; margin-top:12px; border:0; cursor:pointer; padding:12px; border-radius:13px; font:inherit; font-size:14px; font-weight:800; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 10px 22px -8px rgba(99,102,241,.6); }
+    .tc-btn-primary:hover { filter:brightness(1.05); }
+
+    :root[data-theme="dark"] .tc-sys span { background:rgba(20,29,51,.8); color:#94a3b8; border-color:rgba(51,65,85,.6); }
+    :root[data-theme="dark"] .tc-th-btn, :root[data-theme="dark"] .tc-inp { background:#141d33; border-color:#233150; color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-member-row:hover, :root[data-theme="dark"] .tc-addable:hover { background:#182444; }
+
     @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
     @keyframes tcAurora { from { transform:translate(-3%,-2%) rotate(0deg); } to { transform:translate(3%,3%) rotate(7deg); } }
     @keyframes tcWave { 0%,60%,100%{transform:rotate(0);} 10%{transform:rotate(14deg);} 20%{transform:rotate(-8deg);} 30%{transform:rotate(14deg);} 40%{transform:rotate(-4deg);} 50%{transform:rotate(10deg);} }
@@ -459,17 +635,35 @@
     var form  = document.getElementById('tcForm');
     var input = document.getElementById('tcInput');
     var csrf  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    var withId = box.dataset.with;
+    var CONV = box.dataset.conversation || '';
+    var PEER_ID = box.dataset.peer || '';
+    var IS_GROUP = box.dataset.group === '1';
     var lastId = parseInt(box.dataset.last, 10) || 0;
     var THREAD = @js(route('admin.team-messages.thread'));
     var STORE  = @js(route('admin.team-messages.store'));
+    var GBASE  = @js(url('admin/team-messages/group'));
+    var TC_PEERS = @js($teammates->map(fn ($t) => ['id' => $t->id, 'name' => $t->full_name, 'avatar' => $t->avatarUrl()])->values());
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
     var DOTS = '<button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
     var FILE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
     var DL_SVG = '<svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
-    var PEER = @js($active?->full_name ?? '');
+    var PEER_NAME = @js($active && $active->isGroup() ? '' : ($peer->full_name ?? ''));
+
+    function activeRow(){
+        if (CONV){ var r = document.querySelector('.tc-contact[data-conversation="' + CONV + '"]'); if (r) return r; }
+        if (PEER_ID) return document.querySelector('.tc-contact[data-peer="' + PEER_ID + '"]');
+        return null;
+    }
+    function senderChip(m){
+        if (!IS_GROUP || m.mine || !m.sender) return '';
+        var s = m.sender;
+        var av = s.avatar
+            ? '<span class="tc-avatar xs has-img"><img src="' + s.avatar + '" alt=""></span>'
+            : '<span class="tc-avatar xs" style="background:' + s.color + '">' + esc(s.mono) + '</span>';
+        return '<div class="tc-sender">' + av + '<span class="tc-sender-name" style="color:' + s.color + '">' + esc(s.name) + '</span></div>';
+    }
 
     function esc(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     function atBottom(){ return box.scrollHeight - box.scrollTop - box.clientHeight < 80; }
@@ -522,7 +716,7 @@
 
     // Keep the left contact row's preview line in sync, WhatsApp-style, and float it to the top.
     function updatePreview(m){
-        var row = document.querySelector('.tc-contact[data-contact="' + withId + '"]');
+        var row = activeRow();
         if (!row) return;
         var time = row.querySelector('[data-time]');
         if (time){ time.textContent = nowShort(); time.classList.remove('unread'); }
@@ -540,9 +734,14 @@
     function append(m){
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
         var el = document.createElement('div');
-        el.className = 'tc-msg' + (m.mine ? ' mine' : '');
+        if (m.system){
+            el.className = 'tc-sys'; el.innerHTML = '<span>' + esc(m.body) + '</span>';
+            box.appendChild(el); if (m.id > lastId) lastId = m.id;
+            return;
+        }
+        el.className = 'tc-msg' + (m.mine ? ' mine' : '') + (IS_GROUP && !m.mine ? ' tc-msg--grp' : '');
         el.dataset.id = m.id;
-        el.innerHTML = bubbleInner(m);
+        el.innerHTML = senderChip(m) + bubbleInner(m);
         box.appendChild(el);
         if (m.id > lastId) lastId = m.id;
         updatePreview(m);
@@ -576,7 +775,7 @@
             var t = el.querySelector('.tc-btick');
             if (t && id <= upTo) t.classList.add('read');
         });
-        var row = document.querySelector('.tc-contact[data-contact="' + withId + '"]');
+        var row = activeRow();
         if (row){
             var pt = row.querySelector('[data-tick]');
             if (pt && maxMine && maxMine <= upTo) pt.classList.add('read');
@@ -657,7 +856,8 @@
         var btn = form.querySelector('.tc-send'); btn.disabled = true;
 
         var fd = new FormData();
-        fd.append('_token', csrf); fd.append('recipient_id', withId);
+        fd.append('_token', csrf);
+        if (CONV) fd.append('conversation_id', CONV); else if (PEER_ID) fd.append('recipient_id', PEER_ID);
         if (body) fd.append('body', body);
         if (replyId) fd.append('reply_to_id', replyId);
         pending.forEach(function (it) { fd.append('attachments[]', it.file, it.file.name); });
@@ -672,6 +872,11 @@
             btn.disabled = false; if (progressBox) progressBox.hidden = true;
             var res = null; try { res = JSON.parse(xhr.responseText); } catch (err) {}
             if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
+                // First message in a brand-new DM — adopt the conversation id it created.
+                if (!CONV && res.conversation_id) {
+                    CONV = String(res.conversation_id); box.dataset.conversation = CONV;
+                    var r = activeRow(); if (r) r.dataset.conversation = CONV;
+                }
                 append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); toBottom(); input.focus();
             } else {
                 toast(res && res.message ? res.message : 'Could not send message');
@@ -684,7 +889,8 @@
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
     // browser from serving a stale empty response for the same ?after= URL.
     function poll(){
-        fetch(THREAD + '?with=' + encodeURIComponent(withId) + '&after=' + lastId + '&_=' + Date.now(),
+        if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
+        fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
@@ -738,7 +944,9 @@
         var bub = el.querySelector('.tc-bubble');
         if (!bub || bub.classList.contains('deleted')) return;   // nothing to do on a deleted message
         var txtEl = el.querySelector('.tc-text');
-        menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'), text: txtEl ? txtEl.textContent : '' };
+        var nameEl = el.querySelector('.tc-sender-name');
+        menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'),
+                    text: txtEl ? txtEl.textContent : '', author: nameEl ? nameEl.textContent : '' };
         menu.querySelector('[data-act="delete"]').hidden = !menuMsg.mine;
         menu.hidden = false;
         var mw = menu.offsetWidth, mh = menu.offsetHeight;
@@ -762,7 +970,7 @@
         if (!menuMsg || !replyBar) return;
         replyId = menuMsg.id;
         replyBar.hidden = false;
-        replyBar.querySelector('.tc-reply-author').textContent = menuMsg.mine ? 'You' : PEER;
+        replyBar.querySelector('.tc-reply-author').textContent = menuMsg.mine ? 'You' : (menuMsg.author || PEER_NAME);
         replyBar.querySelector('.tc-reply-text').textContent = menuMsg.text.slice(0, 140);
         input.focus();
     }
@@ -800,13 +1008,13 @@
         if (!menuMsg || !fwdModal) return;
         forwardId = menuMsg.id;
         var list = document.getElementById('tcFwdList'); list.innerHTML = '';
-        document.querySelectorAll('.tc-contact').forEach(function (c) {
-            var id = c.dataset.contact;
-            var nameEl = c.querySelector('.tc-c-name'); var name = nameEl ? nameEl.textContent : 'Teammate';
-            var av = c.querySelector('.tc-avatar');
+        TC_PEERS.forEach(function (pr) {
+            var av = pr.avatar
+                ? '<span class="tc-avatar sm has-img"><img src="' + pr.avatar + '" alt=""></span>'
+                : '<span class="tc-avatar sm" style="background:#6366f1">' + esc((pr.name[0] || '?').toUpperCase()) + '</span>';
             var row = document.createElement('button'); row.type = 'button'; row.className = 'tc-fwd-row';
-            row.innerHTML = (av ? av.outerHTML : '') + '<span>' + esc(name) + '</span>';
-            row.addEventListener('click', function () { doForward(id, name); });
+            row.innerHTML = av + '<span>' + esc(pr.name) + '</span>';
+            row.addEventListener('click', function () { doForward(pr.id, pr.name); });
             list.appendChild(row);
         });
         fwdModal.hidden = false;
@@ -874,6 +1082,82 @@
         var fc = document.getElementById('tcFwdClose'); if (fc) fc.addEventListener('click', function () { fwdModal.hidden = true; });
         fwdModal.addEventListener('click', function (e) { if (e.target === fwdModal) fwdModal.hidden = true; });
     }
+
+    // ---------- Group members panel (active group only) ----------
+    var membersModal = document.getElementById('tcMembers');
+    var membersBtn = document.getElementById('tcMembersBtn');
+    if (membersModal) document.body.appendChild(membersModal);
+    if (membersModal && membersBtn){
+        var GID = membersModal.dataset.group;
+        function gpost(path, extra){
+            var fd = new FormData(); fd.append('_token', csrf);
+            if (extra) extra(fd);
+            return fetch(GBASE + '/' + GID + path, { method:'POST', body:fd,
+                headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).then(function (r) { return r.json(); });
+        }
+        membersBtn.addEventListener('click', function () { membersModal.hidden = false; });
+        document.getElementById('tcMembersClose').addEventListener('click', function () { membersModal.hidden = true; });
+        membersModal.addEventListener('click', function (e) { if (e.target === membersModal) membersModal.hidden = true; });
+
+        membersModal.addEventListener('click', function (e) {
+            var rem = e.target.closest('.tc-member-remove'); if (!rem) return;
+            if (!window.confirm('Remove this member from the group?')) return;
+            gpost('/members/' + rem.dataset.admin, function (fd) { fd.append('_method', 'DELETE'); })
+                .then(function (res) { if (res && res.ok) location.reload(); });
+        });
+        var addBtn = document.getElementById('tcAddMembersBtn');
+        if (addBtn) addBtn.addEventListener('click', function () {
+            var ids = Array.prototype.map.call(membersModal.querySelectorAll('.tc-member-add-list input:checked'), function (c) { return c.value; });
+            if (!ids.length) { toast('Select teammates to add'); return; }
+            gpost('/members', function (fd) { ids.forEach(function (i) { fd.append('members[]', i); }); })
+                .then(function (res) { if (res && res.ok) location.reload(); });
+        });
+        var renameBtn = document.getElementById('tcRenameBtn');
+        if (renameBtn) renameBtn.addEventListener('click', function () {
+            var nm = document.getElementById('tcRenameName').value.trim(); if (!nm) { toast('Name required'); return; }
+            gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) { if (res && res.ok) location.reload(); });
+        });
+        document.getElementById('tcLeaveBtn').addEventListener('click', function () {
+            if (!window.confirm('Leave this group?')) return;
+            gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); });
+        });
+    }
+})();
+
+// New-group modal — lives outside the thread scope so it works with no chat open.
+(function () {
+    var modal = document.getElementById('tcGroupModal');
+    var openBtn = document.getElementById('tcNewGroup');
+    if (!modal || !openBtn) return;
+    document.body.appendChild(modal);
+    var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var STORE_GROUP = @js(route('admin.team-messages.group.store'));
+    var toast = window.apexToast || function () {};
+    var chosenIcon = '💬';
+
+    openBtn.addEventListener('click', function () { modal.hidden = false; });
+    document.getElementById('tcGroupClose').addEventListener('click', function () { modal.hidden = true; });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.hidden = true; });
+
+    var iconRow = document.getElementById('tcIconRow'), iconPick = document.getElementById('tcIconPick');
+    iconRow.addEventListener('click', function (e) {
+        var b = e.target.closest('.tc-icon-opt'); if (!b) return;
+        chosenIcon = b.dataset.icon; iconPick.textContent = chosenIcon;
+        iconRow.querySelectorAll('.tc-icon-opt').forEach(function (x) { x.classList.remove('sel'); });
+        b.classList.add('sel');
+    });
+
+    document.getElementById('tcGroupCreate').addEventListener('click', function () {
+        var name = document.getElementById('tcGroupName').value.trim();
+        var members = Array.prototype.map.call(modal.querySelectorAll('.tc-group-members input:checked'), function (c) { return c.value; });
+        if (!name) { toast('Name your group'); return; }
+        if (!members.length) { toast('Pick at least one teammate'); return; }
+        var fd = new FormData(); fd.append('_token', csrf); fd.append('name', name); fd.append('icon', chosenIcon);
+        members.forEach(function (m) { fd.append('members[]', m); });
+        fetch(STORE_GROUP, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (res) { if (res && res.ok) location.href = '?c=' + res.conversation_id; else toast('Could not create group'); });
+    });
 })();
 </script>
 @endpush

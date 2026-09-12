@@ -1,6 +1,16 @@
 @php
+    $isGroup = $isGroup ?? false;
+    $showSender = $showSender ?? false;
+@endphp
+
+@if ($msg->isSystem())
+    <div class="tc-sys"><span>{{ $msg->body }}</span></div>
+@else
+@php
     $mine = $msg->sender_id === $me->id;
     $del  = (bool) $msg->deleted_at;
+    $hasAtts = ! $del && $msg->attachments->isNotEmpty();
+    $onlyMedia = $hasAtts && $msg->body === '';
 
     $rx = [];
     foreach (($msg->reactions ?? []) as $uid => $e) {
@@ -15,15 +25,31 @@
     if ($msg->replyTo) {
         $rep = [
             'author' => $msg->replyTo->sender_id === $me->id ? 'You' : ($msg->replyTo->sender->full_name ?? 'Teammate'),
-            'text'   => $msg->replyTo->deleted_at ? 'Deleted message' : \Illuminate\Support\Str::limit($msg->replyTo->body, 90),
+            'text'   => $msg->replyTo->deleted_at ? 'Deleted message' : \Illuminate\Support\Str::limit($msg->replyTo->body !== '' ? $msg->replyTo->body : '📎 Attachment', 90),
         ];
     }
+
+    // Sender chip (group, incoming only).
+    $s = $msg->sender;
+    $sName = $s->full_name ?? 'Someone';
+    $sParts = preg_split('/\s+/', trim($sName ?: '?'));
+    $sMono = mb_strtoupper(mb_substr($sParts[0], 0, 1) . (count($sParts) > 1 ? mb_substr(end($sParts), 0, 1) : ''));
+    $sPalette = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ec4899','#14b8a6','#f43f5e','#7c3aed','#0891b2'];
+    $sN = 0; foreach (str_split($sName ?: '?') as $ch) $sN += ord($ch);
+    $sColor = $sPalette[$sN % count($sPalette)];
+    $sAvatar = $s ? $s->avatarUrl() : null;
 @endphp
-@php
-    $hasAtts = ! $del && $msg->attachments->isNotEmpty();
-    $onlyMedia = $hasAtts && $msg->body === '';
-@endphp
-<div class="tc-msg {{ $mine ? 'mine' : '' }}" data-id="{{ $msg->id }}">
+<div class="tc-msg {{ $mine ? 'mine' : '' }} {{ $isGroup && ! $mine ? 'tc-msg--grp' : '' }}" data-id="{{ $msg->id }}">
+    @if ($isGroup && ! $mine && $showSender)
+        <div class="tc-sender">
+            @if ($sAvatar)
+                <span class="tc-avatar xs has-img"><img src="{{ $sAvatar }}" alt=""></span>
+            @else
+                <span class="tc-avatar xs" style="background:{{ $sColor }}">{{ $sMono }}</span>
+            @endif
+            <span class="tc-sender-name" style="color:{{ $sColor }}">{{ $sName }}</span>
+        </div>
+    @endif
     <div class="tc-bubble {{ $del ? 'deleted' : '' }} {{ $onlyMedia ? 'tc-bubble--media' : '' }}">
         @if ($rep && ! $del)
             <div class="tc-quote"><span class="tc-quote-author">{{ $rep['author'] }}</span><span class="tc-quote-text">{{ $rep['text'] }}</span></div>
@@ -53,7 +79,7 @@
             <div class="tc-text">{{ $msg->body }}</div>
         @endif
     </div>
-    <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($mine && ! $del)<span class="tc-btick {{ $msg->read_at ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>
+    <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($mine && ! $del)<span class="tc-btick {{ ($readUpTo ?? 0) >= $msg->id ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>
     <div class="tc-reacts">
         @foreach ($rx as $r)
             <span class="tc-react {{ ($r['mine'] ?? false) ? 'mine' : '' }}" data-emoji="{{ $r['emoji'] }}">{{ $r['emoji'] }}{{ $r['count'] > 1 ? ' '.$r['count'] : '' }}</span>
@@ -63,3 +89,4 @@
         <button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
     @endunless
 </div>
+@endif

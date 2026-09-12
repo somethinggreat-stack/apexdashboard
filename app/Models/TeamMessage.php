@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TeamMessage extends Model
 {
-    protected $fillable = ['sender_id', 'recipient_id', 'reply_to_id', 'body', 'reactions', 'forwarded', 'read_at'];
+    protected $fillable = ['conversation_id', 'type', 'sender_id', 'recipient_id', 'reply_to_id', 'body', 'reactions', 'forwarded', 'read_at'];
 
     protected $casts = [
         'read_at'    => 'datetime',
@@ -14,6 +14,16 @@ class TeamMessage extends Model
         'reactions'  => 'array',
         'forwarded'  => 'boolean',
     ];
+
+    public function conversation()
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->type === 'system';
+    }
 
     public function sender()
     {
