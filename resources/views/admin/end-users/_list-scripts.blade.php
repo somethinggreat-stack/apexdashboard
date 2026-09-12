@@ -18,6 +18,26 @@
     }
 @endphp
 
+@push('head')
+<style>
+    /* List lock while an inline action refreshes the table (prevents double-clicks). */
+    [data-clients-refresh].is-refreshing { position:relative; pointer-events:none; }
+    [data-clients-refresh].is-refreshing > * { opacity:.55; transition:opacity .12s; }
+    [data-clients-refresh].is-refreshing::after {
+        content:''; position:absolute; z-index:20; top:0; left:0; right:0; bottom:0;
+        background:rgba(255,255,255,.02);
+    }
+    [data-clients-refresh].is-refreshing::before {
+        content:''; position:absolute; z-index:21; top:70px; left:50%; width:34px; height:34px;
+        margin-left:-17px; border-radius:50%;
+        border:3px solid rgba(37,99,235,.22); border-top-color:#2563eb;
+        animation:apexSpin .6s linear infinite;
+    }
+    @keyframes apexSpin { to { transform:rotate(360deg); } }
+    :root[data-theme="dark"] [data-clients-refresh].is-refreshing::before { border-color:rgba(96,165,250,.25); border-top-color:#60a5fa; }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 (function () {
@@ -34,6 +54,13 @@
     // action buttons use inline onclick / delegated confirm, so the fresh rows
     // keep working. Falls back to a reload if the table can't be found.
     window.apexRefreshTable = function () {
+        // Lock the list while it refreshes: a spinner overlay + pointer-events off,
+        // so a still-visible "LOG" badge (or any inline action) can't be clicked a
+        // second time in the ~1s before the fresh, updated rows swap in.
+        var busyRegion = document.querySelector('[data-clients-refresh]');
+        if (busyRegion) busyRegion.classList.add('is-refreshing');
+        var unlock = function () { if (busyRegion) busyRegion.classList.remove('is-refreshing'); };
+
         fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { return r.text(); })
             .then(function (html) {
@@ -42,13 +69,19 @@
                 // not just the rows) so nothing goes stale after an inline edit.
                 var region = doc.querySelector('[data-clients-refresh]');
                 var cur = document.querySelector('[data-clients-refresh]');
-                if (region && cur) { cur.innerHTML = region.innerHTML; return; }
+                if (region && cur) { cur.innerHTML = region.innerHTML; unlock(); return; }
                 var newBody = doc.querySelector('[data-clients-table] tbody');
                 var curBody = document.querySelector('[data-clients-table] tbody');
-                if (newBody && curBody) { curBody.innerHTML = newBody.innerHTML; }
+                if (newBody && curBody) { curBody.innerHTML = newBody.innerHTML; unlock(); }
                 else { window.location.reload(); }
             })
             .catch(function () { window.location.reload(); });
+    };
+    // Belt-and-suspenders: never open the quick-log modal while the list is
+    // mid-refresh (the row underneath is about to be replaced).
+    window.apexListBusy = function () {
+        var r = document.querySelector('[data-clients-refresh]');
+        return !!(r && r.classList.contains('is-refreshing'));
     };
 
     /* --------- generic field-edit popup (no more inline editing) --------- */
@@ -194,6 +227,7 @@
     }
 
     window.openQuickLog = function (euId, name, targetWeek, currentRound, cycleDays, presetSteps) {
+        if (window.apexListBusy && window.apexListBusy()) return;   // list is refreshing
         cycleDays = (parseInt(cycleDays, 10) === 20) ? 20 : 30;
         var weekCount = (cycleDays === 20) ? 3 : 4;               // 20-day → 3 weeks
         qlStepsMap = WEEK_STEPS[cycleDays] || WEEK_STEPS[30];
