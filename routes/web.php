@@ -44,9 +44,9 @@ Route::middleware('throttle:10,1')->group(function () {
 */
 
 Route::middleware('throttle:20,1')->group(function () {
-    Route::get('/intake/{token}', [IntakeController::class, 'show'])->name('intake.show')->where('token', '[A-Za-z0-9]+');
-    Route::middleware('throttle:5,1')->post('/intake/{token}', [IntakeController::class, 'store'])->name('intake.store')->where('token', '[A-Za-z0-9]+');
-    Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9]+');
+    Route::get('/intake/{token}', [IntakeController::class, 'show'])->name('intake.show')->where('token', '[A-Za-z0-9-]+');
+    Route::middleware('throttle:5,1')->post('/intake/{token}', [IntakeController::class, 'store'])->name('intake.store')->where('token', '[A-Za-z0-9-]+');
+    Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9-]+');
 });
 
 // Server-to-server intake API (key-authenticated; CSRF-exempt via bootstrap/app.php)
