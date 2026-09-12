@@ -262,7 +262,7 @@
 
     document.addEventListener('keydown', function (e) {
         var k = (e.key || '').toLowerCase();
-        if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); isOpen() ? close() : open(); return; }
+        if ((e.metaKey || e.ctrlKey) && k === 'f') { e.preventDefault(); isOpen() ? close() : open(); return; }
         if (!isOpen()) return;
         if (k === 'escape') { e.preventDefault(); close(); }
         else if (k === 'arrowdown') { e.preventDefault(); setActive(active + 1); }
