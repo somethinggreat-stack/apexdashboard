@@ -147,7 +147,10 @@ class ClientSelectorController extends Controller
      */
     public function exportIntakeLinks()
     {
-        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $me = Auth::guard('admin')->user();
+        abort_unless($me->isSuper(), 403);   // super-admin only; hidden from VAs
+
+        $ownerId = $me->dataOwnerId();
         $clients = Client::forAdmin($ownerId)->active()->orderBy('business_name')->get();
 
         $filename = 'intake-links-' . now()->format('Y-m-d') . '.csv';
