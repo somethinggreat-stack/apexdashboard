@@ -276,6 +276,24 @@ class TeamMessageTest extends TestCase
             ->assertJsonPath('states.0.reactions.0.emoji', '❤️');
     }
 
+    public function test_team_photos_resolve_by_name(): void
+    {
+        $this->assertStringContainsString('/img/team/abid.jpg', (new Admin(['full_name' => 'Abid Hussain']))->avatarUrl());
+        $this->assertStringContainsString('/img/team/rajakhuram.jpg', (new Admin(['full_name' => 'Raja Khuram']))->avatarUrl());
+        $this->assertStringContainsString('/img/team/umairarshad.jpg', (new Admin(['full_name' => 'Mr. Muhammad Umair Arshad']))->avatarUrl());
+        $this->assertStringContainsString('/img/team/mujeeburrehman.jpg', (new Admin(['full_name' => 'Mujeeb']))->avatarUrl());
+        $this->assertNull((new Admin(['full_name' => 'Someone Random']))->avatarUrl());
+    }
+
+    public function test_the_contact_photo_renders_when_the_name_matches(): void
+    {
+        $this->va('Abid Hussain');
+
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
+            ->assertOk()
+            ->assertSee('img/team/abid.jpg', false);
+    }
+
     public function test_body_is_required(): void
     {
         $va = $this->va();

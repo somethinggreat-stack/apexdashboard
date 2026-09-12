@@ -9,6 +9,14 @@
         return mb_strtoupper(mb_substr($p[0], 0, 1) . (count($p) > 1 ? mb_substr(end($p), 0, 1) : ''));
     };
     $color = function ($s) use ($palette) { $n = 0; foreach (str_split($s ?: '?') as $c) { $n += ord($c); } return $palette[$n % count($palette)]; };
+    // Photo if we have one, otherwise a colored monogram.
+    $avatar = function ($admin, $extra = '') use ($mono, $color) {
+        $url = $admin->avatarUrl();
+        if ($url) {
+            return '<span class="tc-avatar has-img ' . $extra . '"><img src="' . e($url) . '" alt="" loading="lazy"></span>';
+        }
+        return '<span class="tc-avatar ' . $extra . '" style="background:' . $color($admin->full_name) . '">' . e($mono($admin->full_name)) . '</span>';
+    };
 @endphp
 
 @section('content')
@@ -22,7 +30,7 @@
             @forelse ($members as $m)
                 @php $p = $previews[$m->id] ?? null; $u = $unread[$m->id] ?? 0; @endphp
                 <a href="{{ route('admin.team-messages.index', ['with' => $m->id]) }}" class="tc-contact {{ $active && $active->id === $m->id ? 'active' : '' }}" data-contact="{{ $m->id }}">
-                    <span class="tc-avatar" style="background:{{ $color($m->full_name) }}">{{ $mono($m->full_name) }}</span>
+                    {!! $avatar($m) !!}
                     <span class="tc-c-body">
                         <span class="tc-c-top">
                             <span class="tc-c-name">{{ $m->full_name }}</span>
@@ -50,7 +58,7 @@
     <section class="tc-thread">
         @if ($active)
             <div class="tc-thread-head">
-                <span class="tc-avatar sm" style="background:{{ $color($active->full_name) }}">{{ $mono($active->full_name) }}</span>
+                {!! $avatar($active, 'sm') !!}
                 <div>
                     <div class="tc-th-name">{{ $active->full_name }}</div>
                     <div class="tc-th-role">{{ $active->isSuper() ? 'Super Admin' : 'VA' }} · {{ $active->email }}</div>
@@ -138,6 +146,8 @@
     .tc-contact.active { background:linear-gradient(90deg, rgba(79,70,229,.12), rgba(37,99,235,.05)); }
     .tc-avatar { flex:none; width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; box-shadow:0 4px 10px rgba(15,23,42,.16); }
     .tc-avatar.sm { width:38px; height:38px; border-radius:12px; }
+    .tc-avatar.has-img { overflow:hidden; background:#e2e8f0; }
+    .tc-avatar.has-img img { width:100%; height:100%; object-fit:cover; display:block; }
     .tc-c-body { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
     .tc-c-top { display:flex; align-items:center; gap:8px; }
     .tc-c-name { flex:1; min-width:0; font-size:14px; font-weight:700; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
