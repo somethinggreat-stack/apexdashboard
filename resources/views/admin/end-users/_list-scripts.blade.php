@@ -221,11 +221,18 @@
         openModal('quickLogModal');
     };
 
-    // Build the step_types[] the store expects from whatever the modal resolves to.
+    // Log the step in place (like the inline edits) — POST via fetch, then swap
+    // the clients region so the page stays exactly where it was. No full reload,
+    // no jump to the top. Falls back to a native submit only on a network error.
     (function () {
         var qlForm = document.querySelector('#quickLogModal form');
         if (!qlForm) return;
-        qlForm.addEventListener('submit', function () {
+        var busy = false;
+        qlForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (busy) return;
+
+            // Build the step_types[] the store expects from whatever the modal resolves to.
             qlForm.querySelectorAll('input[data-ql-step]').forEach(function (n) { n.remove(); });
             var single = document.getElementById('quickLogStepType');
             if (single) single.value = '';   // use step_types[] instead
@@ -235,6 +242,40 @@
                 var i = document.createElement('input');
                 i.type = 'hidden'; i.name = 'step_types[]'; i.value = s; i.setAttribute('data-ql-step', '1');
                 qlForm.appendChild(i);
+            });
+
+            var btn = qlForm.querySelector('button[type="submit"]');
+            busy = true;
+            if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'Saving…'; }
+
+            fetch(qlForm.action, {
+                method: 'POST',
+                body: new FormData(qlForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+            }).then(function (res) {
+                busy = false;
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Save Step'; }
+                if (res.ok) {
+                    closeModal('quickLogModal');
+                    var created = (res.d && typeof res.d.created === 'number') ? res.d.created : 1;
+                    var msg = created > 0 ? 'Process step(s) logged.' : 'Already logged for this round & week.';
+                    if (window.apexToast) window.apexToast(msg, created > 0 ? 'success' : 'error');
+                    apexRefreshTable();
+                } else {
+                    var err = 'Could not log step.';
+                    if (res.d) {
+                        if (res.d.message) err = res.d.message;
+                        else if (res.d.errors) { var first = Object.values(res.d.errors)[0]; if (first && first[0]) err = first[0]; }
+                    }
+                    if (window.apexToast) window.apexToast(err, 'error'); else alert(err);
+                }
+            }).catch(function () {
+                // Network hiccup — fall back to a normal submit so nothing is lost.
+                busy = false;
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Save Step'; }
+                HTMLFormElement.prototype.submit.call(qlForm);
             });
         });
     })();
