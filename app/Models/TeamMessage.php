@@ -6,9 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class TeamMessage extends Model
 {
-    protected $fillable = ['sender_id', 'recipient_id', 'body', 'read_at'];
+    protected $fillable = ['sender_id', 'recipient_id', 'reply_to_id', 'body', 'reactions', 'forwarded', 'read_at'];
 
-    protected $casts = ['read_at' => 'datetime'];
+    protected $casts = [
+        'read_at'    => 'datetime',
+        'deleted_at' => 'datetime',
+        'reactions'  => 'array',
+        'forwarded'  => 'boolean',
+    ];
 
     public function sender()
     {
@@ -18,6 +23,12 @@ class TeamMessage extends Model
     public function recipient()
     {
         return $this->belongsTo(Admin::class, 'recipient_id');
+    }
+
+    /** The message this one is a reply to (quoted). */
+    public function replyTo()
+    {
+        return $this->belongsTo(TeamMessage::class, 'reply_to_id');
     }
 
     /** Messages exchanged between two admins, in either direction. */

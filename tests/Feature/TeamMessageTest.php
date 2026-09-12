@@ -171,6 +171,111 @@ class TeamMessageTest extends TestCase
             ->assertOk()->assertJsonPath('readUpTo', $m->id);
     }
 
+    public function test_a_participant_can_react_and_toggle_off(): void
+    {
+        $va = $this->va();
+        $m  = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'yo']);
+
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
+            ->assertOk()
+            ->assertJsonPath('reactions.0.emoji', '👍')
+            ->assertJsonPath('reactions.0.count', 1)
+            ->assertJsonPath('reactions.0.mine', true);
+
+        $this->assertSame(['👍'], array_values($m->fresh()->reactions));
+
+        // Tapping the same emoji again clears my reaction.
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
+            ->assertOk()->assertJsonCount(0, 'reactions');
+
+        $this->assertNull($m->fresh()->reactions);
+    }
+
+    public function test_a_non_participant_cannot_react(): void
+    {
+        $va    = $this->va('Sam');
+        $other = $this->va('Jo');
+        $m = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'hi']);
+
+        $this->actingAs($other, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
+            ->assertNotFound();
+    }
+
+    public function test_forward_sends_the_text_to_another_teammate(): void
+    {
+        $a = $this->va('A');
+        $b = $this->va('B');
+        $m = TeamMessage::create(['sender_id' => $a->id, 'recipient_id' => $this->super->id, 'body' => 'ship it']);
+
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/forward', ['message_id' => $m->id, 'recipient_id' => $b->id])
+            ->assertOk()->assertJsonPath('with', $b->id);
+
+        $this->assertDatabaseHas('team_messages', [
+            'sender_id' => $this->super->id, 'recipient_id' => $b->id, 'body' => 'ship it', 'forwarded' => true,
+        ]);
+    }
+
+    public function test_only_the_sender_can_delete_and_it_becomes_a_tombstone(): void
+    {
+        $va     = $this->va();
+        $mine   = TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'secret']);
+        $theirs = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'yours']);
+
+        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $theirs->id)->assertForbidden();
+
+        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $mine->id)->assertOk();
+        $fresh = $mine->fresh();
+        $this->assertNotNull($fresh->deleted_at);
+        $this->assertSame('', $fresh->body);
+    }
+
+    public function test_reply_links_to_a_message_in_the_same_thread(): void
+    {
+        $va   = $this->va();
+        $orig = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'question?']);
+
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'answer', 'reply_to_id' => $orig->id])
+            ->assertOk()->assertJsonPath('message.reply.text', 'question?');
+
+        $this->assertDatabaseHas('team_messages', [
+            'sender_id' => $this->super->id, 'recipient_id' => $va->id, 'reply_to_id' => $orig->id,
+        ]);
+    }
+
+    public function test_reply_to_a_message_outside_the_thread_is_ignored(): void
+    {
+        $va      = $this->va('Sam');
+        $other   = $this->va('Jo');
+        $foreign = TeamMessage::create(['sender_id' => $other->id, 'recipient_id' => $this->super->id, 'body' => 'elsewhere']);
+
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages', ['recipient_id' => $va->id, 'body' => 'hi', 'reply_to_id' => $foreign->id])
+            ->assertOk();
+
+        $this->assertDatabaseHas('team_messages', [
+            'sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'hi', 'reply_to_id' => null,
+        ]);
+    }
+
+    public function test_thread_poll_reports_reaction_and_deletion_state(): void
+    {
+        $va = $this->va();
+        $m  = TeamMessage::create(['sender_id' => $va->id, 'recipient_id' => $this->super->id, 'body' => 'hi']);
+        $m->reactions = [$this->super->id => '❤️'];
+        $m->save();
+
+        $this->actingAs($this->super, 'admin')
+            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
+            ->assertOk()
+            ->assertJsonPath('states.0.id', $m->id)
+            ->assertJsonPath('states.0.reactions.0.emoji', '❤️');
+    }
+
     public function test_body_is_required(): void
     {
         $va = $this->va();
