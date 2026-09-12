@@ -179,6 +179,9 @@
     .tc-thread-empty { margin:auto; color:#94a3b8; font-size:13.5px; }
     .tc-msg { position:relative; }
     .tc-bubble { cursor:default; }
+    /* These elements set their own display in the class, which would otherwise
+       beat the UA [hidden] rule and make them impossible to hide. Force it. */
+    .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden] { display:none !important; }
 
     /* Quoted reply inside a bubble */
     .tc-quote { display:flex; flex-direction:column; gap:1px; padding:5px 9px; margin:-2px 0 6px; border-left:3px solid rgba(79,70,229,.7); border-radius:7px; background:rgba(79,70,229,.08); font-size:12.5px; }
