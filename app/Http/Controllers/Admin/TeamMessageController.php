@@ -104,7 +104,7 @@ class TeamMessageController extends Controller
         return response()->json([
             'messages' => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
             'readUpTo' => $readUpTo,
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     private function present(TeamMessage $m, int $meId): array

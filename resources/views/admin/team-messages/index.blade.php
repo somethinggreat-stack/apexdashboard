@@ -221,6 +221,7 @@
     }
 
     toBottom();
+    if (input) input.focus(); // ready to type the moment the chat opens
 
     // Auto-grow + Enter to send.
     function grow(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
@@ -244,9 +245,11 @@
             .catch(function () { btn.disabled = false; });
     });
 
-    // Live poll for new incoming messages.
-    setInterval(function () {
-        fetch(THREAD + '?with=' + encodeURIComponent(withId) + '&after=' + lastId, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+    // Live poll for new incoming messages. cache:'no-store' + a buster stop the
+    // browser from serving a stale empty response for the same ?after= URL.
+    function poll(){
+        fetch(THREAD + '?with=' + encodeURIComponent(withId) + '&after=' + lastId + '&_=' + Date.now(),
+            { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (!res) return;
@@ -258,7 +261,8 @@
                 applyReadReceipts(res.readUpTo);
             })
             .catch(function () {});
-    }, 4000);
+    }
+    setInterval(poll, 3000);
 })();
 </script>
 @endpush
