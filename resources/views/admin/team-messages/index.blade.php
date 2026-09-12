@@ -1,4 +1,4 @@
-@extends($adminLayout ?? 'layouts.admin-pro')
+@extends(request()->boolean('standalone') ? 'layouts.chat' : ($adminLayout ?? 'layouts.admin-pro'))
 
 @section('title', 'Team Chat')
 
@@ -39,19 +39,12 @@
             <div class="tc-filters">
                 <button type="button" class="tc-filter active" data-filter="all">All</button>
                 <button type="button" class="tc-filter" data-filter="unread">Unread</button>
-                <button type="button" class="tc-filter" data-filter="fav">Favorites</button>
+                <button type="button" class="tc-filter" data-filter="groups">Groups</button>
             </div>
         </div>
         <div class="tc-contacts" id="tcContacts">
-            <div class="tc-section" data-section="fav" {{ count($favorites) ? '' : 'hidden' }}>Favorites</div>
-            <div id="tcFavList">
-                @foreach ($favorites as $it)
-                    @include('partials.team-chat-row', ['it' => $it])
-                @endforeach
-            </div>
-            <div class="tc-section" data-section="chats">Chats</div>
             <div id="tcChatList">
-                @forelse ($chats as $it)
+                @forelse (array_merge($favorites, $chats) as $it)
                     @include('partials.team-chat-row', ['it' => $it])
                 @empty
                     <div class="tc-empty">No teammates to message yet.</div>
@@ -395,7 +388,7 @@
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
     .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden],
     .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden],
-    .tc-bell-pop[hidden], .tc-mention-pop[hidden] { display:none !important; }
+    .tc-bell-pop[hidden], .tc-mention-pop[hidden], .tc-contact[hidden], .tc-section[hidden] { display:none !important; }
 
     /* Search + filters */
     .tc-search { position:relative; display:flex; align-items:center; margin-top:12px; }
@@ -817,8 +810,25 @@
 @endpush
 
 @push('scripts')
-<script>
+<script data-tc>
+// Cleanup registry — lets the whole chat script be safely re-run on SPA navigation
+// (clears the previous thread's intervals, document listeners, and body-moved modals).
 (function () {
+    if (window.__tcReg) window.__tcReg.cleanup();
+    var reg = { intervals: [], nodes: [], docs: [] };
+    window.__tcReg = reg;
+    window.TCI = function (fn, ms) { var id = setInterval(fn, ms); reg.intervals.push(id); return id; };
+    window.TCB = function (node) { document.body.appendChild(node); reg.nodes.push(node); return node; };
+    window.TCD = function (t, fn, o) { document.addEventListener(t, fn, o); reg.docs.push([t, fn, o]); };
+    reg.cleanup = function () {
+        reg.intervals.forEach(clearInterval);
+        reg.docs.forEach(function (d) { document.removeEventListener(d[0], d[1], d[2]); });
+        reg.nodes.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
+    };
+})();
+
+(function () {
+    var STANDALONE = @js(request()->boolean('standalone'));
     var box = document.getElementById('tcMessages');
     if (!box) return;
     var form  = document.getElementById('tcForm');
@@ -1052,7 +1062,7 @@
 
     // ---------- @mention autocomplete ----------
     var mentionPop = document.getElementById('tcMentionPop');
-    if (mentionPop) document.body.appendChild(mentionPop);
+    if (mentionPop) TCB(mentionPop);
     var pendingMentions = [], mentionState = null, mentionActive = 0, lastMentionOpts = [];
 
     function mentionOptions(query){
@@ -1124,7 +1134,7 @@
     // ---------- Per-chat notification setting (bell) ----------
     var bell = document.getElementById('tcBell'), bellPop = document.getElementById('tcBellPop');
     if (bell && bellPop){
-        document.body.appendChild(bellPop);
+        TCB(bellPop);
         bell.addEventListener('click', function (e) {
             e.stopPropagation();
             bellPop.querySelectorAll('.tc-bell-opt').forEach(function (o) { o.classList.toggle('sel', o.dataset.level === bell.dataset.level); });
@@ -1143,7 +1153,7 @@
             var fd = new FormData(); fd.append('_token', csrf); fd.append('conversation_id', CONV); fd.append('level', lvl);
             fetch(@js(route('admin.team-messages.notify')), { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).catch(function () {});
         });
-        document.addEventListener('click', function (e) { if (!bellPop.hidden && !bellPop.contains(e.target) && !bell.contains(e.target)) bellPop.hidden = true; });
+        TCD('click', function (e) { if (!bellPop.hidden && !bellPop.contains(e.target) && !bell.contains(e.target)) bellPop.hidden = true; });
     }
 
     // ---------- Attachments ----------
@@ -1263,14 +1273,14 @@
             })
             .catch(function () {});
     }
-    setInterval(poll, 3000);
+    TCI(poll, 3000);
 
     // ---------- Message actions: menu, react, reply, copy, forward, delete ----------
     var menu     = document.getElementById('tcMenu');
     var fwdModal = document.getElementById('tcForward');
     var replyBar = document.getElementById('tcReply');
-    if (menu) document.body.appendChild(menu);         // detach so position:fixed is exact
-    if (fwdModal) document.body.appendChild(fwdModal);
+    if (menu) TCB(menu);         // detach so position:fixed is exact
+    if (fwdModal) TCB(fwdModal);
     var menuMsg = null, replyId = null, forwardId = null, guardUntil = 0, emojiTargetId = null;
 
     // ---------- Emoji reactions: recent quick-bar + full picker ----------
@@ -1304,7 +1314,7 @@
     // ---------- Image lightbox ----------
     var lightbox = document.getElementById('tcLightbox');
     var lbImg = document.getElementById('tcLbImg');
-    if (lightbox) document.body.appendChild(lightbox);
+    if (lightbox) TCB(lightbox);
     function closeLightbox(){ if (lightbox) { lightbox.hidden = true; lbImg.src = ''; } }
     box.addEventListener('click', function (e) {
         var img = e.target.closest('.tc-att-img'); if (!img) return;
@@ -1484,7 +1494,7 @@
 
     // Full emoji picker (built once, moved to body).
     var picker = document.getElementById('tcEmojiPicker');
-    if (picker) document.body.appendChild(picker);
+    if (picker) TCB(picker);
     var pickerBuilt = false;
     function buildPicker(){
         if (pickerBuilt || !picker) return; pickerBuilt = true;
@@ -1509,7 +1519,7 @@
             if (emojiTargetId){ react(emojiTargetId, b.dataset.emoji); recordRecent(b.dataset.emoji); }
             closePicker();
         });
-        document.addEventListener('click', function (e) {
+        TCD('click', function (e) {
             if (picker.hidden) return;
             if (!picker.contains(e.target) && !e.target.closest('[data-more]')) closePicker();
         });
@@ -1536,13 +1546,13 @@
         });
     }
 
-    document.addEventListener('click', function (e) {
+    TCD('click', function (e) {
         if (!menu || menu.hidden) return;
         if (Date.now() < guardUntil) return;
         if (!menu.contains(e.target)) closeMenu();
     });
     box.addEventListener('scroll', function () { if (menu && !menu.hidden) closeMenu(); });
-    document.addEventListener('keydown', function (e) {
+    TCD('keydown', function (e) {
         if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; closeLightbox(); closePicker(); }
     });
 
@@ -1555,7 +1565,7 @@
     // ---------- Group members panel (active group only) ----------
     var membersModal = document.getElementById('tcMembers');
     var membersBtn = document.getElementById('tcMembersBtn');
-    if (membersModal) document.body.appendChild(membersModal);
+    if (membersModal) TCB(membersModal);
     if (membersModal && membersBtn){
         var GID = membersModal.dataset.group;
         function gpost(path, extra){
@@ -1602,7 +1612,7 @@
     var modal = document.getElementById('tcGroupModal');
     var openBtn = document.getElementById('tcNewGroup');
     if (!modal || !openBtn) return;
-    document.body.appendChild(modal);
+    TCB(modal);
     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     var STORE_GROUP = @js(route('admin.team-messages.group.store'));
     var toast = window.apexToast || function () {};
@@ -1629,7 +1639,11 @@
         members.forEach(function (m) { fd.append('members[]', m); });
         fetch(STORE_GROUP, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
-            .then(function (res) { if (res && res.ok) location.href = '?c=' + res.conversation_id; else toast('Could not create group'); });
+            .then(function (res) {
+                if (!res || !res.ok) { toast('Could not create group'); return; }
+                var url = '?c=' + res.conversation_id + (@js(request()->boolean('standalone')) ? '&standalone=1' : '');
+                if (window.tcNav) window.tcNav(url, true); else location.href = url;
+            });
     });
 })();
 
@@ -1637,8 +1651,8 @@
 (function () {
     var cm = document.getElementById('tcConfirmModal');
     var dm = document.getElementById('tcDeleteModal');
-    if (cm) document.body.appendChild(cm);
-    if (dm) document.body.appendChild(dm);
+    if (cm) TCB(cm);
+    if (dm) TCB(dm);
 
     window.tcConfirm = function (message, okLabel) {
         return new Promise(function (resolve) {
@@ -1673,7 +1687,6 @@
     var clearBtn = document.getElementById('tcSearchClear');
     var srBox = document.getElementById('tcSearchResults');
     var noRes = document.getElementById('tcNoResults');
-    var favList = document.getElementById('tcFavList');
     var chatList = document.getElementById('tcChatList');
     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     var SEARCH_URL = @js(route('admin.team-messages.search'));
@@ -1692,14 +1705,9 @@
         rows().forEach(function (r) {
             var show = true;
             if (curFilter === 'unread' && r.dataset.unread !== '1') show = false;
-            if (curFilter === 'fav' && r.dataset.fav !== '1') show = false;
+            if (curFilter === 'groups' && r.dataset.group !== '1') show = false;
             if (searching && r.dataset.name.indexOf(q) < 0) show = false;
             r.hidden = !show; if (show) anyRow = true;
-        });
-        var flat = searching || curFilter !== 'all';
-        contacts.querySelectorAll('.tc-section').forEach(function (s) {
-            if (flat) { s.hidden = true; return; }
-            s.hidden = s.dataset.section === 'fav' ? favList.querySelectorAll('.tc-contact').length === 0 : false;
         });
         if (searching && q.length >= 2) scheduleSearch(search.value.trim());
         else { srBox.hidden = true; srBox.innerHTML = ''; lastQuery = ''; noRes.hidden = anyRow || !searching; }
@@ -1718,8 +1726,9 @@
     function renderResults(msgs){
         if (!msgs.length){ srBox.hidden = true; srBox.innerHTML = ''; }
         else {
+            var sa = @js(request()->boolean('standalone')) ? '&standalone=1' : '';
             srBox.innerHTML = '<div class="tc-section">Messages</div>' + msgs.map(function (m) {
-                return '<a class="tc-sr-item" href="?c=' + m.conversation_id + '"><span class="tc-sr-title">' + esc(m.title)
+                return '<a class="tc-sr-item" href="?c=' + m.conversation_id + sa + '"><span class="tc-sr-title">' + esc(m.title)
                     + '</span><span class="tc-sr-snip">' + esc(m.sender) + ': ' + esc(m.snippet) + '</span></a>';
             }).join('');
             srBox.hidden = false;
@@ -1755,7 +1764,7 @@
             var on = favBtn.classList.toggle('on'); row.dataset.fav = on ? '1' : '0';
             favBtn.title = on ? 'Unfavorite' : 'Favorite';
             post(FAV_URL, { conversation_id: conv, favorite: on ? 1 : 0 });
-            (on ? favList : chatList).insertBefore(row, (on ? favList : chatList).firstChild);
+            if (on) chatList.insertBefore(row, chatList.firstChild);   // float favorites to the top
             applyView();
         } else {
             var m = muteBtn.classList.toggle('on'); row.dataset.muted = m ? '1' : '0';
@@ -1782,7 +1791,46 @@
                 res.presence.forEach(function (p) { var d = document.querySelector('.tc-dot[data-dot="' + p.id + '"]'); if (d) d.classList.toggle('on', !!p.online); });
             }).catch(function () {});
     }
-    setInterval(tick, 20000);
+    TCI(tick, 20000);
+})();
+</script>
+
+{{-- SPA navigation — open chats without a full page reload. Persists across nav
+     (NOT tagged data-tc), re-running only the chat script for the new thread. --}}
+<script>
+(function () {
+    if (window.__tcNavInit) return; window.__tcNavInit = true;
+
+    function samePath(href){ try { return new URL(href, location.href).pathname === location.pathname; } catch (e) { return false; } }
+
+    window.tcNav = function (url, push) {
+        var wrap = document.querySelector('.tc-wrap'); if (!wrap) { location.href = url; return; }
+        wrap.style.opacity = '0.55';
+        fetch(url, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var nw = doc.querySelector('.tc-wrap'), cur = document.querySelector('.tc-wrap');
+                if (!nw || !cur) { location.href = url; return; }
+                cur.replaceWith(nw);
+                if (doc.title) document.title = doc.title;
+                if (push !== false) history.pushState({ tc: 1 }, '', url);
+                var old = document.querySelector('script[data-tc]'); if (old && old.parentNode) old.parentNode.removeChild(old);
+                var s = doc.querySelector('script[data-tc]');
+                if (s){ var el = document.createElement('script'); el.setAttribute('data-tc', ''); el.textContent = s.textContent; document.body.appendChild(el); }
+                var box = document.getElementById('tcMessages'); if (box){ box.scrollTop = box.scrollHeight; }
+            })
+            .catch(function () { location.href = url; });
+    };
+
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('a.tc-contact, a.tc-sr-item');
+        if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (a.getAttribute('target') === '_blank' || !samePath(a.href)) return;
+        e.preventDefault();
+        window.tcNav(a.href, true);
+    });
+    window.addEventListener('popstate', function () { window.tcNav(location.href, false); });
 })();
 </script>
 @endpush

@@ -5,13 +5,14 @@
         ? ($it['conversation_id'] && $active->id === $it['conversation_id'])
         : ($peer && ! $it['is_group'] && $it['peer_id'] === ($peer->id ?? null) && ! $it['conversation_id']);
 @endphp
-<a href="{{ route('admin.team-messages.index', $it['href']) }}"
+<a href="{{ route('admin.team-messages.index', array_merge($it['href'], request()->boolean('standalone') ? ['standalone' => 1] : [])) }}"
    class="tc-contact {{ $isActive ? 'active' : '' }}"
    data-key="{{ $it['active_key'] }}"
    data-name="{{ \Illuminate\Support\Str::lower($it['name']) }}"
    data-unread="{{ $it['unread'] > 0 ? 1 : 0 }}"
    data-fav="{{ $it['favorite'] ? 1 : 0 }}"
    data-muted="{{ $it['muted'] ? 1 : 0 }}"
+   data-group="{{ $it['is_group'] ? 1 : 0 }}"
    @if ($it['conversation_id']) data-conversation="{{ $it['conversation_id'] }}" @endif
    @if ($it['peer_id']) data-peer="{{ $it['peer_id'] }}" @endif>
     @if ($it['is_group'])
