@@ -132,8 +132,9 @@ class Client extends Authenticatable
 
     public static function generateIntakeToken(): string
     {
-        // 48 base62 chars ~ 286 bits of entropy, url-safe, no collisions in practice.
-        return Str::random(48);
+        // 14 base62 chars (~83 bits) — still unguessable, but a much shorter,
+        // cleaner link to share. Alphanumeric, matching the /intake/{token} route.
+        return Str::random(14);
     }
 
     /** Server-to-server intake API key (prefixed so it's recognisable in logs). */
