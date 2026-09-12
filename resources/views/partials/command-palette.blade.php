@@ -16,17 +16,37 @@
 @if ($cmdkMe && ! $cmdkMe->isLeads())
 <div id="cmdk" class="cmdk" hidden>
     <div class="cmdk-backdrop" data-cmdk-close></div>
-    <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="Quick search">
+        <div class="cmdk-head">
+            <div class="cmdk-head-l">
+                <span class="cmdk-head-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                </span>
+                <div>
+                    <div class="cmdk-head-title">Quick Jump</div>
+                    <div class="cmdk-head-sub">Find any client or business owner, instantly</div>
+                </div>
+            </div>
+            <kbd class="cmdk-head-kbd" id="cmdkHeadKbd">⌘ K</kbd>
+        </div>
         <div class="cmdk-input-row">
             <span class="cmdk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg></span>
             <input id="cmdkInput" type="text" placeholder="Search clients or business owners…" autocomplete="off" spellcheck="false" aria-label="Search">
-            <kbd class="cmdk-esc">esc</kbd>
+            <button type="button" class="cmdk-close" data-cmdk-close aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
         <div id="cmdkResults" class="cmdk-results" role="listbox"></div>
         <div class="cmdk-foot">
-            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
-            <span><kbd>↵</kbd> open</span>
-            <span><kbd>esc</kbd> close</span>
+            <div class="cmdk-foot-keys">
+                <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+                <span><kbd>↵</kbd> open</span>
+                <span><kbd>esc</kbd> close</span>
+            </div>
+            <div class="cmdk-foot-tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Searches across all your business owners
+            </div>
         </div>
     </div>
 </div>
@@ -45,20 +65,32 @@
         backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); animation:cmdkFade .2s ease both; }
     @keyframes cmdkFade { from { opacity:0; } to { opacity:1; } }
 
-    .cmdk-panel { position:relative; width:min(720px,94vw); margin-top:9vh; background:var(--pro-surface,#fff);
-        border:1px solid var(--pro-line,#e6ebf2); border-radius:22px; overflow:hidden;
-        box-shadow:0 40px 120px rgba(3,7,18,.55), 0 0 60px -12px rgba(79,70,229,.45);
+    .cmdk-panel { position:relative; width:min(760px,94vw); margin-top:8vh; background:var(--pro-surface,#fff);
+        border:1px solid var(--pro-line,#e6ebf2); border-radius:24px; overflow:hidden;
+        box-shadow:0 44px 130px rgba(3,7,18,.58), 0 0 66px -12px rgba(79,70,229,.48);
         animation:cmdkPop .36s cubic-bezier(.16,1,.3,1) both; }
     @keyframes cmdkPop { 0% { opacity:0; transform:translateY(-16px) scale(.94); } 60% { opacity:1; } 100% { opacity:1; transform:none; } }
     .cmdk-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#4f46e5,#2563eb,#22d3ee); }
 
-    .cmdk-input-row { display:flex; align-items:center; gap:14px; padding:20px 22px; border-bottom:1px solid var(--pro-line,#eef2f7); }
-    .cmdk-ico { flex:none; width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+    .cmdk-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px 2px; }
+    .cmdk-head-l { display:flex; align-items:center; gap:13px; }
+    .cmdk-head-badge { flex:none; width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+        background:linear-gradient(135deg,#4f46e5,#22d3ee); color:#fff; box-shadow:0 6px 15px rgba(79,70,229,.34); }
+    .cmdk-head-badge svg { width:18px; height:18px; }
+    .cmdk-head-title { font-size:15.5px; font-weight:800; letter-spacing:-.01em; color:var(--pro-text,#0f172a); }
+    .cmdk-head-sub { font-size:12px; color:#94a3b8; margin-top:1px; }
+    .cmdk-head-kbd { font-size:11px; font-weight:700; color:#64748b; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-bottom-width:2px; border-radius:8px; padding:5px 11px; }
+
+    .cmdk-input-row { display:flex; align-items:center; gap:15px; padding:16px 22px 18px; border-bottom:1px solid var(--pro-line,#eef2f7); }
+    .cmdk-ico { flex:none; width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center;
         background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; box-shadow:0 8px 18px rgba(79,70,229,.34); }
-    .cmdk-ico svg { width:20px; height:20px; }
-    .cmdk-input-row input { flex:1; border:0; outline:none; background:transparent; font-size:20px; font-weight:500; letter-spacing:-.01em; color:var(--pro-text,#0f172a); }
+    .cmdk-ico svg { width:21px; height:21px; }
+    .cmdk-input-row input { flex:1; border:0; outline:none; background:transparent; font-size:21px; font-weight:500; letter-spacing:-.01em; color:var(--pro-text,#0f172a); }
     .cmdk-input-row input::placeholder { color:#9aa7bd; font-weight:400; }
-    .cmdk-esc { font-size:11px; font-weight:600; color:#94a3b8; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-bottom-width:2px; border-radius:7px; padding:4px 9px; }
+    .cmdk-close { flex:none; width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+        background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); color:#64748b; transition:background .12s, color .12s, transform .12s; }
+    .cmdk-close svg { width:17px; height:17px; }
+    .cmdk-close:hover { background:#fee2e2; border-color:#fecaca; color:#dc2626; transform:rotate(90deg); }
 
     .cmdk-results { max-height:58vh; overflow-y:auto; padding:10px; scrollbar-width:thin; }
     .cmdk-results::-webkit-scrollbar { width:10px; }
@@ -84,13 +116,17 @@
     .cmdk-empty { display:flex; flex-direction:column; align-items:center; gap:11px; padding:46px 16px; color:#94a3b8; font-size:14px; }
     .cmdk-empty svg { width:30px; height:30px; color:#cbd5e1; }
 
-    .cmdk-foot { display:flex; gap:18px; padding:12px 20px; border-top:1px solid var(--pro-line,#eef2f7); color:#94a3b8; font-size:12px; }
+    .cmdk-foot { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:13px 22px; border-top:1px solid var(--pro-line,#eef2f7); color:#94a3b8; font-size:12px; }
+    .cmdk-foot-keys { display:flex; gap:16px; }
     .cmdk-foot kbd { font-family:inherit; font-size:11px; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-bottom-width:2px; border-radius:6px; padding:1px 6px; margin-right:3px; }
+    .cmdk-foot-tag { display:inline-flex; align-items:center; gap:6px; font-weight:600; color:#a0abc0; white-space:nowrap; }
+    .cmdk-foot-tag svg { width:13px; height:13px; color:#818cf8; }
+    @media (max-width:560px){ .cmdk-foot-tag { display:none; } }
 
     :root[data-theme="dark"] .cmdk-panel { background:#0e1526; border-color:#233150; box-shadow:0 40px 120px rgba(0,0,0,.7), 0 0 60px -12px rgba(99,102,241,.5); }
     :root[data-theme="dark"] .cmdk-input-row, :root[data-theme="dark"] .cmdk-foot { border-color:#1e293b; }
     :root[data-theme="dark"] .cmdk-item.active { background:linear-gradient(90deg, rgba(99,102,241,.20), rgba(34,211,238,.05)); }
-    :root[data-theme="dark"] .cmdk-esc, :root[data-theme="dark"] .cmdk-pill, :root[data-theme="dark"] .cmdk-foot kbd { background:#1a2440; border-color:#2b3b5e; color:#94a3b8; }
+    :root[data-theme="dark"] .cmdk-pill, :root[data-theme="dark"] .cmdk-foot kbd, :root[data-theme="dark"] .cmdk-head-kbd, :root[data-theme="dark"] .cmdk-close { background:#1a2440; border-color:#2b3b5e; color:#94a3b8; }
     @media (prefers-reduced-motion: reduce) { .cmdk-panel, .cmdk-item, .cmdk-backdrop { animation:none !important; } }
 </style>
 
@@ -98,6 +134,9 @@
 (function () {
     var el      = document.getElementById('cmdk');
     if (!el) return;
+    // Show the right shortcut label for the platform (⌘ on Mac, Ctrl elsewhere).
+    var headKbd = document.getElementById('cmdkHeadKbd');
+    if (headKbd) headKbd.textContent = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘ K' : 'Ctrl K';
     var input   = document.getElementById('cmdkInput');
     var results = document.getElementById('cmdkResults');
     var goForm  = document.getElementById('cmdkGo');
