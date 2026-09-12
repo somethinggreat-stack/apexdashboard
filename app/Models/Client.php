@@ -166,7 +166,14 @@ class Client extends Authenticatable
 
     public function intakeUrl(): string
     {
-        return url('/intake/' . $this->intake_token);
+        // When a neutral public base is configured (a free reverse-proxy host),
+        // build the client-facing link from it so the app's real domain never
+        // shows. Otherwise fall back to the app's own URL.
+        $base = rtrim((string) config('intake.public_base'), '/');
+
+        return $base !== ''
+            ? $base . '/intake/' . $this->intake_token
+            : url('/intake/' . $this->intake_token);
     }
 
     public function intakeLogoUrl(): ?string

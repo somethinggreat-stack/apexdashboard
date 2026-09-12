@@ -194,7 +194,9 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('intake.store', ['token' => $token]) }}" enctype="multipart/form-data" id="intakeForm">
+        {{-- Relative action keeps the POST on whatever host is showing (a neutral
+             reverse-proxy), so the app's real domain never appears. --}}
+        <form method="POST" action="/intake/{{ $token }}" enctype="multipart/form-data" id="intakeForm">
             @csrf
 
             {{-- 1 · Your Details --}}
