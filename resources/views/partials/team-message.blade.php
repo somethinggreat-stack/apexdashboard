@@ -35,4 +35,7 @@
             <span class="tc-react {{ ($r['mine'] ?? false) ? 'mine' : '' }}" data-emoji="{{ $r['emoji'] }}">{{ $r['emoji'] }}{{ $r['count'] > 1 ? ' '.$r['count'] : '' }}</span>
         @endforeach
     </div>
+    @unless ($del)
+        <button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+    @endunless
 </div>

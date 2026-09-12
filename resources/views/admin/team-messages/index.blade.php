@@ -170,7 +170,8 @@
     .tc-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; background:var(--pro-soft,#f7f9fc); }
     .tc-msg { display:flex; flex-direction:column; align-items:flex-start; max-width:74%; }
     .tc-msg.mine { align-self:flex-end; align-items:flex-end; }
-    .tc-bubble { padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; color:var(--pro-text,#0f172a); background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); white-space:pre-wrap; word-break:break-word; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .tc-bubble { padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; color:var(--pro-text,#0f172a); background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .tc-text { white-space:pre-wrap; word-break:break-word; }
     .tc-msg.mine .tc-bubble { background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; border-color:transparent; }
     .tc-time { font-size:10.5px; color:#94a3b8; margin:4px 6px 0; display:inline-flex; align-items:center; gap:4px; }
     .tc-btick { display:inline-flex; width:15px; color:#9aa7b8; }
@@ -179,6 +180,14 @@
     .tc-thread-empty { margin:auto; color:#94a3b8; font-size:13.5px; }
     .tc-msg { position:relative; }
     .tc-bubble { cursor:default; }
+
+    /* Three-dots action trigger on each message (hover on desktop, always on touch). */
+    .tc-dots { position:absolute; top:0; opacity:0; width:26px; height:26px; padding:0; border:1px solid var(--pro-line,#e6ebf2); background:var(--pro-surface,#fff); color:#64748b; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(15,23,42,.14); transition:opacity .12s; }
+    .tc-dots svg { width:15px; height:15px; }
+    .tc-msg:hover .tc-dots, .tc-dots:focus-visible { opacity:1; }
+    .tc-msg.mine .tc-dots { left:-34px; }
+    .tc-msg:not(.mine) .tc-dots { right:-34px; }
+    @media (hover:none){ .tc-dots { opacity:1; } }
     /* These elements set their own display in the class, which would otherwise
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden] { display:none !important; }
@@ -273,6 +282,7 @@
     var STORE  = @js(route('admin.team-messages.store'));
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
+    var DOTS = '<button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
     var PEER = @js($active?->full_name ?? '');
 
@@ -305,6 +315,7 @@
         var tick = (m.mine && !m.deleted) ? '<span class="tc-btick">' + TICK + '</span>' : '';
         h += '<div class="tc-time">' + esc(m.at) + tick + '</div>';
         h += '<div class="tc-reacts">' + reactsHtml(m.reactions) + '</div>';
+        if (!m.deleted) h += DOTS;
         return h;
     }
 
@@ -529,6 +540,15 @@
         var t = e.touches[0]; lp = setTimeout(function () { openMenu(t.clientX, t.clientY, el); }, 480);
     }, { passive: true });
     ['touchend','touchmove','touchcancel'].forEach(function (ev) { box.addEventListener(ev, function () { clearTimeout(lp); }); });
+
+    // Three-dots trigger opens the same action menu.
+    box.addEventListener('click', function (e) {
+        var dots = e.target.closest('.tc-dots'); if (!dots) return;
+        e.stopPropagation();
+        var el = dots.closest('.tc-msg'); if (!el) return;
+        var r = dots.getBoundingClientRect();
+        openMenu(r.left, r.bottom + 4, el);
+    });
 
     // Tap a reaction pill to toggle that emoji.
     box.addEventListener('click', function (e) {
