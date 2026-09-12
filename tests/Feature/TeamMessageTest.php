@@ -121,8 +121,8 @@ class TeamMessageTest extends TestCase
         // Unread badge shows in the sidebar item before opening.
         $this->actingAs($this->super, 'admin')->get('/admin/team-messages')
             ->assertOk()
-            ->assertViewHas('items', function ($items) use ($va) {
-                foreach ($items as $it) if (($it['peer_id'] ?? null) === $va->id) return $it['unread'] === 1;
+            ->assertViewHas('chats', function ($chats) use ($va) {
+                foreach ($chats as $it) if (($it['peer_id'] ?? null) === $va->id) return $it['unread'] === 1;
                 return false;
             });
 

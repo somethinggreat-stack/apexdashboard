@@ -77,6 +77,10 @@ class TeamMessageController extends Controller
             return strcasecmp($a['name'], $b['name']);
         });
 
+        // Favorites float into their own section at the top.
+        $favorites = array_values(array_filter($items, fn ($it) => $it['favorite']));
+        $chats     = array_values(array_filter($items, fn ($it) => ! $it['favorite']));
+
         // Resolve the active thread: ?c=<conversation> or ?with=<teammate>.
         $active = null; $peer = null; $messages = collect(); $members = collect(); $addable = collect();
 
@@ -87,9 +91,13 @@ class TeamMessageController extends Controller
             if ($peer) $active = $dmByPeer[$peer->id] ?? null;   // may be null → virtual DM
         }
 
+        $pinned = collect();
+
         if ($active) {
             $messages = $active->messages()
                 ->with('sender', 'replyTo.sender', 'attachments')->orderBy('id')->get();
+            $pinned = $active->messages()->whereNotNull('pinned_at')->with('sender')
+                ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
 
             if ($active->isDm()) {
@@ -102,8 +110,8 @@ class TeamMessageController extends Controller
         }
 
         return view($this->adminView('admin.team-messages.index'), [
-            'me' => $me, 'items' => $items, 'active' => $active, 'peer' => $peer,
-            'messages' => $messages, 'members' => $members, 'addable' => $addable,
+            'me' => $me, 'favorites' => $favorites, 'chats' => $chats, 'active' => $active, 'peer' => $peer,
+            'messages' => $messages, 'members' => $members, 'addable' => $addable, 'pinned' => $pinned,
             'teammates' => $teammates, 'emoji' => self::EMOJI, 'groupIcons' => self::GROUP_ICONS,
             'readUpTo' => $active ? $this->readUpTo($active, $me->id) : 0,
             'watermarks' => $active ? $this->watermarks($active, $me->id) : [],
@@ -279,6 +287,78 @@ class TeamMessageController extends Controller
         $msg->save();
 
         return response()->json(['ok' => true, 'reactions' => $this->reactionsOf($msg, $me->id)]);
+    }
+
+    /** Toggle a conversation as a favorite (pinned to the top of my sidebar). */
+    public function favorite(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->input('conversation_id'));
+        $fav = $request->boolean('favorite');
+        $conv->participants()->where('admin_id', $me->id)->update(['favorite' => $fav]);
+
+        return response()->json(['ok' => true, 'favorite' => $fav]);
+    }
+
+    /** Toggle mute for a conversation (no unread badge / notifications for me). */
+    public function mute(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->input('conversation_id'));
+        $muted = $request->boolean('muted');
+        $conv->participants()->where('admin_id', $me->id)->update(['muted' => $muted]);
+
+        return response()->json(['ok' => true, 'muted' => $muted]);
+    }
+
+    /** Pin / unpin a message within its conversation. */
+    public function pin(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $msg = $this->participantMessage($me, (int) $request->input('message_id'));
+        abort_if($msg->isSystem() || $msg->deleted_at, 404);
+
+        if ($request->boolean('pinned')) {
+            $msg->forceFill(['pinned_at' => now(), 'pinned_by' => $me->id])->save();
+        } else {
+            $msg->forceFill(['pinned_at' => null, 'pinned_by' => null])->save();
+        }
+
+        return response()->json(['ok' => true, 'pinned' => (bool) $msg->pinned_at]);
+    }
+
+    /** Search my conversations' message text (people/group names are filtered client-side). */
+    public function search(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $q = trim((string) $request->query('q'));
+        if (mb_strlen($q) < 2) return response()->json(['messages' => []]);
+
+        $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
+
+        $msgs = TeamMessage::whereIn('conversation_id', $convIds)
+            ->where('type', 'text')->whereNull('deleted_at')
+            ->where('body', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%')
+            ->with('sender', 'conversation.participants.admin')
+            ->latest('id')->limit(20)->get();
+
+        return response()->json([
+            'messages' => $msgs->map(fn ($m) => [
+                'conversation_id' => $m->conversation_id,
+                'title'   => $this->convTitle($m->conversation, $me->id),
+                'snippet' => Str::limit($m->body, 80),
+                'sender'  => $this->senderInfo($m->sender)['first'],
+                'at'      => $m->created_at->timezone(self::TZ)->format('M j'),
+            ])->values(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    private function convTitle(Conversation $conv, int $meId): string
+    {
+        if ($conv->isGroup()) return $conv->name ?: 'Group';
+        $other = $conv->otherAdmin($meId);
+
+        return $other->full_name ?? 'Direct message';
     }
 
     public function forward(Request $request)
@@ -474,6 +554,7 @@ class TeamMessageController extends Controller
             'reply'       => $this->replySnippet($m, $meId),
             'attachments' => $m->deleted_at ? [] : $this->attachmentsOf($m),
             'sender'      => $this->senderInfo($m->sender),
+            'pinned'      => (bool) $m->pinned_at,
         ];
     }
 
@@ -527,6 +608,7 @@ class TeamMessageController extends Controller
     private function dmItem(Admin $me, Admin $peer, ?Conversation $c, $lastMsgs, array $unread): array
     {
         $last = $c && $c->last_message_id ? $lastMsgs->get($c->last_message_id) : null;
+        $part = $c ? $c->participantFor($me->id) : null;
 
         return [
             'kind'            => 'dm',
@@ -537,6 +619,8 @@ class TeamMessageController extends Controller
             'icon'            => null,
             'peer'            => $peer,
             'online'          => $peer->isOnline(),
+            'favorite'        => $part ? (bool) $part->favorite : false,
+            'muted'           => $part ? (bool) $part->muted : false,
             'href'            => $c ? ['c' => $c->id] : ['with' => $peer->id],
             'preview'         => $last ? $this->previewOf($me, $c, $last, false) : null,
             'unread'          => $c ? ($unread[$c->id] ?? 0) : 0,
@@ -548,6 +632,7 @@ class TeamMessageController extends Controller
     private function groupItem(Admin $me, Conversation $c, $lastMsgs, array $unread): array
     {
         $last = $c->last_message_id ? $lastMsgs->get($c->last_message_id) : null;
+        $part = $c->participantFor($me->id);
 
         return [
             'kind'            => 'group',
@@ -557,6 +642,8 @@ class TeamMessageController extends Controller
             'is_group'        => true,
             'icon'            => $c->icon ?: '💬',
             'peer'            => null,
+            'favorite'        => $part ? (bool) $part->favorite : false,
+            'muted'           => $part ? (bool) $part->muted : false,
             'members_count'   => $c->participants->count(),
             'href'            => ['c' => $c->id],
             'preview'         => $last ? $this->previewOf($me, $c, $last, true) : null,

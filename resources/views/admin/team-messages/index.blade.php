@@ -31,45 +31,34 @@
                 </button>
             </div>
             <p>Message any teammate or start a group.</p>
+            <div class="tc-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="tcSearch" placeholder="Search people & messages" autocomplete="off">
+                <button type="button" id="tcSearchClear" hidden aria-label="Clear">&times;</button>
+            </div>
+            <div class="tc-filters">
+                <button type="button" class="tc-filter active" data-filter="all">All</button>
+                <button type="button" class="tc-filter" data-filter="unread">Unread</button>
+                <button type="button" class="tc-filter" data-filter="fav">Favorites</button>
+            </div>
         </div>
-        <div class="tc-contacts">
-            @forelse ($items as $it)
-                @php $key = $it['active_key']; $u = $it['unread']; $p = $it['preview'];
-                     $isActive = $active
-                        ? ($it['conversation_id'] && $active->id === $it['conversation_id'])
-                        : ($peer && ! $it['is_group'] && $it['peer_id'] === ($peer->id ?? null) && ! $it['conversation_id']);
-                @endphp
-                <a href="{{ route('admin.team-messages.index', $it['href']) }}"
-                   class="tc-contact {{ $isActive ? 'active' : '' }}"
-                   data-key="{{ $key }}" @if ($it['conversation_id']) data-conversation="{{ $it['conversation_id'] }}" @endif @if ($it['peer_id']) data-peer="{{ $it['peer_id'] }}" @endif>
-                    @if ($it['is_group'])
-                        <span class="tc-avatar tc-avatar--group">{{ $it['icon'] }}</span>
-                    @else
-                        <span class="tc-av">{!! $avatar($it['peer']) !!}<i class="tc-dot {{ $it['online'] ? 'on' : '' }}" data-dot="{{ $it['peer_id'] }}"></i></span>
-                    @endif
-                    <span class="tc-c-body">
-                        <span class="tc-c-top">
-                            <span class="tc-c-name">{{ $it['name'] }}</span>
-                            <span class="tc-c-time {{ $u > 0 ? 'unread' : '' }}" data-time>{{ $p['at'] ?? '' }}</span>
-                        </span>
-                        <span class="tc-c-sub">
-                            <span class="tc-c-preview {{ $u > 0 ? 'unread' : '' }}" data-preview>
-                                @if ($p)
-                                    @if ($p['mine'])<span class="tc-tick {{ $p['read'] ? 'read' : '' }}" data-tick>@include('partials.tick')</span>@endif
-                                    <span data-preview-text>{{ Str::limit($p['text'], 40) }}</span>
-                                @elseif ($it['is_group'])
-                                    <span class="tc-c-muted">{{ $it['members_count'] }} members</span>
-                                @else
-                                    <span class="tc-c-muted">{{ $it['peer']->isSuper() ? 'Super Admin' : 'VA' }} · Tap to message</span>
-                                @endif
-                            </span>
-                            @if ($u > 0)<span class="tc-unread" data-badge>{{ $u }}</span>@endif
-                        </span>
-                    </span>
-                </a>
-            @empty
-                <div class="tc-empty">No teammates to message yet.</div>
-            @endforelse
+        <div class="tc-contacts" id="tcContacts">
+            <div class="tc-section" data-section="fav" {{ count($favorites) ? '' : 'hidden' }}>Favorites</div>
+            <div id="tcFavList">
+                @foreach ($favorites as $it)
+                    @include('partials.team-chat-row', ['it' => $it])
+                @endforeach
+            </div>
+            <div class="tc-section" data-section="chats">Chats</div>
+            <div id="tcChatList">
+                @forelse ($chats as $it)
+                    @include('partials.team-chat-row', ['it' => $it])
+                @empty
+                    <div class="tc-empty">No teammates to message yet.</div>
+                @endforelse
+            </div>
+            <div class="tc-search-results" id="tcSearchResults" hidden></div>
+            <div class="tc-no-results" id="tcNoResults" hidden>No matches.</div>
         </div>
     </aside>
 
@@ -95,6 +84,24 @@
                     </div>
                 @endif
             </div>
+
+            @if ($pinned->isNotEmpty())
+                <div class="tc-pinned" id="tcPinned">
+                    <button type="button" class="tc-pinned-head" id="tcPinnedHead">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+                        <span class="tc-pinned-latest">{{ $pinned->first()->body !== '' ? \Illuminate\Support\Str::limit($pinned->first()->body, 60) : '📎 Attachment' }}</span>
+                        @if ($pinned->count() > 1)<span class="tc-pinned-count">{{ $pinned->count() }}</span>@endif
+                    </button>
+                    <div class="tc-pinned-drop" id="tcPinnedDrop" hidden>
+                        @foreach ($pinned as $pm)
+                            <div class="tc-pinned-item" data-goto="{{ $pm->id }}">
+                                <span class="tc-pinned-text">{{ optional($pm->sender)->full_name ? \Illuminate\Support\Str::of(optional($pm->sender)->full_name)->before(' ').': ' : '' }}{{ $pm->body !== '' ? \Illuminate\Support\Str::limit($pm->body, 70) : '📎 Attachment' }}</span>
+                                <button type="button" class="tc-pinned-x" data-unpin="{{ $pm->id }}" title="Unpin">&times;</button>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             <div class="tc-messages" id="tcMessages"
                  @if ($active) data-conversation="{{ $active->id }}" @endif
@@ -178,6 +185,9 @@
                 </button>
                 <button type="button" class="tc-menu-item" data-act="forward">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg> Forward
+                </button>
+                <button type="button" class="tc-menu-item" data-act="pin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg> <span data-pin-label>Pin</span>
                 </button>
                 <button type="button" class="tc-menu-item danger" data-act="delete" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete
@@ -345,7 +355,60 @@
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
-    .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden] { display:none !important; }
+    .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden],
+    .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden] { display:none !important; }
+
+    /* Search + filters */
+    .tc-search { position:relative; display:flex; align-items:center; margin-top:12px; }
+    .tc-search svg { position:absolute; left:12px; width:16px; height:16px; color:#94a3b8; pointer-events:none; }
+    .tc-search input { width:100%; border:1.5px solid rgba(148,163,184,.28); border-radius:12px; padding:9px 30px 9px 34px; font:inherit; font-size:13px; background:var(--pro-soft,#f7f9fc); color:var(--pro-text,#0f172a); outline:none; }
+    .tc-search input:focus { border-color:#6366f1; background:var(--pro-surface,#fff); box-shadow:0 0 0 3px rgba(99,102,241,.13); }
+    #tcSearchClear { position:absolute; right:8px; border:0; background:transparent; color:#94a3b8; font-size:18px; line-height:1; cursor:pointer; padding:2px 4px; }
+    .tc-filters { display:flex; gap:6px; margin-top:10px; }
+    .tc-filter { border:1px solid rgba(148,163,184,.28); background:transparent; color:#64748b; cursor:pointer; padding:5px 12px; border-radius:999px; font:inherit; font-size:12px; font-weight:700; }
+    .tc-filter:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-filter.active { background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; border-color:transparent; }
+
+    .tc-section { padding:12px 12px 4px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
+    .tc-no-results { padding:24px 14px; text-align:center; color:#94a3b8; font-size:13px; }
+
+    /* Row favorite/mute actions */
+    .tc-contact { position:relative; }
+    .tc-row-actions { position:absolute; right:8px; top:50%; transform:translateY(-50%); display:none; gap:2px; background:var(--pro-surface,#fff); border-radius:10px; padding:2px; box-shadow:0 4px 12px -4px rgba(15,23,42,.3); }
+    .tc-contact:hover .tc-row-actions { display:flex; }
+    .tc-row-act { border:0; background:transparent; cursor:pointer; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#94a3b8; }
+    .tc-row-act:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-row-act svg { width:16px; height:16px; }
+    .tc-fav-btn svg { fill:none; }
+    .tc-fav-btn.on { color:#f59e0b; } .tc-fav-btn.on svg { fill:#f59e0b; }
+    .tc-mute-btn.on { color:#6366f1; }
+    .tc-mute-ic { flex:none; color:#94a3b8; display:inline-flex; } .tc-mute-ic svg { width:14px; height:14px; }
+
+    /* Pinned banner */
+    .tc-pinned { position:relative; z-index:2; border-bottom:1px solid rgba(148,163,184,.14); background:rgba(250,204,21,.08); }
+    .tc-pinned-head { display:flex; align-items:center; gap:9px; width:100%; border:0; background:transparent; cursor:pointer; padding:10px 20px; text-align:left; font:inherit; }
+    .tc-pinned-head svg { width:15px; height:15px; color:#ca8a04; flex:none; }
+    .tc-pinned-latest { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-pinned-count { flex:none; font-size:11px; font-weight:800; color:#fff; background:#ca8a04; border-radius:999px; padding:1px 7px; }
+    .tc-pinned-drop { flex-direction:column; max-height:180px; overflow-y:auto; padding:4px 12px 10px; }
+    .tc-pinned-item { display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:9px; cursor:pointer; }
+    .tc-pinned-item:hover { background:rgba(250,204,21,.12); }
+    .tc-pinned-text { flex:1; min-width:0; font-size:12.5px; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-pinned-x { flex:none; border:0; background:transparent; color:#94a3b8; font-size:16px; line-height:1; cursor:pointer; padding:0 4px; }
+    .tc-pinned-x:hover { color:#ef4444; }
+    .tc-msg[data-pinned="1"] .tc-bubble { box-shadow:0 0 0 1.5px rgba(202,138,4,.4), 0 8px 20px -10px rgba(30,41,59,.32); }
+
+    /* Search results */
+    .tc-search-results { padding:4px 8px 10px; }
+    .tc-sr-item { display:block; padding:9px 11px; border-radius:11px; text-decoration:none; }
+    .tc-sr-item:hover { background:var(--pro-soft,#f5f7fb); }
+    .tc-sr-title { font-size:13px; font-weight:700; color:var(--pro-text,#0f172a); }
+    .tc-sr-snip { font-size:12px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    :root[data-theme="dark"] .tc-search input { background:#0b1120; border-color:#233150; color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-row-actions { background:#141d33; }
+    :root[data-theme="dark"] .tc-pinned { background:rgba(250,204,21,.06); }
+    :root[data-theme="dark"] .tc-sr-item:hover, :root[data-theme="dark"] .tc-filter:hover { background:#182444; }
 
     /* Emoji reaction quick bar + full picker */
     .tc-menu-emoji button { position:relative; }
@@ -648,6 +711,8 @@
     :root[data-theme="dark"] .tc-th-btn, :root[data-theme="dark"] .tc-inp { background:#141d33; border-color:#233150; color:#e2e8f0; }
     :root[data-theme="dark"] .tc-member-row:hover, :root[data-theme="dark"] .tc-addable:hover { background:#182444; }
 
+    .tc-msg.tc-flash .tc-bubble { animation:tcFlash 1.3s ease; }
+    @keyframes tcFlash { 0%,100%{ box-shadow:0 8px 20px -10px rgba(30,41,59,.32); } 30%{ box-shadow:0 0 0 3px rgba(99,102,241,.5); } }
     @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
     @keyframes tcAurora { from { transform:translate(-3%,-2%) rotate(0deg); } to { transform:translate(3%,3%) rotate(7deg); } }
     @keyframes tcWave { 0%,60%,100%{transform:rotate(0);} 10%{transform:rotate(14deg);} 20%{transform:rotate(-8deg);} 30%{transform:rotate(14deg);} 40%{transform:rotate(-4deg);} 50%{transform:rotate(10deg);} }
@@ -781,6 +846,7 @@
         }
         el.className = 'tc-msg' + (m.mine ? ' mine' : '') + (IS_GROUP && !m.mine ? ' tc-msg--grp' : '');
         el.dataset.id = m.id;
+        el.dataset.pinned = m.pinned ? 1 : 0;
         el.innerHTML = senderChip(m) + bubbleInner(m);
         box.appendChild(el);
         if (m.id > lastId) lastId = m.id;
@@ -1075,6 +1141,8 @@
         menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'),
                     text: txtEl ? txtEl.textContent : '', author: nameEl ? nameEl.textContent : '' };
         menu.querySelector('[data-act="delete"]').hidden = !menuMsg.mine;
+        var pinLbl = menu.querySelector('[data-pin-label]');
+        if (pinLbl) pinLbl.textContent = el.dataset.pinned === '1' ? 'Unpin' : 'Pin';
         renderQuickEmojis();
         menu.hidden = false;
         var mw = menu.offsetWidth, mh = menu.offsetHeight;
@@ -1114,6 +1182,31 @@
             try { document.execCommand('copy'); toast('Copied'); } catch (e) {}
             ta.remove();
         }
+    }
+
+    function pinMsg(){
+        if (!menuMsg) return;
+        var el = box.querySelector('.tc-msg[data-id="' + menuMsg.id + '"]');
+        var isPinned = el && el.dataset.pinned === '1';
+        postJson(BASE + '/pin', { message_id: menuMsg.id, pinned: isPinned ? 0 : 1 })
+            .then(function (res) { if (res && res.ok) location.reload(); });
+    }
+
+    // Pinned banner: expand/collapse, jump to a pinned message, unpin.
+    var pinnedHead = document.getElementById('tcPinnedHead');
+    var pinnedDrop = document.getElementById('tcPinnedDrop');
+    if (pinnedHead && pinnedDrop){
+        pinnedHead.addEventListener('click', function () { pinnedDrop.hidden = !pinnedDrop.hidden; });
+        pinnedDrop.addEventListener('click', function (e) {
+            var un = e.target.closest('[data-unpin]');
+            if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res) { if (res && res.ok) location.reload(); }); return; }
+            var go = e.target.closest('[data-goto]');
+            if (go){
+                var t = box.querySelector('.tc-msg[data-id="' + go.dataset.goto + '"]');
+                if (t){ t.scrollIntoView({ behavior:'smooth', block:'center' }); t.classList.add('tc-flash'); setTimeout(function () { t.classList.remove('tc-flash'); }, 1300); }
+                pinnedDrop.hidden = true;
+            }
+        });
     }
 
     function delMsg(){
@@ -1228,6 +1321,7 @@
             if (act === 'reply') startReply();
             else if (act === 'copy') copyMsg();
             else if (act === 'forward') openForward();
+            else if (act === 'pin') pinMsg();
             else if (act === 'delete') delMsg();
             closeMenu();
         });
@@ -1323,6 +1417,110 @@
         fetch(STORE_GROUP, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) { if (res && res.ok) location.href = '?c=' + res.conversation_id; else toast('Could not create group'); });
+    });
+})();
+
+// Sidebar organize — search, filters, favorite, mute (works with no chat open).
+(function () {
+    var search = document.getElementById('tcSearch'); if (!search) return;
+    var contacts = document.getElementById('tcContacts');
+    var clearBtn = document.getElementById('tcSearchClear');
+    var srBox = document.getElementById('tcSearchResults');
+    var noRes = document.getElementById('tcNoResults');
+    var favList = document.getElementById('tcFavList');
+    var chatList = document.getElementById('tcChatList');
+    var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var SEARCH_URL = @js(route('admin.team-messages.search'));
+    var FAV_URL = @js(route('admin.team-messages.favorite'));
+    var MUTE_URL = @js(route('admin.team-messages.mute'));
+    var curFilter = 'all', searchTimer, lastQuery = '';
+
+    function esc(s){ return (s||'').replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    function rows(){ return contacts.querySelectorAll('.tc-contact'); }
+
+    function applyView(){
+        var q = search.value.trim().toLowerCase();
+        var searching = q.length > 0;
+        clearBtn.hidden = !searching;
+        var anyRow = false;
+        rows().forEach(function (r) {
+            var show = true;
+            if (curFilter === 'unread' && r.dataset.unread !== '1') show = false;
+            if (curFilter === 'fav' && r.dataset.fav !== '1') show = false;
+            if (searching && r.dataset.name.indexOf(q) < 0) show = false;
+            r.hidden = !show; if (show) anyRow = true;
+        });
+        var flat = searching || curFilter !== 'all';
+        contacts.querySelectorAll('.tc-section').forEach(function (s) {
+            if (flat) { s.hidden = true; return; }
+            s.hidden = s.dataset.section === 'fav' ? favList.querySelectorAll('.tc-contact').length === 0 : false;
+        });
+        if (searching && q.length >= 2) scheduleSearch(search.value.trim());
+        else { srBox.hidden = true; srBox.innerHTML = ''; lastQuery = ''; noRes.hidden = anyRow || !searching; }
+    }
+
+    function scheduleSearch(q){
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            if (q === lastQuery) return; lastQuery = q;
+            fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (res) { if (search.value.trim() === q) renderResults(res.messages || []); })
+                .catch(function () {});
+        }, 250);
+    }
+    function renderResults(msgs){
+        if (!msgs.length){ srBox.hidden = true; srBox.innerHTML = ''; }
+        else {
+            srBox.innerHTML = '<div class="tc-section">Messages</div>' + msgs.map(function (m) {
+                return '<a class="tc-sr-item" href="?c=' + m.conversation_id + '"><span class="tc-sr-title">' + esc(m.title)
+                    + '</span><span class="tc-sr-snip">' + esc(m.sender) + ': ' + esc(m.snippet) + '</span></a>';
+            }).join('');
+            srBox.hidden = false;
+        }
+        var anyRow = Array.prototype.some.call(rows(), function (r) { return !r.hidden; });
+        noRes.hidden = anyRow || !srBox.hidden;
+    }
+
+    search.addEventListener('input', applyView);
+    clearBtn.addEventListener('click', function () { search.value = ''; applyView(); search.focus(); });
+    document.querySelectorAll('.tc-filter').forEach(function (f) {
+        f.addEventListener('click', function () {
+            document.querySelectorAll('.tc-filter').forEach(function (x) { x.classList.remove('active'); });
+            f.classList.add('active'); curFilter = f.dataset.filter; applyView();
+        });
+    });
+
+    function post(url, data){
+        var fd = new FormData(); fd.append('_token', csrf);
+        Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });
+        return fetch(url, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).catch(function () {});
+    }
+
+    contacts.addEventListener('click', function (e) {
+        var favBtn = e.target.closest('[data-fav-toggle]');
+        var muteBtn = e.target.closest('[data-mute-toggle]');
+        if (!favBtn && !muteBtn) return;
+        e.preventDefault(); e.stopPropagation();
+        var row = (favBtn || muteBtn).closest('.tc-contact');
+        var conv = row.dataset.conversation; if (!conv) return;
+
+        if (favBtn){
+            var on = favBtn.classList.toggle('on'); row.dataset.fav = on ? '1' : '0';
+            favBtn.title = on ? 'Unfavorite' : 'Favorite';
+            post(FAV_URL, { conversation_id: conv, favorite: on ? 1 : 0 });
+            (on ? favList : chatList).insertBefore(row, (on ? favList : chatList).firstChild);
+            applyView();
+        } else {
+            var m = muteBtn.classList.toggle('on'); row.dataset.muted = m ? '1' : '0';
+            muteBtn.title = m ? 'Unmute' : 'Mute';
+            post(MUTE_URL, { conversation_id: conv, muted: m ? 1 : 0 });
+            var badge = row.querySelector('[data-badge]'); if (m && badge) badge.remove();
+            var sub = row.querySelector('.tc-c-sub');
+            var ic = row.querySelector('.tc-mute-ic');
+            if (m && !ic && sub){ var s = document.createElement('span'); s.className = 'tc-mute-ic'; s.innerHTML = @js(view('partials.mute-icon')->render()); sub.appendChild(s); }
+            else if (!m && ic) ic.remove();
+        }
     });
 })();
 

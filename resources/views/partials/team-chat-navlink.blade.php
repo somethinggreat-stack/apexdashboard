@@ -1,7 +1,7 @@
 @php
     $teamUnread = \Illuminate\Support\Facades\DB::table('team_messages as m')
         ->join('conversation_participants as p', 'p.conversation_id', '=', 'm.conversation_id')
-        ->where('p.admin_id', $me->id)->where('m.type', 'text')->where('m.sender_id', '!=', $me->id)
+        ->where('p.admin_id', $me->id)->where('p.muted', false)->where('m.type', 'text')->where('m.sender_id', '!=', $me->id)
         ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')->count();
 @endphp
 <a href="{{ route('admin.team-messages.index') }}" class="{{ request()->routeIs('admin.team-messages.*') ? 'active' : '' }}">

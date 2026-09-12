@@ -171,6 +171,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
+        Route::get('team-messages/search', [Admin\TeamMessageController::class, 'search'])->name('team-messages.search');
+        Route::post('team-messages/favorite', [Admin\TeamMessageController::class, 'favorite'])->name('team-messages.favorite');
+        Route::post('team-messages/mute', [Admin\TeamMessageController::class, 'mute'])->name('team-messages.mute');
+        Route::post('team-messages/pin', [Admin\TeamMessageController::class, 'pin'])->name('team-messages.pin');
         Route::post('team-messages/forward', [Admin\TeamMessageController::class, 'forward'])->name('team-messages.forward');
         // Groups
         Route::post('team-messages/group', [Admin\TeamMessageController::class, 'storeGroup'])->name('team-messages.group.store');

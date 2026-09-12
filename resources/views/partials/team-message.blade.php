@@ -39,7 +39,7 @@
     $sColor = $sPalette[$sN % count($sPalette)];
     $sAvatar = $s ? $s->avatarUrl() : null;
 @endphp
-<div class="tc-msg {{ $mine ? 'mine' : '' }} {{ $isGroup && ! $mine ? 'tc-msg--grp' : '' }}" data-id="{{ $msg->id }}">
+<div class="tc-msg {{ $mine ? 'mine' : '' }} {{ $isGroup && ! $mine ? 'tc-msg--grp' : '' }}" data-id="{{ $msg->id }}" data-pinned="{{ $msg->pinned_at ? 1 : 0 }}">
     @if ($isGroup && ! $mine && $showSender)
         <div class="tc-sender">
             @if ($sAvatar)
