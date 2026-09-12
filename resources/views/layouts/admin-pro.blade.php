@@ -405,6 +405,8 @@
 <script src="{{ asset('js/interactions.js') }}"></script>
 <script src="{{ asset('js/inplace.js') }}?v={{ @filemtime(public_path('js/inplace.js')) ?: '1' }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
+
+@include('partials.command-palette')
 <script>
 /* Rows with data-href are clickable, minus the real controls inside them. */
 (function () {
