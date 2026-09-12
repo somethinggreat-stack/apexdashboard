@@ -46,6 +46,14 @@
                 <small class="muted" style="display:block; margin-top:4px;">Applies to all of this owner's clients — next-round dates, days-left and step reminders adjust immediately.</small>
             </div>
 
+            <div class="form-group" style="flex:1 1 100%;">
+                <label>Client Intake Domain <span class="muted">(optional)</span></label>
+                <input type="text" name="intake_domain" value="{{ old('intake_domain', $client->intake_domain) }}" placeholder="intake.theirbrand.com" autocomplete="off">
+                <small class="muted" style="display:block; margin-top:4px;">
+                    The branded domain clients see on this owner's <strong>Secure Intake Link</strong> — enter the host you added as a Custom Domain on the Cloudflare Worker (e.g. <code>intake.victorialovecredit.com</code>). Leave blank to use the default host. Does not affect the API endpoint.
+                </small>
+            </div>
+
             <div class="form-section" style="margin-top:18px; padding:16px 18px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px;">
                 <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; margin:0;">
                     <input type="checkbox" name="access_revoked" value="1" style="width:18px; height:18px; margin-top:2px;"

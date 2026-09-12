@@ -19,6 +19,7 @@ class Client extends Authenticatable
         'access_revoked', 'access_revoked_message',
         'referred_by_chantal', 'is_commission_referrer', 'referrer_id',
         'intake_token', 'intake_logo_path', 'intake_display_name', 'intake_enabled',
+        'intake_domain',
         'intake_monitoring_provider', 'intake_monitoring_enroll_url',
         'intake_api_key', 'intake_external_url', 'intake_security_extra',
         'compensation_model', 'per_round_fee', 'hourly_rate',
@@ -166,14 +167,34 @@ class Client extends Authenticatable
 
     public function intakeUrl(): string
     {
-        // When a neutral public base is configured (a free reverse-proxy host),
-        // build the client-facing link from it so the app's real domain never
-        // shows. Otherwise fall back to the app's own URL.
-        $base = rtrim((string) config('intake.public_base'), '/');
+        $base = $this->intakeBase();
 
         return $base !== ''
             ? $base . '/intake/' . $this->intake_token
             : url('/intake/' . $this->intake_token);
+    }
+
+    /**
+     * The host the client-facing intake link is built on. Precedence:
+     *   1. this owner's own branded domain (intake_domain),
+     *   2. a global neutral base (config intake.public_base — e.g. the Worker),
+     *   3. empty → the app's own URL.
+     * Never exposes the app's real domain when a branded/neutral host is set.
+     */
+    private function intakeBase(): string
+    {
+        foreach ([$this->intake_domain, config('intake.public_base')] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate === '') {
+                continue;
+            }
+            if (! preg_match('#^https?://#i', $candidate)) {
+                $candidate = 'https://' . $candidate;   // a bare host like intake.brand.com
+            }
+            return rtrim($candidate, '/');
+        }
+
+        return '';
     }
 
     public function intakeLogoUrl(): ?string

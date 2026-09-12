@@ -85,6 +85,7 @@ class ClientController extends Controller
             'status'                 => 'required|in:active,inactive',
             'round_cycle_days'       => 'required|in:20,30',
             'access_revoked_message' => 'nullable|string|max:500',
+            'intake_domain'          => 'nullable|string|max:255',
         ]);
 
         if (empty($data['password'])) {
@@ -94,6 +95,9 @@ class ClientController extends Controller
         $data['is_commission_referrer'] = $request->boolean('is_commission_referrer');
         $data['access_revoked']         = $request->boolean('access_revoked');
         $data['referrer_id']            = $this->validReferrerId($request->input('referrer_id'), $client->id);
+        // Client-facing intake domain: store the bare host (strip protocol/path),
+        // e.g. "intake.theirbrand.com". Blank clears it.
+        $data['intake_domain']          = $this->normalizeIntakeDomain($request->input('intake_domain'));
 
         $client->update($data);
 
@@ -115,6 +119,17 @@ class ClientController extends Controller
     private function scoped()
     {
         return Client::forAdmin(Auth::guard('admin')->id());
+    }
+
+    /** Reduce a submitted intake domain to a bare host (or null). */
+    private function normalizeIntakeDomain(?string $value): ?string
+    {
+        $host = strtolower(trim((string) $value));
+        $host = preg_replace('#^https?://#', '', $host);   // drop protocol
+        $host = preg_replace('#/.*$#', '', $host);          // drop any path
+        $host = trim($host, "/. \t");
+
+        return $host !== '' ? $host : null;
     }
 
     /** Business owners in this org flagged as commission referrers. */
