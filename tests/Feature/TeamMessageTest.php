@@ -152,6 +152,25 @@ class TeamMessageTest extends TestCase
             ->assertJsonPath('messages.0.mine', true);
     }
 
+    public function test_thread_poll_reports_read_state_of_my_sent_messages(): void
+    {
+        $va = $this->va();
+        $m  = TeamMessage::create(['sender_id' => $this->super->id, 'recipient_id' => $va->id, 'body' => 'seen soon']);
+
+        // Before they open it, nothing is read.
+        $this->actingAs($this->super, 'admin')
+            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
+            ->assertOk()->assertJsonPath('readUpTo', 0);
+
+        // The VA opens the thread, which marks my message read.
+        $this->actingAs($va, 'admin')->get('/admin/team-messages?with=' . $this->super->id)->assertOk();
+
+        // Now my poll reports the read watermark.
+        $this->actingAs($this->super, 'admin')
+            ->getJson('/admin/team-messages/thread?with=' . $va->id . '&after=999')
+            ->assertOk()->assertJsonPath('readUpTo', $m->id);
+    }
+
     public function test_body_is_required(): void
     {
         $va = $this->va();

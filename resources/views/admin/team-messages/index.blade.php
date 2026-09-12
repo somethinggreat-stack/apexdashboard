@@ -59,9 +59,9 @@
 
             <div class="tc-messages" id="tcMessages" data-with="{{ $active->id }}" data-last="{{ $messages->last()->id ?? 0 }}">
                 @forelse ($messages as $msg)
-                    <div class="tc-msg {{ $msg->sender_id === $me->id ? 'mine' : '' }}">
+                    <div class="tc-msg {{ $msg->sender_id === $me->id ? 'mine' : '' }}" data-id="{{ $msg->id }}">
                         <div class="tc-bubble">{{ $msg->body }}</div>
-                        <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}</div>
+                        <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($msg->sender_id === $me->id)<span class="tc-btick {{ $msg->read_at ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>
                     </div>
                 @empty
                     <div class="tc-thread-empty">No messages yet — say hello 👋</div>
@@ -124,7 +124,10 @@
     .tc-msg.mine { align-self:flex-end; align-items:flex-end; }
     .tc-bubble { padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; color:var(--pro-text,#0f172a); background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); white-space:pre-wrap; word-break:break-word; box-shadow:0 1px 2px rgba(15,23,42,.05); }
     .tc-msg.mine .tc-bubble { background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; border-color:transparent; }
-    .tc-time { font-size:10.5px; color:#94a3b8; margin:4px 6px 0; }
+    .tc-time { font-size:10.5px; color:#94a3b8; margin:4px 6px 0; display:inline-flex; align-items:center; gap:4px; }
+    .tc-btick { display:inline-flex; width:15px; color:#9aa7b8; }
+    .tc-btick svg { width:15px; height:auto; }
+    .tc-btick.read { color:#2563eb; }
     .tc-thread-empty { margin:auto; color:#94a3b8; font-size:13.5px; }
 
     .tc-composer { display:flex; align-items:flex-end; gap:10px; padding:14px 16px; border-top:1px solid var(--pro-line,#eef2f7); }
@@ -172,7 +175,7 @@
         return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
     }
 
-    // Keep the left contact row's preview line in sync, WhatsApp-style.
+    // Keep the left contact row's preview line in sync, WhatsApp-style, and float it to the top.
     function updatePreview(m){
         var row = document.querySelector('.tc-contact[data-contact="' + withId + '"]');
         if (!row) return;
@@ -185,16 +188,36 @@
                 + '<span data-preview-text>' + esc(m.body).slice(0, 80) + '</span>';
         }
         var badge = row.querySelector('[data-badge]'); if (badge) badge.remove();
+        if (row.parentNode) row.parentNode.insertBefore(row, row.parentNode.firstChild); // move to top
     }
 
     function append(m){
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
         var el = document.createElement('div');
         el.className = 'tc-msg' + (m.mine ? ' mine' : '');
-        el.innerHTML = '<div class="tc-bubble">' + esc(m.body) + '</div><div class="tc-time">' + esc(m.at) + '</div>';
+        el.dataset.id = m.id;
+        var tick = m.mine ? '<span class="tc-btick">' + TICK + '</span>' : '';
+        el.innerHTML = '<div class="tc-bubble">' + esc(m.body) + '</div><div class="tc-time">' + esc(m.at) + tick + '</div>';
         box.appendChild(el);
         if (m.id > lastId) lastId = m.id;
         updatePreview(m);
+    }
+
+    // Flip sent-message ticks blue once the other person has read them.
+    function applyReadReceipts(upTo){
+        if (!upTo) return;
+        var maxMine = 0;
+        box.querySelectorAll('.tc-msg.mine').forEach(function (el) {
+            var id = parseInt(el.dataset.id, 10) || 0;
+            if (id > maxMine) maxMine = id;
+            var t = el.querySelector('.tc-btick');
+            if (t && id <= upTo) t.classList.add('read');
+        });
+        var row = document.querySelector('.tc-contact[data-contact="' + withId + '"]');
+        if (row){
+            var pt = row.querySelector('[data-tick]');
+            if (pt && maxMine && maxMine <= upTo) pt.classList.add('read');
+        }
     }
 
     toBottom();
@@ -226,10 +249,13 @@
         fetch(THREAD + '?with=' + encodeURIComponent(withId) + '&after=' + lastId, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                if (!res || !res.messages || !res.messages.length) return;
-                var stick = atBottom();
-                res.messages.forEach(append);
-                if (stick) toBottom();
+                if (!res) return;
+                if (res.messages && res.messages.length) {
+                    var stick = atBottom();
+                    res.messages.forEach(append);
+                    if (stick) toBottom();
+                }
+                applyReadReceipts(res.readUpTo);
             })
             .catch(function () {});
     }, 4000);

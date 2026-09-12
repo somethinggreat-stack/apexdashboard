@@ -97,7 +97,14 @@ class TeamMessageController extends Controller
 
         $this->markRead($me->id, $with->id);
 
-        return response()->json(['messages' => $msgs->map(fn ($m) => $this->present($m, $me->id))->values()]);
+        // Highest id of MY messages the other person has now read — drives the live blue ticks.
+        $readUpTo = (int) (TeamMessage::where('sender_id', $me->id)->where('recipient_id', $with->id)
+            ->whereNotNull('read_at')->max('id') ?? 0);
+
+        return response()->json([
+            'messages' => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
+            'readUpTo' => $readUpTo,
+        ]);
     }
 
     private function present(TeamMessage $m, int $meId): array
