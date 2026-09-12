@@ -162,6 +162,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // One-click CSV of every owner's Secure Intake Link (name + branded link).
         Route::get('select-business-owner/intake-links', [Admin\ClientSelectorController::class, 'exportIntakeLinks'])
             ->name('client-selector.intake-links');
+
+        // Team Chat — internal direct messages between the org's admins (super + VAs).
+        Route::get('team-messages', [Admin\TeamMessageController::class, 'index'])->name('team-messages.index');
+        Route::post('team-messages', [Admin\TeamMessageController::class, 'store'])->name('team-messages.store');
+        Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])
