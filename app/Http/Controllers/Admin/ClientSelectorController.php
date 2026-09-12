@@ -102,7 +102,7 @@ class ClientSelectorController extends Controller
     public function search(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
-        if (mb_strlen($q) < 2) {
+        if ($q === '') {
             return response()->json(['results' => []]);
         }
 

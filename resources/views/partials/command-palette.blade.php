@@ -18,7 +18,7 @@
     <div class="cmdk-backdrop" data-cmdk-close></div>
     <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="Search">
         <div class="cmdk-input-row">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+            <span class="cmdk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg></span>
             <input id="cmdkInput" type="text" placeholder="Search clients or business owners…" autocomplete="off" spellcheck="false" aria-label="Search">
             <kbd class="cmdk-esc">esc</kbd>
         </div>
@@ -38,36 +38,60 @@
 </form>
 
 <style>
-    .cmdk { position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-start; justify-content:center; }
+    .cmdk { position:fixed; inset:0; z-index:2000; display:flex; align-items:flex-start; justify-content:center; }
     .cmdk[hidden] { display:none; }
-    .cmdk-backdrop { position:absolute; inset:0; background:rgba(6,10,25,.55); backdrop-filter:blur(3px); animation:cmdkFade .12s ease; }
+    .cmdk-backdrop { position:absolute; inset:0;
+        background:radial-gradient(1200px circle at 50% -10%, rgba(79,70,229,.30), transparent 55%), rgba(4,7,20,.62);
+        backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); animation:cmdkFade .2s ease both; }
     @keyframes cmdkFade { from { opacity:0; } to { opacity:1; } }
-    .cmdk-panel { position:relative; width:min(640px,92vw); margin-top:12vh; background:var(--pro-surface,#fff);
-        border:1px solid var(--pro-line,#e6ebf2); border-radius:16px; box-shadow:0 30px 80px rgba(3,7,18,.5);
-        overflow:hidden; animation:cmdkRise .14s cubic-bezier(.2,.7,.2,1); }
-    @keyframes cmdkRise { from { opacity:0; transform:translateY(-8px) scale(.99); } to { opacity:1; transform:none; } }
-    .cmdk-input-row { display:flex; align-items:center; gap:11px; padding:15px 17px; border-bottom:1px solid var(--pro-line,#eef2f7); }
-    .cmdk-input-row svg { width:19px; height:19px; color:#94a3b8; flex:none; }
-    .cmdk-input-row input { flex:1; border:0; outline:none; background:transparent; font-size:16px; color:var(--pro-text,#0f172a); }
-    .cmdk-input-row input::placeholder { color:#9aa7bd; }
-    .cmdk-esc { font-size:11px; color:#94a3b8; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-radius:6px; padding:2px 7px; }
-    .cmdk-results { max-height:56vh; overflow-y:auto; padding:8px; }
-    .cmdk-group { font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; padding:10px 10px 6px; }
-    .cmdk-item { display:flex; align-items:center; gap:12px; padding:9px 11px; border-radius:11px; cursor:pointer; }
-    .cmdk-item.active { background:var(--pro-soft,#eef4ff); }
-    .cmdk-mono { flex:none; width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-        color:#fff; font-weight:800; font-size:13px; }
+
+    .cmdk-panel { position:relative; width:min(720px,94vw); margin-top:9vh; background:var(--pro-surface,#fff);
+        border:1px solid var(--pro-line,#e6ebf2); border-radius:22px; overflow:hidden;
+        box-shadow:0 40px 120px rgba(3,7,18,.55), 0 0 60px -12px rgba(79,70,229,.45);
+        animation:cmdkPop .36s cubic-bezier(.16,1,.3,1) both; }
+    @keyframes cmdkPop { 0% { opacity:0; transform:translateY(-16px) scale(.94); } 60% { opacity:1; } 100% { opacity:1; transform:none; } }
+    .cmdk-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#4f46e5,#2563eb,#22d3ee); }
+
+    .cmdk-input-row { display:flex; align-items:center; gap:14px; padding:20px 22px; border-bottom:1px solid var(--pro-line,#eef2f7); }
+    .cmdk-ico { flex:none; width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+        background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; box-shadow:0 8px 18px rgba(79,70,229,.34); }
+    .cmdk-ico svg { width:20px; height:20px; }
+    .cmdk-input-row input { flex:1; border:0; outline:none; background:transparent; font-size:20px; font-weight:500; letter-spacing:-.01em; color:var(--pro-text,#0f172a); }
+    .cmdk-input-row input::placeholder { color:#9aa7bd; font-weight:400; }
+    .cmdk-esc { font-size:11px; font-weight:600; color:#94a3b8; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-bottom-width:2px; border-radius:7px; padding:4px 9px; }
+
+    .cmdk-results { max-height:58vh; overflow-y:auto; padding:10px; scrollbar-width:thin; }
+    .cmdk-results::-webkit-scrollbar { width:10px; }
+    .cmdk-results::-webkit-scrollbar-thumb { background:rgba(100,116,139,.30); border-radius:8px; border:3px solid transparent; background-clip:content-box; }
+    .cmdk-group { font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#a0abc0; padding:14px 12px 7px; }
+
+    .cmdk-item { position:relative; display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:14px; cursor:pointer;
+        animation:cmdkItem .28s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes cmdkItem { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .cmdk-item:nth-child(1){animation-delay:.01s}.cmdk-item:nth-child(2){animation-delay:.03s}.cmdk-item:nth-child(3){animation-delay:.05s}.cmdk-item:nth-child(4){animation-delay:.07s}.cmdk-item:nth-child(5){animation-delay:.09s}.cmdk-item:nth-child(6){animation-delay:.11s}.cmdk-item:nth-child(7){animation-delay:.13s}.cmdk-item:nth-child(8){animation-delay:.15s}.cmdk-item:nth-child(9){animation-delay:.17s}.cmdk-item:nth-child(n+10){animation-delay:.19s}
+    .cmdk-item.active { background:linear-gradient(90deg, rgba(79,70,229,.13), rgba(37,99,235,.05)); }
+    .cmdk-item.active::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:4px; border-radius:0 4px 4px 0; background:linear-gradient(180deg,#4f46e5,#22d3ee); }
+    .cmdk-mono { flex:none; width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+        color:#fff; font-weight:800; font-size:15px; box-shadow:0 6px 15px rgba(15,23,42,.20); transition:transform .16s cubic-bezier(.2,.7,.2,1); }
+    .cmdk-item.active .cmdk-mono { transform:scale(1.06); }
     .cmdk-body { min-width:0; flex:1; }
-    .cmdk-title { font-size:14px; font-weight:700; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cmdk-sub { font-size:12px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .cmdk-pill { flex:none; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--pro-soft,#eef2f7); color:#64748b; }
-    .cmdk-empty { padding:26px 14px; text-align:center; color:#94a3b8; font-size:13.5px; }
-    .cmdk-foot { display:flex; gap:16px; padding:10px 16px; border-top:1px solid var(--pro-line,#eef2f7); color:#94a3b8; font-size:11.5px; }
-    .cmdk-foot kbd { font-family:inherit; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-radius:5px; padding:1px 5px; margin-right:2px; }
-    :root[data-theme="dark"] .cmdk-panel { background:#0f1629; border-color:#233150; }
+    .cmdk-title { font-size:15.5px; font-weight:700; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cmdk-sub { font-size:12.5px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+    .cmdk-pill { flex:none; font-size:11px; font-weight:700; padding:4px 11px; border-radius:999px; background:var(--pro-soft,#eef2f7); color:#64748b; }
+    .cmdk-enter { flex:none; font-size:11px; font-weight:800; color:#4f46e5; opacity:0; transform:translateX(-4px); transition:opacity .14s, transform .14s; }
+    .cmdk-item.active .cmdk-enter { opacity:1; transform:none; }
+
+    .cmdk-empty { display:flex; flex-direction:column; align-items:center; gap:11px; padding:46px 16px; color:#94a3b8; font-size:14px; }
+    .cmdk-empty svg { width:30px; height:30px; color:#cbd5e1; }
+
+    .cmdk-foot { display:flex; gap:18px; padding:12px 20px; border-top:1px solid var(--pro-line,#eef2f7); color:#94a3b8; font-size:12px; }
+    .cmdk-foot kbd { font-family:inherit; font-size:11px; background:var(--pro-soft,#f1f5f9); border:1px solid var(--pro-line,#e2e8f0); border-bottom-width:2px; border-radius:6px; padding:1px 6px; margin-right:3px; }
+
+    :root[data-theme="dark"] .cmdk-panel { background:#0e1526; border-color:#233150; box-shadow:0 40px 120px rgba(0,0,0,.7), 0 0 60px -12px rgba(99,102,241,.5); }
     :root[data-theme="dark"] .cmdk-input-row, :root[data-theme="dark"] .cmdk-foot { border-color:#1e293b; }
-    :root[data-theme="dark"] .cmdk-item.active { background:#182444; }
+    :root[data-theme="dark"] .cmdk-item.active { background:linear-gradient(90deg, rgba(99,102,241,.20), rgba(34,211,238,.05)); }
     :root[data-theme="dark"] .cmdk-esc, :root[data-theme="dark"] .cmdk-pill, :root[data-theme="dark"] .cmdk-foot kbd { background:#1a2440; border-color:#2b3b5e; color:#94a3b8; }
+    @media (prefers-reduced-motion: reduce) { .cmdk-panel, .cmdk-item, .cmdk-backdrop { animation:none !important; } }
 </style>
 
 <script>
@@ -110,12 +134,13 @@
     function render(list) {
         items = list;
         active = 0;
+        var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>';
         if (!input.value.trim()) {
-            results.innerHTML = '<div class="cmdk-empty">Type a client or business owner name…</div>';
+            results.innerHTML = '<div class="cmdk-empty">' + ico + 'Type a client or business owner name…</div>';
             return;
         }
         if (!list.length) {
-            results.innerHTML = '<div class="cmdk-empty">No matches.</div>';
+            results.innerHTML = '<div class="cmdk-empty">' + ico + 'No matches yet — keep typing…</div>';
             return;
         }
         var html = '', lastGroup = null;
@@ -129,6 +154,7 @@
                   + '<div class="cmdk-body"><div class="cmdk-title">' + esc(it.label) + '</div>'
                   + (it.sub ? '<div class="cmdk-sub">' + esc(it.sub) + '</div>' : '') + '</div>'
                   + (it.pill ? '<div class="cmdk-pill">' + esc(it.pill) + '</div>' : '')
+                  + '<span class="cmdk-enter">↵</span>'
                   + '</div>';
         });
         results.innerHTML = html;
@@ -188,8 +214,8 @@
     input.addEventListener('input', function () {
         var q = input.value.trim();
         clearTimeout(timer);
-        if (q.length < 2) { render([]); return; }
-        timer = setTimeout(function () { search(q); }, 140);
+        if (q.length < 1) { render([]); return; }   // results from the first keystroke
+        timer = setTimeout(function () { search(q); }, 90);
     });
 
     results.addEventListener('mousemove', function (e) {
