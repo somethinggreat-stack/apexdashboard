@@ -49,7 +49,9 @@ class PwaInstallTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('manifest.webmanifest', $html);
-        $this->assertStringContainsString('apexInstallBtn', $html);
+        // The install button was removed by request; the app stays PWA-capable
+        // (manifest + service worker) without the visible prompt.
+        $this->assertStringNotContainsString('apexInstallBtn', $html);
         $this->assertStringContainsString("register('/sw.js'", $html);
         $this->assertStringContainsString('name="theme-color"', $html);
         // Fulfillment team gets the new-client desktop notifier.

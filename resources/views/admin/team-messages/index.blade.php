@@ -66,10 +66,23 @@
             </div>
 
             <div class="tc-messages" id="tcMessages" data-with="{{ $active->id }}" data-last="{{ $messages->last()->id ?? 0 }}">
+                @php $tcLastDay = null; $tcNow = \Illuminate\Support\Carbon::now($tz); @endphp
                 @forelse ($messages as $msg)
+                    @php
+                        $d = $msg->created_at->timezone($tz);
+                        $dayKey = $d->format('Y-m-d');
+                        $dayLabel = $d->isSameDay($tcNow) ? 'Today' : ($d->isSameDay($tcNow->copy()->subDay()) ? 'Yesterday' : $d->format('F j, Y'));
+                    @endphp
+                    @if ($dayKey !== $tcLastDay)
+                        <div class="tc-daysep"><span>{{ $dayLabel }}</span></div>
+                        @php $tcLastDay = $dayKey; @endphp
+                    @endif
                     @include('partials.team-message', ['msg' => $msg])
                 @empty
-                    <div class="tc-thread-empty">No messages yet — say hello 👋</div>
+                    <div class="tc-thread-empty">
+                        <div class="tc-thread-empty-emoji">👋</div>
+                        <p>No messages yet — say hello!</p>
+                    </div>
                 @endforelse
             </div>
 
@@ -265,6 +278,107 @@
     :root[data-theme="dark"] .tc-bubble { background:#141d33; border-color:#233150; color:#e2e8f0; }
     :root[data-theme="dark"] .tc-contact:hover { background:#182444; }
     :root[data-theme="dark"] .tc-composer textarea { background:#0b1120; border-color:#233150; color:#e2e8f0; }
+
+    /* ==========================================================================
+       PREMIUM LAYER — immersive aurora-glass redesign (overrides the above)
+       ========================================================================== */
+    .tc-wrap { gap:18px; }
+
+    .tc-list, .tc-thread {
+        border-radius:24px;
+        border:1px solid rgba(148,163,184,.18);
+        background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.78));
+        backdrop-filter:blur(22px) saturate(150%);
+        -webkit-backdrop-filter:blur(22px) saturate(150%);
+        box-shadow:0 24px 60px -26px rgba(30,41,59,.42), 0 2px 12px rgba(30,41,59,.05);
+    }
+
+    .tc-list-head { padding:20px 20px 14px; border-bottom:1px solid rgba(148,163,184,.14); }
+    .tc-list-head h2 { font-size:18px; letter-spacing:-.02em; background:linear-gradient(120deg,#4f46e5,#7c3aed 55%,#ec4899); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .tc-list-head p { color:#94a3b8; }
+
+    .tc-contacts { padding:10px; }
+    .tc-contact { position:relative; border-radius:15px; transition:background .16s, transform .14s, box-shadow .16s; }
+    .tc-contact:hover { transform:translateX(2px); background:rgba(99,102,241,.06); }
+    .tc-contact.active { background:linear-gradient(90deg, rgba(99,102,241,.16), rgba(124,58,237,.05)); box-shadow:inset 0 0 0 1px rgba(99,102,241,.20); }
+    .tc-contact.active::before { content:''; position:absolute; left:2px; top:13px; bottom:13px; width:3px; border-radius:3px; background:linear-gradient(#6366f1,#7c3aed); }
+    .tc-avatar { border-radius:14px; box-shadow:0 6px 14px -4px rgba(30,41,59,.35); }
+    .tc-unread { background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 5px 12px -3px rgba(99,102,241,.6); }
+
+    .tc-thread-head { padding:16px 22px; border-bottom:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.35)); backdrop-filter:blur(10px); }
+    .tc-thread-head .tc-avatar { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(99,102,241,.4), 0 8px 18px -6px rgba(99,102,241,.5); }
+    .tc-th-name { font-size:16px; font-weight:800; letter-spacing:-.01em; }
+
+    .tc-messages {
+        position:relative; padding:22px 22px 26px;
+        background:
+            radial-gradient(900px 480px at 8% -12%, rgba(99,102,241,.14), transparent 60%),
+            radial-gradient(680px 460px at 112% 0%, rgba(236,72,153,.10), transparent 55%),
+            radial-gradient(720px 560px at 50% 120%, rgba(56,189,248,.12), transparent 60%),
+            linear-gradient(180deg,#f7f9ff,#eef2fb);
+    }
+    .tc-messages::before {
+        content:''; position:absolute; inset:-30%; z-index:0; pointer-events:none; filter:blur(10px);
+        background:
+            radial-gradient(300px 300px at 28% 30%, rgba(99,102,241,.16), transparent 62%),
+            radial-gradient(320px 320px at 72% 58%, rgba(236,72,153,.12), transparent 62%),
+            radial-gradient(280px 280px at 52% 84%, rgba(56,189,248,.16), transparent 62%);
+        animation:tcAurora 20s ease-in-out infinite alternate;
+    }
+    .tc-messages::after {
+        content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+        background-image:radial-gradient(rgba(79,70,229,.12) 1px, transparent 1.5px);
+        background-size:22px 22px; opacity:.5;
+        -webkit-mask-image:linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+        mask-image:linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+    }
+    .tc-msg { z-index:1; animation:tcIn .3s cubic-bezier(.2,.7,.3,1) both; }
+
+    .tc-bubble {
+        border-radius:18px 18px 18px 7px;
+        border:1px solid rgba(148,163,184,.16);
+        background:rgba(255,255,255,.97);
+        box-shadow:0 8px 20px -10px rgba(30,41,59,.32), 0 1px 2px rgba(30,41,59,.06);
+    }
+    .tc-msg.mine .tc-bubble {
+        border-radius:18px 18px 7px 18px; border-color:transparent; color:#fff;
+        background:linear-gradient(135deg,#6366f1,#7c3aed);
+        box-shadow:0 12px 28px -10px rgba(99,102,241,.6), 0 2px 6px rgba(124,58,237,.25);
+    }
+
+    .tc-daysep { align-self:center; z-index:1; margin:8px 0 2px; }
+    .tc-daysep span { font-size:11px; font-weight:700; color:#64748b; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,.78); backdrop-filter:blur(8px); border:1px solid rgba(148,163,184,.2); box-shadow:0 3px 12px -5px rgba(30,41,59,.28); }
+
+    .tc-react { border-radius:999px; background:rgba(255,255,255,.97); box-shadow:0 4px 10px -4px rgba(30,41,59,.3); }
+
+    .tc-thread-empty { z-index:1; margin:auto; display:flex; flex-direction:column; align-items:center; gap:10px; color:#94a3b8; }
+    .tc-thread-empty-emoji { font-size:46px; transform-origin:70% 70%; animation:tcWave 2.6s ease-in-out infinite; filter:drop-shadow(0 10px 18px rgba(99,102,241,.3)); }
+    .tc-thread-empty p { font-size:14px; font-weight:600; }
+
+    .tc-composer { padding:16px 18px; border-top:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.85)); backdrop-filter:blur(10px); }
+    .tc-composer textarea { border-radius:16px; border:1.5px solid rgba(148,163,184,.3); background:rgba(255,255,255,.92); box-shadow:inset 0 1px 2px rgba(30,41,59,.04); }
+    .tc-composer textarea:focus { border-color:#6366f1; background:#fff; box-shadow:0 0 0 4px rgba(99,102,241,.15); }
+    .tc-send { width:46px; height:46px; border-radius:15px; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 12px 24px -8px rgba(99,102,241,.62); }
+    .tc-send:hover { transform:translateY(-2px) scale(1.03); filter:brightness(1.04); }
+
+    .tc-contacts::-webkit-scrollbar, .tc-messages::-webkit-scrollbar { width:9px; }
+    .tc-contacts::-webkit-scrollbar-thumb, .tc-messages::-webkit-scrollbar-thumb { background:rgba(99,102,241,.28); border-radius:9px; border:2px solid transparent; background-clip:padding-box; }
+    .tc-contacts::-webkit-scrollbar-thumb:hover, .tc-messages::-webkit-scrollbar-thumb:hover { background:rgba(99,102,241,.45); background-clip:padding-box; }
+
+    @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
+    @keyframes tcAurora { from { transform:translate(-3%,-2%) rotate(0deg); } to { transform:translate(3%,3%) rotate(7deg); } }
+    @keyframes tcWave { 0%,60%,100%{transform:rotate(0);} 10%{transform:rotate(14deg);} 20%{transform:rotate(-8deg);} 30%{transform:rotate(14deg);} 40%{transform:rotate(-4deg);} 50%{transform:rotate(10deg);} }
+    @media (prefers-reduced-motion: reduce){ .tc-msg, .tc-messages::before, .tc-thread-empty-emoji { animation:none !important; } }
+
+    :root[data-theme="dark"] .tc-list, :root[data-theme="dark"] .tc-thread { background:linear-gradient(180deg, rgba(17,24,39,.9), rgba(13,17,32,.72)); border-color:rgba(51,65,85,.55); box-shadow:0 24px 60px -26px rgba(0,0,0,.6); }
+    :root[data-theme="dark"] .tc-messages { background:radial-gradient(900px 480px at 8% -12%, rgba(99,102,241,.18), transparent 60%), radial-gradient(680px 460px at 112% 0%, rgba(236,72,153,.12), transparent 55%), radial-gradient(720px 560px at 50% 120%, rgba(56,189,248,.14), transparent 60%), linear-gradient(180deg,#0b1120,#0a0e1c); }
+    :root[data-theme="dark"] .tc-messages::after { background-image:radial-gradient(rgba(148,163,184,.14) 1px, transparent 1.5px); }
+    :root[data-theme="dark"] .tc-bubble { background:rgba(20,29,51,.92); border-color:rgba(51,65,85,.6); color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-thread-head, :root[data-theme="dark"] .tc-composer { background:linear-gradient(180deg, rgba(17,24,39,.7), rgba(13,17,32,.4)); }
+    :root[data-theme="dark"] .tc-composer textarea { background:rgba(11,17,32,.9); color:#e2e8f0; border-color:rgba(51,65,85,.6); }
+    :root[data-theme="dark"] .tc-daysep span { background:rgba(20,29,51,.82); color:#94a3b8; border-color:rgba(51,65,85,.6); }
+    :root[data-theme="dark"] .tc-react { background:rgba(20,29,51,.92); }
+    :root[data-theme="dark"] .tc-contact:hover { background:rgba(99,102,241,.12); }
 </style>
 @endpush
 
