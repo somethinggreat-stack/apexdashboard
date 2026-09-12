@@ -20,3 +20,6 @@ yarn-error.log
 /.idea
 /.vscode
 /.zed
+
+# Stray local files (not part of the app)
+AppData/
