@@ -294,6 +294,29 @@
     </div>
 </div>
 
+{{-- Styled confirm dialog --}}
+<div class="tc-modal tc-confirm-modal" id="tcConfirmModal" hidden>
+    <div class="tc-confirm-card">
+        <div class="tc-confirm-msg" id="tcConfirmMsg"></div>
+        <div class="tc-confirm-row">
+            <button type="button" class="tc-btn-cancel" id="tcConfirmCancel">Cancel</button>
+            <button type="button" class="tc-btn-danger" id="tcConfirmOk">Confirm</button>
+        </div>
+    </div>
+</div>
+
+{{-- Delete choice (WhatsApp-style) --}}
+<div class="tc-modal tc-confirm-modal" id="tcDeleteModal" hidden>
+    <div class="tc-confirm-card">
+        <div class="tc-confirm-title">Delete message?</div>
+        <div class="tc-confirm-actions-v">
+            <button type="button" class="tc-del-opt" id="tcDelEveryone" hidden>Delete for everyone</button>
+            <button type="button" class="tc-del-opt" id="tcDelMe">Delete for me</button>
+            <button type="button" class="tc-del-opt tc-del-cancel" id="tcDelCancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
 @push('head')
 <style>
     .tc-wrap { display:grid; grid-template-columns:320px 1fr; gap:16px; height:calc(100vh - 150px); min-height:520px; }
@@ -331,7 +354,7 @@
     .tc-th-name { font-size:15px; font-weight:800; color:var(--pro-text,#0f172a); }
     .tc-th-role { font-size:12px; color:#94a3b8; }
     .tc-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; background:var(--pro-soft,#f7f9fc); }
-    .tc-msg { display:flex; flex-direction:column; align-items:flex-start; max-width:74%; }
+    .tc-msg { display:flex; flex-direction:column; align-items:flex-start; align-self:flex-start; max-width:74%; }
     .tc-msg.mine { align-self:flex-end; align-items:flex-end; }
     .tc-bubble { padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.5; color:var(--pro-text,#0f172a); background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); box-shadow:0 1px 2px rgba(15,23,42,.05); }
     .tc-text { white-space:pre-wrap; word-break:break-word; }
@@ -349,8 +372,8 @@
     .tc-dots svg { width:14px; height:14px; }
     .tc-msg:hover .tc-dots, .tc-dots:focus-visible { opacity:1; }
     .tc-dots:hover { transform:scale(1.08); }
-    .tc-msg.mine .tc-dots { left:-32px; }
-    .tc-msg:not(.mine) .tc-dots { right:-32px; }
+    .tc-msg.mine .tc-dots { left:-27px; }
+    .tc-msg:not(.mine) .tc-dots { right:-27px; }
     /* These elements set their own display in the class, which would otherwise
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
     .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
@@ -456,7 +479,9 @@
     .tc-bubble.deleted { background:transparent; border:1px dashed var(--pro-line,#d7dee8); box-shadow:none; }
     .tc-bubble.deleted .tc-text { font-style:italic; color:#94a3b8; }
     .tc-msg.mine .tc-bubble.deleted { background:transparent; }
-    .tc-msg.mine .tc-bubble.deleted .tc-text { color:rgba(255,255,255,.7); }
+    .tc-msg.mine .tc-bubble.deleted .tc-text { color:#64748b; }
+    .tc-deleted-text { color:#64748b !important; font-style:italic; display:flex; align-items:center; gap:6px; }
+    :root[data-theme="dark"] .tc-deleted-text { color:#94a3b8 !important; }
 
     /* Reaction pills */
     .tc-reacts { display:flex; flex-wrap:wrap; gap:4px; margin-top:-4px; padding:0 4px; }
@@ -711,6 +736,23 @@
     :root[data-theme="dark"] .tc-th-btn, :root[data-theme="dark"] .tc-inp { background:#141d33; border-color:#233150; color:#e2e8f0; }
     :root[data-theme="dark"] .tc-member-row:hover, :root[data-theme="dark"] .tc-addable:hover { background:#182444; }
 
+    /* Confirm + delete dialogs */
+    .tc-confirm-card { width:100%; max-width:340px; background:var(--pro-surface,#fff); border-radius:18px; padding:22px; box-shadow:0 24px 60px rgba(15,23,42,.35); }
+    .tc-confirm-title { font-size:16px; font-weight:800; margin-bottom:16px; color:var(--pro-text,#0f172a); }
+    .tc-confirm-msg { font-size:14.5px; color:var(--pro-text,#0f172a); margin-bottom:20px; line-height:1.5; }
+    .tc-confirm-row { display:flex; gap:10px; justify-content:flex-end; }
+    .tc-btn-cancel { border:1px solid var(--pro-line,#e6ebf2); background:transparent; color:#475569; padding:9px 18px; border-radius:11px; font:inherit; font-weight:700; cursor:pointer; }
+    .tc-btn-cancel:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-btn-danger { border:0; background:#ef4444; color:#fff; padding:9px 18px; border-radius:11px; font:inherit; font-weight:700; cursor:pointer; }
+    .tc-btn-danger:hover { filter:brightness(1.05); }
+    .tc-confirm-actions-v { display:flex; flex-direction:column; gap:8px; }
+    .tc-del-opt { border:1px solid var(--pro-line,#e6ebf2); background:transparent; padding:12px; border-radius:12px; font:inherit; font-weight:700; font-size:14px; cursor:pointer; color:#ef4444; }
+    .tc-del-opt:hover { background:rgba(239,68,68,.07); }
+    .tc-del-cancel { color:var(--pro-text,#0f172a); }
+    .tc-del-cancel:hover { background:var(--pro-soft,#f1f5f9); }
+    :root[data-theme="dark"] .tc-confirm-card { background:#0f1629; }
+    :root[data-theme="dark"] .tc-btn-cancel:hover, :root[data-theme="dark"] .tc-del-cancel:hover { background:#182444; }
+
     .tc-msg.tc-flash .tc-bubble { animation:tcFlash 1.3s ease; }
     @keyframes tcFlash { 0%,100%{ box-shadow:0 8px 20px -10px rgba(30,41,59,.32); } 30%{ box-shadow:0 0 0 3px rgba(99,102,241,.5); } }
     @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
@@ -789,6 +831,10 @@
         }).join('');
     }
 
+    function deletedLabel(by){
+        return by === 'You' ? 'You deleted this message' : 'This message was deleted by ' + esc(by || 'Someone');
+    }
+
     function attsHtml(list){
         if (!list || !list.length) return '';
         return '<div class="tc-atts">' + list.map(function (a) {
@@ -809,7 +855,7 @@
             + '</span><span class="tc-quote-text">' + esc(m.reply.text) + '</span></div>';
         if (m.forwarded && !m.deleted) h += '<div class="tc-fwd">↪ Forwarded</div>';
         h += attsHtml(atts);
-        if (m.deleted) h += '<div class="tc-text">🚫 This message was deleted</div>';
+        if (m.deleted) h += '<div class="tc-text tc-deleted-text">🚫 ' + deletedLabel(m.deletedBy) + '</div>';
         else if (m.body) h += '<div class="tc-text">' + esc(m.body) + '</div>';
         h += '</div>';
         var tick = (m.mine && !m.deleted) ? '<span class="tc-btick">' + TICK + '</span>' : '';
@@ -865,7 +911,8 @@
                 var b = el.querySelector('.tc-bubble');
                 if (b && !b.classList.contains('deleted')){
                     b.classList.add('deleted');
-                    b.innerHTML = '<div class="tc-text">🚫 This message was deleted</div>';
+                    b.innerHTML = '<div class="tc-text tc-deleted-text">🚫 ' + deletedLabel(s.deletedBy) + '</div>';
+                    var el0 = box.querySelector('.tc-msg[data-id="' + s.id + '"] .tc-dots'); if (el0) el0.remove();
                 }
             }
         });
@@ -1144,10 +1191,24 @@
         var pinLbl = menu.querySelector('[data-pin-label]');
         if (pinLbl) pinLbl.textContent = el.dataset.pinned === '1' ? 'Unpin' : 'Pin';
         renderQuickEmojis();
+        menu.style.left = '0px'; menu.style.top = '0px';
         menu.hidden = false;
-        var mw = menu.offsetWidth, mh = menu.offsetHeight;
-        menu.style.left = Math.max(8, Math.min(x, window.innerWidth  - mw - 8)) + 'px';
-        menu.style.top  = Math.max(8, Math.min(y, window.innerHeight - mh - 8)) + 'px';
+        var mrect = menu.getBoundingClientRect();
+        var mw = mrect.width, mh = mrect.height;
+
+        // Desired VIEWPORT position: beside the message's dots (which hug the bubble).
+        var trig = el.querySelector('.tc-dots');
+        var tr = trig ? trig.getBoundingClientRect() : { left: x, right: x, top: y, bottom: y };
+        var mine = el.classList.contains('mine');
+        var want = mine ? (tr.left - mw - 4) : (tr.right + 4);
+        want = Math.max(8, Math.min(want, window.innerWidth - mw - 8));
+        var wantTop = Math.max(8, Math.min(tr.top, window.innerHeight - mh - 8));
+
+        // Two-pass: whatever coordinate offset the ancestor imposes, measure and cancel it.
+        menu.style.left = want + 'px'; menu.style.top = wantTop + 'px';
+        var act = menu.getBoundingClientRect();
+        menu.style.left = (2 * want - act.left) + 'px';
+        menu.style.top  = (2 * wantTop - act.top) + 'px';
         guardUntil = Date.now() + 350;
     }
     function closeMenu(){ if (menu) { menu.hidden = true; } menuMsg = null; }
@@ -1211,17 +1272,19 @@
 
     function delMsg(){
         if (!menuMsg) return;
-        var id = menuMsg.id;
-        if (!window.confirm('Delete this message for everyone?')) return;
-        postJson(BASE + '/' + id, {}, 'DELETE').then(function (res) {
-            if (res && res.ok){
-                var el = box.querySelector('.tc-msg[data-id="' + id + '"]');
-                if (el){
-                    var b = el.querySelector('.tc-bubble'); b.classList.add('deleted');
-                    b.innerHTML = '<div class="tc-text">🚫 This message was deleted</div>';
-                    var rr = el.querySelector('.tc-reacts'); if (rr) rr.innerHTML = '';
-                }
-            }
+        var id = menuMsg.id, mine = menuMsg.mine;
+        window.tcDelete(mine).then(function (mode) {
+            if (!mode) return;
+            postJson(BASE + '/' + id, { mode: mode }, 'DELETE').then(function (res) {
+                if (!res || !res.ok) return;
+                var el = box.querySelector('.tc-msg[data-id="' + id + '"]'); if (!el) return;
+                if (mode === 'me'){ el.remove(); return; }
+                var b = el.querySelector('.tc-bubble'); b.classList.add('deleted');
+                b.innerHTML = '<div class="tc-text tc-deleted-text">🚫 You deleted this message</div>';
+                var rr = el.querySelector('.tc-reacts'); if (rr) rr.innerHTML = '';
+                var dots = el.querySelector('.tc-dots'); if (dots) dots.remove();
+                el.dataset.pinned = 0;
+            });
         });
     }
 
@@ -1361,9 +1424,11 @@
 
         membersModal.addEventListener('click', function (e) {
             var rem = e.target.closest('.tc-member-remove'); if (!rem) return;
-            if (!window.confirm('Remove this member from the group?')) return;
-            gpost('/members/' + rem.dataset.admin, function (fd) { fd.append('_method', 'DELETE'); })
-                .then(function (res) { if (res && res.ok) location.reload(); });
+            window.tcConfirm('Remove this member from the group?', 'Remove').then(function (ok) {
+                if (!ok) return;
+                gpost('/members/' + rem.dataset.admin, function (fd) { fd.append('_method', 'DELETE'); })
+                    .then(function (res) { if (res && res.ok) location.reload(); });
+            });
         });
         var addBtn = document.getElementById('tcAddMembersBtn');
         if (addBtn) addBtn.addEventListener('click', function () {
@@ -1378,8 +1443,10 @@
             gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) { if (res && res.ok) location.reload(); });
         });
         document.getElementById('tcLeaveBtn').addEventListener('click', function () {
-            if (!window.confirm('Leave this group?')) return;
-            gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); });
+            window.tcConfirm('Leave this group?', 'Leave').then(function (ok) {
+                if (!ok) return;
+                gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); });
+            });
         });
     }
 })();
@@ -1418,6 +1485,39 @@
             .then(function (r) { return r.json(); })
             .then(function (res) { if (res && res.ok) location.href = '?c=' + res.conversation_id; else toast('Could not create group'); });
     });
+})();
+
+// Styled confirm + delete dialogs (global helpers; moved to <body> for exact overlay).
+(function () {
+    var cm = document.getElementById('tcConfirmModal');
+    var dm = document.getElementById('tcDeleteModal');
+    if (cm) document.body.appendChild(cm);
+    if (dm) document.body.appendChild(dm);
+
+    window.tcConfirm = function (message, okLabel) {
+        return new Promise(function (resolve) {
+            if (!cm) { resolve(window.confirm(message)); return; }
+            document.getElementById('tcConfirmMsg').textContent = message;
+            var ok = document.getElementById('tcConfirmOk'); ok.textContent = okLabel || 'Confirm';
+            var ca = document.getElementById('tcConfirmCancel');
+            cm.hidden = false;
+            function fin(v){ cm.hidden = true; ok.removeEventListener('click', okH); ca.removeEventListener('click', caH); cm.removeEventListener('click', bg); document.removeEventListener('keydown', kh); resolve(v); }
+            function okH(){ fin(true); } function caH(){ fin(false); } function bg(e){ if (e.target === cm) fin(false); } function kh(e){ if (e.key === 'Escape') fin(false); }
+            ok.addEventListener('click', okH); ca.addEventListener('click', caH); cm.addEventListener('click', bg); document.addEventListener('keydown', kh);
+        });
+    };
+
+    window.tcDelete = function (mine) {
+        return new Promise(function (resolve) {
+            if (!dm) { resolve(window.confirm('Delete this message?') ? (mine ? 'everyone' : 'me') : null); return; }
+            var ev = document.getElementById('tcDelEveryone'); ev.hidden = !mine;
+            var meB = document.getElementById('tcDelMe'), ca = document.getElementById('tcDelCancel');
+            dm.hidden = false;
+            function fin(v){ dm.hidden = true; ev.removeEventListener('click', evH); meB.removeEventListener('click', meH); ca.removeEventListener('click', caH); dm.removeEventListener('click', bg); document.removeEventListener('keydown', kh); resolve(v); }
+            function evH(){ fin('everyone'); } function meH(){ fin('me'); } function caH(){ fin(null); } function bg(e){ if (e.target === dm) fin(null); } function kh(e){ if (e.key === 'Escape') fin(null); }
+            ev.addEventListener('click', evH); meB.addEventListener('click', meH); ca.addEventListener('click', caH); dm.addEventListener('click', bg); document.addEventListener('keydown', kh);
+        });
+    };
 })();
 
 // Sidebar organize — search, filters, favorite, mute (works with no chat open).

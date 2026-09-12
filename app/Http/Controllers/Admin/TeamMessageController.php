@@ -94,9 +94,9 @@ class TeamMessageController extends Controller
         $pinned = collect();
 
         if ($active) {
-            $messages = $active->messages()
-                ->with('sender', 'replyTo.sender', 'attachments')->orderBy('id')->get();
-            $pinned = $active->messages()->whereNotNull('pinned_at')->with('sender')
+            $messages = $active->messages()->visibleTo($me->id)
+                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin')->orderBy('id')->get();
+            $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
 
@@ -195,14 +195,15 @@ class TeamMessageController extends Controller
         $conv = $this->findConversation($me, (int) $request->query('c'));
         $after = (int) $request->query('after', 0);
 
-        $msgs = $conv->messages()->with('sender', 'replyTo.sender', 'attachments')
+        $msgs = $conv->messages()->visibleTo($me->id)->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin')
             ->where('id', '>', $after)->orderBy('id')->get();
 
         $this->markRead($conv, $me);
 
-        $states = $conv->messages()->latest('id')->limit(80)->get()
+        $states = $conv->messages()->with('deletedByAdmin')->latest('id')->limit(80)->get()
             ->map(fn ($m) => [
                 'id' => $m->id, 'deleted' => (bool) $m->deleted_at, 'reactions' => $this->reactionsOf($m, $me->id),
+                'deletedBy' => $m->deleted_at ? ($m->deleted_by === $me->id ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
             ])->values();
 
         $others = $conv->participants->where('admin_id', '!=', $me->id);
@@ -395,6 +396,16 @@ class TeamMessageController extends Controller
     public function destroy(Request $request, TeamMessage $message)
     {
         $me = Auth::guard('admin')->user();
+        abort_unless($this->isParticipant($me, $message->conversation_id), 403);
+
+        // "Delete for me" — hide it for just this person; anyone can do it.
+        if ($request->input('mode') === 'me') {
+            $message->hiddenFor()->syncWithoutDetaching([$me->id]);
+
+            return response()->json(['ok' => true, 'mode' => 'me', 'id' => $message->id]);
+        }
+
+        // "Delete for everyone" — only the sender, and never a system message.
         abort_unless($message->sender_id === $me->id && ! $message->isSystem(), 403);
 
         foreach ($message->attachments as $att) {
@@ -402,12 +413,11 @@ class TeamMessageController extends Controller
         }
         $message->attachments()->delete();
 
-        $message->body = '';
-        $message->reactions = null;
-        $message->deleted_at = now();
-        $message->save();
+        $message->forceFill([
+            'body' => '', 'reactions' => null, 'deleted_at' => now(), 'deleted_by' => $me->id,
+        ])->save();
 
-        return response()->json(['ok' => true, 'id' => $message->id]);
+        return response()->json(['ok' => true, 'mode' => 'everyone', 'id' => $message->id]);
     }
 
     /** Guarded, org-scoped file access — inline by default, ?dl=1 forces download. */
@@ -555,6 +565,7 @@ class TeamMessageController extends Controller
             'attachments' => $m->deleted_at ? [] : $this->attachmentsOf($m),
             'sender'      => $this->senderInfo($m->sender),
             'pinned'      => (bool) $m->pinned_at,
+            'deletedBy'   => $m->deleted_at ? ($m->deleted_by === $meId ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
         ];
     }
 

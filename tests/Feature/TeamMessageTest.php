@@ -183,6 +183,49 @@ class TeamMessageTest extends TestCase
         $this->assertNotNull($mine->fresh()->deleted_at);
     }
 
+    public function test_delete_for_me_hides_a_message_for_just_me(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $va, ['body' => 'private note']);
+
+        $this->actingAs($this->super, 'admin')
+            ->deleteJson('/admin/team-messages/' . $m->id, ['mode' => 'me'])
+            ->assertOk()->assertJson(['mode' => 'me']);
+
+        $this->assertDatabaseHas('message_hides', ['team_message_id' => $m->id, 'admin_id' => $this->super->id]);
+        $this->assertNull($m->fresh()->deleted_at);   // not a tombstone
+
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages?c=' . $c->id)
+            ->assertViewHas('messages', fn ($msgs) => $msgs->doesntContain('id', $m->id));
+        $this->actingAs($va, 'admin')->get('/admin/team-messages?c=' . $c->id)
+            ->assertViewHas('messages', fn ($msgs) => $msgs->contains('id', $m->id));
+    }
+
+    public function test_delete_for_everyone_tombstones_and_records_who(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $this->super, ['body' => 'oops']);
+
+        $this->actingAs($this->super, 'admin')
+            ->deleteJson('/admin/team-messages/' . $m->id, ['mode' => 'everyone'])
+            ->assertOk()->assertJson(['mode' => 'everyone']);
+
+        $this->assertNotNull($m->fresh()->deleted_at);
+        $this->assertSame($this->super->id, $m->fresh()->deleted_by);
+    }
+
+    public function test_cannot_delete_someone_elses_message_for_everyone(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $va, ['body' => 'theirs']);
+
+        $this->actingAs($this->super, 'admin')
+            ->deleteJson('/admin/team-messages/' . $m->id, ['mode' => 'everyone'])->assertForbidden();
+    }
+
     // ---------------------------------------------------------------- groups
 
     public function test_super_can_create_a_group_with_teammates(): void

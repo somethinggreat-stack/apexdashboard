@@ -74,7 +74,11 @@
             </div>
         @endif
         @if ($del)
-            <div class="tc-text">🚫 This message was deleted</div>
+            @php
+                $delFirst = optional($msg->deletedByAdmin)->full_name ? \Illuminate\Support\Str::of($msg->deletedByAdmin->full_name)->before(' ') : 'Someone';
+                $delText = $msg->deleted_by === $me->id ? 'You deleted this message' : 'This message was deleted by ' . $delFirst;
+            @endphp
+            <div class="tc-text tc-deleted-text">🚫 {{ $delText }}</div>
         @elseif ($msg->body !== '')
             <div class="tc-text">{{ $msg->body }}</div>
         @endif

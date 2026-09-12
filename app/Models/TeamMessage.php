@@ -12,9 +12,26 @@ class TeamMessage extends Model
         'read_at'    => 'datetime',
         'deleted_at' => 'datetime',
         'pinned_at'  => 'datetime',
-        'reactions'  => 'array',
-        'forwarded'  => 'boolean',
+        'reactions'    => 'array',
+        'forwarded'    => 'boolean',
     ];
+
+    /** Admins who "deleted for me" (message hidden for them only). */
+    public function hiddenFor()
+    {
+        return $this->belongsToMany(Admin::class, 'message_hides', 'team_message_id', 'admin_id');
+    }
+
+    public function deletedByAdmin()
+    {
+        return $this->belongsTo(Admin::class, 'deleted_by');
+    }
+
+    /** Exclude messages a given admin has hidden ("delete for me"). */
+    public function scopeVisibleTo($query, int $adminId)
+    {
+        return $query->whereDoesntHave('hiddenFor', fn ($q) => $q->where('admin_id', $adminId));
+    }
 
     public function conversation()
     {
