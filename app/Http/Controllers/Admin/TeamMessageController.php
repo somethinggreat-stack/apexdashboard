@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\MessageAttachment;
 use App\Models\TeamMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Team Chat — internal direct messages between the org's admins (super + VAs).
@@ -21,6 +24,12 @@ class TeamMessageController extends Controller
 
     /** Emoji a message can be reacted with (WhatsApp-style). */
     private const EMOJI = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+    /** File types a teammate may attach, and the per-file size cap. */
+    private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
+    private const MAX_KB = 25600;   // 25 MB per file
+    private const MAX_FILES = 10;
+    private const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
     public function index(Request $request)
     {
@@ -52,7 +61,7 @@ class TeamMessageController extends Controller
 
         if ($active) {
             $messages = TeamMessage::between($me->id, $active->id)
-                ->with('replyTo.sender')->orderBy('id')->get();
+                ->with('replyTo.sender', 'attachments')->orderBy('id')->get();
             $this->markRead($me->id, $active->id);
         }
 
@@ -67,13 +76,29 @@ class TeamMessageController extends Controller
         $me = Auth::guard('admin')->user();
 
         $data = $request->validate([
-            'recipient_id' => ['required', 'integer'],
-            'body'         => ['required', 'string', 'max:5000'],
-            'reply_to_id'  => ['nullable', 'integer'],
+            'recipient_id'  => ['required', 'integer'],
+            'body'          => ['nullable', 'string', 'max:5000'],
+            'reply_to_id'   => ['nullable', 'integer'],
+            'attachments'   => ['nullable', 'array', 'max:' . self::MAX_FILES],
+            'attachments.*' => ['file', 'max:' . self::MAX_KB],
         ]);
 
         // The recipient must be a teammate in my org (never outside it, never me).
         $recipient = $this->teammates($me)->findOrFail($data['recipient_id']);
+
+        $files = $request->file('attachments', []);
+        $body  = trim((string) ($data['body'] ?? ''));
+
+        // A message must carry something: text or at least one file.
+        if ($body === '' && empty($files)) {
+            throw ValidationException::withMessages(['body' => 'Type a message or attach a file.']);
+        }
+        // Reject disallowed file types up front (defence beyond the size cap).
+        foreach ($files as $file) {
+            if (! in_array(strtolower($file->getClientOriginalExtension()), self::ALLOWED_EXT, true)) {
+                throw ValidationException::withMessages(['attachments' => 'That file type is not allowed.']);
+            }
+        }
 
         // A reply must point at a message inside this very thread.
         $replyToId = null;
@@ -86,15 +111,63 @@ class TeamMessageController extends Controller
             'sender_id'    => $me->id,
             'recipient_id' => $recipient->id,
             'reply_to_id'  => $replyToId,
-            'body'         => trim($data['body']),
+            'body'         => $body,
         ]);
-        $msg->load('replyTo.sender');
+
+        $this->storeAttachments($msg, $files, $me->dataOwnerId());
+        $msg->load('replyTo.sender', 'attachments');
 
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'message' => $this->present($msg, $me->id)]);
         }
 
         return redirect()->route('admin.team-messages.index', ['with' => $recipient->id]);
+    }
+
+    /** Persist uploaded files to the private disk and attach them to the message. */
+    private function storeAttachments(TeamMessage $msg, array $files, int $ownerId): void
+    {
+        foreach ($files as $file) {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if (! in_array($ext, self::ALLOWED_EXT, true)) continue;
+
+            $w = $h = null;
+            if (in_array($ext, self::IMAGE_EXT, true)) {
+                $dims = @getimagesize($file->getRealPath());
+                if ($dims) { $w = $dims[0]; $h = $dims[1]; }
+            }
+
+            $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $ext, 'private');
+
+            $msg->attachments()->create([
+                'disk_path'     => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime'          => $file->getClientMimeType(),
+                'size'          => $file->getSize(),
+                'width'         => $w,
+                'height'        => $h,
+            ]);
+        }
+    }
+
+    /** Guarded, org-scoped file access — inline by default, ?dl=1 forces download. */
+    public function attachment(Request $request, MessageAttachment $attachment)
+    {
+        $me  = Auth::guard('admin')->user();
+        $msg = $attachment->message;
+
+        // Only the two people in the thread may fetch its files, and never once deleted.
+        abort_unless($msg && ($msg->sender_id === $me->id || $msg->recipient_id === $me->id), 403);
+        abort_if((bool) $msg->deleted_at, 404);
+
+        $disk = Storage::disk('private');
+        abort_unless($disk->exists($attachment->disk_path), 404);
+
+        $headers = ['Cache-Control' => 'private, no-store, max-age=0'];
+
+        return $request->boolean('dl')
+            ? $disk->download($attachment->disk_path, $attachment->original_name, $headers)
+            : $disk->response($attachment->disk_path, $attachment->original_name, $headers);
     }
 
     /** Add / change / remove my emoji reaction on a message I can see. */
@@ -150,6 +223,12 @@ class TeamMessageController extends Controller
         $me = Auth::guard('admin')->user();
         abort_unless($message->sender_id === $me->id, 403);
 
+        // Purge any attached files from the private disk, then tombstone the row.
+        foreach ($message->attachments as $att) {
+            Storage::disk('private')->delete($att->disk_path);
+        }
+        $message->attachments()->delete();
+
         $message->body = '';
         $message->reactions = null;
         $message->deleted_at = now();
@@ -166,7 +245,7 @@ class TeamMessageController extends Controller
         $after = (int) $request->query('after', 0);
 
         $msgs = TeamMessage::between($me->id, $with->id)
-            ->with('replyTo.sender')->where('id', '>', $after)->orderBy('id')->get();
+            ->with('replyTo.sender', 'attachments')->where('id', '>', $after)->orderBy('id')->get();
 
         $this->markRead($me->id, $with->id);
 
@@ -191,15 +270,34 @@ class TeamMessageController extends Controller
     private function present(TeamMessage $m, int $meId): array
     {
         return [
-            'id'        => $m->id,
-            'mine'      => $m->sender_id === $meId,
-            'body'      => $m->deleted_at ? '' : $m->body,
-            'at'        => $m->created_at->timezone(self::TZ)->format('M j · g:i A'),
-            'deleted'   => (bool) $m->deleted_at,
-            'forwarded' => (bool) $m->forwarded,
-            'reactions' => $this->reactionsOf($m, $meId),
-            'reply'     => $this->replySnippet($m, $meId),
+            'id'          => $m->id,
+            'mine'        => $m->sender_id === $meId,
+            'body'        => $m->deleted_at ? '' : $m->body,
+            'at'          => $m->created_at->timezone(self::TZ)->format('M j · g:i A'),
+            'deleted'     => (bool) $m->deleted_at,
+            'forwarded'   => (bool) $m->forwarded,
+            'reactions'   => $this->reactionsOf($m, $meId),
+            'reply'       => $this->replySnippet($m, $meId),
+            'attachments' => $m->deleted_at ? [] : $this->attachmentsOf($m),
         ];
+    }
+
+    /** Attachment payloads for the client — inline url, download url, and image dims. */
+    private function attachmentsOf(TeamMessage $m): array
+    {
+        return $m->attachments->map(function (MessageAttachment $a) {
+            $url = route('admin.team-messages.attachment', $a->id);
+
+            return [
+                'name'     => $a->original_name,
+                'size'     => $a->humanSize(),
+                'image'    => $a->isImage(),
+                'url'      => $url,
+                'download' => $url . '?dl=1',
+                'w'        => $a->width,
+                'h'        => $a->height,
+            ];
+        })->values()->all();
     }
 
     /** Aggregate reactions to [{emoji, count, mine}], most-used first. */
@@ -241,8 +339,10 @@ class TeamMessageController extends Controller
     {
         $mine = $m->sender_id === $meId;
 
+        $body = $m->deleted_at ? 'This message was deleted' : ($m->body !== '' ? $m->body : '📎 Attachment');
+
         return [
-            'body' => $m->deleted_at ? 'This message was deleted' : $m->body,
+            'body' => $body,
             'mine' => $mine,
             'read' => $mine ? ! is_null($m->read_at) : true,
             'ts'   => $m->created_at->timestamp,

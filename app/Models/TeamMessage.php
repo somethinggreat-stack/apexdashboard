@@ -31,6 +31,12 @@ class TeamMessage extends Model
         return $this->belongsTo(TeamMessage::class, 'reply_to_id');
     }
 
+    /** Files/images sent with this message (private disk). */
+    public function attachments()
+    {
+        return $this->hasMany(MessageAttachment::class, 'team_message_id');
+    }
+
     /** Messages exchanged between two admins, in either direction. */
     public function scopeBetween($query, int $a, int $b)
     {

@@ -167,6 +167,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages', [Admin\TeamMessageController::class, 'index'])->name('team-messages.index');
         Route::post('team-messages', [Admin\TeamMessageController::class, 'store'])->name('team-messages.store');
         Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
+        Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
         Route::post('team-messages/forward', [Admin\TeamMessageController::class, 'forward'])->name('team-messages.forward');
         Route::delete('team-messages/{message}', [Admin\TeamMessageController::class, 'destroy'])->name('team-messages.destroy');

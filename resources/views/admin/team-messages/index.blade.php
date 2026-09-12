@@ -95,14 +95,27 @@
                 <button type="button" class="tc-reply-x" id="tcReplyCancel" aria-label="Cancel reply">&times;</button>
             </div>
 
-            <form class="tc-composer" id="tcForm" method="POST" action="{{ route('admin.team-messages.store') }}">
+            <div class="tc-pending" id="tcPending" hidden></div>
+            <div class="tc-progress" id="tcProgress" hidden><i></i></div>
+
+            <form class="tc-composer" id="tcForm" method="POST" action="{{ route('admin.team-messages.store') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="recipient_id" value="{{ $active->id }}">
-                <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $active->full_name }}…" maxlength="5000" required></textarea>
+                <input type="file" id="tcFile" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx">
+                <button type="button" class="tc-attach" id="tcAttach" aria-label="Attach a file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $active->full_name }}…" maxlength="5000"></textarea>
                 <button type="submit" class="tc-send" aria-label="Send">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
             </form>
+
+            {{-- Image lightbox (moved to <body> by JS) --}}
+            <div class="tc-lightbox" id="tcLightbox" hidden>
+                <button type="button" class="tc-lb-x" id="tcLbClose" aria-label="Close">&times;</button>
+                <img src="" alt="" id="tcLbImg">
+            </div>
 
             {{-- Message action menu (WhatsApp-style). Moved to <body> by JS so position:fixed is exact. --}}
             <div class="tc-menu" id="tcMenu" hidden>
@@ -203,7 +216,8 @@
     @media (hover:none){ .tc-dots { opacity:1; } }
     /* These elements set their own display in the class, which would otherwise
        beat the UA [hidden] rule and make them impossible to hide. Force it. */
-    .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden] { display:none !important; }
+    .tc-menu[hidden], .tc-menu-item[hidden], .tc-reply-bar[hidden], .tc-modal[hidden],
+    .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden] { display:none !important; }
 
     /* Quoted reply inside a bubble */
     .tc-quote { display:flex; flex-direction:column; gap:1px; padding:5px 9px; margin:-2px 0 6px; border-left:3px solid rgba(79,70,229,.7); border-radius:7px; background:rgba(79,70,229,.08); font-size:12.5px; }
@@ -371,6 +385,55 @@
     .tc-contacts::-webkit-scrollbar-thumb, .tc-messages::-webkit-scrollbar-thumb { background:rgba(99,102,241,.28); border-radius:9px; border:2px solid transparent; background-clip:padding-box; }
     .tc-contacts::-webkit-scrollbar-thumb:hover, .tc-messages::-webkit-scrollbar-thumb:hover { background:rgba(99,102,241,.45); background-clip:padding-box; }
 
+    /* Attachments in a bubble */
+    .tc-atts { display:flex; flex-direction:column; gap:8px; }
+    .tc-atts:not(:last-child) { margin-bottom:8px; }
+    .tc-bubble--media { padding:6px; background:rgba(255,255,255,.97); }
+    .tc-msg.mine .tc-bubble--media { background:rgba(99,102,241,.14); }
+    .tc-att-img { display:block; max-width:260px; border-radius:12px; overflow:hidden; line-height:0; cursor:zoom-in; }
+    .tc-att-img img { width:100%; max-height:320px; object-fit:cover; display:block; }
+    .tc-att-file { display:flex; align-items:center; gap:11px; min-width:220px; max-width:300px; padding:10px 12px; border-radius:12px; text-decoration:none; background:rgba(255,255,255,.9); border:1px solid rgba(148,163,184,.24); color:var(--pro-text,#0f172a); transition:transform .12s, box-shadow .14s; }
+    .tc-att-file:hover { transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(30,41,59,.3); }
+    .tc-msg.mine .tc-att-file { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28); color:#fff; }
+    .tc-att-ic { flex:none; width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; }
+    .tc-att-ic svg { width:19px; height:19px; }
+    .tc-att-meta { flex:1; min-width:0; display:flex; flex-direction:column; }
+    .tc-att-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-att-size { font-size:11px; opacity:.7; }
+    .tc-att-dl { flex:none; width:17px; height:17px; opacity:.75; }
+
+    /* Attach button in composer */
+    .tc-attach { flex:none; width:42px; height:42px; border:0; border-radius:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#64748b; background:rgba(148,163,184,.14); transition:background .14s, color .14s, transform .1s; }
+    .tc-attach:hover { background:rgba(99,102,241,.14); color:#4f46e5; transform:translateY(-1px); }
+    .tc-attach svg { width:20px; height:20px; }
+
+    /* Pending files tray */
+    .tc-pending { display:flex; flex-wrap:wrap; gap:8px; padding:10px 18px 0; position:relative; z-index:1; }
+    .tc-pending-chip { display:flex; align-items:center; gap:8px; max-width:220px; padding:7px 10px; border-radius:11px; background:var(--pro-surface,#fff); border:1px solid rgba(148,163,184,.24); box-shadow:0 3px 10px -5px rgba(30,41,59,.25); font-size:12.5px; }
+    .tc-pending-chip img { width:30px; height:30px; border-radius:7px; object-fit:cover; flex:none; }
+    .tc-pending-chip .tc-chip-ic { width:30px; height:30px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; }
+    .tc-pending-chip .tc-chip-ic svg { width:15px; height:15px; }
+    .tc-chip-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--pro-text,#0f172a); }
+    .tc-chip-x { flex:none; border:0; background:transparent; color:#94a3b8; cursor:pointer; font-size:17px; line-height:1; padding:0 2px; }
+    .tc-chip-x:hover { color:#ef4444; }
+
+    /* Upload progress */
+    .tc-progress { height:4px; margin:10px 18px 0; border-radius:999px; background:rgba(99,102,241,.14); overflow:hidden; position:relative; z-index:1; }
+    .tc-progress i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#6366f1,#7c3aed); transition:width .15s; }
+
+    /* Drag-over highlight */
+    .tc-thread.tc-drag::after { content:'Drop files to send'; position:absolute; inset:12px; z-index:5; display:flex; align-items:center; justify-content:center; font-weight:800; color:#4f46e5; font-size:16px; border:2.5px dashed rgba(99,102,241,.6); border-radius:20px; background:rgba(99,102,241,.08); backdrop-filter:blur(2px); }
+
+    /* Lightbox */
+    .tc-lightbox { position:fixed; inset:0; z-index:1002; background:rgba(8,11,22,.85); display:flex; align-items:center; justify-content:center; padding:32px; }
+    .tc-lightbox img { max-width:92vw; max-height:88vh; border-radius:12px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .tc-lb-x { position:fixed; top:20px; right:24px; width:44px; height:44px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:26px; line-height:1; cursor:pointer; }
+    .tc-lb-x:hover { background:rgba(255,255,255,.25); }
+
+    :root[data-theme="dark"] .tc-att-file { background:rgba(20,29,51,.9); border-color:rgba(51,65,85,.6); color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-pending-chip { background:#141d33; border-color:#233150; }
+    :root[data-theme="dark"] .tc-attach { background:rgba(148,163,184,.12); }
+
     @keyframes tcIn { from { opacity:0; transform:translateY(9px) scale(.98); } to { opacity:1; transform:none; } }
     @keyframes tcAurora { from { transform:translate(-3%,-2%) rotate(0deg); } to { transform:translate(3%,3%) rotate(7deg); } }
     @keyframes tcWave { 0%,60%,100%{transform:rotate(0);} 10%{transform:rotate(14deg);} 20%{transform:rotate(-8deg);} 30%{transform:rotate(14deg);} 40%{transform:rotate(-4deg);} 50%{transform:rotate(10deg);} }
@@ -403,6 +466,8 @@
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
     var DOTS = '<button type="button" class="tc-dots" aria-label="Message actions"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
+    var FILE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    var DL_SVG = '<svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
     var PEER = @js($active?->full_name ?? '');
 
@@ -425,13 +490,29 @@
         }).join('');
     }
 
+    function attsHtml(list){
+        if (!list || !list.length) return '';
+        return '<div class="tc-atts">' + list.map(function (a) {
+            if (a.image) return '<a class="tc-att-img" href="' + a.url + '" data-lightbox><img src="' + a.url + '" alt="' + esc(a.name) + '" loading="lazy"></a>';
+            return '<a class="tc-att-file" href="' + a.download + '">'
+                + '<span class="tc-att-ic">' + FILE_SVG + '</span>'
+                + '<span class="tc-att-meta"><span class="tc-att-name">' + esc(a.name) + '</span><span class="tc-att-size">' + esc(a.size) + '</span></span>'
+                + DL_SVG + '</a>';
+        }).join('') + '</div>';
+    }
+
     // Full inner HTML of a message row — kept in step with partials/team-message.blade.php.
     function bubbleInner(m){
-        var h = '<div class="tc-bubble' + (m.deleted ? ' deleted' : '') + '">';
+        var atts = (!m.deleted && m.attachments && m.attachments.length) ? m.attachments : [];
+        var onlyMedia = atts.length && !m.body;
+        var h = '<div class="tc-bubble' + (m.deleted ? ' deleted' : '') + (onlyMedia ? ' tc-bubble--media' : '') + '">';
         if (m.reply && !m.deleted) h += '<div class="tc-quote"><span class="tc-quote-author">' + esc(m.reply.author)
             + '</span><span class="tc-quote-text">' + esc(m.reply.text) + '</span></div>';
         if (m.forwarded && !m.deleted) h += '<div class="tc-fwd">↪ Forwarded</div>';
-        h += '<div class="tc-text">' + (m.deleted ? '🚫 This message was deleted' : esc(m.body)) + '</div></div>';
+        h += attsHtml(atts);
+        if (m.deleted) h += '<div class="tc-text">🚫 This message was deleted</div>';
+        else if (m.body) h += '<div class="tc-text">' + esc(m.body) + '</div>';
+        h += '</div>';
         var tick = (m.mine && !m.deleted) ? '<span class="tc-btick">' + TICK + '</span>' : '';
         h += '<div class="tc-time">' + esc(m.at) + tick + '</div>';
         h += '<div class="tc-reacts">' + reactsHtml(m.reactions) + '</div>';
@@ -449,7 +530,7 @@
         if (prev){
             prev.classList.remove('unread');
             var t = (m.mine && !m.deleted) ? '<span class="tc-tick" data-tick>' + TICK + '</span>' : '';
-            var txt = m.deleted ? 'This message was deleted' : m.body;
+            var txt = m.deleted ? 'This message was deleted' : (m.body ? m.body : '📎 Attachment');
             prev.innerHTML = t + '<span data-preview-text>' + esc(txt).slice(0, 80) + '</span>';
         }
         var badge = row.querySelector('[data-badge]'); if (badge) badge.remove();
@@ -512,20 +593,92 @@
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
     });
 
+    // ---------- Attachments ----------
+    var fileInput = document.getElementById('tcFile');
+    var attachBtn = document.getElementById('tcAttach');
+    var pendingBox = document.getElementById('tcPending');
+    var progressBox = document.getElementById('tcProgress');
+    var progressBar = progressBox ? progressBox.querySelector('i') : null;
+    var ALLOWED = ['jpg','jpeg','png','gif','webp','pdf','zip','doc','docx','xls','xlsx','csv','txt','ppt','pptx'];
+    var IMG_EXT = ['jpg','jpeg','png','gif','webp'];
+    var MAX_BYTES = 25600 * 1024;
+    var pending = [];
+
+    function extOf(name){ var i = name.lastIndexOf('.'); return i >= 0 ? name.slice(i + 1).toLowerCase() : ''; }
+
+    function addFiles(list){
+        Array.prototype.slice.call(list || []).forEach(function (f) {
+            if (pending.length >= 10) { toast('Up to 10 files per message'); return; }
+            if (ALLOWED.indexOf(extOf(f.name)) < 0) { toast(f.name + ': file type not allowed'); return; }
+            if (f.size > MAX_BYTES) { toast(f.name + ': larger than 25 MB'); return; }
+            var it = { file: f };
+            if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);
+            pending.push(it);
+        });
+        renderPending();
+    }
+    function renderPending(){
+        if (!pending.length) { pendingBox.hidden = true; pendingBox.innerHTML = ''; return; }
+        pendingBox.hidden = false;
+        pendingBox.innerHTML = pending.map(function (it, i) {
+            var thumb = it.url ? '<img src="' + it.url + '">' : '<span class="tc-chip-ic">' + FILE_SVG + '</span>';
+            return '<span class="tc-pending-chip">' + thumb + '<span class="tc-chip-name">' + esc(it.file.name)
+                + '</span><button type="button" class="tc-chip-x" data-i="' + i + '" aria-label="Remove">&times;</button></span>';
+        }).join('');
+    }
+    function clearPending(){ pending.forEach(function (it) { if (it.url) URL.revokeObjectURL(it.url); }); pending = []; renderPending(); }
+
+    if (attachBtn) attachBtn.addEventListener('click', function () { fileInput.click(); });
+    if (fileInput) fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
+    if (pendingBox) pendingBox.addEventListener('click', function (e) {
+        var x = e.target.closest('.tc-chip-x'); if (!x) return;
+        var i = parseInt(x.dataset.i, 10);
+        if (pending[i] && pending[i].url) URL.revokeObjectURL(pending[i].url);
+        pending.splice(i, 1); renderPending();
+    });
+
+    // Drag & drop anywhere on the thread panel.
+    var thread = box.closest('.tc-thread');
+    if (thread){
+        ['dragenter','dragover'].forEach(function (ev) { thread.addEventListener(ev, function (e) {
+            if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); thread.classList.add('tc-drag'); }
+        }); });
+        thread.addEventListener('dragleave', function (e) { if (!e.relatedTarget || !thread.contains(e.relatedTarget)) thread.classList.remove('tc-drag'); });
+        thread.addEventListener('drop', function (e) {
+            thread.classList.remove('tc-drag');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { e.preventDefault(); addFiles(e.dataTransfer.files); }
+        });
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         var body = input.value.trim();
-        if (!body) return;
+        if (!body && !pending.length) return;
         var btn = form.querySelector('.tc-send'); btn.disabled = true;
-        var fd = new FormData(); fd.append('_token', csrf); fd.append('recipient_id', withId); fd.append('body', body);
+
+        var fd = new FormData();
+        fd.append('_token', csrf); fd.append('recipient_id', withId);
+        if (body) fd.append('body', body);
         if (replyId) fd.append('reply_to_id', replyId);
-        fetch(STORE, { method:'POST', cache:'no-store', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                btn.disabled = false;
-                if (res && res.ok) { append(res.message); input.value=''; grow(); cancelReply(); toBottom(); input.focus(); }
-            })
-            .catch(function () { btn.disabled = false; });
+        pending.forEach(function (it) { fd.append('attachments[]', it.file, it.file.name); });
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', STORE);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('Accept', 'application/json');
+        if (pending.length && progressBox) { progressBox.hidden = false; progressBar.style.width = '0%'; }
+        xhr.upload.onprogress = function (ev) { if (ev.lengthComputable && progressBar) progressBar.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
+        xhr.onload = function () {
+            btn.disabled = false; if (progressBox) progressBox.hidden = true;
+            var res = null; try { res = JSON.parse(xhr.responseText); } catch (err) {}
+            if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
+                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); toBottom(); input.focus();
+            } else {
+                toast(res && res.message ? res.message : 'Could not send message');
+            }
+        };
+        xhr.onerror = function () { btn.disabled = false; if (progressBox) progressBox.hidden = true; toast('Network error — try again'); };
+        xhr.send(fd);
     });
 
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
@@ -555,6 +708,21 @@
     if (menu) document.body.appendChild(menu);         // detach so position:fixed is exact
     if (fwdModal) document.body.appendChild(fwdModal);
     var menuMsg = null, replyId = null, forwardId = null, guardUntil = 0;
+
+    // ---------- Image lightbox ----------
+    var lightbox = document.getElementById('tcLightbox');
+    var lbImg = document.getElementById('tcLbImg');
+    if (lightbox) document.body.appendChild(lightbox);
+    function closeLightbox(){ if (lightbox) { lightbox.hidden = true; lbImg.src = ''; } }
+    box.addEventListener('click', function (e) {
+        var img = e.target.closest('.tc-att-img'); if (!img) return;
+        e.preventDefault();
+        lbImg.src = img.getAttribute('href'); lightbox.hidden = false;
+    });
+    if (lightbox){
+        document.getElementById('tcLbClose').addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
+    }
 
     function postJson(url, data, method){
         var fd = new FormData(); fd.append('_token', csrf);
@@ -698,7 +866,7 @@
     });
     box.addEventListener('scroll', function () { if (menu && !menu.hidden) closeMenu(); });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; }
+        if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; closeLightbox(); }
     });
 
     var rc = document.getElementById('tcReplyCancel'); if (rc) rc.addEventListener('click', cancelReply);
