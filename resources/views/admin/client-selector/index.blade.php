@@ -233,7 +233,8 @@
                 @php
                     $name   = $o['client']->business_name;
                     $isOwed = $o['pending'] > 0;
-                    $accent = $isOwed ? $accentOf($name) : '#22c55e';
+                    // Colour by how much is owed: $100 or more is red, under $100 (incl. paid) is green.
+                    $accent = $o['pending'] >= 100 ? '#ef4444' : '#22c55e';
                 @endphp
                 <form method="POST" action="{{ route('admin.client-selector.select', $o['client']->id) }}"
                       class="owes-form" data-status="{{ $isOwed ? 'owed' : 'clear' }}">
