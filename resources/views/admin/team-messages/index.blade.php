@@ -62,7 +62,12 @@
                 @if ($isGroup)
                     <span class="tc-avatar sm tc-avatar--group">{{ $active->icon ?: '💬' }}</span>
                     <div class="tc-th-info">
-                        <div class="tc-th-name">{{ $active->name }}</div>
+                        <div class="tc-th-nameline">
+                            <span class="tc-th-name" id="tcGroupName">{{ $active->name }}</span>
+                            <button type="button" class="tc-th-edit" id="tcGroupNameEdit" title="Edit group name" aria-label="Edit group name">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                            </button>
+                        </div>
                         <div class="tc-th-role">{{ $members->count() }} members<span id="tcOnlineCount">{{ $onlineCount > 0 ? ' · '.$onlineCount.' online' : '' }}</span></div>
                     </div>
                     <button type="button" class="tc-th-btn" id="tcMembersBtn" title="Members">
@@ -185,8 +190,17 @@
                 </button>
             </form>
 
-            {{-- Full emoji picker for reactions (moved to <body> by JS) --}}
-            <div class="tc-emoji-picker" id="tcEmojiPicker" hidden></div>
+            {{-- Teams-style emoji picker (moved to <body> by JS) --}}
+            <div class="tc-emoji-picker" id="tcEmojiPicker" hidden>
+                <div class="tc-emoji-head">
+                    <div class="tc-emoji-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="tcEmojiSearch" placeholder="Find something fun" autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+                <div class="tc-emoji-scroll" id="tcEmojiScroll"></div>
+                <div class="tc-emoji-tabs" id="tcEmojiTabs"></div>
+            </div>
 
             {{-- Shared files gallery --}}
             <div class="tc-modal" id="tcGallery" hidden>
@@ -382,6 +396,14 @@
     .tc-empty { padding:26px 14px; text-align:center; color:#94a3b8; font-size:13px; }
 
     .tc-thread-head { display:flex; align-items:center; gap:12px; padding:15px 20px; border-bottom:1px solid var(--pro-line,#eef2f7); }
+    .tc-th-nameline { display:flex; align-items:center; gap:6px; }
+    .tc-th-edit { border:0; background:transparent; padding:3px; border-radius:7px; cursor:pointer; color:#94a3b8; opacity:0; transition:opacity .12s, background .12s, color .12s; display:inline-flex; }
+    .tc-th-nameline:hover .tc-th-edit, .tc-th-edit:focus-visible { opacity:1; }
+    .tc-th-edit:hover { background:var(--pro-soft,#f1f5f9); color:#6366f1; }
+    .tc-th-edit svg { width:15px; height:15px; }
+    .tc-th-name-input { font:700 15px system-ui,sans-serif; color:var(--pro-ink,#1e293b); border:0; border-bottom:2px solid #6366f1; outline:0; background:transparent; padding:0 2px 2px; min-width:120px; max-width:340px; }
+    :root[data-theme="dark"] .tc-th-name-input { color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-th-edit:hover { background:#182444; }
     .tc-th-name { font-size:15px; font-weight:800; color:var(--pro-text,#0f172a); }
     .tc-th-role { font-size:12px; color:#94a3b8; }
     .tc-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; background:var(--pro-soft,#f7f9fc); }
@@ -498,14 +520,32 @@
     /* Emoji reaction quick bar + full picker */
     .tc-menu-emoji button { position:relative; }
     .tc-emoji-more { font-size:16px !important; color:#6366f1; font-weight:800; }
-    .tc-emoji-picker { position:fixed; z-index:1003; width:308px; max-height:320px; overflow-y:auto; padding:10px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:16px; box-shadow:0 20px 50px rgba(15,23,42,.28); }
-    .tc-emoji-cat { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; margin:8px 4px 4px; }
+    /* ---- Teams-style emoji panel ---- */
+    .tc-emoji-picker { position:fixed; z-index:1003; width:340px; display:flex; flex-direction:column; overflow:hidden; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.30); }
+    .tc-emoji-head { padding:12px 12px 8px; }
+    .tc-emoji-search { display:flex; align-items:center; gap:8px; padding:0 4px 8px; border-bottom:2px solid var(--pro-line,#e6ebf2); }
+    .tc-emoji-search:focus-within { border-bottom-color:#6366f1; }
+    .tc-emoji-search svg { width:17px; height:17px; color:#94a3b8; flex:none; }
+    .tc-emoji-search input { flex:1; border:0; outline:0; background:transparent; font:500 14px system-ui,sans-serif; color:var(--pro-ink,#1e293b); }
+    .tc-emoji-search input::placeholder { color:#94a3b8; }
+    .tc-emoji-scroll { flex:1; max-height:288px; overflow-y:auto; padding:6px 12px 8px; scroll-behavior:smooth; }
+    .tc-emoji-cat { font-size:12px; font-weight:700; color:var(--pro-ink,#334155); margin:12px 2px 6px; }
     .tc-emoji-cat:first-child { margin-top:2px; }
-    .tc-emoji-grid { display:grid; grid-template-columns:repeat(8, 1fr); gap:2px; }
-    .tc-emoji-grid button { border:0; background:transparent; font-size:20px; line-height:1; padding:5px 0; border-radius:8px; cursor:pointer; }
-    .tc-emoji-grid button:hover { background:var(--pro-soft,#f1f5f9); transform:scale(1.15); }
+    .tc-emoji-grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:1px; }
+    .tc-emoji-grid button { border:0; background:transparent; font-size:25px; line-height:1; height:40px; border-radius:9px; cursor:pointer; transition:background .1s, transform .06s; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+    .tc-emoji-grid button:hover { background:var(--pro-soft,#f1f5f9); transform:scale(1.12); }
+    .tc-emoji-empty { text-align:center; color:#94a3b8; font-size:13px; padding:26px 0; }
+    .tc-emoji-tabs { display:flex; align-items:center; justify-content:space-between; gap:2px; padding:6px 8px; border-top:1px solid var(--pro-line,#eef2f7); background:var(--pro-soft,#f8fafc); }
+    .tc-emoji-tabs button { flex:1; border:0; background:transparent; font-size:19px; line-height:1; height:32px; border-radius:8px; cursor:pointer; opacity:.65; filter:grayscale(.15); transition:background .12s, opacity .12s; font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+    .tc-emoji-tabs button:hover { opacity:1; background:rgba(99,102,241,.10); }
+    .tc-emoji-tabs button.active { opacity:1; background:rgba(99,102,241,.14); box-shadow:inset 0 -2px 0 #6366f1; }
     :root[data-theme="dark"] .tc-emoji-picker { background:#0f1629; border-color:#233150; }
+    :root[data-theme="dark"] .tc-emoji-search { border-bottom-color:#233150; }
+    :root[data-theme="dark"] .tc-emoji-search input { color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-emoji-cat { color:#cbd5e1; }
     :root[data-theme="dark"] .tc-emoji-grid button:hover { background:#182444; }
+    :root[data-theme="dark"] .tc-emoji-tabs { background:#0b1120; border-top-color:#233150; }
+    :root[data-theme="dark"] .tc-emoji-tabs button:hover { background:rgba(99,102,241,.18); }
 
     /* Presence dots */
     .tc-av { position:relative; flex:none; display:inline-flex; }
@@ -1323,13 +1363,23 @@
 
     // ---------- Emoji reactions: recent quick-bar + full picker ----------
     var DEFAULT_EMOJI = ['👍','❤️','😂','😮','😢','🙏'];
-    var EMOJI_ALL = {
-        'Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','💩','🤡','👻','👽','🤖'],
-        'Gestures': ['👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🙏','✍️','💅','🤳','💪','🔥','💯','✔️','➕','✖️','🎉','🎊','⭐','🌟','✨','⚡','💥','💫','💦'],
-        'Hearts': ['❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💔','❣️','💕','💞','💓','💗','💖','💘','💝'],
-        'Animals & Food': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐷','🐸','🐵','🐔','🐧','🦄','🐝','🦋','🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🍔','🍟','🍕','🌭','🍿','🎂','🍰','🍩','🍪','☕','🍺','🥂'],
-        'Objects & Symbols': ['💬','📌','📎','✅','❌','❗','❓','💡','📁','📣','🛠️','🏆','🎯','💼','🚀','⏰','📅','🔒','🔑','💸','💰','📈','📉','✏️','📝','🔔','⚠️','🚫','♻️','✔️','☑️','🆗','🆕','🔝','💤']
-    };
+    // Each category: { key, tab (icon glyph), name, items:[[emoji, 'search keywords'], ...] }
+    var EMOJI_CATS = [
+        { key:'smileys', tab:'😀', name:'Smileys & people', items:[
+            ['😀','grin happy smile'],['😃','happy smile joy'],['😄','happy laugh smile'],['😁','grin beam'],['😆','laugh haha'],['😅','sweat laugh nervous'],['🤣','rofl rolling laugh'],['😂','joy tears laugh cry'],['🙂','slight smile'],['🙃','upside down silly'],['😉','wink'],['😊','blush smile happy'],['😇','angel innocent halo'],['🥰','love hearts adore'],['😍','love heart eyes'],['🤩','star struck wow'],['😘','kiss blow'],['😗','kiss'],['😚','kiss closed'],['😙','kiss smile'],['😋','yum tasty tongue'],['😛','tongue playful'],['😜','wink tongue'],['🤪','zany crazy silly'],['😝','tongue squint'],['🤑','money mouth rich'],['🤗','hug hands'],['🤭','giggle oops hand'],['🤫','shush quiet secret'],['🤔','thinking hmm think'],['🤐','zipper quiet'],['😐','neutral meh'],['😑','expressionless blank'],['😶','no mouth silent'],['😏','smirk'],['😒','unamused annoyed'],['🙄','eye roll'],['😬','grimace awkward'],['🤥','lying pinocchio'],['😌','relieved calm'],['😔','sad pensive'],['😪','sleepy tired'],['🤤','drool'],['😴','sleep zzz'],['😷','mask sick'],['🤒','sick thermometer'],['🤕','hurt bandage injured'],['🤢','sick nausea gross'],['🤮','vomit puke sick'],['🤧','sneeze sick'],['🥵','hot heat sweat'],['🥶','cold freeze'],['🥴','woozy drunk dizzy'],['😵','dizzy dead ko'],['🤯','mind blown shocked'],['🤠','cowboy'],['🥳','party celebrate hat'],['😎','cool sunglasses'],['🤓','nerd geek glasses'],['🧐','monocle inspect'],['😕','confused'],['😟','worried'],['🙁','frown sad'],['☹️','frown sad'],['😮','wow surprised oh'],['😯','hushed surprised'],['😲','astonished shocked'],['😳','flushed embarrassed'],['🥺','pleading puppy eyes beg'],['😦','frown anguish'],['😧','anguished'],['😨','fearful scared'],['😰','anxious sweat scared'],['😥','sad relieved'],['😢','cry sad tear'],['😭','sob cry bawl'],['😱','scream shocked fear'],['😖','confounded'],['😣','persevere struggle'],['😞','disappointed sad'],['😓','sweat sad'],['😩','weary tired'],['😫','tired exhausted'],['🥱','yawn bored'],['😤','huff triumph frustrated'],['😡','angry mad rage red'],['😠','angry mad'],['🤬','cursing swear angry'],['😈','devil imp evil'],['👿','angry devil'],['💀','skull dead'],['💩','poop'],['🤡','clown'],['👻','ghost boo'],['👽','alien'],['🤖','robot bot']] },
+        { key:'gestures', tab:'✋', name:'Gestures & body', items:[
+            ['👋','wave hi bye hello'],['🤚','raised hand'],['✋','hand stop high five'],['🖖','vulcan spock'],['👌','ok perfect'],['🤏','pinch small'],['✌️','peace victory'],['🤞','fingers crossed luck'],['🤟','love you'],['🤘','rock horns'],['🤙','call me shaka'],['👈','point left'],['👉','point right'],['👆','point up'],['👇','point down'],['☝️','point up index'],['👍','thumbs up like yes good approve'],['👎','thumbs down dislike no bad'],['✊','fist raised power'],['👊','fist bump punch'],['🤛','fist left'],['🤜','fist right'],['👏','clap applause bravo'],['🙌','raise hands celebrate praise'],['👐','open hands'],['🤲','palms up'],['🙏','pray thanks please please high five'],['✍️','write hand'],['💅','nails polish'],['🤳','selfie'],['💪','muscle strong flex'],['🔥','fire lit hot flame'],['💯','hundred perfect score'],['✔️','check tick yes done'],['➕','plus add'],['✖️','cross multiply'],['🎉','party celebrate tada'],['🎊','confetti celebrate'],['⭐','star'],['🌟','glow star sparkle'],['✨','sparkles shiny magic'],['⚡','bolt lightning fast'],['💥','boom explode'],['💫','dizzy star'],['💦','sweat water splash']] },
+        { key:'hearts', tab:'❤️', name:'Hearts', items:[
+            ['❤️','red heart love'],['🧡','orange heart'],['💛','yellow heart'],['💚','green heart'],['💙','blue heart'],['💜','purple heart'],['🤎','brown heart'],['🖤','black heart'],['🤍','white heart'],['💔','broken heart'],['❣️','heart exclamation'],['💕','two hearts love'],['💞','revolving hearts'],['💓','beating heart'],['💗','growing heart'],['💖','sparkling heart'],['💘','arrow heart cupid'],['💝','heart gift ribbon']] },
+        { key:'animals', tab:'🐻', name:'Animals & nature', items:[
+            ['🐶','dog puppy'],['🐱','cat kitten'],['🐭','mouse'],['🐹','hamster'],['🐰','rabbit bunny'],['🦊','fox'],['🐻','bear'],['🐼','panda'],['🐨','koala'],['🐯','tiger'],['🦁','lion'],['🐷','pig'],['🐸','frog'],['🐵','monkey'],['🐔','chicken'],['🐧','penguin'],['🦄','unicorn'],['🐝','bee'],['🦋','butterfly'],['🌸','blossom flower'],['🌹','rose flower'],['🌻','sunflower'],['🌈','rainbow'],['☀️','sun sunny'],['🌙','moon night'],['⛄','snowman winter'],['🌊','wave ocean water'],['🌍','earth globe world']] },
+        { key:'food', tab:'🍔', name:'Food & drink', items:[
+            ['🍏','green apple'],['🍎','apple'],['🍐','pear'],['🍊','orange tangerine'],['🍋','lemon'],['🍌','banana'],['🍉','watermelon'],['🍓','strawberry'],['🫐','blueberry'],['🍒','cherry'],['🍑','peach'],['🥭','mango'],['🍍','pineapple'],['🥥','coconut'],['🍔','burger'],['🍟','fries chips'],['🍕','pizza'],['🌭','hot dog'],['🍿','popcorn'],['🎂','cake birthday'],['🍰','cake slice'],['🍩','donut'],['🍪','cookie'],['🍫','chocolate'],['🍭','lollipop candy'],['☕','coffee tea'],['🍺','beer'],['🍻','beers cheers'],['🥂','champagne cheers toast'],['🍷','wine']] },
+        { key:'activity', tab:'⚽', name:'Activity & travel', items:[
+            ['⚽','soccer football'],['🏀','basketball'],['🏈','american football'],['⚾','baseball'],['🎾','tennis'],['🏆','trophy win champion'],['🥇','gold medal first'],['🎯','target bullseye dart'],['🎮','game controller'],['🎲','dice'],['🎸','guitar music'],['🎧','headphones music'],['🚀','rocket launch ship fast'],['✈️','plane travel flight'],['🚗','car'],['🏠','house home'],['🏝️','island beach'],['🗽','statue liberty'],['🎡','ferris wheel'],['⛱️','beach umbrella'],['🏖️','beach'],['🗺️','map'],['🧳','luggage travel'],['⛰️','mountain']] },
+        { key:'symbols', tab:'🔣', name:'Objects & symbols', items:[
+            ['💬','speech chat message'],['💭','thought bubble'],['📌','pin'],['📎','paperclip clip'],['✅','check done tick green'],['❌','cross no wrong'],['❗','exclamation important'],['❓','question'],['💡','idea light bulb'],['📁','folder file'],['📣','megaphone announce'],['🛠️','tools fix'],['🏆','trophy'],['🎯','target'],['💼','briefcase work'],['⏰','alarm clock time'],['🔒','lock secure'],['🔑','key'],['💸','money fly cash'],['💰','money bag'],['📈','chart up growth'],['📉','chart down'],['✏️','pencil edit'],['📝','memo note write'],['🔔','bell notify'],['⚠️','warning caution'],['🚫','no prohibited ban'],['♻️','recycle'],['☑️','checkbox ticked'],['🆗','ok'],['🆕','new'],['🔝','top up'],['💤','sleep zzz'],['🙏','thanks pray']] }
+    ];
 
     function getRecent(){
         try { var r = JSON.parse(localStorage.getItem('tc-recent-emoji') || '[]'); return (r && r.length) ? r : DEFAULT_EMOJI.slice(); }
@@ -1609,50 +1659,122 @@
         var el = pill.closest('.tc-msg'); if (el) react(parseInt(el.dataset.id, 10), pill.dataset.emoji);
     });
 
-    // Full emoji picker (built once, moved to body).
+    // ---- Teams-style emoji picker (search + recent + categories + bottom tabs). Moved to <body>. ----
     var picker = document.getElementById('tcEmojiPicker');
     if (picker) TCB(picker);
-    var pickerBuilt = false;
-    function buildPicker(){
-        if (pickerBuilt || !picker) return; pickerBuilt = true;
-        var html = '';
-        Object.keys(EMOJI_ALL).forEach(function (cat) {
-            html += '<div class="tc-emoji-cat">' + cat + '</div><div class="tc-emoji-grid">'
-                + EMOJI_ALL[cat].map(function (e) { return '<button type="button" data-emoji="' + e + '">' + e + '</button>'; }).join('')
-                + '</div>';
-        });
-        picker.innerHTML = html;
+    var pkScroll = picker && picker.querySelector('#tcEmojiScroll');
+    var pkTabs   = picker && picker.querySelector('#tcEmojiTabs');
+    var pkSearch = picker && picker.querySelector('#tcEmojiSearch');
+    var tabsBuilt = false;
+
+    function cellHtml(pair){ // pair = [emoji, keywords]
+        return '<button type="button" data-emoji="' + pair[0] + '" title="' + pair[1].split(' ')[0] + '">' + pair[0] + '</button>';
     }
+    function buildTabs(){
+        if (tabsBuilt || !pkTabs) return; tabsBuilt = true;
+        var h = '<button type="button" data-cat="recent" title="Recent">🕘</button>';
+        EMOJI_CATS.forEach(function (c) { h += '<button type="button" data-cat="' + c.key + '" title="' + c.name + '">' + c.tab + '</button>'; });
+        pkTabs.innerHTML = h;
+    }
+    function renderSections(){ // full list: Recent + every category, each with an anchor for tab-jump
+        var rec = getRecent();
+        var h = '';
+        if (rec.length){
+            h += '<div class="tc-emoji-cat" data-sec="recent">Recent</div><div class="tc-emoji-grid">'
+               + rec.map(function (e) { return cellHtml([e, e]); }).join('') + '</div>';
+        }
+        EMOJI_CATS.forEach(function (c) {
+            h += '<div class="tc-emoji-cat" data-sec="' + c.key + '">' + c.name + '</div><div class="tc-emoji-grid">'
+               + c.items.map(cellHtml).join('') + '</div>';
+        });
+        pkScroll.innerHTML = h;
+    }
+    function renderSearch(q){
+        q = q.trim().toLowerCase();
+        if (!q){ renderSections(); return; }
+        var seen = {}, hits = [];
+        EMOJI_CATS.forEach(function (c) {
+            c.items.forEach(function (p) {
+                if (!seen[p[0]] && (p[1].indexOf(q) !== -1 || p[0] === q)){ seen[p[0]] = 1; hits.push(p); }
+            });
+        });
+        pkScroll.innerHTML = hits.length
+            ? '<div class="tc-emoji-grid" style="margin-top:6px">' + hits.map(cellHtml).join('') + '</div>'
+            : '<div class="tc-emoji-empty">No emoji found for “' + q.replace(/[<>&]/g, '') + '”</div>';
+    }
+    function syncActiveTab(){
+        if (!pkTabs || pkScroll.querySelector('.tc-emoji-empty')) return;
+        var secs = pkScroll.querySelectorAll('[data-sec]'), top = pkScroll.getBoundingClientRect().top, cur = null;
+        secs.forEach(function (s) { if (s.getBoundingClientRect().top - top <= 12) cur = s.getAttribute('data-sec'); });
+        pkTabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-cat') === cur); });
+    }
+
     var pickerMode = 'react';
+    function place(anchor){
+        var r = anchor.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+        var pw = picker.offsetWidth, ph = picker.offsetHeight;
+        var left = Math.max(8, Math.min(r.left, vw - pw - 8));
+        // Teams pops UP from the composer/anchor; fall back to down only if there's no room above.
+        var top = (r.top > ph + 12) ? (r.top - ph - 8) : Math.min(r.bottom + 8, vh - ph - 8);
+        top = Math.max(8, top);
+        picker.style.left = left + 'px'; picker.style.top = top + 'px';
+        // Two-pass: correct for any transformed ancestor so position:fixed lands true to the viewport.
+        var got = picker.getBoundingClientRect(), dx = left - got.left, dy = top - got.top;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5){ picker.style.left = (left + dx) + 'px'; picker.style.top = (top + dy) + 'px'; }
+    }
     function openPicker(anchor, mode){
         pickerMode = mode || 'react';
-        buildPicker(); picker.hidden = false;
-        var r = anchor.getBoundingClientRect(), pw = picker.offsetWidth, ph = picker.offsetHeight;
-        picker.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
-        picker.style.top  = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - ph - 8)) + 'px';
+        buildTabs(); if (pkSearch) pkSearch.value = '';
+        renderSections();
+        picker.hidden = false;
+        place(anchor);
+        syncActiveTab();
     }
     function closePicker(){ if (picker) picker.hidden = true; if (pickerMode !== 'compose') emojiTargetId = null; }
+
+    function pickEmoji(emoji){
+        if (pickerMode === 'compose'){
+            var s = input.selectionStart, en = input.selectionEnd, v = input.value;
+            input.value = v.slice(0, s) + emoji + v.slice(en);
+            var caret = s + emoji.length; input.setSelectionRange(caret, caret);
+            input.focus(); grow(); recordRecent(emoji); closePicker();
+        } else {
+            if (emojiTargetId){ react(emojiTargetId, emoji); recordRecent(emoji); }
+            closePicker();
+        }
+    }
     if (picker){
-        picker.addEventListener('click', function (e) {
-            var b = e.target.closest('[data-emoji]'); if (!b) return;
-            if (pickerMode === 'compose'){
-                var s = input.selectionStart, en = input.selectionEnd, v = input.value;
-                input.value = v.slice(0, s) + b.dataset.emoji + v.slice(en);
-                var caret = s + b.dataset.emoji.length; input.setSelectionRange(caret, caret);
-                input.focus(); grow(); closePicker();
-            } else {
-                if (emojiTargetId){ react(emojiTargetId, b.dataset.emoji); recordRecent(b.dataset.emoji); }
-                closePicker();
-            }
+        pkScroll.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-emoji]'); if (b) pickEmoji(b.dataset.emoji);
         });
+        if (pkTabs) pkTabs.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-cat]'); if (!b) return;
+            if (pkSearch && pkSearch.value){ pkSearch.value = ''; renderSections(); }
+            var sec = pkScroll.querySelector('[data-sec="' + b.getAttribute('data-cat') + '"]');
+            if (sec) pkScroll.scrollTop = sec.offsetTop - 4;
+            syncActiveTab();
+        });
+        pkScroll.addEventListener('scroll', syncActiveTab, { passive: true });
+        if (pkSearch){
+            pkSearch.addEventListener('input', function () { renderSearch(pkSearch.value); syncActiveTab(); });
+            pkSearch.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter'){ e.preventDefault(); var first = pkScroll.querySelector('[data-emoji]'); if (first) pickEmoji(first.dataset.emoji); }
+                else if (e.key === 'Escape'){ closePicker(); }
+            });
+        }
         TCD('click', function (e) {
             if (picker.hidden) return;
             if (!picker.contains(e.target) && !e.target.closest('[data-more]') && e.target.id !== 'tcEmojiBtn' && !e.target.closest('#tcEmojiBtn')) closePicker();
         });
     }
-    // Composer emoji button (compose mode).
+    // Composer emoji button (compose mode). Focus search so you can type to find one instantly.
     var emojiBtn = document.getElementById('tcEmojiBtn');
-    if (emojiBtn && picker) emojiBtn.addEventListener('click', function (e) { e.stopPropagation(); openPicker(emojiBtn, 'compose'); });
+    if (emojiBtn && picker) emojiBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!picker.hidden){ closePicker(); return; }
+        openPicker(emojiBtn, 'compose');
+        setTimeout(function () { try { pkSearch.focus(); } catch (err) {} }, 30);
+    });
 
     if (menu){
         // Quick-bar emoji (recent) + the "＋" that opens the full picker.
@@ -1705,6 +1827,45 @@
                 headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).then(function (r) { return r.json(); });
         }
         membersBtn.addEventListener('click', function () { membersModal.hidden = false; });
+
+        // Inline group-name edit (Teams-style pencil in the header).
+        var nameEl = document.getElementById('tcGroupName');
+        var nameEdit = document.getElementById('tcGroupNameEdit');
+        if (nameEl && nameEdit){
+            var editing = false;
+            function startNameEdit(){
+                if (editing) return; editing = true;
+                var cur = nameEl.textContent.trim();
+                var inp = document.createElement('input');
+                inp.type = 'text'; inp.className = 'tc-th-name-input'; inp.maxLength = 80; inp.value = cur;
+                nameEl.hidden = true; nameEdit.hidden = true;
+                nameEl.parentNode.insertBefore(inp, nameEl);
+                inp.focus(); inp.select();
+                var done = false;
+                function finish(save){
+                    if (done) return; done = true;
+                    var nm = inp.value.trim();
+                    inp.remove(); nameEl.hidden = false; nameEdit.hidden = false; editing = false;
+                    if (save && nm && nm !== cur){
+                        gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) {
+                            if (res && res.ok){
+                                nameEl.textContent = nm;
+                                var rn = document.getElementById('tcRenameName'); if (rn) rn.value = nm;
+                                var row = document.querySelector('.tc-contact[data-conversation="' + GID + '"] .tc-c-name');
+                                if (row) row.textContent = nm;
+                                if (typeof toast === 'function') toast('Group renamed');
+                            } else { toast('Could not rename'); }
+                        });
+                    }
+                }
+                inp.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+                    else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+                });
+                inp.addEventListener('blur', function () { finish(true); });
+            }
+            nameEdit.addEventListener('click', startNameEdit);
+        }
         document.getElementById('tcMembersClose').addEventListener('click', function () { membersModal.hidden = true; });
         membersModal.addEventListener('click', function (e) { if (e.target === membersModal) membersModal.hidden = true; });
 
