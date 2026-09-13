@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PushSubscription;
+use App\Services\WebPush\WebPushCrypto;
 use App\Services\WebPushSender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
-use Minishlink\WebPush\VAPID;
 
 class PushSubscriptionController extends Controller
 {
@@ -21,7 +21,7 @@ class PushSubscriptionController extends Controller
         // Generate a fresh key pair, try to save it, and ALWAYS show it for copy-paste.
         if ($request->query('generate')) {
             try {
-                $keys = VAPID::createVapidKeys();
+                $keys = WebPushCrypto::generateVapidKeys();
             } catch (\Throwable $e) {
                 return response($this->setupHtml('error', $e->getMessage()));
             }

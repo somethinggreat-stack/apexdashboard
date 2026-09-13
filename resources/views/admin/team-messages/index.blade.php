@@ -1478,7 +1478,9 @@
         if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
         var isOpen = String(m.conversation_id) === String(CONV);
         var pv = row.querySelector('[data-preview-text]');
-        if (pv) pv.textContent = (m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet;
+        // Match the server format: groups show "Name: text", DMs show just the text.
+        if (pv) pv.textContent = (row.dataset.group === '1' ? m.sender + ': ' : '') + m.snippet;
+        var tick = row.querySelector('[data-tick]'); if (tick) tick.remove();   // incoming message → no "sent" tick
         var tm = row.querySelector('[data-time]'); if (tm) tm.textContent = 'now';
         if (!isOpen && m.mention && row.dataset.muted !== '1' && !row.querySelector('.tc-mention-badge')){
             var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';

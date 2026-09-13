@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Services\WebPush\WebPushCrypto;
 use Illuminate\Console\Command;
-use Minishlink\WebPush\VAPID;
 
 class GenerateVapidKeys extends Command
 {
@@ -29,7 +29,7 @@ class GenerateVapidKeys extends Command
         }
 
         try {
-            $keys = VAPID::createVapidKeys();
+            $keys = WebPushCrypto::generateVapidKeys();
         } catch (\Throwable $e) {
             $this->warn('webpush:install: could not generate keys (' . $e->getMessage() . ') — skipping.');
             return self::SUCCESS;

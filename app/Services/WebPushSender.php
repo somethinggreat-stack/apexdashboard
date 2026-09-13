@@ -3,10 +3,14 @@
 namespace App\Services;
 
 use App\Models\PushSubscription as Sub;
+use App\Services\WebPush\WebPushCrypto;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Minishlink\WebPush\Subscription;
-use Minishlink\WebPush\WebPush;
 
+/**
+ * Sends Web Push notifications with a self-contained (dependency-free) VAPID + aes128gcm
+ * implementation — no composer package to fail on shared hosting. See WebPushCrypto.
+ */
 class WebPushSender
 {
     /** Are VAPID keys configured? If not, Web Push is simply a no-op. */
@@ -17,10 +21,10 @@ class WebPushSender
 
     /**
      * Send one payload to every push subscription owned by the given admins.
-     * Dead subscriptions (410/404) are pruned. Failures never throw.
+     * Dead subscriptions (404/410) are pruned. Failures never throw.
      *
      * @param  int[]  $adminIds
-     * @param  array  $payload   ['title' => .., 'body' => .., 'url' => .., 'tag' => ..]
+     * @param  array  $payload   ['title'=>.., 'body'=>.., 'url'=>.., 'tag'=>.., 'conv'=>..]
      */
     public function sendToAdmins(array $adminIds, array $payload): void
     {
@@ -33,44 +37,36 @@ class WebPushSender
             return;
         }
 
-        try {
-            $webPush = new WebPush([
-                'VAPID' => [
-                    'subject'    => config('webpush.subject'),
-                    'publicKey'  => config('webpush.public_key'),
-                    'privateKey' => config('webpush.private_key'),
-                ],
-            ]);
+        $public  = (string) config('webpush.public_key');
+        $private  = (string) config('webpush.private_key');
+        $subject  = (string) (config('webpush.subject') ?: 'mailto:admin@apexgrowthsolution.com');
+        $ttl      = (int) config('webpush.ttl', 1800);
+        $body     = json_encode($payload);
 
-            $body = json_encode($payload);
-            $byEndpoint = [];
+        foreach ($subs as $sub) {
+            try {
+                $enc = WebPushCrypto::encrypt($sub->p256dh, $sub->auth, $body);
+                $vapid = WebPushCrypto::vapidAuth($sub->endpoint, $public, $private, $subject);
 
-            foreach ($subs as $sub) {
-                $byEndpoint[$sub->endpoint] = $sub;
-                $webPush->queueNotification(
-                    Subscription::create([
-                        'endpoint'        => $sub->endpoint,
-                        'publicKey'       => $sub->p256dh,
-                        'authToken'       => $sub->auth,
-                        'contentEncoding' => $sub->content_encoding ?: 'aesgcm',
-                    ]),
-                    $body,
-                    ['TTL' => (int) config('webpush.ttl', 1800)]
-                );
-            }
+                $res = Http::withHeaders([
+                    'Authorization'    => $vapid['Authorization'],
+                    'Content-Type'     => 'application/octet-stream',
+                    'Content-Encoding' => 'aes128gcm',
+                    'TTL'              => (string) $ttl,
+                    'Urgency'          => 'high',
+                ])->withOptions(['timeout' => 8, 'connect_timeout' => 5])
+                    ->withBody($enc['body'], 'application/octet-stream')
+                    ->post($sub->endpoint);
 
-            foreach ($webPush->flush() as $report) {
-                $endpoint = $report->getRequest()->getUri()->__toString();
-                if ($report->isSuccess()) {
-                    continue;
-                }
                 // 404 gone / 410 expired → the subscription is dead; delete it.
-                if ($report->isSubscriptionExpired() && isset($byEndpoint[$endpoint])) {
-                    $byEndpoint[$endpoint]->delete();
+                if (in_array($res->status(), [404, 410], true)) {
+                    $sub->delete();
+                } elseif ($res->successful()) {
+                    $sub->forceFill(['last_used_at' => now()])->saveQuietly();
                 }
+            } catch (\Throwable $e) {
+                Log::warning('WebPush send failed: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::warning('WebPush send failed: ' . $e->getMessage());
         }
     }
 }
