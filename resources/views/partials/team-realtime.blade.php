@@ -70,7 +70,8 @@
     if (bc) bc.onmessage = function (e) {
         var d = e.data || {};
         if (d.kind === 'active'){ if (d.focused) activeConvs[d.conv] = true; else delete activeConvs[d.conv]; return; }
-        if (d.kind === 'seen'){ hydrate(); renderPanel(); setBadge(d.unread); return; }
+        if (d.kind === 'seen'){ hydrate(); renderPanel(); return; }
+        if (d.kind === 'unread'){ applyUnread(d.unread, d.perConv); return; }   // authoritative counts from the leader
         if (d.kind === 'data'){ ingest(d.data, false); }   // from the leader — update in-app UI, don't re-notify/re-broadcast
     };
     function post(o){ if (bc) bc.postMessage(o); }
@@ -152,21 +153,30 @@
         if (bell) bell.classList.remove('pulse');
     }
 
-    // ---------- nav badge (Team Chat link) + bell count ----------
+    // ---------- nav badge (the ONE Team Chat nav link) + floating bell count ----------
+    // IMPORTANT: sidebar conversation rows are ALSO <a href=...team-messages...>. We must
+    // NEVER stamp the global unread total onto them — each row owns its own per-chat badge.
     function setBadge(n){
         if (typeof n !== 'number') return;
         document.querySelectorAll('a[href*="team-messages"]').forEach(function (a) {
+            if (a.classList.contains('tc-contact') || a.closest('.tc-list') || a.closest('.tc-wrap')) return;   // skip Team Chat sidebar rows
             var b = a.querySelector('.pro-count');
             if (n > 0){ if (!b){ b = document.createElement('span'); b.className = 'pro-count'; a.appendChild(b); } b.textContent = n > 99 ? '99+' : n; b.style.display = ''; }
             else if (b){ b.remove(); }
         });
         if (badge){ if (n > 0){ badge.textContent = n > 99 ? '99+' : n; badge.classList.add('show'); } else badge.classList.remove('show'); }
     }
+    // Push the authoritative unread total to badges and hand the per-conversation map to
+    // an open Team Chat so each sidebar row shows exactly its own count (never all rows).
+    function applyUnread(total, perConv){
+        if (typeof total === 'number') setBadge(total);
+        if (perConv) window.dispatchEvent(new CustomEvent('apex:team-unread', { detail: perConv }));
+    }
 
     // ---------- ingest a payload (from network on the leader, or from a peer tab) ----------
     function ingest(data, fromNetwork){
         if (!data) return;
-        if (typeof data.unread === 'number') setBadge(data.unread);
+        applyUnread(data.unread, data.perConv);
         var msgs = data.messages || [];
         msgs.forEach(function (m) {
             if (seen[m.id]) return; seen[m.id] = 1;
@@ -189,7 +199,9 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data){ schedule(); return; }
-                if (typeof data.unread === 'number') setBadge(data.unread);
+                // Authoritative unread every poll — so counts also DROP when read elsewhere.
+                applyUnread(data.unread, data.perConv);
+                post({ kind: 'unread', unread: data.unread, perConv: data.perConv });
                 if (!primed){ if (data.lastId){ lastId = data.lastId; ls(LKEY, String(lastId)); } primed = true; schedule(); return; }
                 if (data.lastId > lastId){ lastId = data.lastId; ls(LKEY, String(lastId)); }
                 if ((data.messages || []).length){ ingest(data, true); post({ kind: 'data', data: data }); }

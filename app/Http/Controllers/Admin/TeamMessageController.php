@@ -448,16 +448,24 @@ class TeamMessageController extends Controller
             ];
         }
 
-        // Total unread (unmuted) across all my conversations — for the live nav badge.
-        $unread = (int) DB::table('team_messages as m')
+        // Authoritative unread (unmuted), per conversation — drives the sidebar badges and
+        // the nav badge with no client-side drift. Keyed by conversation id.
+        $perConv = DB::table('team_messages as m')
             ->join('conversation_participants as p', 'p.conversation_id', '=', 'm.conversation_id')
             ->where('p.admin_id', $me->id)->where('p.muted', false)->where('m.type', 'text')
             ->where('m.sender_id', '!=', $me->id)
             ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')
-            ->whereNull('m.deleted_at')->count();
+            ->whereNull('m.deleted_at')
+            ->groupBy('m.conversation_id')
+            ->selectRaw('m.conversation_id as cid, COUNT(*) as c')
+            ->pluck('c', 'cid');
 
-        return response()->json(['messages' => $out, 'lastId' => $maxId, 'unread' => $unread])
-            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return response()->json([
+            'messages' => $out,
+            'lastId'   => $maxId,
+            'unread'   => (int) $perConv->sum(),
+            'perConv'  => (object) $perConv->all(),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /** Unread @mentions of me, per conversation (for the "@" badge). */

@@ -418,7 +418,7 @@
     .tc-tick { flex:none; display:inline-flex; width:16px; color:#9aa7b8; }
     .tc-tick svg { width:16px; height:auto; }
     .tc-tick.read { color:#2563eb; }
-    .tc-unread { flex:none; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#4f46e5; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+    .tc-unread { flex:none; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#16a34a; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
     .tc-empty { padding:26px 14px; text-align:center; color:#94a3b8; font-size:13px; }
 
     .tc-thread-head { display:flex; align-items:center; gap:12px; padding:15px 20px; border-bottom:1px solid var(--pro-line,#eef2f7); }
@@ -757,7 +757,7 @@
     .tc-contact.active { background:linear-gradient(90deg, rgba(99,102,241,.16), rgba(124,58,237,.05)); box-shadow:inset 0 0 0 1px rgba(99,102,241,.20); }
     .tc-contact.active::before { content:''; position:absolute; left:2px; top:13px; bottom:13px; width:3px; border-radius:3px; background:linear-gradient(#6366f1,#7c3aed); }
     .tc-avatar { border-radius:14px; box-shadow:0 6px 14px -4px rgba(30,41,59,.35); }
-    .tc-unread { background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 5px 12px -3px rgba(99,102,241,.6); }
+    .tc-unread { background:linear-gradient(135deg,#22c55e,#16a34a); box-shadow:0 5px 12px -3px rgba(34,197,94,.55); }
 
     .tc-thread-head { padding:16px 22px; border-bottom:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.35)); }
     .tc-thread-head .tc-avatar { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(99,102,241,.4), 0 8px 18px -6px rgba(99,102,241,.5); }
@@ -1463,7 +1463,9 @@
     TCD('visibilitychange', announceActive);
     window.addEventListener('focus', announceActive);
 
-    // Move a conversation's sidebar row to the top of its list, updating preview/time/unread.
+    // Update a conversation's row preview/time/mention and float it to the top of its list.
+    // The numeric UNREAD count is NOT touched here — it comes authoritatively from the
+    // server via applyRowUnread(), so only the chat that actually got a message shows a count.
     function bumpSidebar(m){
         var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
         if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
@@ -1471,20 +1473,37 @@
         var pv = row.querySelector('[data-preview-text]');
         if (pv) pv.textContent = (m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet;
         var tm = row.querySelector('[data-time]'); if (tm) tm.textContent = 'now';
-        if (!isOpen && row.dataset.muted !== '1'){
-            var badge = row.querySelector('[data-badge]');
-            if (!badge){ badge = document.createElement('span'); badge.className = 'tc-unread'; badge.setAttribute('data-badge', ''); badge.textContent = '0';
-                var sub = row.querySelector('.tc-c-sub'); if (sub) sub.appendChild(badge); }
-            badge.textContent = (parseInt(badge.textContent, 10) || 0) + 1;
-            row.dataset.unread = '1';
-            row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.add('unread'); });
-            if (m.mention && !row.querySelector('.tc-mention-badge')){
-                var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';
-                var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]'));
-            }
+        if (!isOpen && m.mention && row.dataset.muted !== '1' && !row.querySelector('.tc-mention-badge')){
+            var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';
+            var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]') || null);
         }
         var listParent = row.parentNode; if (listParent && listParent.firstChild !== row) listParent.insertBefore(row, listParent.firstChild);
     }
+
+    // Authoritative per-conversation unread — sets EACH row to exactly its own count
+    // (the open conversation is always 0). Fired every poll, so counts also drop on read.
+    function applyRowUnread(map){
+        map = map || {};
+        document.querySelectorAll('.tc-contact[data-conversation]').forEach(function (row) {
+            var id = row.dataset.conversation;
+            var isOpen = String(id) === String(CONV);
+            var n = isOpen ? 0 : (parseInt(map[id], 10) || 0);
+            var badge = row.querySelector('[data-badge]');
+            var sub = row.querySelector('.tc-c-sub');
+            if (n > 0){
+                if (!badge){ badge = document.createElement('span'); badge.className = 'tc-unread'; badge.setAttribute('data-badge', ''); if (sub) sub.appendChild(badge); }
+                badge.textContent = n > 99 ? '99+' : n;
+                row.dataset.unread = '1';
+                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.add('unread'); });
+            } else {
+                if (badge) badge.remove();
+                row.dataset.unread = '0';
+                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.remove('unread'); });
+                if (isOpen){ var mb = row.querySelector('.tc-mention-badge'); if (mb) mb.remove(); }
+            }
+        });
+    }
+    window.addEventListener('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
 
     window.addEventListener('apex:team-message', function (e) {
         var m = e.detail; if (!m) return;
