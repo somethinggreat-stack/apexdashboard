@@ -184,6 +184,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('team-messages/group/{conversation}/members/{admin}', [Admin\TeamMessageController::class, 'removeMember'])->name('team-messages.group.members.remove');
         Route::post('team-messages/group/{conversation}/leave', [Admin\TeamMessageController::class, 'leaveGroup'])->name('team-messages.group.leave');
         Route::post('team-messages/group/{conversation}/rename', [Admin\TeamMessageController::class, 'renameGroup'])->name('team-messages.group.rename');
+        Route::get('team-messages/gallery', [Admin\TeamMessageController::class, 'gallery'])->name('team-messages.gallery');
+        Route::put('team-messages/{message}', [Admin\TeamMessageController::class, 'update'])->name('team-messages.update');
         Route::delete('team-messages/{message}', [Admin\TeamMessageController::class, 'destroy'])->name('team-messages.destroy');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');

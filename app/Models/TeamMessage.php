@@ -10,6 +10,7 @@ class TeamMessage extends Model
 
     protected $casts = [
         'read_at'    => 'datetime',
+        'edited_at'  => 'datetime',
         'deleted_at' => 'datetime',
         'pinned_at'  => 'datetime',
         'reactions'    => 'array',

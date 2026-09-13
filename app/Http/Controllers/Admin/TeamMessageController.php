@@ -212,10 +212,14 @@ class TeamMessageController extends Controller
 
         $this->markRead($conv, $me);
 
-        $states = $conv->messages()->with('deletedByAdmin')->latest('id')->limit(80)->get()
+        $states = $conv->messages()->with('deletedByAdmin', 'mentionedAdmins')->latest('id')->limit(80)->get()
             ->map(fn ($m) => [
                 'id' => $m->id, 'deleted' => (bool) $m->deleted_at, 'reactions' => $this->reactionsOf($m, $me->id),
                 'deletedBy' => $m->deleted_at ? ($m->deleted_by === $me->id ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
+                'edited' => ! $m->deleted_at && (bool) $m->edited_at,
+                // Carry the current text only for edited messages, so peers see edits live.
+                'body' => (! $m->deleted_at && $m->edited_at) ? $m->body : null,
+                'mentionLabels' => (! $m->deleted_at && $m->edited_at) ? $this->mentionLabels($m) : [],
             ])->values();
 
         $others = $conv->participants->where('admin_id', '!=', $me->id);
@@ -532,6 +536,53 @@ class TeamMessageController extends Controller
         return response()->json(['ok' => true, 'mode' => 'everyone', 'id' => $message->id]);
     }
 
+    /** Edit my own text message. */
+    public function update(Request $request, TeamMessage $message)
+    {
+        $me = Auth::guard('admin')->user();
+        abort_unless($message->sender_id === $me->id && ! $message->isSystem() && ! $message->deleted_at, 403);
+
+        $data = $request->validate([
+            'body'       => ['required', 'string', 'max:5000'],
+            'mentions'   => ['nullable', 'array', 'max:50'],
+            'mentions.*' => ['string', 'max:20'],
+        ]);
+
+        $message->forceFill(['body' => trim($data['body']), 'edited_at' => now()])->save();
+
+        // Re-resolve mentions against the new text.
+        $message->mentionedAdmins()->detach();
+        $message->forceFill(['mentions_all' => false])->save();
+        $message->load('conversation.participants');
+        $this->syncMentions($message, $message->conversation, $me, $request->input('mentions', []));
+
+        $message->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins', 'deletedByAdmin');
+
+        return response()->json(['ok' => true, 'message' => $this->present($message, $me->id)]);
+    }
+
+    /** All files/images shared in a conversation (the "Shared files" gallery). */
+    public function gallery(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->query('c'));
+
+        $atts = MessageAttachment::whereHas('message', fn ($q) => $q->where('conversation_id', $conv->id)->whereNull('deleted_at'))
+            ->with('message.sender')->latest('id')->limit(200)->get();
+
+        return response()->json([
+            'files' => $atts->map(function (MessageAttachment $a) {
+                $url = route('admin.team-messages.attachment', $a->id);
+                return [
+                    'name' => $a->original_name, 'size' => $a->humanSize(), 'image' => $a->isImage(),
+                    'url' => $url, 'download' => $url . '?dl=1',
+                    'by' => optional($a->message->sender)->full_name ?? 'Someone',
+                    'at' => $a->created_at->timezone(self::TZ)->format('M j, Y'),
+                ];
+            })->values(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
     /** Guarded, org-scoped file access — inline by default, ?dl=1 forces download. */
     public function attachment(Request $request, MessageAttachment $attachment)
     {
@@ -680,6 +731,7 @@ class TeamMessageController extends Controller
             'deletedBy'   => $m->deleted_at ? ($m->deleted_by === $meId ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
             'mentionsMe'  => ! $m->deleted_at && $this->mentionsMe($m, $meId),
             'mentionLabels' => $m->deleted_at ? [] : $this->mentionLabels($m),
+            'edited'      => ! $m->deleted_at && (bool) $m->edited_at,
         ];
     }
 
@@ -723,6 +775,7 @@ class TeamMessageController extends Controller
         if (! $r) return null;
 
         return [
+            'id'     => $r->id,
             'author' => $r->sender_id === $meId ? 'You' : ($r->sender->full_name ?? 'Teammate'),
             'text'   => $r->deleted_at ? 'Deleted message' : Str::limit($r->body !== '' ? $r->body : '📎 Attachment', 90),
         ];

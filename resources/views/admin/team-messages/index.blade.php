@@ -76,6 +76,9 @@
                         <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $peerSeen }}</div>
                     </div>
                 @endif
+                <button type="button" class="tc-bell" id="tcGalleryBtn" title="Shared files">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </button>
                 <button type="button" class="tc-bell {{ $notifyLevel === 'none' ? 'muted' : '' }}" id="tcBell" data-level="{{ $notifyLevel }}" title="Notifications">
                     @if ($notifyLevel === 'none')
                         @include('partials.mute-icon')
@@ -144,6 +147,12 @@
                 <span id="tcTypingText"></span>
             </div>
 
+            <div class="tc-edit-bar" id="tcEditBar" hidden>
+                <span class="tc-reply-accent"></span>
+                <div class="tc-reply-info"><span class="tc-reply-author">Editing message</span><span class="tc-reply-text">Esc to cancel</span></div>
+                <button type="button" class="tc-reply-x" id="tcEditCancel" aria-label="Cancel edit">&times;</button>
+            </div>
+
             <div class="tc-reply-bar" id="tcReply" hidden>
                 <span class="tc-reply-accent"></span>
                 <div class="tc-reply-info">
@@ -167,6 +176,9 @@
                 <button type="button" class="tc-attach" id="tcAttach" aria-label="Attach a file">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
+                <button type="button" class="tc-emoji-btn" id="tcEmojiBtn" aria-label="Emoji">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
                 <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $isGroup ? $active->name : $peer->full_name }}…" maxlength="5000"></textarea>
                 <button type="submit" class="tc-send" aria-label="Send">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -175,6 +187,14 @@
 
             {{-- Full emoji picker for reactions (moved to <body> by JS) --}}
             <div class="tc-emoji-picker" id="tcEmojiPicker" hidden></div>
+
+            {{-- Shared files gallery --}}
+            <div class="tc-modal" id="tcGallery" hidden>
+                <div class="tc-modal-card tc-gallery-card">
+                    <div class="tc-modal-head"><span>Shared files</span><button type="button" id="tcGalleryClose" aria-label="Close">&times;</button></div>
+                    <div class="tc-gallery-body" id="tcGalleryBody"><div class="tc-gallery-empty">Loading…</div></div>
+                </div>
+            </div>
 
             {{-- Image lightbox (moved to <body> by JS) --}}
             <div class="tc-lightbox" id="tcLightbox" hidden>
@@ -190,6 +210,9 @@
                 </button>
                 <button type="button" class="tc-menu-item" data-act="copy">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy
+                </button>
+                <button type="button" class="tc-menu-item" data-act="edit" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> Edit
                 </button>
                 <button type="button" class="tc-menu-item" data-act="forward">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg> Forward
@@ -388,7 +411,37 @@
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
     .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden],
     .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden],
-    .tc-bell-pop[hidden], .tc-mention-pop[hidden], .tc-contact[hidden], .tc-section[hidden] { display:none !important; }
+    .tc-bell-pop[hidden], .tc-mention-pop[hidden], .tc-contact[hidden], .tc-section[hidden], .tc-edit-bar[hidden] { display:none !important; }
+
+    /* Phase 6 polish */
+    .tc-link { color:#2563eb; text-decoration:underline; word-break:break-all; }
+    .tc-msg.mine .tc-link { color:#e0e7ff; }
+    .tc-edited { font-size:10px; color:#94a3b8; font-style:italic; }
+    .tc-msg.mine .tc-edited { color:rgba(255,255,255,.7); }
+    .tc-pin-ic { font-size:10px; }
+    .tc-quote[data-goto] { cursor:pointer; }
+    .tc-emoji-btn { flex:none; width:42px; height:42px; border:0; border-radius:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#64748b; background:rgba(148,163,184,.14); transition:background .14s, color .14s, transform .1s; }
+    .tc-emoji-btn:hover { background:rgba(99,102,241,.14); color:#4f46e5; transform:translateY(-1px); }
+    .tc-emoji-btn svg { width:20px; height:20px; }
+    .tc-edit-bar { display:flex; align-items:center; gap:10px; padding:9px 16px 0; }
+
+    /* Shared files gallery */
+    .tc-gallery-card { max-width:520px; max-height:80vh; }
+    .tc-gallery-body { overflow-y:auto; padding:14px 16px; }
+    .tc-gallery-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:14px; }
+    .tc-gallery-grid a { display:block; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--pro-soft,#f1f5f9); }
+    .tc-gallery-grid img { width:100%; height:100%; object-fit:cover; display:block; }
+    .tc-gallery-file { display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:11px; text-decoration:none; color:var(--pro-text,#0f172a); }
+    .tc-gallery-file:hover { background:var(--pro-soft,#f5f7fb); }
+    .tc-gallery-file .tc-att-ic { flex:none; width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; }
+    .tc-gallery-file .tc-att-ic svg { width:18px; height:18px; }
+    .tc-gallery-meta { min-width:0; flex:1; }
+    .tc-gallery-meta b { display:block; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-gallery-meta span { font-size:11.5px; color:#94a3b8; }
+    .tc-gallery-sub { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; margin:4px 0 8px; }
+    .tc-gallery-empty { text-align:center; color:#94a3b8; padding:30px; font-size:14px; }
+    :root[data-theme="dark"] .tc-gallery-file:hover { background:#182444; }
+    :root[data-theme="dark"] .tc-emoji-btn { background:rgba(148,163,184,.12); }
 
     /* Search + filters */
     .tc-search { position:relative; display:flex; align-items:center; margin-top:12px; }
@@ -892,6 +945,7 @@
 
     function highlightBody(body, labels){
         var h = esc(body);
+        h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="tc-link">$1</a>');
         if (labels && labels.length){
             labels.slice().sort(function (a, b) { return b.length - a.length; }).forEach(function (l) {
                 var tok = '@' + esc(l);
@@ -917,7 +971,7 @@
         var atts = (!m.deleted && m.attachments && m.attachments.length) ? m.attachments : [];
         var onlyMedia = atts.length && !m.body;
         var h = '<div class="tc-bubble' + (m.deleted ? ' deleted' : '') + (onlyMedia ? ' tc-bubble--media' : '') + '">';
-        if (m.reply && !m.deleted) h += '<div class="tc-quote"><span class="tc-quote-author">' + esc(m.reply.author)
+        if (m.reply && !m.deleted) h += '<div class="tc-quote" data-goto="' + (m.reply.id || '') + '"><span class="tc-quote-author">' + esc(m.reply.author)
             + '</span><span class="tc-quote-text">' + esc(m.reply.text) + '</span></div>';
         if (m.forwarded && !m.deleted) h += '<div class="tc-fwd">↪ Forwarded</div>';
         h += attsHtml(atts);
@@ -925,7 +979,9 @@
         else if (m.body) h += '<div class="tc-text">' + highlightBody(m.body, m.mentionLabels) + '</div>';
         h += '</div>';
         var tick = (m.mine && !m.deleted) ? '<span class="tc-btick">' + TICK + '</span>' : '';
-        h += '<div class="tc-time">' + esc(m.at) + tick + '</div>';
+        var pin = (m.pinned && !m.deleted) ? '<span class="tc-pin-ic" title="Pinned">📌</span>' : '';
+        var edited = (m.edited && !m.deleted) ? '<span class="tc-edited">(edited)</span>' : '';
+        h += '<div class="tc-time">' + pin + esc(m.at) + edited + tick + '</div>';
         h += '<div class="tc-reacts">' + reactsHtml(m.reactions) + '</div>';
         if (!m.deleted) h += DOTS;
         return h;
@@ -980,6 +1036,11 @@
                     b.innerHTML = '<div class="tc-text tc-deleted-text">🚫 ' + deletedLabel(s.deletedBy) + '</div>';
                     var el0 = box.querySelector('.tc-msg[data-id="' + s.id + '"] .tc-dots'); if (el0) el0.remove();
                 }
+            } else if (s.edited && s.body != null){
+                var txt = el.querySelector('.tc-bubble .tc-text');
+                if (txt) txt.innerHTML = highlightBody(s.body, s.mentionLabels);
+                var tl = el.querySelector('.tc-time');
+                if (tl && !tl.querySelector('.tc-edited')){ var ed = document.createElement('span'); ed.className = 'tc-edited'; ed.textContent = '(edited)'; tl.insertBefore(ed, tl.querySelector('.tc-btick')); }
             }
         });
     }
@@ -1128,6 +1189,7 @@
             if (e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); pickMention(lastMentionOpts[mentionActive]); return; }
             if (e.key === 'Escape'){ hideMentions(); return; }
         }
+        if (e.key === 'Escape' && editingId){ e.preventDefault(); cancelEdit(); return; }
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
     });
 
@@ -1215,6 +1277,7 @@
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
+        if (editingId){ doEdit(); return; }   // editing an existing message, not sending a new one
         var body = input.value.trim();
         if (!body && !pending.length) return;
         var btn = form.querySelector('.tc-send'); btn.disabled = true;
@@ -1344,6 +1407,8 @@
         menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'),
                     text: txtEl ? txtEl.textContent : '', author: nameEl ? nameEl.textContent : '' };
         menu.querySelector('[data-act="delete"]').hidden = !menuMsg.mine;
+        var editItem = menu.querySelector('[data-act="edit"]');
+        if (editItem) editItem.hidden = !(menuMsg.mine && menuMsg.text && menuMsg.text.trim());
         var pinLbl = menu.querySelector('[data-pin-label]');
         if (pinLbl) pinLbl.textContent = el.dataset.pinned === '1' ? 'Unpin' : 'Pin';
         renderQuickEmojis();
@@ -1388,6 +1453,83 @@
         input.focus();
     }
     function cancelReply(){ replyId = null; if (replyBar) replyBar.hidden = true; }
+
+    // ---------- Edit message ----------
+    var editingId = null;
+    var editBar = document.getElementById('tcEditBar');
+    function startEdit(){
+        if (!menuMsg) return;
+        cancelReply();
+        editingId = menuMsg.id;
+        var el = box.querySelector('.tc-msg[data-id="' + editingId + '"]');
+        var t = el ? el.querySelector('.tc-bubble .tc-text') : null;
+        input.value = t ? t.textContent : menuMsg.text;
+        if (editBar) editBar.hidden = false;
+        grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+    }
+    function cancelEdit(){ editingId = null; if (editBar) editBar.hidden = true; input.value = ''; grow(); }
+    function doEdit(){
+        var body = input.value.trim(); if (!body){ cancelEdit(); return; }
+        var id = editingId;
+        var fd = new FormData(); fd.append('_token', csrf); fd.append('_method', 'PUT'); fd.append('body', body);
+        pendingMentions.forEach(function (pm) { if (body.indexOf('@' + pm.label) >= 0) fd.append('mentions[]', pm.key); });
+        fetch(BASE + '/' + id, { method:'POST', cache:'no-store', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res || !res.ok){ toast('Could not edit'); return; }
+                var el = box.querySelector('.tc-msg[data-id="' + id + '"]');
+                if (el){
+                    var t = el.querySelector('.tc-bubble .tc-text');
+                    if (t) t.innerHTML = highlightBody(res.message.body, res.message.mentionLabels);
+                    var tl = el.querySelector('.tc-time');
+                    if (tl && !tl.querySelector('.tc-edited')){ var ed = document.createElement('span'); ed.className = 'tc-edited'; ed.textContent = '(edited)'; tl.insertBefore(ed, tl.querySelector('.tc-btick')); }
+                }
+                cancelEdit(); pendingMentions = []; input.focus();
+            })
+            .catch(function () { toast('Could not edit'); });
+    }
+    var ecBtn = document.getElementById('tcEditCancel'); if (ecBtn) ecBtn.addEventListener('click', cancelEdit);
+
+    // ---------- Shared files gallery ----------
+    var galleryBtn = document.getElementById('tcGalleryBtn');
+    var galleryModal = document.getElementById('tcGallery');
+    if (galleryModal) TCB(galleryModal);
+    if (galleryBtn && galleryModal){
+        galleryBtn.addEventListener('click', openGallery);
+        document.getElementById('tcGalleryClose').addEventListener('click', function () { galleryModal.hidden = true; });
+        galleryModal.addEventListener('click', function (e) {
+            if (e.target === galleryModal){ galleryModal.hidden = true; return; }
+            var a = e.target.closest('a[data-lightbox]'); if (a){ e.preventDefault(); lbImg.src = a.getAttribute('href'); lightbox.hidden = false; }
+        });
+    }
+    function openGallery(){
+        if (!CONV){ toast('No shared files yet'); return; }
+        galleryModal.hidden = false;
+        var gbody = document.getElementById('tcGalleryBody'); gbody.innerHTML = '<div class="tc-gallery-empty">Loading…</div>';
+        fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
+            .then(function (r) { return r.json(); }).then(function (res) { renderGallery(res.files || []); }).catch(function () {});
+    }
+    function renderGallery(files){
+        var gbody = document.getElementById('tcGalleryBody');
+        if (!files.length){ gbody.innerHTML = '<div class="tc-gallery-empty">No files shared in this chat yet.</div>'; return; }
+        var imgs = files.filter(function (f) { return f.image; }), docs = files.filter(function (f) { return !f.image; });
+        var html = '';
+        if (imgs.length) html += '<div class="tc-gallery-sub">Images</div><div class="tc-gallery-grid">' + imgs.map(function (f) {
+            return '<a href="' + f.url + '" data-lightbox><img src="' + f.url + '" loading="lazy"></a>';
+        }).join('') + '</div>';
+        if (docs.length) html += '<div class="tc-gallery-sub">Files</div>' + docs.map(function (f) {
+            return '<a class="tc-gallery-file" href="' + f.download + '"><span class="tc-att-ic">' + FILE_SVG + '</span><span class="tc-gallery-meta"><b>'
+                + esc(f.name) + '</b><span>' + esc(f.size) + ' · ' + esc(f.by) + ' · ' + esc(f.at) + '</span></span></a>';
+        }).join('');
+        gbody.innerHTML = html;
+    }
+
+    // ---------- Reply-quote → jump to the original message ----------
+    box.addEventListener('click', function (e) {
+        var q = e.target.closest('.tc-quote[data-goto]'); if (!q || !q.dataset.goto) return;
+        var t = box.querySelector('.tc-msg[data-id="' + q.dataset.goto + '"]');
+        if (t){ t.scrollIntoView({ behavior:'smooth', block:'center' }); t.classList.add('tc-flash'); setTimeout(function () { t.classList.remove('tc-flash'); }, 1300); }
+    });
 
     function copyMsg(){
         if (!menuMsg) return;
@@ -1506,24 +1648,36 @@
         });
         picker.innerHTML = html;
     }
-    function openPicker(anchor){
+    var pickerMode = 'react';
+    function openPicker(anchor, mode){
+        pickerMode = mode || 'react';
         buildPicker(); picker.hidden = false;
         var r = anchor.getBoundingClientRect(), pw = picker.offsetWidth, ph = picker.offsetHeight;
         picker.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
         picker.style.top  = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - ph - 8)) + 'px';
     }
-    function closePicker(){ if (picker) picker.hidden = true; emojiTargetId = null; }
+    function closePicker(){ if (picker) picker.hidden = true; if (pickerMode !== 'compose') emojiTargetId = null; }
     if (picker){
         picker.addEventListener('click', function (e) {
             var b = e.target.closest('[data-emoji]'); if (!b) return;
-            if (emojiTargetId){ react(emojiTargetId, b.dataset.emoji); recordRecent(b.dataset.emoji); }
-            closePicker();
+            if (pickerMode === 'compose'){
+                var s = input.selectionStart, en = input.selectionEnd, v = input.value;
+                input.value = v.slice(0, s) + b.dataset.emoji + v.slice(en);
+                var caret = s + b.dataset.emoji.length; input.setSelectionRange(caret, caret);
+                input.focus(); grow(); closePicker();
+            } else {
+                if (emojiTargetId){ react(emojiTargetId, b.dataset.emoji); recordRecent(b.dataset.emoji); }
+                closePicker();
+            }
         });
         TCD('click', function (e) {
             if (picker.hidden) return;
-            if (!picker.contains(e.target) && !e.target.closest('[data-more]')) closePicker();
+            if (!picker.contains(e.target) && !e.target.closest('[data-more]') && e.target.id !== 'tcEmojiBtn' && !e.target.closest('#tcEmojiBtn')) closePicker();
         });
     }
+    // Composer emoji button (compose mode).
+    var emojiBtn = document.getElementById('tcEmojiBtn');
+    if (emojiBtn && picker) emojiBtn.addEventListener('click', function (e) { e.stopPropagation(); openPicker(emojiBtn, 'compose'); });
 
     if (menu){
         // Quick-bar emoji (recent) + the "＋" that opens the full picker.
@@ -1539,6 +1693,7 @@
             var act = it.dataset.act;
             if (act === 'reply') startReply();
             else if (act === 'copy') copyMsg();
+            else if (act === 'edit') startEdit();
             else if (act === 'forward') openForward();
             else if (act === 'pin') pinMsg();
             else if (act === 'delete') delMsg();

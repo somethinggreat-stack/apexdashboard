@@ -34,6 +34,7 @@
     $mLabels = $msg->mentionedAdmins->pluck('full_name')->all();
     if ($msg->mentions_all) $mLabels[] = 'everyone';
     $bodyHtml = e($msg->body);
+    $bodyHtml = preg_replace('~(https?://[^\s<]+)~', '<a href="$1" target="_blank" rel="noopener" class="tc-link">$1</a>', $bodyHtml);
     foreach (collect($mLabels)->sortByDesc(fn ($l) => mb_strlen($l))->all() as $lab) {
         $tok = '@' . e($lab);
         $bodyHtml = str_replace($tok, '<span class="tc-mention">' . $tok . '</span>', $bodyHtml);
@@ -62,7 +63,7 @@
     @endif
     <div class="tc-bubble {{ $del ? 'deleted' : '' }} {{ $onlyMedia ? 'tc-bubble--media' : '' }}">
         @if ($rep && ! $del)
-            <div class="tc-quote"><span class="tc-quote-author">{{ $rep['author'] }}</span><span class="tc-quote-text">{{ $rep['text'] }}</span></div>
+            <div class="tc-quote" data-goto="{{ $msg->reply_to_id }}"><span class="tc-quote-author">{{ $rep['author'] }}</span><span class="tc-quote-text">{{ $rep['text'] }}</span></div>
         @endif
         @if ($msg->forwarded && ! $del)
             <div class="tc-fwd">↪ Forwarded</div>
@@ -93,7 +94,7 @@
             <div class="tc-text">{!! $bodyHtml !!}</div>
         @endif
     </div>
-    <div class="tc-time">{{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($mine && ! $del)<span class="tc-btick {{ ($readUpTo ?? 0) >= $msg->id ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>
+    <div class="tc-time">@if ($msg->pinned_at && ! $del)<span class="tc-pin-ic" title="Pinned">📌</span>@endif {{ $msg->created_at->timezone($tz)->format('M j · g:i A') }}@if ($msg->edited_at && ! $del) <span class="tc-edited">(edited)</span>@endif @if ($mine && ! $del)<span class="tc-btick {{ ($readUpTo ?? 0) >= $msg->id ? 'read' : '' }}">@include('partials.tick')</span>@endif</div>
     <div class="tc-reacts">
         @foreach ($rx as $r)
             <span class="tc-react {{ ($r['mine'] ?? false) ? 'mine' : '' }}" data-emoji="{{ $r['emoji'] }}">{{ $r['emoji'] }}{{ $r['count'] > 1 ? ' '.$r['count'] : '' }}</span>
