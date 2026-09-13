@@ -573,11 +573,14 @@ class TeamMessageController extends Controller
         return response()->json([
             'files' => $atts->map(function (MessageAttachment $a) {
                 $url = route('admin.team-messages.attachment', $a->id);
+                $when = $a->created_at->timezone(self::TZ);
                 return [
                     'name' => $a->original_name, 'size' => $a->humanSize(), 'image' => $a->isImage(),
                     'url' => $url, 'download' => $url . '?dl=1',
                     'by' => optional($a->message->sender)->full_name ?? 'Someone',
-                    'at' => $a->created_at->timezone(self::TZ)->format('M j, Y'),
+                    'at' => $when->format('M j, Y'),
+                    'time' => $when->format('g:i A'),
+                    'ts' => $when->timestamp,
                 ];
             })->values(),
         ])->header('Cache-Control', 'no-store');

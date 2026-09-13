@@ -81,9 +81,12 @@
                         <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $peerSeen }}</div>
                     </div>
                 @endif
-                <button type="button" class="tc-bell" id="tcGalleryBtn" title="Shared files">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </button>
+                <nav class="tc-tabs" id="tcTabs" role="tablist">
+                    <button type="button" class="tc-tab active" data-tab="chat" role="tab">Chat</button>
+                    <button type="button" class="tc-tab" data-tab="files" role="tab">Files</button>
+                    <button type="button" class="tc-tab" data-tab="photos" role="tab">Photos</button>
+                </nav>
+                <div class="tc-th-spacer"></div>
                 <button type="button" class="tc-bell {{ $notifyLevel === 'none' ? 'muted' : '' }}" id="tcBell" data-level="{{ $notifyLevel }}" title="Notifications">
                     @if ($notifyLevel === 'none')
                         @include('partials.mute-icon')
@@ -144,6 +147,29 @@
                         <p>{{ $isGroup ? 'Group created — say hello to the team!' : 'No messages yet — say hello!' }}</p>
                     </div>
                 @endforelse
+            </div>
+
+            {{-- Files tab (Teams-style table). Shown when the Files header tab is active. --}}
+            <div class="tc-panel tc-files-panel" id="tcPanelFiles" hidden>
+                <div class="tc-panel-bar">
+                    <button type="button" class="tc-upload-btn" id="tcFilesUpload">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M5 12l7-7 7 7"/></svg>
+                        Upload
+                    </button>
+                    <div class="tc-sel-bar" id="tcFilesSelBar" hidden>
+                        <button type="button" class="tc-sel-dl" id="tcFilesDownload">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download
+                        </button>
+                        <button type="button" class="tc-sel-clear" id="tcFilesClearSel"><span id="tcFilesSelCount">0</span> selected&nbsp;&times;</button>
+                    </div>
+                </div>
+                <div class="tc-files-scroll" id="tcFilesScroll"><div class="tc-panel-empty">Loading…</div></div>
+            </div>
+
+            {{-- Photos tab (Teams-style grid grouped by date). --}}
+            <div class="tc-panel tc-photos-panel" id="tcPanelPhotos" hidden>
+                <div class="tc-photos-scroll" id="tcPhotosScroll"><div class="tc-panel-empty">Loading…</div></div>
             </div>
 
             <div class="tc-seen" id="tcSeen" hidden></div>
@@ -404,6 +430,72 @@
     .tc-th-name-input { font:700 15px system-ui,sans-serif; color:var(--pro-ink,#1e293b); border:0; border-bottom:2px solid #6366f1; outline:0; background:transparent; padding:0 2px 2px; min-width:120px; max-width:340px; }
     :root[data-theme="dark"] .tc-th-name-input { color:#e2e8f0; }
     :root[data-theme="dark"] .tc-th-edit:hover { background:#182444; }
+    /* ---- Header tabs (Chat / Files / Photos) ---- */
+    .tc-th-spacer { flex:1; }
+    .tc-tabs { display:flex; align-items:center; gap:2px; margin-left:18px; }
+    .tc-tab { position:relative; border:0; background:transparent; padding:6px 12px 10px; font:600 14px system-ui,sans-serif; color:#64748b; cursor:pointer; border-radius:8px 8px 0 0; transition:color .12s, background .12s; }
+    .tc-tab:hover { color:var(--pro-ink,#1e293b); background:var(--pro-soft,#f5f7fb); }
+    .tc-tab.active { color:#4f46e5; }
+    .tc-tab.active::after { content:""; position:absolute; left:12px; right:12px; bottom:0; height:2.5px; border-radius:3px; background:#6366f1; }
+    :root[data-theme="dark"] .tc-tab { color:#94a3b8; }
+    :root[data-theme="dark"] .tc-tab:hover { color:#e2e8f0; background:#182444; }
+    :root[data-theme="dark"] .tc-tab.active { color:#a5b4fc; }
+    @media (max-width:560px){ .tc-tabs { margin-left:8px; } .tc-tab { padding:6px 8px 10px; font-size:13px; } }
+    /* ---- Files / Photos panels ---- */
+    .tc-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--pro-soft,#f7f9fc); }
+    .tc-panel[hidden] { display:none !important; }
+    /* When a non-chat tab is active, hide the chat surfaces. */
+    .tcv-files .tc-messages, .tcv-files .tc-composer, .tcv-files .tc-reply-bar, .tcv-files .tc-edit-bar, .tcv-files .tc-pinned, .tcv-files #tcSeen, .tcv-files #tcTyping,
+    .tcv-photos .tc-messages, .tcv-photos .tc-composer, .tcv-photos .tc-reply-bar, .tcv-photos .tc-edit-bar, .tcv-photos .tc-pinned, .tcv-photos #tcSeen, .tcv-photos #tcTyping { display:none !important; }
+    .tc-panel-bar { display:flex; align-items:center; gap:12px; padding:14px 22px 8px; }
+    .tc-upload-btn { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--pro-line,#e2e8f0); background:var(--pro-surface,#fff); color:var(--pro-ink,#1e293b); font:600 13.5px system-ui,sans-serif; padding:8px 15px; border-radius:9px; cursor:pointer; transition:border-color .12s, box-shadow .12s; }
+    .tc-upload-btn:hover { border-color:#6366f1; box-shadow:0 4px 12px -6px rgba(99,102,241,.5); }
+    .tc-upload-btn svg { width:16px; height:16px; }
+    .tc-sel-bar { display:flex; align-items:center; gap:10px; margin-left:auto; }
+    .tc-sel-bar[hidden] { display:none !important; }
+    .tc-sel-dl { display:inline-flex; align-items:center; gap:7px; border:0; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; font:600 13px system-ui,sans-serif; padding:8px 14px; border-radius:9px; cursor:pointer; }
+    .tc-sel-dl svg { width:15px; height:15px; }
+    .tc-sel-clear { border:0; background:transparent; color:#64748b; font:600 13px system-ui,sans-serif; cursor:pointer; padding:6px 8px; border-radius:7px; }
+    .tc-sel-clear:hover { background:var(--pro-soft,#eef2f7); }
+    .tc-files-scroll { flex:1; overflow-y:auto; padding:4px 12px 18px; }
+    .tc-panel-empty { text-align:center; color:#94a3b8; font-size:14px; padding:48px 0; }
+    .tc-ftable { width:100%; border-collapse:collapse; }
+    .tc-ftable thead th { position:sticky; top:0; z-index:1; background:var(--pro-soft,#f7f9fc); text-align:left; font:700 12px system-ui,sans-serif; color:#94a3b8; padding:8px 12px; border-bottom:1px solid var(--pro-line,#e6ebf2); white-space:nowrap; }
+    .tc-ftable th.tc-fsort { cursor:pointer; user-select:none; }
+    .tc-ftable th.tc-fsort:hover { color:#475569; }
+    .tc-ftable td { padding:9px 12px; border-bottom:1px solid var(--pro-line,#eef2f7); font-size:13.5px; color:var(--pro-ink,#1e293b); vertical-align:middle; }
+    .tc-ftable tbody tr { transition:background .1s; }
+    .tc-ftable tbody tr:hover { background:var(--pro-surface,#fff); }
+    .tc-ftable tbody tr.sel { background:rgba(99,102,241,.07); }
+    .tc-fcheck { width:34px; text-align:center; }
+    .tc-fcheck input { width:16px; height:16px; accent-color:#6366f1; cursor:pointer; }
+    .tc-ficon { width:40px; }
+    .tc-ficon span { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:7px; font-size:16px; }
+    .tc-fname { display:flex; align-items:center; gap:9px; min-width:0; }
+    .tc-fname a { color:var(--pro-ink,#1e293b); text-decoration:none; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:38ch; }
+    .tc-fname a:hover { color:#4f46e5; text-decoration:underline; }
+    .tc-fmeta { color:#64748b; white-space:nowrap; }
+    .tc-fby { display:flex; align-items:center; gap:7px; color:#475569; white-space:nowrap; }
+    .tc-fdl { border:0; background:transparent; color:#94a3b8; cursor:pointer; padding:5px; border-radius:7px; opacity:0; }
+    .tc-ftable tbody tr:hover .tc-fdl { opacity:1; }
+    .tc-fdl:hover { background:var(--pro-soft,#eef2f7); color:#4f46e5; }
+    .tc-fdl svg { width:16px; height:16px; }
+    @media (max-width:640px){ .tc-fcol-when, .tc-fcol-by { display:none; } .tc-fname a { max-width:22ch; } }
+    /* Photos grid */
+    .tc-photos-scroll { flex:1; overflow-y:auto; padding:14px 22px 22px; }
+    .tc-photos-group { font:700 13px system-ui,sans-serif; color:var(--pro-ink,#334155); margin:14px 2px 10px; }
+    .tc-photos-group:first-child { margin-top:2px; }
+    .tc-photos-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:10px; margin-bottom:6px; }
+    .tc-photo { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; display:block; }
+    .tc-photo img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .18s; }
+    .tc-photo:hover img { transform:scale(1.05); }
+    .tc-photo-cap { position:absolute; left:0; right:0; bottom:0; padding:14px 8px 6px; font:600 11px system-ui,sans-serif; color:#fff; background:linear-gradient(180deg, transparent, rgba(15,23,42,.68)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    :root[data-theme="dark"] .tc-panel { background:#0b1120; }
+    :root[data-theme="dark"] .tc-ftable thead th { background:#0b1120; border-bottom-color:#233150; color:#7c8aa5; }
+    :root[data-theme="dark"] .tc-ftable td { border-bottom-color:#182335; color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-ftable tbody tr:hover { background:#111a2e; }
+    :root[data-theme="dark"] .tc-upload-btn { background:#0f1629; border-color:#233150; color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-fname a { color:#e2e8f0; }
     .tc-th-name { font-size:15px; font-weight:800; color:var(--pro-text,#0f172a); }
     .tc-th-role { font-size:12px; color:#94a3b8; }
     .tc-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; background:var(--pro-soft,#f7f9fc); }
@@ -1320,6 +1412,8 @@
                     var r = activeRow(); if (r) r.dataset.conversation = CONV;
                 }
                 append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
+                // If the message carried files, refresh an open Files/Photos tab.
+                if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
             } else {
                 toast(res && res.message ? res.message : 'Could not send message');
             }
@@ -1548,6 +1642,152 @@
         }).join('');
         gbody.innerHTML = html;
     }
+
+    // ---------- Header tabs: Chat / Files / Photos ----------
+    var thread = document.querySelector('.tc-thread');
+    var tabsNav = document.getElementById('tcTabs');
+    var filesScroll = document.getElementById('tcFilesScroll');
+    var photosScroll = document.getElementById('tcPhotosScroll');
+    var galleryData = null, currentTab = 'chat';
+
+    function extIcon(name, isImg){
+        if (isImg) return '<span style="background:#eef2ff">🖼️</span>';
+        var m = (name || '').toLowerCase().match(/\.([a-z0-9]+)$/), e = m ? m[1] : '';
+        var map = { zip:['📦','#fef3c7'], rar:['📦','#fef3c7'], '7z':['📦','#fef3c7'],
+            pdf:['📕','#fee2e2'], doc:['📘','#dbeafe'], docx:['📘','#dbeafe'],
+            xls:['📗','#dcfce7'], xlsx:['📗','#dcfce7'], csv:['📗','#dcfce7'],
+            ppt:['📙','#ffedd5'], pptx:['📙','#ffedd5'], txt:['📄','#f1f5f9'] };
+        var v = map[e] || ['📄','#f1f5f9'];
+        return '<span style="background:' + v[1] + '">' + v[0] + '</span>';
+    }
+
+    // Sequential, popup-safe downloads via a reused hidden iframe.
+    var dlFrame = null;
+    function downloadUrls(urls){
+        if (!urls.length) return;
+        if (!dlFrame){ dlFrame = document.createElement('iframe'); dlFrame.style.display = 'none'; TCB(dlFrame); }
+        var i = 0;
+        (function next(){ if (i >= urls.length) return; dlFrame.src = urls[i++]; setTimeout(next, 500); })();
+    }
+
+    var fSort = { key: 'ts', dir: -1 };
+    var fSelected = {};   // url -> true
+    function selCount(){ return Object.keys(fSelected).length; }
+    function updateSelBar(){
+        var bar = document.getElementById('tcFilesSelBar'), n = selCount();
+        if (bar){ bar.hidden = n === 0; var c = document.getElementById('tcFilesSelCount'); if (c) c.textContent = n; }
+    }
+    function renderFiles(){
+        if (!filesScroll) return;
+        var files = (galleryData || []).slice();
+        if (!files.length){ filesScroll.innerHTML = '<div class="tc-panel-empty">No files shared in this chat yet.<br>Use <b>Upload</b> to share one.</div>'; return; }
+        files.sort(function (a, b) {
+            var r = 0;
+            if (fSort.key === 'name') r = String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase());
+            else if (fSort.key === 'by') r = String(a.by).toLowerCase().localeCompare(String(b.by).toLowerCase());
+            else r = (a.ts || 0) - (b.ts || 0);
+            return r * fSort.dir;
+        });
+        function arrow(k){ return fSort.key === k ? (fSort.dir === 1 ? ' ↑' : ' ↓') : ''; }
+        var rows = files.map(function (f) {
+            var sel = fSelected[f.url] ? ' sel' : '';
+            return '<tr class="' + sel.trim() + '" data-url="' + esc(f.url) + '" data-dl="' + esc(f.download) + '">'
+                + '<td class="tc-fcheck"><input type="checkbox" ' + (fSelected[f.url] ? 'checked' : '') + '></td>'
+                + '<td class="tc-ficon">' + extIcon(f.name, f.image) + '</td>'
+                + '<td class="tc-fname"><a href="' + esc(f.image ? f.url : f.download) + '"' + (f.image ? ' data-lightbox' : '') + '>' + esc(f.name) + '</a></td>'
+                + '<td class="tc-fcol-when tc-fmeta">' + esc(f.at) + ' · ' + esc(f.time || '') + '</td>'
+                + '<td class="tc-fcol-by"><span class="tc-fby">' + esc(f.by) + '</span></td>'
+                + '<td style="width:38px;text-align:right"><button type="button" class="tc-fdl" title="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button></td>'
+                + '</tr>';
+        }).join('');
+        var allSel = files.length && files.every(function (f) { return fSelected[f.url]; });
+        filesScroll.innerHTML = '<table class="tc-ftable"><thead><tr>'
+            + '<th class="tc-fcheck"><input type="checkbox" id="tcFilesAll" ' + (allSel ? 'checked' : '') + '></th><th class="tc-ficon"></th>'
+            + '<th class="tc-fsort" data-sort="name">Name' + arrow('name') + '</th>'
+            + '<th class="tc-fsort tc-fcol-when" data-sort="ts">Shared on' + arrow('ts') + '</th>'
+            + '<th class="tc-fsort tc-fcol-by" data-sort="by">Sent by' + arrow('by') + '</th><th></th>'
+            + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        updateSelBar();
+    }
+    function renderPhotos(){
+        if (!photosScroll) return;
+        var imgs = (galleryData || []).filter(function (f) { return f.image; });
+        if (!imgs.length){ photosScroll.innerHTML = '<div class="tc-panel-empty">No photos shared in this chat yet.</div>'; return; }
+        imgs.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        var now = new Date(), groups = [], gmap = {};
+        function label(ts){
+            var d = new Date(ts * 1000), diff = (now - d) / 86400000;
+            if (d.toDateString() === now.toDateString()) return 'Today';
+            var y = new Date(now); y.setDate(y.getDate() - 1);
+            if (d.toDateString() === y.toDateString()) return 'Yesterday';
+            if (diff < 7) return 'Earlier this week';
+            if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) return 'Earlier this month';
+            return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        }
+        imgs.forEach(function (f) {
+            var l = label(f.ts || 0);
+            if (!gmap[l]){ gmap[l] = []; groups.push(l); }
+            gmap[l].push(f);
+        });
+        photosScroll.innerHTML = groups.map(function (l) {
+            return '<div class="tc-photos-group">' + esc(l) + '</div><div class="tc-photos-grid">' + gmap[l].map(function (f) {
+                return '<a class="tc-photo" href="' + esc(f.url) + '" data-lightbox><img src="' + esc(f.url) + '" loading="lazy"><span class="tc-photo-cap">' + esc(f.by) + '</span></a>';
+            }).join('') + '</div>';
+        }).join('');
+    }
+    function loadGallery(after){
+        if (!CONV){ galleryData = []; after(); return; }
+        fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) { galleryData = res.files || []; after(); })
+            .catch(function () { galleryData = galleryData || []; after(); });
+    }
+    function switchTab(tab){
+        currentTab = tab;
+        if (tabsNav) tabsNav.querySelectorAll('.tc-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+        thread.classList.remove('tcv-files', 'tcv-photos');
+        var pf = document.getElementById('tcPanelFiles'), pp = document.getElementById('tcPanelPhotos');
+        if (pf) pf.hidden = tab !== 'files';
+        if (pp) pp.hidden = tab !== 'photos';
+        if (tab === 'files'){ thread.classList.add('tcv-files'); loadGallery(renderFiles); }
+        else if (tab === 'photos'){ thread.classList.add('tcv-photos'); loadGallery(renderPhotos); }
+    }
+    if (tabsNav){
+        tabsNav.addEventListener('click', function (e) { var b = e.target.closest('.tc-tab'); if (b) switchTab(b.dataset.tab); });
+    }
+    // Re-fetch the active panel (e.g. after an upload).
+    window.tcGalleryDirty = function () {
+        if (currentTab === 'files') loadGallery(renderFiles);
+        else if (currentTab === 'photos') loadGallery(renderPhotos);
+    };
+    // Files panel interactions.
+    if (filesScroll){
+        filesScroll.addEventListener('click', function (e) {
+            var img = e.target.closest('a[data-lightbox]');
+            if (img){ e.preventDefault(); lbImg.src = img.getAttribute('href'); lightbox.hidden = false; return; }
+            var dl = e.target.closest('.tc-fdl');
+            if (dl){ var tr = dl.closest('tr'); if (tr) downloadUrls([tr.dataset.dl]); return; }
+            var all = e.target.closest('#tcFilesAll');
+            if (all){
+                var on = all.checked;
+                (galleryData || []).forEach(function (f) { if (on) fSelected[f.url] = true; else delete fSelected[f.url]; });
+                renderFiles(); return;
+            }
+            var cb = e.target.closest('.tc-fcheck input:not(#tcFilesAll)');
+            if (cb){ var row = cb.closest('tr'), u = row.dataset.url; if (cb.checked) fSelected[u] = true; else delete fSelected[u]; row.classList.toggle('sel', cb.checked); updateSelBar(); return; }
+            var th = e.target.closest('.tc-fsort');
+            if (th){ var k = th.dataset.sort; if (fSort.key === k) fSort.dir *= -1; else { fSort.key = k; fSort.dir = k === 'ts' ? -1 : 1; } renderFiles(); }
+        });
+    }
+    var upBtn = document.getElementById('tcFilesUpload');
+    if (upBtn){ var fileInput = document.getElementById('tcFile'); if (fileInput) upBtn.addEventListener('click', function () { fileInput.click(); }); }
+    var dlSel = document.getElementById('tcFilesDownload');
+    if (dlSel) dlSel.addEventListener('click', function () {
+        var urls = (galleryData || []).filter(function (f) { return fSelected[f.url]; }).map(function (f) { return f.download; });
+        if (urls.length){ downloadUrls(urls); toast('Downloading ' + urls.length + ' file' + (urls.length > 1 ? 's' : '')); }
+    });
+    var clrSel = document.getElementById('tcFilesClearSel');
+    if (clrSel) clrSel.addEventListener('click', function () { fSelected = {}; renderFiles(); });
 
     // ---------- Reply-quote → jump to the original message ----------
     box.addEventListener('click', function (e) {
