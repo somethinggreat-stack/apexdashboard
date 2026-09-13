@@ -1,27 +1,21 @@
-{{-- PWA: service-worker registration for static-asset caching. Team layouts only.
-     (The "Install desktop app" button was removed at the team's request.) --}}
+{{-- Service worker registration — Web Push only (the installable PWA was removed).
+     Registered at root scope so it can receive push while any Apex tab is open or
+     the browser is closed. Also unregisters the old '/admin/'-scoped caching worker. --}}
 <script>
 (function () {
     'use strict';
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/sw.js', { scope: '/admin/' }).catch(function () {});
-        });
-
-        // Best-effort: clear caches on logout (caches hold only non-sensitive
-        // static assets, but tidy is better).
-        document.addEventListener('submit', function (e) {
-            var form = e.target;
-            if (form && form.action && /\/logout(?:$|[/?])/.test(form.action)) {
-                try {
-                    if (navigator.serviceWorker.controller) {
-                        navigator.serviceWorker.controller.postMessage('CLEAR_CACHES');
-                    }
-                } catch (err) {}
-            }
-        }, true);
-    }
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', function () {
+        // Retire the previous installable-PWA worker (scope /admin/) if it's still around.
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (r) {
+                if (r.scope && r.scope.indexOf('/admin/') !== -1 && r.scope.indexOf('/admin/') === r.scope.length - 7) {
+                    r.unregister().catch(function () {});
+                }
+            });
+        }).catch(function () {});
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
 })();
 </script>
 

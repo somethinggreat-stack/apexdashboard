@@ -187,6 +187,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('team-messages/gallery', [Admin\TeamMessageController::class, 'gallery'])->name('team-messages.gallery');
         Route::put('team-messages/{message}', [Admin\TeamMessageController::class, 'update'])->name('team-messages.update');
         Route::delete('team-messages/{message}', [Admin\TeamMessageController::class, 'destroy'])->name('team-messages.destroy');
+        // Web Push — background/closed-tab chat notifications (service worker + VAPID).
+        Route::post('push/subscribe', [Admin\PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
+        Route::post('push/unsubscribe', [Admin\PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])

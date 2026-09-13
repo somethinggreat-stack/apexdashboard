@@ -47,6 +47,9 @@
 
     var POLL_URL = @json(route('admin.team-messages.notifications'));
     var OPEN_URL = @json(route('admin.team-messages.index'));
+    var SUB_URL  = @json(route('admin.push.subscribe'));
+    var VAPID    = @json(config('webpush.public_key'));   // null if Web Push isn't configured
+    var CSRF     = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
     var onChatPage = !!document.querySelector('.tc-wrap');   // the Team Chat page renders its own surface
 
     // ---------- shared state ----------
@@ -85,7 +88,39 @@
 
     // ---------- desktop notification permission ----------
     function permission(){ return ('Notification' in window) ? Notification.permission : 'denied'; }
-    function askPermission(){ if (permission() === 'default') { try { Notification.requestPermission().then(renderPanel); } catch (e) {} } }
+    function askPermission(){ if (permission() === 'default') { try { Notification.requestPermission().then(function () { renderPanel(); ensurePush(); }); } catch (e) {} } }
+
+    // ---------- Web Push: subscribe this browser so notifications arrive when the tab is
+    // backgrounded/throttled or the browser is closed (needs VAPID keys on the server). ----------
+    function urlB64ToUint8Array(b64){
+        var pad = '='.repeat((4 - b64.length % 4) % 4);
+        var base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+        var raw = atob(base), arr = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+        return arr;
+    }
+    var pushTried = false;
+    function ensurePush(){
+        if (pushTried) return;
+        if (!VAPID || permission() !== 'granted') return;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        pushTried = true;
+        navigator.serviceWorker.ready.then(function (reg) {
+            return reg.pushManager.getSubscription().then(function (sub) {
+                if (sub) return sub;
+                return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(VAPID) });
+            });
+        }).then(function (sub) {
+            if (!sub) return;
+            var j = sub.toJSON() || {};
+            var enc = (window.PushManager && PushManager.supportedContentEncodings) ? PushManager.supportedContentEncodings[0] : 'aesgcm';
+            fetch(SUB_URL, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ endpoint: sub.endpoint, keys: j.keys || {}, contentEncoding: enc })
+            }).catch(function () {});
+        }).catch(function () { pushTried = false; });
+    }
 
     function chime(){
         try {
@@ -225,6 +260,7 @@
 
     // ---------- boot ----------
     buildUI(); renderPanel(); setBadge(0);
+    if (permission() === 'granted') ensurePush();   // already allowed → make sure a push subscription exists
     schedule();
     document.addEventListener('visibilitychange', function () { if (!document.hidden){ claim(); clearTimeout(timer); loop(); } });
     // A user gesture is the only time we may prompt; make the whole page a one-shot enabler when still "default".

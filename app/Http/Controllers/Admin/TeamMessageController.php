@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\Conversation;
 use App\Models\MessageAttachment;
 use App\Models\TeamMessage;
+use App\Services\WebPushSender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -193,11 +194,54 @@ class TeamMessageController extends Controller
 
         $msg->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins');
 
+        $this->queuePush($conv, $msg, $me);
+
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'message' => $this->present($msg, $me->id), 'conversation_id' => $conv->id]);
         }
 
         return redirect()->route('admin.team-messages.index', ['c' => $conv->id]);
+    }
+
+    /**
+     * Fire a Web Push to every recipient who should be notified (respecting notify_level
+     * and mute; @mentions pierce both). Sent AFTER the response so it never slows the send.
+     */
+    private function queuePush(Conversation $conv, TeamMessage $msg, Admin $me): void
+    {
+        if (! WebPushSender::enabled()) {
+            return;
+        }
+
+        $recipients = [];
+        foreach ($conv->participants as $p) {
+            if ($p->admin_id === $me->id) {
+                continue;
+            }
+            $mention = $msg->mentions_all || $msg->mentionedAdmins->contains('id', $p->admin_id);
+            $level   = $p->notify_level ?? 'all';
+            $muted   = (bool) ($p->muted ?? false);
+            $should  = $mention ? ($level !== 'none') : (! $muted && $level === 'all');
+            if ($should) {
+                $recipients[] = $p->admin_id;
+            }
+        }
+        if (empty($recipients)) {
+            return;
+        }
+
+        $snippet = $msg->body !== '' ? Str::limit($msg->body, 80) : 'Sent a file';
+        $payload = [
+            // For a DM this resolves (per the recipient) to the sender's name; for a group, the group name.
+            'title' => $this->convTitle($conv, $recipients[0]),
+            'body'  => ($msg->mentions_all ? '@ ' : '') . $this->senderInfo($msg->sender)['first'] . ': ' . $snippet,
+            'url'   => route('admin.team-messages.index', ['c' => $conv->id, 'standalone' => 1]),
+            'tag'   => 'apex-team-' . $conv->id,
+        ];
+
+        app()->terminating(function () use ($recipients, $payload) {
+            app(WebPushSender::class)->sendToAdmins($recipients, $payload);
+        });
     }
 
     /** Poll: new messages, read watermarks, reaction/deletion state, typing + presence. */

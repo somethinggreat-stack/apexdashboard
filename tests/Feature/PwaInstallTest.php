@@ -9,28 +9,28 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The dashboard is an installable desktop PWA for the internal team: the team
- * layouts ship the manifest + install button + service worker, and the BO
- * portal deliberately does NOT (BOs aren't the team).
+ * The installable PWA was removed at the team's request. The service worker now
+ * exists ONLY for Web Push (background/closed-tab chat notifications) — there is
+ * no manifest, no offline page, and no asset caching.
  */
 class PwaInstallTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_pwa_static_files_exist_and_manifest_is_scoped_to_team(): void
+    public function test_pwa_is_removed_and_sw_is_push_only(): void
     {
+        // The service worker stays (for Web Push) but the installable-app files are gone.
         $this->assertFileExists(public_path('sw.js'));
-        $this->assertFileExists(public_path('offline.html'));
-        $this->assertFileExists(public_path('Images/pwa/icon-512.png'));
+        $this->assertFileDoesNotExist(public_path('manifest.webmanifest'));
+        $this->assertFileDoesNotExist(public_path('offline.html'));
 
-        $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true);
-        $this->assertIsArray($manifest);
-        $this->assertSame('standalone', $manifest['display']);
-        $this->assertSame('/admin/', $manifest['scope']);
-        $this->assertStringStartsWith('/admin/', $manifest['start_url']);
+        $sw = file_get_contents(public_path('sw.js'));
+        $this->assertStringContainsString("addEventListener('push'", $sw);        // handles push
+        $this->assertStringContainsString("addEventListener('notificationclick'", $sw);
+        $this->assertStringNotContainsString("addEventListener('fetch'", $sw);    // no asset caching / offline app
     }
 
-    public function test_team_pages_are_installable(): void
+    public function test_team_pages_no_longer_advertise_an_installable_app(): void
     {
         $super = new Admin(['email' => 's@t.com', 'password' => 'x', 'full_name' => 'S']);
         $super->role = 'super';
@@ -48,11 +48,11 @@ class PwaInstallTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('manifest.webmanifest', $html);
-        // The install button was removed by request; the app stays PWA-capable
-        // (manifest + service worker) without the visible prompt.
-        $this->assertStringNotContainsString('apexInstallBtn', $html);
-        $this->assertStringContainsString("register('/sw.js'", $html);
+        // No manifest link => not installable, no "Install app" prompt.
+        $this->assertStringNotContainsString('rel="manifest"', $html);
+        $this->assertStringNotContainsString('manifest.webmanifest', $html);
+        // The push service worker is still registered, and theme-color remains.
+        $this->assertStringContainsString("register('/sw.js')", $html);
         $this->assertStringContainsString('name="theme-color"', $html);
         // Fulfillment team gets the new-client desktop notifier.
         $this->assertStringContainsString('new-clients-poll', $html);
