@@ -88,7 +88,7 @@
 
     // ---------- desktop notification permission ----------
     function permission(){ return ('Notification' in window) ? Notification.permission : 'denied'; }
-    function askPermission(){ if (permission() === 'default') { try { Notification.requestPermission().then(function () { renderPanel(); ensurePush(); }); } catch (e) {} } }
+    function askPermission(){ if (permission() === 'default') { try { Notification.requestPermission().then(function () { renderPanel(); refreshEnablePill(); ensurePush(); }); } catch (e) {} } }
 
     // ---------- Web Push: subscribe this browser so notifications arrive when the tab is
     // backgrounded/throttled or the browser is closed (needs VAPID keys on the server). ----------
@@ -99,7 +99,7 @@
         for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
         return arr;
     }
-    var pushTried = false;
+    var pushTried = false, pushActive = false;   // pushActive => the SW delivers OS toasts; don't also fire in-page ones
     function ensurePush(){
         if (pushTried) return;
         if (!VAPID || permission() !== 'granted') return;
@@ -112,6 +112,7 @@
             });
         }).then(function (sub) {
             if (!sub) return;
+            pushActive = true;
             var j = sub.toJSON() || {};
             var enc = (window.PushManager && PushManager.supportedContentEncodings) ? PushManager.supportedContentEncodings[0] : 'aesgcm';
             fetch(SUB_URL, {
@@ -231,7 +232,9 @@
             if (m.id <= floor) return;
             var muted = isActive(m.conversation_id);   // conversation open+focused somewhere → stay quiet
             addNotif(m);
-            if (!muted){ didNotify = true; if (amLeader()) desktop(m); }
+            // When Web Push is active the service worker shows the OS toast (works backgrounded/closed);
+            // only fall back to an in-page Notification when push isn't subscribed.
+            if (!muted){ didNotify = true; if (amLeader() && !pushActive) desktop(m); }
         });
         if (maxId > floor) ls(NLKEY, String(maxId));   // advance the global notify watermark
         if (didNotify && amLeader()) chime();
@@ -258,9 +261,34 @@
             .catch(function () { schedule(); });
     }
 
+    // A push arriving at the service worker nudges every tab to poll NOW → instant in-app sync
+    // (no waiting for the timer), on top of the OS notification the SW shows.
+    if ('serviceWorker' in navigator && navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'apex-push') { claim(); clearTimeout(timer); loop(); }
+        });
+    }
+
+    // A clear one-tap enabler shown on EVERY page (incl. the chat page, which has no bell)
+    // whenever notifications are still off — so a teammate can turn them on without hunting.
+    var enablePill = null;
+    function refreshEnablePill(){
+        // On the chat page there's no floating bell, so surface a clear one-tap enabler there.
+        var need = onChatPage && (permission() === 'default');
+        if (need && !enablePill){
+            enablePill = document.createElement('button');
+            enablePill.type = 'button';
+            enablePill.textContent = '🔔 Turn on chat notifications';
+            enablePill.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:92px;z-index:6000;border:0;cursor:pointer;padding:11px 18px;border-radius:999px;font:600 13.5px system-ui,sans-serif;color:#fff;background:linear-gradient(135deg,#6366f1,#7c3aed);box-shadow:0 14px 32px -8px rgba(99,102,241,.6);';
+            enablePill.onclick = function(){ askPermission(); };
+            document.body.appendChild(enablePill);
+        } else if (!need && enablePill){ enablePill.remove(); enablePill = null; }
+    }
+
     // ---------- boot ----------
     buildUI(); renderPanel(); setBadge(0);
     if (permission() === 'granted') ensurePush();   // already allowed → make sure a push subscription exists
+    refreshEnablePill();
     schedule();
     document.addEventListener('visibilitychange', function () { if (!document.hidden){ claim(); clearTimeout(timer); loop(); } });
     // A user gesture is the only time we may prompt; make the whole page a one-shot enabler when still "default".

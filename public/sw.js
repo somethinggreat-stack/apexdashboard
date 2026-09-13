@@ -23,21 +23,35 @@ self.addEventListener('activate', (event) => {
     })());
 });
 
-// Incoming push from the server → show an OS notification.
+// Incoming push from the server → wake any open Apex tab to sync instantly, and show an
+// OS notification unless the user is right now focused on that exact conversation.
 self.addEventListener('push', (event) => {
     let data = {};
     try { data = event.data ? event.data.json() : {}; } catch (e) {}
     const title = data.title || 'Apex Team Chat';
     const body  = data.body  || 'New message';
     const url   = data.url   || '/admin/team-messages';
-    event.waitUntil(self.registration.showNotification(title, {
-        body: body,
-        tag: data.tag || 'apex-team',
-        renotify: true,
-        icon: '/Images/pwa/icon-192.png',
-        badge: '/Images/pwa/icon-192.png',
-        data: { url: url }
-    }));
+    const conv  = String(data.conv || '');
+
+    event.waitUntil((async () => {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+        // Nudge every open tab to poll immediately (instant in-app update, no waiting for the timer).
+        wins.forEach((c) => { try { c.postMessage({ type: 'apex-push', conv: conv }); } catch (e) {} });
+
+        // If a focused tab is already viewing this conversation, skip the OS toast (they can see it).
+        const focusedHere = wins.some((c) => c.focused && conv && c.url.indexOf('c=' + conv) !== -1);
+        if (focusedHere) return;
+
+        return self.registration.showNotification(title, {
+            body: body,
+            tag: data.tag || 'apex-team-' + conv,
+            renotify: true,
+            icon: '/Images/pwa/icon-192.png',
+            badge: '/Images/pwa/icon-192.png',
+            data: { url: url }
+        });
+    })());
 });
 
 // Click a notification → focus an existing Apex tab (navigating it) or open one.

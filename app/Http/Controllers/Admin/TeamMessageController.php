@@ -237,6 +237,7 @@ class TeamMessageController extends Controller
             'body'  => ($msg->mentions_all ? '@ ' : '') . $this->senderInfo($msg->sender)['first'] . ': ' . $snippet,
             'url'   => route('admin.team-messages.index', ['c' => $conv->id, 'standalone' => 1]),
             'tag'   => 'apex-team-' . $conv->id,
+            'conv'  => (string) $conv->id,
         ];
 
         app()->terminating(function () use ($recipients, $payload) {
