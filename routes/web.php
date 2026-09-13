@@ -190,8 +190,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Web Push — background/closed-tab chat notifications (service worker + VAPID).
         Route::post('push/subscribe', [Admin\PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
         Route::post('push/unsubscribe', [Admin\PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
-        // One-time, super-admin-only Web Push setup page (generates + saves VAPID keys, no terminal).
-        Route::get('push/setup', [Admin\PushSubscriptionController::class, 'setup'])->name('push.setup');
         Route::post('select-business-owner/{id}', [Admin\ClientSelectorController::class, 'select'])
             ->name('client-selector.select');
         Route::post('switch-business-owner', [Admin\ClientSelectorController::class, 'clear'])

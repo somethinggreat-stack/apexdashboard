@@ -1,6 +1,13 @@
 # Team Chat — Status & Handoff (as of last session)
 
-Latest commit: `72ce278` on `main`. All 226 backend tests green.
+On `main`. All backend tests green.
+
+## ✅ Web Push is LIVE
+On the server, `/admin/push/setup` reported **"Web Push is active"** — the dependency-free
+crypto generated keys and they're in `.env`. The setup page has now been **removed** (route +
+controller methods deleted) since it's no longer needed. Remaining next step: each teammate
+clicks **Allow** once, then confirm the live closed-browser test (message a teammate who has
+allowed + closed their browser → OS toast in ~1–2s).
 
 ## What's done
 
@@ -65,7 +72,8 @@ Latest commit: `72ce278` on `main`. All 226 backend tests green.
 ## Nice-to-have / not started
 - Move push send to a queue if the team grows a lot (currently sent inline after the response
   via `app()->terminating()` — fine for a small team).
-- Remove the `/admin/push/setup` page once keys are set (user asked to delete it later).
+- The `/admin/push/setup` page has been removed (keys are set). If keys ever need rotating,
+  run `php artisan webpush:install --force` on deploy, or re-add the setup route temporarily.
 
 ## Local test harness (dev notes)
 - Throwaway sqlite + `php artisan serve` with `DB_CONNECTION=sqlite DB_DATABASE=<path>`.

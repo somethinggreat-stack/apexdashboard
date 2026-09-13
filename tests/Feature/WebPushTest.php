@@ -81,20 +81,6 @@ class WebPushTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function test_setup_page_is_super_admin_only(): void
-    {
-        $va = $this->va();
-        $this->actingAs($va, 'admin')->get('/admin/push/setup')->assertForbidden();
-        $this->actingAs($this->super, 'admin')->get('/admin/push/setup')->assertOk();
-    }
-
-    public function test_setup_page_reports_active_when_keys_present(): void
-    {
-        config(['webpush.public_key' => 'PUB', 'webpush.private_key' => 'PRIV']);
-        $this->actingAs($this->super, 'admin')->get('/admin/push/setup')
-            ->assertOk()->assertSee('active', false);
-    }
-
     public function test_sending_a_message_does_not_error_when_push_is_unconfigured(): void
     {
         config(['webpush.public_key' => null]);
