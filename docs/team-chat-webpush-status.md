@@ -60,6 +60,29 @@ allowed + closed their browser → OS toast in ~1–2s).
 4. Acceptance test: one VA allows + closes the browser; another account messages them →
    OS notification should appear within ~1–2s.
 
+## 🐞 OPEN BUG (top priority next session)
+**Symptom:** A new message ("Zeeshan: Bhello") showed up in the **notification center** (bell
+dropdown) and its count went to 2, but the **Team Chat sidebar did NOT update** — the Zeeshan
+row still showed the older "Hi" preview with unread **1**. Observed while Team Chat was open
+with **NO conversation selected** (empty right/thread pane).
+
+**Leading hypothesis:** In `resources/views/admin/team-messages/index.blade.php`, the main
+chat IIFE starts with `var box = document.getElementById('tcMessages'); if (!box) return;`.
+When no conversation is open, `#tcMessages` is not rendered, so the whole script returns early
+— and the sidebar's live-update wiring lives INSIDE that same IIFE:
+`announceActive`, the `TCW('apex:team-unread', applyRowUnread)` and
+`TCW('apex:team-message', …bumpSidebar)` listeners. So with no chat open, the sidebar never
+receives live updates (preview / time / unread / reorder), even though the global module
+(`partials/team-realtime.blade.php`) keeps updating the notification center + bell fine.
+
+**Fix direction (do NOT done yet):** hoist the sidebar live-update listeners
+(`applyRowUnread`, `bumpSidebar`, and the `apex:team-unread` / `apex:team-message` handlers)
+OUT of the `if (!box) return` guard so they attach whenever the chat PAGE is loaded, not only
+when a conversation is open. Alternatively always render a (possibly empty) `#tcMessages`.
+Then re-test: open Team Chat with no conversation selected, have another account send a
+message → the sidebar row must update preview + unread + reorder live. Also re-test with a
+conversation open (must still work), and the notification-center count must match the sidebar.
+
 ## Still to verify / open items
 - **End-to-end browser delivery** (push service → SW → OS toast) is the ONE leg not
   automatable locally (headless can't create push subscriptions). Needs the live test above.
