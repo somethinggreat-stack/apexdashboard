@@ -143,14 +143,26 @@
     var POLL_URL = @json(route('admin.team-messages.notifications'));
     var OPEN_URL = @json(route('admin.team-messages.index'));
     var KEY = 'apex-team-last-msg';
-    var POLL_MS = 20000;
+    var POLL_MS = 15000;
     var lastId = parseInt(localStorage.getItem(KEY) || '0', 10) || 0;
-    var primed = lastId > 0;   // suppress the backlog until we know a baseline
+    var primed = lastId > 0;   // if we have a baseline, notify new messages (no backlog spam)
+    function store(){ try { localStorage.setItem(KEY, String(lastId)); } catch (e) {} }
 
+    // A one-click prompt so notifications work without the user hunting for a click.
+    var pill = null;
+    function showPill(){
+        if (pill || Notification.permission !== 'default') return;
+        pill = document.createElement('button');
+        pill.type = 'button';
+        pill.textContent = '🔔 Turn on chat notifications';
+        pill.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:6000;border:0;cursor:pointer;padding:11px 16px;border-radius:999px;font:600 13px system-ui,sans-serif;color:#fff;background:linear-gradient(135deg,#6366f1,#7c3aed);box-shadow:0 12px 28px rgba(99,102,241,.45);';
+        pill.onclick = function(){ Notification.requestPermission().then(function(){ if (pill){ pill.remove(); pill = null; } }); };
+        document.body.appendChild(pill);
+    }
     if (Notification.permission === 'default') {
-        var ask = function () { try { Notification.requestPermission(); } catch (e) {} };
+        showPill();
+        var ask = function () { if (Notification.permission === 'default') Notification.requestPermission().then(function(){ if (pill && Notification.permission !== 'default'){ pill.remove(); pill = null; } }); };
         window.addEventListener('pointerdown', ask, { once: true });
-        window.addEventListener('keydown', ask, { once: true });
     }
 
     function chime() {
@@ -181,20 +193,27 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data) return;
-                if (Array.isArray(data.messages) && data.messages.length && primed) {
-                    data.messages.forEach(show); chime();
+                if (!primed) { if (data.lastId) { lastId = data.lastId; store(); } primed = true; return; }  // first ever: baseline only
+                var msgs = data.messages || [];
+                if (msgs.length && Notification.permission === 'granted') {
+                    msgs.forEach(show); chime();
+                    if (data.lastId > lastId) { lastId = data.lastId; store(); }
+                } else if (msgs.length) {
+                    showPill();                       // hold the window; keep un-notified messages until permission is on
+                } else if (data.lastId > lastId) {
+                    lastId = data.lastId; store();
                 }
-                if (data.lastId && data.lastId > lastId) {
-                    lastId = data.lastId; try { localStorage.setItem(KEY, String(lastId)); } catch (e) {}
-                }
-                primed = true;
             })
             .catch(function () {});
     }
 
     poll();
-    setInterval(poll, POLL_MS);
-    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') poll(); });
+    var timer = setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', function () {
+        // Pause polling while the tab is hidden (saves CPU/network); resume on return.
+        if (document.visibilityState === 'visible') { if (!timer) timer = setInterval(poll, POLL_MS); poll(); }
+        else { clearInterval(timer); timer = null; }
+    });
 })();
 </script>
 @endif

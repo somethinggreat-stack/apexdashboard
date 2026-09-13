@@ -288,10 +288,9 @@
             </div>
         @endif
     </section>
-</div>
 
-{{-- New group modal (always available from the sidebar button) --}}
-<div class="tc-modal" id="tcGroupModal" hidden>
+    {{-- New group modal (always available from the sidebar button) --}}
+    <div class="tc-modal" id="tcGroupModal" hidden>
     <div class="tc-modal-card">
         <div class="tc-modal-head">
             <span>New group</span>
@@ -336,17 +335,18 @@
     </div>
 </div>
 
-{{-- Delete choice (WhatsApp-style) --}}
-<div class="tc-modal tc-confirm-modal" id="tcDeleteModal" hidden>
-    <div class="tc-confirm-card">
-        <div class="tc-confirm-title">Delete message?</div>
-        <div class="tc-confirm-actions-v">
-            <button type="button" class="tc-del-opt" id="tcDelEveryone" hidden>Delete for everyone</button>
-            <button type="button" class="tc-del-opt" id="tcDelMe">Delete for me</button>
-            <button type="button" class="tc-del-opt tc-del-cancel" id="tcDelCancel">Cancel</button>
+    {{-- Delete choice (WhatsApp-style) --}}
+    <div class="tc-modal tc-confirm-modal" id="tcDeleteModal" hidden>
+        <div class="tc-confirm-card">
+            <div class="tc-confirm-title">Delete message?</div>
+            <div class="tc-confirm-actions-v">
+                <button type="button" class="tc-del-opt" id="tcDelEveryone" hidden>Delete for everyone</button>
+                <button type="button" class="tc-del-opt" id="tcDelMe">Delete for me</button>
+                <button type="button" class="tc-del-opt tc-del-cancel" id="tcDelCancel">Cancel</button>
+            </div>
         </div>
     </div>
-</div>
+</div>{{-- /.tc-wrap --}}
 
 @push('head')
 <style>
@@ -611,10 +611,8 @@
     .tc-list, .tc-thread {
         border-radius:24px;
         border:1px solid rgba(148,163,184,.18);
-        background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.78));
-        backdrop-filter:blur(22px) saturate(150%);
-        -webkit-backdrop-filter:blur(22px) saturate(150%);
-        box-shadow:0 24px 60px -26px rgba(30,41,59,.42), 0 2px 12px rgba(30,41,59,.05);
+        background:var(--pro-surface,#fff);
+        box-shadow:0 20px 48px -28px rgba(30,41,59,.32), 0 2px 10px rgba(30,41,59,.05);
     }
 
     .tc-list-head { padding:20px 20px 14px; border-bottom:1px solid rgba(148,163,184,.14); }
@@ -629,7 +627,7 @@
     .tc-avatar { border-radius:14px; box-shadow:0 6px 14px -4px rgba(30,41,59,.35); }
     .tc-unread { background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 5px 12px -3px rgba(99,102,241,.6); }
 
-    .tc-thread-head { padding:16px 22px; border-bottom:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.35)); backdrop-filter:blur(10px); }
+    .tc-thread-head { padding:16px 22px; border-bottom:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.35)); }
     .tc-thread-head .tc-avatar { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(99,102,241,.4), 0 8px 18px -6px rgba(99,102,241,.5); }
     .tc-th-name { font-size:16px; font-weight:800; letter-spacing:-.01em; }
 
@@ -644,13 +642,13 @@
             radial-gradient(720px 560px at 50% 120%, rgba(56,189,248,.12), transparent 60%),
             linear-gradient(180deg,#f7f9ff,#eef2fb);
     }
+    /* Static soft blobs — no animation, no blur filter (was a continuous GPU cost). */
     .tc-thread::before {
-        content:''; position:absolute; inset:-12%; z-index:0; pointer-events:none; filter:blur(12px);
+        content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
         background:
-            radial-gradient(300px 300px at 28% 30%, rgba(99,102,241,.16), transparent 62%),
-            radial-gradient(320px 320px at 72% 58%, rgba(236,72,153,.12), transparent 62%),
-            radial-gradient(280px 280px at 52% 84%, rgba(56,189,248,.16), transparent 62%);
-        animation:tcAurora 20s ease-in-out infinite alternate;
+            radial-gradient(360px 360px at 26% 28%, rgba(99,102,241,.10), transparent 66%),
+            radial-gradient(380px 380px at 74% 60%, rgba(236,72,153,.08), transparent 66%),
+            radial-gradient(320px 320px at 50% 88%, rgba(56,189,248,.10), transparent 66%);
     }
     .tc-thread::after {
         content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
@@ -677,15 +675,15 @@
     }
 
     .tc-daysep { align-self:center; z-index:1; margin:8px 0 2px; }
-    .tc-daysep span { font-size:11px; font-weight:700; color:#64748b; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,.78); backdrop-filter:blur(8px); border:1px solid rgba(148,163,184,.2); box-shadow:0 3px 12px -5px rgba(30,41,59,.28); }
+    .tc-daysep span { font-size:11px; font-weight:700; color:#64748b; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,.78); border:1px solid rgba(148,163,184,.2); box-shadow:0 3px 12px -5px rgba(30,41,59,.28); }
 
     .tc-react { border-radius:999px; background:rgba(255,255,255,.97); box-shadow:0 4px 10px -4px rgba(30,41,59,.3); }
 
     .tc-thread-empty { z-index:1; margin:auto; display:flex; flex-direction:column; align-items:center; gap:10px; color:#94a3b8; }
-    .tc-thread-empty-emoji { font-size:46px; transform-origin:70% 70%; animation:tcWave 2.6s ease-in-out infinite; filter:drop-shadow(0 10px 18px rgba(99,102,241,.3)); }
+    .tc-thread-empty-emoji { font-size:46px; transform-origin:70% 70%; animation:tcWave 2.6s ease-in-out 2; }
     .tc-thread-empty p { font-size:14px; font-weight:600; }
 
-    .tc-composer { padding:16px 18px; border-top:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.85)); backdrop-filter:blur(10px); }
+    .tc-composer { padding:16px 18px; border-top:1px solid rgba(148,163,184,.14); background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.85)); }
     .tc-composer textarea { border-radius:16px; border:1.5px solid rgba(148,163,184,.3); background:rgba(255,255,255,.92); box-shadow:inset 0 1px 2px rgba(30,41,59,.04); }
     .tc-composer textarea:focus { border-color:#6366f1; background:#fff; box-shadow:0 0 0 4px rgba(99,102,241,.15); }
     .tc-send { width:46px; height:46px; border-radius:15px; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 12px 24px -8px rgba(99,102,241,.62); }
@@ -732,7 +730,7 @@
     .tc-progress i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#6366f1,#7c3aed); transition:width .15s; }
 
     /* Drag-over highlight */
-    .tc-thread.tc-drag::after { content:'Drop files to send'; position:absolute; inset:12px; z-index:5; display:flex; align-items:center; justify-content:center; font-weight:800; color:#4f46e5; font-size:16px; border:2.5px dashed rgba(99,102,241,.6); border-radius:20px; background:rgba(99,102,241,.08); backdrop-filter:blur(2px); }
+    .tc-thread.tc-drag::after { content:'Drop files to send'; position:absolute; inset:12px; z-index:5; display:flex; align-items:center; justify-content:center; font-weight:800; color:#4f46e5; font-size:16px; border:2.5px dashed rgba(99,102,241,.6); border-radius:20px; background:rgba(99,102,241,.08); }
 
     /* Lightbox */
     .tc-lightbox { position:fixed; inset:0; z-index:1002; background:rgba(8,11,22,.85); display:flex; align-items:center; justify-content:center; padding:32px; }
@@ -762,7 +760,7 @@
     .tc-sender-name { font-size:12px; font-weight:800; }
 
     .tc-sys { align-self:center; z-index:1; margin:6px 0; max-width:80%; }
-    .tc-sys span { display:inline-block; padding:5px 13px; border-radius:999px; font-size:11.5px; font-weight:600; color:#64748b; background:rgba(255,255,255,.7); border:1px solid rgba(148,163,184,.18); backdrop-filter:blur(6px); }
+    .tc-sys span { display:inline-block; padding:5px 13px; border-radius:999px; font-size:11.5px; font-weight:600; color:#64748b; background:rgba(255,255,255,.7); border:1px solid rgba(148,163,184,.18); }
 
     /* Member panel + group form */
     .tc-inp { flex:1; min-width:0; border:1.5px solid rgba(148,163,184,.3); border-radius:11px; padding:9px 12px; font:inherit; font-size:14px; background:var(--pro-surface,#fff); color:var(--pro-text,#0f172a); outline:none; }
@@ -1028,7 +1026,7 @@
             var el = box.querySelector('.tc-msg[data-id="' + s.id + '"]');
             if (!el) return;
             var rr = el.querySelector('.tc-reacts');
-            if (rr) rr.innerHTML = reactsHtml(s.reactions);
+            if (rr){ var rh = reactsHtml(s.reactions); if (rr.innerHTML !== rh) rr.innerHTML = rh; }   // only touch DOM on change
             if (s.deleted){
                 var b = el.querySelector('.tc-bubble');
                 if (b && !b.classList.contains('deleted')){
@@ -1317,6 +1315,7 @@
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
     // browser from serving a stale empty response for the same ?after= URL.
     function poll(){
+        if (document.hidden) return;   // don't poll a backgrounded tab
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
         fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
@@ -1939,6 +1938,7 @@
     if (!document.querySelector('.tc-contact')) return;
     var URL = @js(route('admin.team-messages.presence'));
     function tick(){
+        if (document.hidden) return;   // don't poll a backgrounded tab
         fetch(URL + '?_=' + Date.now(), { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
