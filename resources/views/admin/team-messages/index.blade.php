@@ -1111,6 +1111,8 @@
     }
 
     function append(m){
+        // Dedupe: a message can arrive from both the 3s poll and a realtime-forced poll.
+        if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (m.id > lastId) lastId = m.id; return; }
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
         var el = document.createElement('div');
         if (m.system){
@@ -1424,8 +1426,8 @@
 
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
     // browser from serving a stale empty response for the same ?after= URL.
-    function poll(){
-        if (document.hidden) return;   // don't poll a backgrounded tab
+    function poll(force){
+        if (!force && document.hidden) return;   // background tab: wait for a realtime wake instead
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
         fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
@@ -1446,6 +1448,53 @@
             .catch(function () {});
     }
     TCI(poll, 3000);
+
+    // ---------- Global realtime wiring ----------
+    // The app-wide poller (partials/team-realtime) is the single network listener across all
+    // tabs. Here we (a) tell it which conversation is open+focused so it never desktop-notifies
+    // the chat you're reading and marks it read, and (b) react to its cross-tab events so the
+    // sidebar and the open thread update live even when THIS tab is backgrounded.
+    function announceActive(){
+        if (!window.ApexRealtime || !CONV) return;
+        window.ApexRealtime.setActive(CONV, !document.hidden);
+        if (!document.hidden) window.ApexRealtime.markConversationRead(CONV);
+    }
+    announceActive();
+    TCD('visibilitychange', announceActive);
+    window.addEventListener('focus', announceActive);
+
+    // Move a conversation's sidebar row to the top of its list, updating preview/time/unread.
+    function bumpSidebar(m){
+        var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
+        if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
+        var isOpen = String(m.conversation_id) === String(CONV);
+        var pv = row.querySelector('[data-preview-text]');
+        if (pv) pv.textContent = (m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet;
+        var tm = row.querySelector('[data-time]'); if (tm) tm.textContent = 'now';
+        if (!isOpen && row.dataset.muted !== '1'){
+            var badge = row.querySelector('[data-badge]');
+            if (!badge){ badge = document.createElement('span'); badge.className = 'tc-unread'; badge.setAttribute('data-badge', ''); badge.textContent = '0';
+                var sub = row.querySelector('.tc-c-sub'); if (sub) sub.appendChild(badge); }
+            badge.textContent = (parseInt(badge.textContent, 10) || 0) + 1;
+            row.dataset.unread = '1';
+            row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.add('unread'); });
+            if (m.mention && !row.querySelector('.tc-mention-badge')){
+                var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';
+                var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]'));
+            }
+        }
+        var listParent = row.parentNode; if (listParent && listParent.firstChild !== row) listParent.insertBefore(row, listParent.firstChild);
+    }
+
+    window.addEventListener('apex:team-message', function (e) {
+        var m = e.detail; if (!m) return;
+        if (String(m.conversation_id) === String(CONV)){
+            poll(true);   // fetch the full message(s) for the open thread (dedupes via lastId)
+            if (!document.hidden && window.ApexRealtime) window.ApexRealtime.markConversationRead(CONV);
+        } else {
+            bumpSidebar(m);
+        }
+    });
 
     // ---------- Message actions: menu, react, reply, copy, forward, delete ----------
     var menu     = document.getElementById('tcMenu');

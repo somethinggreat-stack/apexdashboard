@@ -448,7 +448,15 @@ class TeamMessageController extends Controller
             ];
         }
 
-        return response()->json(['messages' => $out, 'lastId' => $maxId])
+        // Total unread (unmuted) across all my conversations — for the live nav badge.
+        $unread = (int) DB::table('team_messages as m')
+            ->join('conversation_participants as p', 'p.conversation_id', '=', 'm.conversation_id')
+            ->where('p.admin_id', $me->id)->where('p.muted', false)->where('m.type', 'text')
+            ->where('m.sender_id', '!=', $me->id)
+            ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')
+            ->whereNull('m.deleted_at')->count();
+
+        return response()->json(['messages' => $out, 'lastId' => $maxId, 'unread' => $unread])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
