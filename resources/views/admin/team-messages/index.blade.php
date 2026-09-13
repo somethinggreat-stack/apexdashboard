@@ -974,14 +974,19 @@
 // (clears the previous thread's intervals, document listeners, and body-moved modals).
 (function () {
     if (window.__tcReg) window.__tcReg.cleanup();
-    var reg = { intervals: [], nodes: [], docs: [] };
+    var reg = { intervals: [], nodes: [], docs: [], wins: [] };
     window.__tcReg = reg;
     window.TCI = function (fn, ms) { var id = setInterval(fn, ms); reg.intervals.push(id); return id; };
     window.TCB = function (node) { document.body.appendChild(node); reg.nodes.push(node); return node; };
     window.TCD = function (t, fn, o) { document.addEventListener(t, fn, o); reg.docs.push([t, fn, o]); };
+    // Window listeners must be tracked too, or SPA navigation LEAKS them: an old listener
+    // keeps the previous conversation's CONV in its closure and would mark that chat read
+    // (via poll->thread) when a new message arrives — the "auto-read without opening" bug.
+    window.TCW = function (t, fn, o) { window.addEventListener(t, fn, o); reg.wins.push([t, fn, o]); };
     reg.cleanup = function () {
         reg.intervals.forEach(clearInterval);
         reg.docs.forEach(function (d) { document.removeEventListener(d[0], d[1], d[2]); });
+        reg.wins.forEach(function (w) { window.removeEventListener(w[0], w[1], w[2]); });
         reg.nodes.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
     };
 })();
@@ -1456,12 +1461,14 @@
     // sidebar and the open thread update live even when THIS tab is backgrounded.
     function announceActive(){
         if (!window.ApexRealtime || !CONV) return;
-        window.ApexRealtime.setActive(CONV, !document.hidden);
-        if (!document.hidden) window.ApexRealtime.markConversationRead(CONV);
+        var looking = !document.hidden && document.hasFocus();   // actually looking at this chat
+        window.ApexRealtime.setActive(CONV, looking);
+        if (looking) window.ApexRealtime.markConversationRead(CONV);
     }
     announceActive();
     TCD('visibilitychange', announceActive);
-    window.addEventListener('focus', announceActive);
+    TCW('focus', announceActive);
+    TCW('blur', announceActive);   // switched to another app → let taskbar notifications through
 
     // Update a conversation's row preview/time/mention and float it to the top of its list.
     // The numeric UNREAD count is NOT touched here — it comes authoritatively from the
@@ -1503,9 +1510,9 @@
             }
         });
     }
-    window.addEventListener('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
+    TCW('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
 
-    window.addEventListener('apex:team-message', function (e) {
+    TCW('apex:team-message', function (e) {
         var m = e.detail; if (!m) return;
         if (String(m.conversation_id) === String(CONV)){
             poll(true);   // fetch the full message(s) for the open thread (dedupes via lastId)

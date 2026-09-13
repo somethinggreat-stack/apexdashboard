@@ -42,18 +42,25 @@
 (function () {
     'use strict';
     if (!window.fetch) return;
+    if (window.__apexRealtimeBooted) return;   // never run two pollers in one page context
+    window.__apexRealtimeBooted = true;
 
     var POLL_URL = @json(route('admin.team-messages.notifications'));
     var OPEN_URL = @json(route('admin.team-messages.index'));
     var onChatPage = !!document.querySelector('.tc-wrap');   // the Team Chat page renders its own surface
 
     // ---------- shared state ----------
-    var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs';
+    var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs', NLKEY = 'apex-team-last-notified';
     function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
     var lastId = parseInt(ls(LKEY) || '0', 10) || 0;
     var primed = lastId > 0;               // if we have a baseline, deliver new msgs (no backlog spam)
-    var seen = {};                          // id -> 1, session-level dedupe
-    var activeConvs = {};                   // convId -> true while open+focused in some tab (suppress its notifications)
+    var seen = {};                          // id -> 1, per-tab UI dedupe
+    function lastNotified(){ return parseInt(ls(NLKEY) || '0', 10) || 0; }   // cross-tab: chime/notify each msg only ONCE
+    // Which conversation each tab is actively viewing (open + focused). Keyed by TAB so a tab
+    // that SPA-navigates simply REPLACES its own entry (no stale "active" convs pile up and
+    // wrongly silence a chat you left). A conv is "active" if ANY tab is looking at it.
+    var activeByTab = {};
+    function isActive(conv){ conv = String(conv); for (var t in activeByTab){ if (activeByTab[t] === conv) return true; } return false; }
 
     // ---------- single-poller leader election (one network poller across all tabs) ----------
     var TAB = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
@@ -69,7 +76,7 @@
     var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('apex-team') : null;
     if (bc) bc.onmessage = function (e) {
         var d = e.data || {};
-        if (d.kind === 'active'){ if (d.focused) activeConvs[d.conv] = true; else delete activeConvs[d.conv]; return; }
+        if (d.kind === 'active'){ if (d.conv) activeByTab[d.tab] = String(d.conv); else delete activeByTab[d.tab]; return; }
         if (d.kind === 'seen'){ hydrate(); renderPanel(); return; }
         if (d.kind === 'unread'){ applyUnread(d.unread, d.perConv); return; }   // authoritative counts from the leader
         if (d.kind === 'data'){ ingest(d.data, false); }   // from the leader — update in-app UI, don't re-notify/re-broadcast
@@ -178,15 +185,21 @@
         if (!data) return;
         applyUnread(data.unread, data.perConv);
         var msgs = data.messages || [];
+        if (!msgs.length) return;
+        var floor = lastNotified();   // messages at/below this were already chimed/notified elsewhere
+        var maxId = floor, didNotify = false;
         msgs.forEach(function (m) {
-            if (seen[m.id]) return; seen[m.id] = 1;
-            var muted = activeConvs[m.conversation_id];   // conversation open+focused somewhere → stay quiet
+            // UI update (sidebar/thread) happens once per TAB — so every tab reflects the message.
+            if (!seen[m.id]){ seen[m.id] = 1; window.dispatchEvent(new CustomEvent('apex:team-message', { detail: m })); }
+            if (m.id > maxId) maxId = m.id;
+            // Chime / desktop / notification-center happen once GLOBALLY — never re-fire an old id.
+            if (m.id <= floor) return;
+            var muted = isActive(m.conversation_id);   // conversation open+focused somewhere → stay quiet
             addNotif(m);
-            if (m.unseen === false) {}   // reserved
-            window.dispatchEvent(new CustomEvent('apex:team-message', { detail: m }));   // let an open Team Chat update live
-            if (fromNetwork && amLeader() && !muted){ desktop(m); }
+            if (!muted){ didNotify = true; if (amLeader()) desktop(m); }
         });
-        if (msgs.length && amLeader()) chime();
+        if (maxId > floor) ls(NLKEY, String(maxId));   // advance the global notify watermark
+        if (didNotify && amLeader()) chime();
     }
 
     // ---------- the poll loop (leader hits the network; others ride broadcasts) ----------
@@ -219,8 +232,13 @@
 
     // Expose a tiny API so the Team Chat page can announce which conversation is open+focused
     // (so we never desktop-notify the chat you're actively reading) and mark notifications read.
+    window.addEventListener('beforeunload', function () { activeByTab[TAB] = undefined; delete activeByTab[TAB]; post({ kind: 'active', tab: TAB, conv: null }); });
     window.ApexRealtime = {
-        setActive: function (conv, focused){ if (focused) activeConvs[conv] = true; else delete activeConvs[conv]; post({ kind: 'active', conv: conv, focused: !!focused }); },
+        setActive: function (conv, focused){
+            var v = focused ? String(conv) : null;
+            if (v) activeByTab[TAB] = v; else delete activeByTab[TAB];
+            post({ kind: 'active', tab: TAB, conv: v });
+        },
         markConversationRead: function (conv){
             notifs.forEach(function (n) { if (String(n.conversation_id) === String(conv)) n.unseen = false; });
             saveNotifs(); renderPanel(); post({ kind: 'seen' });
