@@ -631,35 +631,11 @@
     .tc-thread-head .tc-avatar { box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(99,102,241,.4), 0 8px 18px -6px rgba(99,102,241,.5); }
     .tc-th-name { font-size:16px; font-weight:800; letter-spacing:-.01em; }
 
-    /* The aurora lives on the (non-scrolling, clipped) thread panel — never
-       inside the scrolling message list — so it can't inflate the scroll area
-       or create a stray horizontal scrollbar. */
-    .tc-thread {
-        position:relative;
-        background:
-            radial-gradient(900px 480px at 8% -12%, rgba(99,102,241,.14), transparent 60%),
-            radial-gradient(680px 460px at 112% 0%, rgba(236,72,153,.10), transparent 55%),
-            radial-gradient(720px 560px at 50% 120%, rgba(56,189,248,.12), transparent 60%),
-            linear-gradient(180deg,#f7f9ff,#eef2fb);
-    }
-    /* Static soft blobs — no animation, no blur filter (was a continuous GPU cost). */
-    .tc-thread::before {
-        content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-        background:
-            radial-gradient(360px 360px at 26% 28%, rgba(99,102,241,.10), transparent 66%),
-            radial-gradient(380px 380px at 74% 60%, rgba(236,72,153,.08), transparent 66%),
-            radial-gradient(320px 320px at 50% 88%, rgba(56,189,248,.10), transparent 66%);
-    }
-    .tc-thread::after {
-        content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-        background-image:radial-gradient(rgba(79,70,229,.12) 1px, transparent 1.5px);
-        background-size:22px 22px; opacity:.5;
-        -webkit-mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
-        mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
-    }
-    /* Keep real content above the backdrop. */
+    /* Plain, clean thread surface — no aurora gradients, no dot grid. */
+    .tc-thread { position:relative; }
+    .tc-thread::before, .tc-thread::after { content:none; }
     .tc-thread-head, .tc-messages, .tc-reply-bar, .tc-composer { position:relative; z-index:1; }
-    .tc-messages { padding:22px 22px 26px; background:transparent; overflow-x:hidden; }
+    .tc-messages { padding:22px 22px 26px; background:var(--pro-soft,#f7f9fc); overflow-x:hidden; }
     .tc-msg { animation:tcIn .3s cubic-bezier(.2,.7,.3,1) both; }
 
     .tc-bubble {
