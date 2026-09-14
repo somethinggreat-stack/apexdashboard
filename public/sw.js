@@ -23,6 +23,11 @@ self.addEventListener('activate', (event) => {
     })());
 });
 
+// Presence-only fetch handler: required by some browsers for PWA installability. It caches
+// NOTHING and never calls respondWith(), so every request is handled by the browser exactly
+// as normal (authenticated HTML / client data is never stored).
+self.addEventListener('fetch', () => { /* pass-through */ });
+
 // Incoming push from the server → wake any open Apex tab to sync instantly, and show an
 // OS notification unless the user is right now focused on that exact conversation.
 self.addEventListener('push', (event) => {

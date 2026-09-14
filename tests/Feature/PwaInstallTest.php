@@ -9,25 +9,30 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The installable PWA was removed at the team's request. The service worker now
- * exists ONLY for Web Push (background/closed-tab chat notifications) — there is
- * no manifest, no offline page, and no asset caching.
+ * The dashboard-wide installable PWA was removed; the ONLY installable surface is
+ * the standalone Team Chat (chat-scoped manifest, linked just in layouts/chat).
+ * The service worker exists for Web Push (and a presence-only fetch handler for
+ * installability) and caches nothing — no offline app, no stored client data.
  */
 class PwaInstallTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_pwa_is_removed_and_sw_is_push_only(): void
+    public function test_sw_is_push_only_and_caches_nothing(): void
     {
-        // The service worker stays (for Web Push) but the installable-app files are gone.
+        // The OLD dashboard-wide installable PWA is gone; a chat-scoped manifest exists instead.
         $this->assertFileExists(public_path('sw.js'));
         $this->assertFileDoesNotExist(public_path('manifest.webmanifest'));
         $this->assertFileDoesNotExist(public_path('offline.html'));
+        $this->assertFileExists(public_path('team-chat.webmanifest'));
 
         $sw = file_get_contents(public_path('sw.js'));
         $this->assertStringContainsString("addEventListener('push'", $sw);        // handles push
         $this->assertStringContainsString("addEventListener('notificationclick'", $sw);
-        $this->assertStringNotContainsString("addEventListener('fetch'", $sw);    // no asset caching / offline app
+        // A fetch handler exists (for installability) but it must NEVER cache anything —
+        // authenticated HTML / client SSN data must not be stored.
+        $this->assertStringNotContainsString('cache.put', $sw);
+        $this->assertStringNotContainsString('caches.open', $sw);
     }
 
     public function test_team_pages_no_longer_advertise_an_installable_app(): void

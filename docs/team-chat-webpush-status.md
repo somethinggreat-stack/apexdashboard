@@ -71,6 +71,23 @@ every chat-page load; when a message lands in the currently-open chat it dispatc
 two accounts: receiver on Team Chat with nothing selected → sidebar preview + unread + reorder
 update live; open-conversation append + no-notify-for-open-chat still pass.
 
+## ✅ Team Chat is an installable app (chat-scoped PWA)
+The standalone Team Chat can now be **installed as its own app** (dedicated window, taskbar/
+Start icon, more reliable closed-app notifications on Windows). It is **scoped to the chat
+only** so the dashboard never shows an install prompt:
+- `public/team-chat.webmanifest` (scope `/admin/team-messages`, start_url `?standalone=1`,
+  standalone display, existing `/Images/pwa` icons).
+- Linked ONLY in `layouts/chat.blade.php` (+ apple-mobile-web-app metas). The dashboard
+  layouts have no manifest.
+- A tidy **"Install app"** button appears bottom-left in Team Chat **only when installable**
+  (captures `beforeinstallprompt`, hides after install) — no auto browser nag.
+- `public/sw.js` gained a **presence-only** `fetch` handler (required by some browsers for
+  installability). It caches NOTHING and never calls `respondWith` — no offline app, no stored
+  client data. Push + notificationclick unchanged.
+Verified: manifest serves 200 with name "Apex Team Chat" / scope `/admin/team-messages`; the
+chat page links it and shows the install button; the dashboard does NOT link it. (The install
+prompt/click itself needs real Chrome — headless can't fire `beforeinstallprompt`.)
+
 ## Still to verify / open items
 - **End-to-end browser delivery** (push service → SW → OS toast) is the ONE leg not
   automatable locally (headless can't create push subscriptions). Needs the live test above.
