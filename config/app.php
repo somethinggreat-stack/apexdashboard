@@ -55,6 +55,12 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | The host that serves Team Chat as its own standalone product. On this host
+    | only the chat is reachable (see ChatHostGuard) — dashboard URLs bounce to chat.
+    */
+    'chat_host' => env('CHAT_HOST', 'chat.apexgrowthsolution.com'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

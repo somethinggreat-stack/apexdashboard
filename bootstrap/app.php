@@ -29,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Defense-in-depth security response headers on every request.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // The chat subdomain only serves the Team Chat surface (no-op on every other host).
+        $middleware->append(\App\Http\Middleware\ChatHostGuard::class);
+
         // Behind Cloudflare: trust ONLY Cloudflare's edge ranges so the real
         // visitor IP (from X-Forwarded-For) drives login throttling, intake IP
         // logging and HTTPS detection. Because we trust specific ranges (not '*'),
@@ -63,8 +66,10 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('business-owner') || $request->is('business-owner/*')) {
                 return route('client.login');
             }
-            // The desktop Team Chat app has its own sign-in, separate from the dashboard.
-            if (str_contains((string) $request->userAgent(), 'ApexDesktop')) {
+            // Team Chat has its own sign-in: the desktop app (by user-agent) and the
+            // chat subdomain (by host) both use it, separate from the dashboard.
+            if (str_contains((string) $request->userAgent(), 'ApexDesktop')
+                || $request->getHost() === config('app.chat_host')) {
                 return route('admin.chat-login');
             }
             return route('admin.login');
@@ -74,8 +79,9 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('business-owner') || $request->is('business-owner/*')) {
                 return route('client.dashboard');
             }
-            // A signed-in desktop app user lands in chat, never the dashboard.
-            if (str_contains((string) $request->userAgent(), 'ApexDesktop')) {
+            // A signed-in chat user (desktop app or chat subdomain) lands in chat.
+            if (str_contains((string) $request->userAgent(), 'ApexDesktop')
+                || $request->getHost() === config('app.chat_host')) {
                 return route('admin.team-messages.index', ['standalone' => 1]);
             }
             return route('admin.client-selector.index');
@@ -101,11 +107,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            $isPortal      = $request->is('business-owner') || $request->is('business-owner/*');
-            $isDesktopChat = ! $isPortal && str_contains((string) $request->userAgent(), 'ApexDesktop');
-            $login         = $isPortal
+            $isPortal   = $request->is('business-owner') || $request->is('business-owner/*');
+            $isChat     = ! $isPortal && (str_contains((string) $request->userAgent(), 'ApexDesktop')
+                            || $request->getHost() === config('app.chat_host'));
+            $login      = $isPortal
                 ? route('client.login')
-                : ($isDesktopChat ? route('admin.chat-login') : route('admin.login'));
+                : ($isChat ? route('admin.chat-login') : route('admin.login'));
 
             // Already on a login page — let it render normally, never loop.
             if ($request->is('admin/login') || $request->is('admin/chat-login') || $request->is('business-owner/login')) {
