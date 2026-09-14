@@ -55,11 +55,20 @@
     // Native desktop app (Tauri): we fire OS-native, Apex-branded notifications instead of
     // browser ones, and skip Web Push entirely (the app polls while it lives in the tray).
     var IS_TAURI = !!window.__TAURI__;
+    var lastNotifiedConv = null;   // the conversation of the most recent OS notification
     if (IS_TAURI) {
         try {
             var _n = window.__TAURI__.notification;
             if (_n && _n.isPermissionGranted) {
                 _n.isPermissionGranted().then(function (g) { if (!g && _n.requestPermission) return _n.requestPermission(); }).catch(function () {});
+            }
+            // Click-to-jump: clicking the toast brings the app forward and opens that chat.
+            if (_n && _n.onAction) {
+                _n.onAction(function () {
+                    if (!lastNotifiedConv) return;
+                    try { var w = window.__TAURI__.window.getCurrentWindow(); w.show(); w.unminimize(); w.setFocus(); } catch (e) {}
+                    location.href = OPEN_URL + '?c=' + lastNotifiedConv + '&standalone=1';
+                });
             }
         } catch (e) {}
     }
@@ -201,6 +210,7 @@
     function desktop(m){
         var title = m.title || 'Apex Team Chat';
         var body  = (m.body != null && m.body !== '') ? m.body : ((m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet);
+        if (IS_TAURI && m.conversation_id && m.conversation_id !== 'summary') lastNotifiedConv = m.conversation_id;
         if (nativeNotify(title, body)) return;   // native app → OS toast, Apex-branded, no browser
         if (permission() !== 'granted') return;
         try {

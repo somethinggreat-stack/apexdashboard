@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "notes": "Apex Team Chat desktop app.",
+  "pub_date": "2026-09-14T23:15:09Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTliekJxWkdTcC9rT3hGc0ZPNHZPbGIrak95K3BaRDdtMGYvMHhLdW0rWE95K25iajBqSHJ4VmhPbGpjNFBVdTlXcmF4TC9PQTBpS25WcUc4clpIdEFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDI3NjI1CWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjBfeDY0LXNldHVwLmV4ZQpTT1luUmhKeXdFZkJhOXBRZzhPT0JjbERBYzIzZ2U2N0JnanpwMkg1K3JNV2NHN0t4bXk0MEdoTFFTRlVRTFZDZkZ5dzNwNWJNdVZLN1c3QTJON0FDZz09Cg==",
+      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe"
+    }
+  }
+}
