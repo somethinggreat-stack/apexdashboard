@@ -72,6 +72,12 @@
         } catch (e) {}
         return true;   // in the app we never fall back to a browser toast
     }
+    // A small unread dot on the app's taskbar icon (cleared when caught up).
+    function nativeBadge(n){
+        if (!IS_TAURI) return;
+        var T = window.__TAURI__;
+        try { if (T.core && T.core.invoke) T.core.invoke('set_unread', { count: (n > 0 ? n : 0) }); } catch (e) {}
+    }
 
     // ---------- shared state ----------
     var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs', NLKEY = 'apex-team-last-notified';
@@ -247,6 +253,7 @@
     // NEVER stamp the global unread total onto them — each row owns its own per-chat badge.
     function setBadge(n){
         if (typeof n !== 'number') return;
+        if (IS_TAURI) nativeBadge(n);   // taskbar unread dot in the desktop app
         document.querySelectorAll('a[href*="team-messages"]').forEach(function (a) {
             if (a.classList.contains('tc-contact') || a.closest('.tc-list') || a.closest('.tc-wrap')) return;   // skip Team Chat sidebar rows
             var b = a.querySelector('.pro-count');
