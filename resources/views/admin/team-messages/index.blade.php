@@ -271,6 +271,9 @@
                 </button>
             </div>
 
+            {{-- Teams-style hover quick-react bar (emojis appear the moment you hover a message) --}}
+            <div class="tc-qr" id="tcQuickReact" hidden></div>
+
             {{-- Forward picker --}}
             <div class="tc-modal" id="tcForward" hidden>
                 <div class="tc-modal-card">
@@ -542,7 +545,7 @@
     .tc-pending[hidden], .tc-progress[hidden], .tc-lightbox[hidden],
     .tc-typing[hidden], .tc-seen[hidden], .tc-emoji-picker[hidden],
     .tc-pinned-drop[hidden], .tc-search-results[hidden], .tc-no-results[hidden],
-    .tc-bell-pop[hidden], .tc-mention-pop[hidden], .tc-contact[hidden], .tc-section[hidden], .tc-edit-bar[hidden] { display:none !important; }
+    .tc-bell-pop[hidden], .tc-mention-pop[hidden], .tc-contact[hidden], .tc-section[hidden], .tc-edit-bar[hidden], .tc-qr[hidden] { display:none !important; }
 
     /* Phase 6 polish */
     .tc-link { color:#2563eb; text-decoration:underline; word-break:break-all; }
@@ -695,9 +698,12 @@
     :root[data-theme="dark"] .tc-deleted-text { color:#94a3b8 !important; }
 
     /* Reaction pills */
-    .tc-reacts { display:flex; flex-wrap:wrap; gap:4px; margin-top:-4px; padding:0 4px; }
+    .tc-reacts { display:flex; flex-wrap:wrap; gap:5px; margin-top:-2px; padding:0 4px; }
     .tc-reacts:empty { display:none; }
-    .tc-react { display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:999px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); font-size:12px; font-weight:700; color:#475569; cursor:pointer; box-shadow:0 1px 2px rgba(15,23,42,.06); }
+    .tc-react { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); font-weight:700; color:#475569; cursor:pointer; box-shadow:0 1px 3px rgba(15,23,42,.08); transition:transform .1s; }
+    .tc-react:hover { transform:scale(1.06); }
+    .tc-react-e { font-size:18px; line-height:1; }
+    .tc-react-n { font-size:12.5px; font-weight:700; }
     .tc-react.mine { background:rgba(79,70,229,.12); border-color:rgba(79,70,229,.4); color:#4f46e5; }
 
     /* Action menu */
@@ -710,6 +716,16 @@
     .tc-menu-item svg { width:17px; height:17px; color:#64748b; flex:none; }
     .tc-menu-item.danger { color:#ef4444; }
     .tc-menu-item.danger svg { color:#ef4444; }
+
+    /* Teams-style hover quick-react bar */
+    .tc-qr { position:fixed; z-index:1001; display:flex; align-items:center; gap:1px; padding:4px 6px; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:999px; box-shadow:0 10px 30px -8px rgba(15,23,42,.35); }
+    .tc-qr button { border:0; background:transparent; font-size:22px; line-height:1; padding:3px 4px; border-radius:50%; cursor:pointer; transition:transform .1s, background .12s; }
+    .tc-qr button:hover { transform:scale(1.25); background:var(--pro-soft,#f1f5f9); }
+    .tc-qr .tc-qr-more, .tc-qr .tc-qr-dots { font-size:17px; color:#64748b; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; }
+    .tc-qr .tc-qr-sep { width:1px; align-self:stretch; margin:3px 3px; background:var(--pro-line,#e6ebf2); }
+    :root[data-theme="dark"] .tc-qr { background:#0f1629; border-color:#233150; }
+    :root[data-theme="dark"] .tc-qr button:hover { background:#182444; }
+    :root[data-theme="dark"] .tc-qr .tc-qr-sep { background:#233150; }
 
     /* Reply composer bar */
     .tc-reply-bar { display:flex; align-items:center; gap:10px; padding:9px 16px 0; }
@@ -1179,7 +1195,8 @@
         return list.map(function (r) {
             var e = esc(r.emoji);   // never trust the stored reaction — escape before inserting as HTML
             return '<span class="tc-react' + (r.mine ? ' mine' : '') + '" data-emoji="' + e + '">'
-                + e + (r.count > 1 ? ' ' + r.count : '') + '</span>';
+                + '<span class="tc-react-e">' + e + '</span>'
+                + (r.count > 1 ? '<span class="tc-react-n">' + r.count + '</span>' : '') + '</span>';
         }).join('');
     }
 
@@ -1558,6 +1575,17 @@
 
     function extOf(name){ var i = name.lastIndexOf('.'); return i >= 0 ? name.slice(i + 1).toLowerCase() : ''; }
 
+    // A pasted screenshot arrives as a nameless image blob; give it a real filename +
+    // extension (from its MIME type) so it passes the same validation as a picked file.
+    var MIME_EXT = { 'image/png':'png', 'image/jpeg':'jpg', 'image/jpg':'jpg', 'image/gif':'gif', 'image/webp':'webp' };
+    function namedFile(f){
+        if (f.name && extOf(f.name)) return f;   // already has a usable name + extension
+        var ext = MIME_EXT[f.type] || (f.type && f.type.indexOf('/') >= 0 ? f.type.split('/')[1] : 'png');
+        var name = 'pasted-' + Date.now() + '.' + ext;
+        try { return new File([f], name, { type: f.type || 'application/octet-stream' }); }
+        catch (err) { try { f.name = name; } catch (e2) {} return f; }
+    }
+
     function addFiles(list){
         Array.prototype.slice.call(list || []).forEach(function (f) {
             if (pending.length >= 10) { toast('Up to 10 files per message'); return; }
@@ -1601,6 +1629,26 @@
             if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { e.preventDefault(); addFiles(e.dataTransfer.files); }
         });
     }
+
+    // Paste an image or file straight into the composer (Ctrl+V) — screenshots included.
+    function handlePaste(e){
+        var dt = e.clipboardData || window.clipboardData; if (!dt) return;
+        var files = [];
+        if (dt.files && dt.files.length) {
+            // Files copied from the OS file manager arrive here with real names.
+            Array.prototype.forEach.call(dt.files, function (f) { files.push(namedFile(f)); });
+        } else if (dt.items && dt.items.length) {
+            // A pasted screenshot/image comes through as an item of kind "file", no name.
+            Array.prototype.forEach.call(dt.items, function (it) {
+                if (it.kind === 'file') { var f = it.getAsFile(); if (f) files.push(namedFile(f)); }
+            });
+        }
+        if (files.length) { e.preventDefault(); addFiles(files); }   // let plain-text paste through untouched
+    }
+    // Attach to ONE element only. The thread panel catches a composer paste as it bubbles
+    // up from the textarea, so a single listener handles it exactly once.
+    var pasteTarget = thread || input;
+    if (pasteTarget) pasteTarget.addEventListener('paste', handlePaste);
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -2143,6 +2191,68 @@
         var pill = e.target.closest('.tc-react'); if (!pill) return;
         var el = pill.closest('.tc-msg'); if (el) react(parseInt(el.dataset.id, 10), pill.dataset.emoji);
     });
+
+    // ---- Teams-style hover quick-react bar: emojis appear the instant you hover a message ----
+    var qr = document.getElementById('tcQuickReact');
+    if (qr) TCB(qr);
+    var qrId = null, qrEl = null, qrHideT = null;
+
+    function buildQR(){
+        var h = getRecent().slice(0, 6).map(function (e) {
+            return '<button type="button" data-emoji="' + e + '">' + e + '</button>';
+        }).join('');
+        h += '<button type="button" class="tc-qr-more" data-qr-more title="More emojis">＋</button>'
+           + '<span class="tc-qr-sep"></span>'
+           + '<button type="button" class="tc-qr-dots" data-qr-dots title="More actions">⋯</button>';
+        qr.innerHTML = h;
+    }
+    function positionQR(el){
+        qr.style.left = '0px'; qr.style.top = '0px'; qr.hidden = false;
+        var qw = qr.offsetWidth, qh = qr.offsetHeight;
+        var bub = el.querySelector('.tc-bubble') || el;
+        var br = bub.getBoundingClientRect();
+        var mine = el.classList.contains('mine');
+        var wantTop = Math.max(8, br.top - qh - 6);              // float just above the bubble
+        var want = mine ? (br.right - qw) : br.left;            // align to the bubble's outer edge
+        want = Math.max(8, Math.min(want, window.innerWidth - qw - 8));
+        // Two-pass offset correction for any transformed ancestor (same trick as the menu).
+        qr.style.left = want + 'px'; qr.style.top = wantTop + 'px';
+        var a = qr.getBoundingClientRect();
+        qr.style.left = (2 * want - a.left) + 'px';
+        qr.style.top  = (2 * wantTop - a.top) + 'px';
+    }
+    function showQR(el){
+        if (!qr || !el) return;
+        var bub = el.querySelector('.tc-bubble');
+        if (!bub || bub.classList.contains('deleted')) { hideQR(); return; }   // nothing to react to
+        clearTimeout(qrHideT);
+        qrId = parseInt(el.dataset.id, 10); qrEl = el;
+        buildQR(); positionQR(el);
+    }
+    function hideQR(){ if (qr) qr.hidden = true; qrId = null; qrEl = null; }
+    function scheduleHideQR(){ clearTimeout(qrHideT); qrHideT = setTimeout(hideQR, 220); }
+
+    if (qr){
+        box.addEventListener('mouseover', function (e) {
+            var el = e.target.closest('.tc-msg'); if (!el) return;
+            if (el !== qrEl) showQR(el); else clearTimeout(qrHideT);
+        });
+        box.addEventListener('mouseout', function (e) {
+            var el = e.target.closest('.tc-msg'); if (!el) return;
+            var rt = e.relatedTarget;
+            if (!rt || (!el.contains(rt) && !qr.contains(rt))) scheduleHideQR();   // keep open over msg or bar
+        });
+        qr.addEventListener('mouseenter', function () { clearTimeout(qrHideT); });
+        qr.addEventListener('mouseleave', scheduleHideQR);
+        qr.addEventListener('click', function (e) {
+            var em = e.target.closest('[data-emoji]');
+            if (em){ if (qrId){ react(qrId, em.dataset.emoji); recordRecent(em.dataset.emoji); } hideQR(); return; }
+            if (e.target.closest('[data-qr-more]')){ emojiTargetId = qrId; openPicker(qr.querySelector('[data-qr-more]')); hideQR(); return; }
+            if (e.target.closest('[data-qr-dots]')){ var el = qrEl; hideQR();
+                if (el){ var d = el.querySelector('.tc-dots'); var r = (d || el).getBoundingClientRect(); openMenu(r.left, r.bottom + 4, el); } }
+        });
+        box.addEventListener('scroll', hideQR);
+    }
 
     // ---- Teams-style emoji picker (search + recent + categories + bottom tabs). Moved to <body>. ----
     var picker = document.getElementById('tcEmojiPicker');
