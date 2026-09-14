@@ -62,12 +62,13 @@
     <div class="steps">
       <h2>How to install</h2>
       <div class="step"><span class="n">1</span><span>Run the downloaded <b>Apex Team Chat setup</b>.</span></div>
-      <div class="step"><span class="n">2</span><span>Windows may show <b>“Windows protected your PC.”</b> Click <b>More info → Run anyway</b> — it's safe, just not code-signed.</span></div>
+      <div class="step"><span class="n">2</span><span>Windows may show <b>&ldquo;Windows protected your PC.&rdquo;</b> Click <b>More info &rarr; Run anyway</b> &mdash; it&rsquo;s safe, just not code-signed.</span></div>
       <div class="step"><span class="n">3</span><span>Open <b>Apex Team Chat</b> from your Start menu and sign in with your Apex email.</span></div>
     </div>
 
-    <div class="note">Tip: right-click the app icon in your taskbar → <b>Pin to taskbar</b>, and enable notifications so you never miss a message.</div>
-    <p class="foot">© {{ date('Y') }} Apex Growth Solutions · authorized staff only</p>
+    <div class="note">Tip: right-click the app icon in your taskbar &rarr; <b>Pin to taskbar</b>, and enable notifications so you never miss a message.</div>
+    <p class="foot">&copy; <span id="yr"></span> Apex Growth Solutions &middot; authorized staff only</p>
   </div>
+  <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
 </body>
 </html>

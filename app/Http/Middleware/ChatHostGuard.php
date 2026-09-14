@@ -21,7 +21,6 @@ class ChatHostGuard
         'admin/logout',
         'admin/push',            // web-push subscribe/unsubscribe
         'admin/profile',         // own profile (avatar, password)
-        'download',              // the desktop app download page (installer is a static file)
     ];
 
     public function handle(Request $request, Closure $next)
