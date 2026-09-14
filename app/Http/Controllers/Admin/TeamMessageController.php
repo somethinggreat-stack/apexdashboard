@@ -340,15 +340,56 @@ class TeamMessageController extends Controller
 
         $r = $msg->reactions ?? [];
         $emoji = $data['emoji'] ?? null;
+        $added = false;
         if ($emoji === null || ($r[$me->id] ?? null) === $emoji) {
             unset($r[$me->id]);
         } else {
             $r[$me->id] = $emoji;
+            $added = true;
         }
         $msg->reactions = $r ?: null;
         $msg->save();
 
+        // Ping the message owner (unless they reacted to themselves) when a reaction is ADDED.
+        if ($added && $msg->sender_id !== $me->id) {
+            $this->queueReactionPush($msg, $me, $emoji);
+        }
+
         return response()->json(['ok' => true, 'reactions' => $this->reactionsOf($msg, $me->id)]);
+    }
+
+    /** Web Push to a message's owner when someone reacts to it. Sent after the response. */
+    private function queueReactionPush(TeamMessage $msg, Admin $reactor, string $emoji): void
+    {
+        if (! WebPushSender::enabled()) {
+            return;
+        }
+        $conv = $msg->conversation;
+        if (! $conv) {
+            return;
+        }
+        $conv->loadMissing('participants');
+        $part = $conv->participants->firstWhere('admin_id', $msg->sender_id);
+        if (! $part) {
+            return;
+        }
+        $level = $part->notify_level ?? 'all';
+        if ((bool) ($part->muted ?? false) || $level === 'none') {
+            return;   // muted or notifications off → no reaction ping
+        }
+
+        $snippet = $msg->body !== '' ? Str::limit($msg->body, 40) : 'your file';
+        $payload = [
+            'title' => $this->convTitle($conv, $msg->sender_id),   // DM → reactor's name; group → group name
+            'body'  => $this->senderInfo($reactor)['first'] . ' reacted ' . $emoji . ' to: ' . $snippet,
+            'url'   => route('admin.team-messages.index', ['c' => $conv->id, 'standalone' => 1]),
+            'tag'   => 'apex-react-' . $msg->id,
+            'conv'  => (string) $conv->id,
+        ];
+        $ownerId = $msg->sender_id;
+        app()->terminating(function () use ($ownerId, $payload) {
+            app(WebPushSender::class)->sendToAdmins([$ownerId], $payload);
+        });
     }
 
     /** Toggle a conversation as a favorite (pinned to the top of my sidebar). */

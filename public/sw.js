@@ -54,6 +54,9 @@ self.addEventListener('push', (event) => {
             renotify: true,
             icon: '/Images/pwa/icon-192.png',
             badge: '/Images/pwa/icon-192.png',
+            // Desktop web push can't do an inline text reply (Android only), but an action
+            // button that opens the chat is the closest to Teams' quick-reply.
+            actions: [{ action: 'open', title: 'Open chat' }],
             data: { url: url }
         });
     })());
