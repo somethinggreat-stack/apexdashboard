@@ -23,6 +23,12 @@ deployment:
     - /bin/cp phpunit.xml $DEPLOYPATH
     - /bin/cp vite.config.js $DEPLOYPATH
     - /bin/cp README.md $DEPLOYPATH
+    # Ensure the runtime storage tree exists and is writable. storage/ is deliberately NOT
+    # copied (it's runtime data), so a fresh docroot — like the chat subdomain — has none and
+    # Laravel 500s trying to write compiled views/logs. mkdir -p is a no-op where it already
+    # exists, so the established main site is left untouched.
+    - mkdir -p "$DEPLOYPATH/storage/framework/cache/data" "$DEPLOYPATH/storage/framework/sessions" "$DEPLOYPATH/storage/framework/views" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/app/public" "$DEPLOYPATH/storage/app/private" "$DEPLOYPATH/bootstrap/cache"
+    - chmod -R 775 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache" 2>&1 || true
     - cd $DEPLOYPATH && /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
     - cd $DEPLOYPATH && php artisan config:clear 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:clear 2>&1 || true
