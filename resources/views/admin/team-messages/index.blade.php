@@ -991,6 +991,82 @@
     };
 })();
 
+// ---------- Sidebar live-updates (ALWAYS runs, even with NO conversation open) ----------
+// The thread IIFE below bails when there's no open chat (#tcMessages absent), so the sidebar's
+// live preview/unread/reorder wiring must live here — driven by the app-wide poller
+// (partials/team-realtime) via window events. This is what keeps the chat list in sync when
+// you're sitting on Team Chat with nothing selected.
+(function () {
+    var activeRow = document.querySelector('.tc-contact.active');
+    var CONV = (activeRow && activeRow.dataset.conversation) || '';
+
+    // Tell the poller which conversation is open+focused (so it never notifies the chat you're
+    // reading, and marks it read).
+    function announceActive(){
+        if (!window.ApexRealtime || !CONV) return;
+        var looking = !document.hidden && document.hasFocus();
+        window.ApexRealtime.setActive(CONV, looking);
+        if (looking) window.ApexRealtime.markConversationRead(CONV);
+    }
+    announceActive();
+    TCD('visibilitychange', announceActive);
+    TCW('focus', announceActive);
+    TCW('blur', announceActive);   // switched to another app → let taskbar notifications through
+
+    // Update a conversation's row preview/time/mention and float it to the top of its list.
+    // The numeric UNREAD count comes authoritatively from applyRowUnread(), not from here.
+    function bumpSidebar(m){
+        var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
+        if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
+        var isOpen = String(m.conversation_id) === String(CONV);
+        var pv = row.querySelector('[data-preview-text]');
+        // Match the server format: groups show "Name: text", DMs show just the text.
+        if (pv) pv.textContent = (row.dataset.group === '1' ? m.sender + ': ' : '') + m.snippet;
+        var tick = row.querySelector('[data-tick]'); if (tick) tick.remove();   // incoming message → no "sent" tick
+        var tm = row.querySelector('[data-time]'); if (tm) tm.textContent = 'now';
+        if (!isOpen && m.mention && row.dataset.muted !== '1' && !row.querySelector('.tc-mention-badge')){
+            var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';
+            var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]') || null);
+        }
+        var listParent = row.parentNode; if (listParent && listParent.firstChild !== row) listParent.insertBefore(row, listParent.firstChild);
+    }
+
+    // Authoritative per-conversation unread — sets EACH row to exactly its own count
+    // (the open conversation is always 0). Fired every poll, so counts also drop on read.
+    function applyRowUnread(map){
+        map = map || {};
+        document.querySelectorAll('.tc-contact[data-conversation]').forEach(function (row) {
+            var id = row.dataset.conversation;
+            var isOpen = String(id) === String(CONV);
+            var n = isOpen ? 0 : (parseInt(map[id], 10) || 0);
+            var badge = row.querySelector('[data-badge]');
+            var sub = row.querySelector('.tc-c-sub');
+            if (n > 0){
+                if (!badge){ badge = document.createElement('span'); badge.className = 'tc-unread'; badge.setAttribute('data-badge', ''); if (sub) sub.appendChild(badge); }
+                badge.textContent = n > 99 ? '99+' : n;
+                row.dataset.unread = '1';
+                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.add('unread'); });
+            } else {
+                if (badge) badge.remove();
+                row.dataset.unread = '0';
+                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.remove('unread'); });
+                if (isOpen){ var mb = row.querySelector('.tc-mention-badge'); if (mb) mb.remove(); }
+            }
+        });
+    }
+
+    TCW('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
+    TCW('apex:team-message', function (e) {
+        var m = e.detail; if (!m) return;
+        if (CONV && String(m.conversation_id) === String(CONV)){
+            window.dispatchEvent(new CustomEvent('apex:thread-poll'));   // the open thread fetches the full message
+            if (!document.hidden && window.ApexRealtime) window.ApexRealtime.markConversationRead(CONV);
+        } else {
+            bumpSidebar(m);
+        }
+    });
+})();
+
 (function () {
     var STANDALONE = @js(request()->boolean('standalone'));
     var box = document.getElementById('tcMessages');
@@ -1454,75 +1530,10 @@
     }
     TCI(poll, 3000);
 
-    // ---------- Global realtime wiring ----------
-    // The app-wide poller (partials/team-realtime) is the single network listener across all
-    // tabs. Here we (a) tell it which conversation is open+focused so it never desktop-notifies
-    // the chat you're reading and marks it read, and (b) react to its cross-tab events so the
-    // sidebar and the open thread update live even when THIS tab is backgrounded.
-    function announceActive(){
-        if (!window.ApexRealtime || !CONV) return;
-        var looking = !document.hidden && document.hasFocus();   // actually looking at this chat
-        window.ApexRealtime.setActive(CONV, looking);
-        if (looking) window.ApexRealtime.markConversationRead(CONV);
-    }
-    announceActive();
-    TCD('visibilitychange', announceActive);
-    TCW('focus', announceActive);
-    TCW('blur', announceActive);   // switched to another app → let taskbar notifications through
-
-    // Update a conversation's row preview/time/mention and float it to the top of its list.
-    // The numeric UNREAD count is NOT touched here — it comes authoritatively from the
-    // server via applyRowUnread(), so only the chat that actually got a message shows a count.
-    function bumpSidebar(m){
-        var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
-        if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
-        var isOpen = String(m.conversation_id) === String(CONV);
-        var pv = row.querySelector('[data-preview-text]');
-        // Match the server format: groups show "Name: text", DMs show just the text.
-        if (pv) pv.textContent = (row.dataset.group === '1' ? m.sender + ': ' : '') + m.snippet;
-        var tick = row.querySelector('[data-tick]'); if (tick) tick.remove();   // incoming message → no "sent" tick
-        var tm = row.querySelector('[data-time]'); if (tm) tm.textContent = 'now';
-        if (!isOpen && m.mention && row.dataset.muted !== '1' && !row.querySelector('.tc-mention-badge')){
-            var mb = document.createElement('span'); mb.className = 'tc-mention-badge'; mb.title = 'You were mentioned'; mb.textContent = '@';
-            var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]') || null);
-        }
-        var listParent = row.parentNode; if (listParent && listParent.firstChild !== row) listParent.insertBefore(row, listParent.firstChild);
-    }
-
-    // Authoritative per-conversation unread — sets EACH row to exactly its own count
-    // (the open conversation is always 0). Fired every poll, so counts also drop on read.
-    function applyRowUnread(map){
-        map = map || {};
-        document.querySelectorAll('.tc-contact[data-conversation]').forEach(function (row) {
-            var id = row.dataset.conversation;
-            var isOpen = String(id) === String(CONV);
-            var n = isOpen ? 0 : (parseInt(map[id], 10) || 0);
-            var badge = row.querySelector('[data-badge]');
-            var sub = row.querySelector('.tc-c-sub');
-            if (n > 0){
-                if (!badge){ badge = document.createElement('span'); badge.className = 'tc-unread'; badge.setAttribute('data-badge', ''); if (sub) sub.appendChild(badge); }
-                badge.textContent = n > 99 ? '99+' : n;
-                row.dataset.unread = '1';
-                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.add('unread'); });
-            } else {
-                if (badge) badge.remove();
-                row.dataset.unread = '0';
-                row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el) { el.classList.remove('unread'); });
-                if (isOpen){ var mb = row.querySelector('.tc-mention-badge'); if (mb) mb.remove(); }
-            }
-        });
-    }
-    TCW('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
-
-    TCW('apex:team-message', function (e) {
-        var m = e.detail; if (!m) return;
-        if (String(m.conversation_id) === String(CONV)){
-            poll(true);   // fetch the full message(s) for the open thread (dedupes via lastId)
-            if (!document.hidden && window.ApexRealtime) window.ApexRealtime.markConversationRead(CONV);
-        } else {
-            bumpSidebar(m);
-        }
-    });
+    // The always-on sidebar block (defined earlier, runs even with no chat open) drives the
+    // sidebar + notify wiring. When a message lands in THIS open conversation it asks the
+    // thread to fetch the full message(s).
+    TCW('apex:thread-poll', function () { poll(true); });
 
     // ---------- Message actions: menu, react, reply, copy, forward, delete ----------
     var menu     = document.getElementById('tcMenu');
