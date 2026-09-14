@@ -14,6 +14,11 @@ Schedule::command('activity:prune')->dailyAt('03:00');
 // Empty the Recycle Bin of anything past its 10-day retention (rows + files).
 Schedule::command('recyclebin:purge')->dailyAt('03:15');
 
+// Team Chat keeps only a rolling 7-day window. Anything older — messages,
+// attachments and their files on the private disk — is deleted for good.
+// Runs hourly so nothing lingers long past the 7-day mark.
+Schedule::command('team-chat:purge')->hourly();
+
 // The GoHighLevel pull is deliberately NOT scheduled. A VA runs it from the
 // Sync now button on the GHL Clients screen when they are ready to work the
 // queue, so clients arrive when somebody is there to review them rather than
