@@ -138,6 +138,13 @@ class AuthController extends Controller
         $request->session()->forget('selected_client_id');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // The desktop app / chat subdomain sign back in on the chat login, not the dashboard.
+        if (str_contains((string) $request->userAgent(), 'ApexDesktop')
+            || $request->getHost() === config('app.chat_host')) {
+            return redirect()->route('admin.chat-login');
+        }
+
         return redirect()->route('admin.login');
     }
 

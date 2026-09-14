@@ -45,8 +45,8 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
-    # Log everyone out on every deploy so the whole team logs back in on fresh
-    # code/session state. Runs LAST, after config:cache, so it reads the live
-    # session driver. (The earlier profile-save bounce was a validation bug, not
-    # this — safe to flush on deploy as intended.)
-    - cd $DEPLOYPATH && php artisan sessions:flush 2>&1 || true
+    # NOTE: we deliberately DO NOT flush sessions on deploy. Flushing wiped everyone's
+    # session so the open app/browser held a dead CSRF token → "CSRF token mismatch" on
+    # the next action. Sessions (and their CSRF tokens) now survive a deploy, so content
+    # updates are seamless — nobody is logged out or interrupted. A shell update restarts
+    # the desktop app on its own, which refreshes everything cleanly.

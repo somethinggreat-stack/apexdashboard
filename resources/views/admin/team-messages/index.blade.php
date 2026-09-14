@@ -32,6 +32,9 @@
                 <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 </button>
+                <a href="{{ route('admin.logout') }}" class="tc-newgroup tc-logout" title="Sign out" aria-label="Sign out">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
             </div>
             <div class="tc-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -417,6 +420,10 @@
     .tc-newgroup:hover { background:var(--pro-soft,#f1f5f9); border-color:#c7d2fe; transform:translateY(-1px); }
     .tc-newgroup:active { transform:translateY(0); }
     .tc-newgroup svg { width:18px; height:18px; }
+    .tc-logout { color:#ef4444; text-decoration:none; }
+    .tc-logout:hover { background:rgba(239,68,68,.09); border-color:rgba(239,68,68,.4); }
+    :root[data-theme="dark"] .tc-logout { color:#f87171; }
+    :root[data-theme="dark"] .tc-logout:hover { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.5); }
     .tc-contacts { flex:1; overflow-y:auto; padding:8px; }
     .tc-contact { display:flex; align-items:center; gap:12px; padding:10px 11px; border-radius:12px; text-decoration:none; }
     .tc-contact:hover { background:var(--pro-soft,#f5f7fb); }
@@ -1463,6 +1470,8 @@
 
     toBottom();
     if (input) input.focus(); // ready to type the moment the chat opens
+    // Restore a draft stashed during a reconnect, so nothing typed is ever lost.
+    try { var _d = sessionStorage.getItem('tc-draft'); if (_d && input) { input.value = _d; sessionStorage.removeItem('tc-draft'); grow(); } } catch (e) {}
     updateSeen();
 
     // ---------- @mention autocomplete ----------
@@ -1685,6 +1694,8 @@
                 append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
                 // If the message carried files, refresh an open Files/Photos tab.
                 if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
+            } else if (xhr.status === 419 || xhr.status === 401 || xhr.status === 403 || xhr.status === 302 || xhr.status === 0) {
+                reconnect(body);   // session/token went stale (e.g. just after an update) — reconnect smoothly
             } else {
                 toast(res && res.message ? res.message : 'Could not send message');
             }
@@ -1700,12 +1711,23 @@
     // browser from serving a stale empty response for the same ?after= URL.
     // Guard poll responses: on an auth failure (session expired → redirect to login HTML) don't
     // silently swallow r.json()'s throw — tell the user once so they can reload/reconnect.
+    // Session/token went stale (e.g. right after a deploy) — reconnect smoothly instead of
+    // showing an error: keep what was typed and reload, which lands back on the chat (or,
+    // if the session is truly gone, the sign-in). No scary "CSRF token mismatch".
+    var reconnecting = false;
+    function reconnect(draft){
+        if (reconnecting) return; reconnecting = true;
+        try { if (draft) sessionStorage.setItem('tc-draft', draft); } catch (e) {}
+        if (window.apexToast) apexToast('Reconnecting…');
+        setTimeout(function () { location.reload(); }, 500);
+    }
+
     var authWarned = false;
     function okJson(r){
         if (r.ok && !r.redirected){ authWarned = false; return r.json(); }
         if (!authWarned && (r.status === 401 || r.status === 419 || r.status === 403 || r.redirected)){
             authWarned = true;
-            if (window.apexToast) apexToast('Session expired — please reload the page.');
+            reconnect();
         }
         return null;
     }
