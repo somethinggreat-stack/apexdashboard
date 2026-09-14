@@ -23,14 +23,16 @@
 <div class="tc-wrap">
     <aside class="tc-list">
         <div class="tc-list-head">
-            <div class="tc-list-head-row">
-                <h2>Team Chat</h2>
-                <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group">
+            <div class="tc-me">
+                <span class="tc-me-av">{!! $avatar($me, 'sm') !!}<i class="tc-me-dot"></i></span>
+                <div class="tc-me-info">
+                    <span class="tc-me-name">{{ $me->full_name }}</span>
+                    <span class="tc-me-sub">{{ $me->isSuper() ? 'Super Admin' : 'Team Member' }}</span>
+                </div>
+                <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-                    <span>New group</span>
                 </button>
             </div>
-            <p>Message any teammate or start a group.</p>
             <div class="tc-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="text" id="tcSearch" placeholder="Search people & messages" autocomplete="off">
@@ -395,8 +397,18 @@
 
     .tc-list, .tc-thread { background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:18px; overflow:hidden; display:flex; flex-direction:column; }
     .tc-list-head { padding:18px 18px 12px; border-bottom:1px solid var(--pro-line,#eef2f7); }
-    .tc-list-head h2 { margin:0; font-size:17px; font-weight:800; color:var(--pro-text,#0f172a); }
-    .tc-list-head p { margin:3px 0 0; font-size:12.5px; color:#94a3b8; }
+    /* Identity header — your avatar + name, with a compact New-group action. */
+    .tc-me { display:flex; align-items:center; gap:11px; }
+    .tc-me-av { position:relative; flex:none; }
+    .tc-me-av .tc-avatar { width:42px; height:42px; border-radius:13px; font-size:15px; }
+    .tc-me-dot { position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2.5px var(--pro-surface,#fff); }
+    .tc-me-info { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.25; }
+    .tc-me-name { font-size:15.5px; font-weight:800; color:var(--pro-text,#0f172a); letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-me-sub { font-size:12px; font-weight:600; color:#94a3b8; }
+    .tc-newgroup { flex:none; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; border-radius:12px; color:#4f46e5; background:var(--pro-surface,#fff); transition:background .12s, border-color .12s, transform .1s; }
+    .tc-newgroup:hover { background:var(--pro-soft,#f1f5f9); border-color:#c7d2fe; transform:translateY(-1px); }
+    .tc-newgroup:active { transform:translateY(0); }
+    .tc-newgroup svg { width:18px; height:18px; }
     .tc-contacts { flex:1; overflow-y:auto; padding:8px; }
     .tc-contact { display:flex; align-items:center; gap:12px; padding:10px 11px; border-radius:12px; text-decoration:none; }
     .tc-contact:hover { background:var(--pro-soft,#f5f7fb); }
@@ -748,8 +760,8 @@
     }
 
     .tc-list-head { padding:20px 20px 14px; border-bottom:1px solid rgba(148,163,184,.14); }
-    .tc-list-head h2 { font-size:18px; letter-spacing:-.02em; background:linear-gradient(120deg,#4f46e5,#7c3aed 55%,#ec4899); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .tc-list-head p { color:#94a3b8; }
+    :root[data-theme="dark"] .tc-newgroup { background:#0f1629; border-color:#233150; color:#a5b4fc; }
+    :root[data-theme="dark"] .tc-newgroup:hover { background:#182444; border-color:#334568; }
 
     .tc-contacts { padding:10px; }
     .tc-contact { position:relative; border-radius:15px; transition:background .16s, transform .14s, box-shadow .16s; }
@@ -851,10 +863,6 @@
     :root[data-theme="dark"] .tc-attach { background:rgba(148,163,184,.12); }
 
     /* Groups: sidebar icon, header, sender chips, system messages */
-    .tc-list-head-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .tc-newgroup { display:inline-flex; align-items:center; gap:6px; border:0; cursor:pointer; padding:6px 11px; border-radius:999px; font:inherit; font-size:12px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 6px 14px -5px rgba(99,102,241,.6); }
-    .tc-newgroup:hover { filter:brightness(1.05); transform:translateY(-1px); }
-    .tc-newgroup svg { width:15px; height:15px; }
     .tc-avatar--group { background:linear-gradient(135deg,#4f46e5,#7c3aed) !important; font-size:20px; }
     .tc-avatar.sm.tc-avatar--group { font-size:17px; }
     .tc-avatar.xs { width:26px; height:26px; border-radius:8px; font-size:10px; box-shadow:0 3px 8px -3px rgba(15,23,42,.35); }
