@@ -29,7 +29,9 @@ deployment:
     # exists, so the established main site is left untouched.
     - mkdir -p "$DEPLOYPATH/storage/framework/cache/data" "$DEPLOYPATH/storage/framework/sessions" "$DEPLOYPATH/storage/framework/views" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/app/public" "$DEPLOYPATH/storage/app/private" "$DEPLOYPATH/bootstrap/cache"
     - chmod -R 775 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache" 2>&1 || true
-    - cd $DEPLOYPATH && /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
+    # COMPOSER_MEMORY_LIMIT=-1 so a cold install on a fresh docroot can't die on the
+    # default memory cap (that's what left the chat subdomain with no vendor/ the first time).
+    - cd $DEPLOYPATH && COMPOSER_MEMORY_LIMIT=-1 /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
     - cd $DEPLOYPATH && php artisan config:clear 2>&1 || true
     - cd $DEPLOYPATH && php artisan route:clear 2>&1 || true
     - cd $DEPLOYPATH && php artisan view:clear 2>&1 || true
