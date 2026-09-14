@@ -16,6 +16,12 @@ class WebPushSender
     /** Are VAPID keys configured? If not, Web Push is simply a no-op. */
     public static function enabled(): bool
     {
+        // Web Push is disabled: Team Chat is now a native desktop app with OS notifications,
+        // so browser push (the "Google Chrome" toasts) is redundant and unwanted.
+        if (! config('webpush.enabled', false)) {
+            return false;
+        }
+
         return (bool) config('webpush.public_key') && (bool) config('webpush.private_key');
     }
 

@@ -852,8 +852,19 @@
     .tc-atts:not(:last-child) { margin-bottom:8px; }
     .tc-bubble--media { padding:6px; background:rgba(255,255,255,.97); }
     .tc-msg.mine .tc-bubble--media { background:rgba(99,102,241,.14); }
-    .tc-att-img { display:block; max-width:260px; border-radius:12px; overflow:hidden; line-height:0; cursor:zoom-in; }
+    .tc-att-img { position:relative; display:block; max-width:260px; border-radius:12px; overflow:hidden; line-height:0; cursor:zoom-in; }
     .tc-att-img img { width:100%; max-height:320px; object-fit:cover; display:block; }
+
+    /* Multiple images render as a compact WhatsApp-style grid, not huge stacked images. */
+    .tc-att-grid { display:grid; gap:3px; width:300px; max-width:100%; border-radius:12px; overflow:hidden; }
+    .tc-att-grid--1 { grid-template-columns:1fr; width:auto; }
+    .tc-att-grid--2, .tc-att-grid--3, .tc-att-grid--4 { grid-template-columns:1fr 1fr; }
+    .tc-att-grid .tc-att-img { max-width:none; border-radius:0; aspect-ratio:1; cursor:zoom-in; }
+    .tc-att-grid .tc-att-img img { width:100%; height:100%; max-height:none; object-fit:cover; }
+    .tc-att-grid--1 .tc-att-img { aspect-ratio:auto; border-radius:12px; max-width:260px; }
+    .tc-att-grid--1 .tc-att-img img { height:auto; max-height:320px; }
+    .tc-att-grid--3 .tc-att-img:first-child { grid-column:1 / -1; aspect-ratio:2 / 1; }
+    .tc-att-more { position:absolute; inset:0; display:grid; place-items:center; background:rgba(6,10,25,.55); color:#fff; font-size:23px; font-weight:700; line-height:1; letter-spacing:-.01em; }
     .tc-att-file { display:flex; align-items:center; gap:11px; min-width:220px; max-width:300px; padding:10px 12px; border-radius:12px; text-decoration:none; background:rgba(255,255,255,.9); border:1px solid rgba(148,163,184,.24); color:var(--pro-text,#0f172a); transition:transform .12s, box-shadow .14s; }
     .tc-att-file:hover { transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(30,41,59,.3); }
     .tc-msg.mine .tc-att-file { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28); color:#fff; }
@@ -1225,13 +1236,24 @@
 
     function attsHtml(list){
         if (!list || !list.length) return '';
-        return '<div class="tc-atts">' + list.map(function (a) {
-            if (a.image) return '<a class="tc-att-img" href="' + a.url + '" data-lightbox><img src="' + a.url + '" alt="' + esc(a.name) + '" loading="lazy"></a>';
+        var imgs = list.filter(function (a) { return a.image; });
+        var files = list.filter(function (a) { return !a.image; });
+        var html = '';
+        if (imgs.length){
+            var show = imgs.slice(0, 4), extra = imgs.length - show.length;
+            html += '<div class="tc-att-grid tc-att-grid--' + Math.min(imgs.length, 4) + '">'
+                + show.map(function (a, i) {
+                    var more = (extra > 0 && i === show.length - 1) ? '<span class="tc-att-more">+' + extra + '</span>' : '';
+                    return '<a class="tc-att-img" href="' + a.url + '" data-lightbox><img src="' + a.url + '" alt="' + esc(a.name) + '" loading="lazy">' + more + '</a>';
+                }).join('') + '</div>';
+        }
+        html += files.map(function (a) {
             return '<a class="tc-att-file" href="' + a.download + '">'
                 + '<span class="tc-att-ic">' + FILE_SVG + '</span>'
                 + '<span class="tc-att-meta"><span class="tc-att-name">' + esc(a.name) + '</span><span class="tc-att-size">' + esc(a.size) + '</span></span>'
                 + DL_SVG + '</a>';
-        }).join('') + '</div>';
+        }).join('');
+        return '<div class="tc-atts">' + html + '</div>';
     }
 
     // Full inner HTML of a message row — kept in step with partials/team-message.blade.php.

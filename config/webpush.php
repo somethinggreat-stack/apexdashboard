@@ -1,6 +1,10 @@
 <?php
 
 return [
+    // Web Push (browser "Google Chrome" notifications) is OFF — Team Chat is a native
+    // desktop app now and uses OS notifications. Set WEBPUSH_ENABLED=true to bring it back.
+    'enabled' => (bool) env('WEBPUSH_ENABLED', false),
+
     /*
      | VAPID keys identify this application server to the browser push services.
      | Generate a pair once with:  php artisan webpush:vapid

@@ -69,18 +69,31 @@
             <div class="tc-fwd">↪ Forwarded</div>
         @endif
         @if ($hasAtts)
+            @php
+                $imgs  = $msg->attachments->filter(fn ($a) => $a->isImage())->values();
+                $files = $msg->attachments->filter(fn ($a) => ! $a->isImage())->values();
+                $imgShow  = $imgs->take(4);
+                $imgExtra = $imgs->count() - $imgShow->count();
+            @endphp
             <div class="tc-atts">
-                @foreach ($msg->attachments as $att)
+                @if ($imgs->isNotEmpty())
+                    <div class="tc-att-grid tc-att-grid--{{ min($imgs->count(), 4) }}">
+                        @foreach ($imgShow as $att)
+                            @php $u = route('admin.team-messages.attachment', $att->id); @endphp
+                            <a class="tc-att-img" href="{{ $u }}" data-lightbox>
+                                <img src="{{ $u }}" alt="{{ $att->original_name }}" loading="lazy">
+                                @if ($imgExtra > 0 && $loop->last)<span class="tc-att-more">+{{ $imgExtra }}</span>@endif
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+                @foreach ($files as $att)
                     @php $u = route('admin.team-messages.attachment', $att->id); @endphp
-                    @if ($att->isImage())
-                        <a class="tc-att-img" href="{{ $u }}" data-lightbox><img src="{{ $u }}" alt="{{ $att->original_name }}" loading="lazy"></a>
-                    @else
-                        <a class="tc-att-file" href="{{ $u }}?dl=1">
-                            <span class="tc-att-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
-                            <span class="tc-att-meta"><span class="tc-att-name">{{ $att->original_name }}</span><span class="tc-att-size">{{ $att->humanSize() }}</span></span>
-                            <svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        </a>
-                    @endif
+                    <a class="tc-att-file" href="{{ $u }}?dl=1">
+                        <span class="tc-att-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                        <span class="tc-att-meta"><span class="tc-att-name">{{ $att->original_name }}</span><span class="tc-att-size">{{ $att->humanSize() }}</span></span>
+                        <svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </a>
                 @endforeach
             </div>
         @endif
