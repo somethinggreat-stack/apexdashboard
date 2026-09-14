@@ -27,7 +27,7 @@
                 <span class="tc-me-av">{!! $avatar($me, 'sm') !!}<i class="tc-me-dot"></i></span>
                 <div class="tc-me-info">
                     <span class="tc-me-name">{{ $me->full_name }}</span>
-                    <span class="tc-me-sub">{{ $me->isSuper() ? 'Super Admin' : 'Team Member' }}</span>
+                    <span class="tc-me-sub"><i class="tc-me-online"></i>Active</span>
                 </div>
                 <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
@@ -404,7 +404,8 @@
     .tc-me-dot { position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2.5px var(--pro-surface,#fff); }
     .tc-me-info { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.25; }
     .tc-me-name { font-size:15.5px; font-weight:800; color:var(--pro-text,#0f172a); letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .tc-me-sub { font-size:12px; font-weight:600; color:#94a3b8; }
+    .tc-me-sub { font-size:12px; font-weight:600; color:#94a3b8; display:flex; align-items:center; }
+    .tc-me-online { width:7px; height:7px; border-radius:50%; background:#22c55e; margin-right:5px; flex:none; }
     .tc-newgroup { flex:none; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; border-radius:12px; color:#4f46e5; background:var(--pro-surface,#fff); transition:background .12s, border-color .12s, transform .1s; }
     .tc-newgroup:hover { background:var(--pro-soft,#f1f5f9); border-color:#c7d2fe; transform:translateY(-1px); }
     .tc-newgroup:active { transform:translateY(0); }
@@ -898,14 +899,16 @@
     .tc-leave-btn { margin:6px 16px 16px; border:1px solid rgba(239,68,68,.3); background:rgba(239,68,68,.06); color:#ef4444; cursor:pointer; padding:9px; border-radius:11px; font:inherit; font-size:13px; font-weight:700; }
     .tc-leave-btn:hover { background:rgba(239,68,68,.12); }
 
-    .tc-group-form { padding:16px; }
-    .tc-group-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    /* Flex column so the members list scrolls and the Create button stays pinned + visible. */
+    .tc-group-form { padding:16px; display:flex; flex-direction:column; flex:1; min-height:0; }
+    .tc-group-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex:none; }
     .tc-icon-pick { flex:none; width:46px; height:46px; border-radius:13px; border:0; cursor:pointer; font-size:24px; background:linear-gradient(135deg,#4f46e5,#7c3aed); }
-    .tc-icon-row { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; }
-    .tc-icon-opt { width:36px; height:36px; border-radius:10px; border:1.5px solid transparent; background:var(--pro-soft,#f1f5f9); cursor:pointer; font-size:18px; }
+    .tc-icon-row { display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; margin-bottom:14px; flex:none; }
+    .tc-icon-opt { width:100%; height:36px; border-radius:10px; border:1.5px solid transparent; background:var(--pro-soft,#f1f5f9); cursor:pointer; font-size:18px; padding:0; }
     .tc-icon-opt.sel { border-color:#6366f1; background:rgba(99,102,241,.12); }
-    .tc-group-members { max-height:230px; }
-    .tc-btn-primary { width:100%; margin-top:12px; border:0; cursor:pointer; padding:12px; border-radius:13px; font:inherit; font-size:14px; font-weight:800; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 10px 22px -8px rgba(99,102,241,.6); }
+    .tc-group-members-title { flex:none; }
+    .tc-group-members { flex:1; min-height:60px; overflow-y:auto; }
+    .tc-btn-primary { flex:none; width:100%; margin-top:12px; border:0; cursor:pointer; padding:12px; border-radius:13px; font:inherit; font-size:14px; font-weight:800; color:#fff; background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 10px 22px -8px rgba(99,102,241,.6); }
     .tc-btn-primary:hover { filter:brightness(1.05); }
 
     :root[data-theme="dark"] .tc-sys span { background:rgba(20,29,51,.8); color:#94a3b8; border-color:rgba(51,65,85,.6); }

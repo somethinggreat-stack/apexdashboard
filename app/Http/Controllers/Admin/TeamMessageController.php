@@ -26,7 +26,7 @@ class TeamMessageController extends Controller
     private const TZ = 'America/New_York';
 
     private const EMOJI = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-    private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣', '🛠️', '🏆'];
+    private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 
     private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
     private const MAX_KB = 25600;
