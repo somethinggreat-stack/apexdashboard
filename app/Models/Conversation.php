@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Conversation extends Model
 {
-    protected $fillable = ['type', 'name', 'icon', 'data_owner_id', 'created_by', 'last_message_id', 'last_message_at'];
+    protected $fillable = ['type', 'name', 'icon', 'data_owner_id', 'created_by', 'last_message_id', 'last_message_at', 'dm_key'];
 
     protected $casts = ['last_message_at' => 'datetime'];
 

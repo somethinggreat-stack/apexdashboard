@@ -66,12 +66,20 @@
     function isActive(conv){ conv = String(conv); for (var t in activeByTab){ if (activeByTab[t] === conv) return true; } return false; }
 
     // ---------- single-poller leader election (one network poller across all tabs) ----------
+    // A VISIBLE tab is preferred as leader so a backgrounded tab (throttled to 15s) never starves
+    // the tab you're actually looking at (M4). A visible tab preempts a hidden leader.
     var TAB = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
     var LEAD = 'apex-team-leader';
     function leader(){ try { return JSON.parse(ls(LEAD) || 'null'); } catch (e) { return null; } }
     function leaderFresh(){ var l = leader(); return l && (Date.now() - l.ts < 8000); }
     function amLeader(){ var l = leader(); return l && l.id === TAB; }
-    function claim(){ if (!leaderFresh() || amLeader()) ls(LEAD, JSON.stringify({ id: TAB, ts: Date.now() })); }
+    function claim(){
+        var l = leader(), fresh = l && (Date.now() - l.ts < 8000), vis = !document.hidden;
+        // Claim if: no fresh leader, I already am, or I'm visible and the current leader is hidden.
+        if (!fresh || (l && l.id === TAB) || (vis && l && !l.vis)) {
+            ls(LEAD, JSON.stringify({ id: TAB, ts: Date.now(), vis: vis }));
+        }
+    }
     claim(); setInterval(claim, 3000);
     window.addEventListener('beforeunload', function () { if (amLeader()) { try { localStorage.removeItem(LEAD); } catch (e) {} } });
 

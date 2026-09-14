@@ -259,7 +259,18 @@ class TeamMessageController extends Controller
 
         $this->markRead($conv, $me);
 
-        $states = $conv->messages()->with('deletedByAdmin', 'mentionedAdmins')->latest('id')->limit(80)->get()
+        // Reaction/edit/delete "states": on the first poll sync the visible window (latest 80);
+        // after that, return only what CHANGED since the client's last poll — so edits/reactions/
+        // deletes on ANY message (not just the newest 80) propagate live.
+        $statesSince = (string) $request->query('statesSince', '');
+        $stateToken  = now()->toDateTimeString();   // captured before the query, round-tripped by the client
+        $statesQuery = $conv->messages()->with('deletedByAdmin', 'mentionedAdmins');
+        if ($statesSince !== '') {
+            $statesQuery->where('updated_at', '>=', $statesSince)->latest('updated_at')->limit(300);
+        } else {
+            $statesQuery->latest('id')->limit(80);
+        }
+        $states = $statesQuery->get()
             ->map(fn ($m) => [
                 'id' => $m->id, 'deleted' => (bool) $m->deleted_at, 'reactions' => $this->reactionsOf($m, $me->id),
                 'deletedBy' => $m->deleted_at ? ($m->deleted_by === $me->id ? 'You' : $this->senderInfo($m->deletedByAdmin)['first']) : null,
@@ -276,12 +287,13 @@ class TeamMessageController extends Controller
             ->map(fn ($p) => $this->senderInfo($p->admin)['first'])->values();
 
         return response()->json([
-            'messages'   => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
-            'readUpTo'   => $this->readUpTo($conv, $me->id),
-            'states'     => $states,
-            'typing'     => $typing,
-            'watermarks' => $this->watermarks($conv, $me->id),
-            'presence'   => $this->presenceOf($others),
+            'messages'    => $msgs->map(fn ($m) => $this->present($m, $me->id))->values(),
+            'readUpTo'    => $this->readUpTo($conv, $me->id),
+            'states'      => $states,
+            'statesToken' => $stateToken,
+            'typing'      => $typing,
+            'watermarks'  => $this->watermarks($conv, $me->id),
+            'presence'    => $this->presenceOf($others),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
@@ -340,22 +352,30 @@ class TeamMessageController extends Controller
         $msg = $this->participantMessage($me, $data['message_id']);
         abort_if($msg->isSystem() || $msg->deleted_at, 404);   // no reacting to a tombstone
 
-        $r = $msg->reactions ?? [];
         $emoji = $data['emoji'] ?? null;
         // A reaction must be a real emoji, never HTML/markup — the value is broadcast to every
         // participant and shown on their bubbles (defends against stored XSS in the reaction).
         if (is_string($emoji) && preg_match('~[<>&"\'`\x00-\x1f\x7f]~u', $emoji)) {
             throw ValidationException::withMessages(['emoji' => 'That reaction is not allowed.']);
         }
+
+        // Lock the row for the read-modify-write so two simultaneous reactors can't clobber the
+        // reactions JSON (one reaction silently lost). No-op on sqlite; real lock on MySQL.
         $added = false;
-        if ($emoji === null || ($r[$me->id] ?? null) === $emoji) {
-            unset($r[$me->id]);
-        } else {
-            $r[$me->id] = $emoji;
-            $added = true;
-        }
-        $msg->reactions = $r ?: null;
-        $msg->save();
+        $msg = DB::transaction(function () use ($data, $me, $emoji, &$added) {
+            $m = TeamMessage::whereKey($data['message_id'])->lockForUpdate()->first();
+            $r = $m->reactions ?? [];
+            if ($emoji === null || ($r[$me->id] ?? null) === $emoji) {
+                unset($r[$me->id]);
+            } else {
+                $r[$me->id] = $emoji;
+                $added = true;
+            }
+            $m->reactions = $r ?: null;
+            $m->save();
+
+            return $m;
+        });
 
         // Ping the message owner (unless they reacted to themselves) when a reaction is ADDED.
         if ($added && $msg->sender_id !== $me->id) {
@@ -550,6 +570,8 @@ class TeamMessageController extends Controller
             ->where('m.sender_id', '!=', $me->id)
             ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')
             ->whereNull('m.deleted_at')
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('message_hides as mh')
+                ->whereColumn('mh.team_message_id', 'm.id')->where('mh.admin_id', $me->id))
             ->groupBy('m.conversation_id')
             ->selectRaw('m.conversation_id as cid, COUNT(*) as c')
             ->pluck('c', 'cid');
@@ -1005,21 +1027,34 @@ class TeamMessageController extends Controller
 
     private function findOrCreateDm(Admin $me, Admin $peer): Conversation
     {
-        $conv = Conversation::where('type', 'dm')->where('data_owner_id', $me->dataOwnerId())
-            ->whereHas('participants', fn ($q) => $q->where('admin_id', $me->id))
-            ->whereHas('participants', fn ($q) => $q->where('admin_id', $peer->id))
-            ->first();
+        $ids = [$me->id, $peer->id];
+        sort($ids);
+        $key = 'dm:' . $ids[0] . '-' . $ids[1];
 
-        if (! $conv) {
-            $conv = Conversation::create(['type' => 'dm', 'data_owner_id' => $me->dataOwnerId(), 'created_by' => $me->id]);
-            $conv->participants()->createMany([
-                ['admin_id' => $me->id, 'role' => 'member', 'joined_at' => now()],
-                ['admin_id' => $peer->id, 'role' => 'member', 'joined_at' => now()],
-            ]);
-            $conv->load('participants.admin');
+        $find = fn () => Conversation::where('type', 'dm')->where('data_owner_id', $me->dataOwnerId())
+            ->where('dm_key', $key)->with('participants.admin')->first();
+
+        if ($conv = $find()) {
+            return $conv;
         }
 
-        return $conv;
+        // Create in a transaction; if a concurrent request beat us to it, fetch theirs instead of
+        // leaving two split DM threads for the same pair (M10).
+        try {
+            return DB::transaction(function () use ($me, $peer, $key) {
+                $conv = Conversation::create([
+                    'type' => 'dm', 'data_owner_id' => $me->dataOwnerId(), 'created_by' => $me->id, 'dm_key' => $key,
+                ]);
+                $conv->participants()->createMany([
+                    ['admin_id' => $me->id, 'role' => 'member', 'joined_at' => now()],
+                    ['admin_id' => $peer->id, 'role' => 'member', 'joined_at' => now()],
+                ]);
+
+                return $conv->load('participants.admin');
+            });
+        } catch (\Throwable $e) {
+            return $find() ?: throw $e;
+        }
     }
 
     private function participantMessage(Admin $me, int $id): TeamMessage
@@ -1062,7 +1097,13 @@ class TeamMessageController extends Controller
 
     private function touchConversation(Conversation $conv, TeamMessage $msg): void
     {
-        $conv->update(['last_message_id' => $msg->id, 'last_message_at' => $msg->created_at]);
+        // Only ever move the pointer forward — under concurrent sends an older message's update
+        // must not overwrite a newer last_message_id.
+        Conversation::whereKey($conv->id)
+            ->where(fn ($q) => $q->whereNull('last_message_id')->orWhere('last_message_id', '<', $msg->id))
+            ->update(['last_message_id' => $msg->id, 'last_message_at' => $msg->created_at]);
+        $conv->last_message_id = $msg->id;
+        $conv->last_message_at = $msg->created_at;
     }
 
     /** Mark everything in the conversation read up to its newest message, for me. */
@@ -1096,6 +1137,9 @@ class TeamMessageController extends Controller
             ->where('m.type', 'text')
             ->where('m.sender_id', '!=', $me->id)
             ->whereRaw('m.id > COALESCE(p.last_read_message_id, 0)')
+            ->whereNull('m.deleted_at')
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('message_hides as mh')
+                ->whereColumn('mh.team_message_id', 'm.id')->where('mh.admin_id', $me->id))
             ->groupBy('m.conversation_id')
             ->selectRaw('m.conversation_id, COUNT(*) AS c')
             ->pluck('c', 'm.conversation_id')->all();

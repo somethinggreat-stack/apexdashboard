@@ -148,6 +148,45 @@ class TeamMessageTest extends TestCase
             ->assertJsonPath('messages.0.mine', true);
     }
 
+    public function test_a_delete_for_me_message_no_longer_counts_as_unread(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $this->msg($c, $va, ['body' => 'one']);
+        $mid = $this->msg($c, $va, ['body' => 'two'])->id;
+        $this->msg($c, $va, ['body' => 'three']);
+
+        // Baseline: 3 unread for super.
+        $this->actingAs($this->super, 'admin')->getJson('/admin/team-messages/notifications?after=0')
+            ->assertOk()->assertJsonPath('perConv.' . $c->id, 3);
+
+        // Super hides one for themselves → it must drop out of the unread count.
+        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $mid, ['mode' => 'me'])->assertOk();
+
+        $this->actingAs($this->super, 'admin')->getJson('/admin/team-messages/notifications?after=0')
+            ->assertOk()->assertJsonPath('perConv.' . $c->id, 2);
+    }
+
+    public function test_a_state_change_on_an_old_message_is_returned_via_statesSince(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $old = $this->msg($c, $this->super, ['body' => 'an old message']);
+
+        // Someone reacts to the OLD message now. A "changed since" poll must surface it even though
+        // it is not among the newest messages.
+        $this->actingAs($va, 'admin')->postJson('/admin/team-messages/react', ['message_id' => $old->id, 'emoji' => '👍'])->assertOk();
+
+        $states = $this->actingAs($this->super, 'admin')
+            ->getJson('/admin/team-messages/thread?c=' . $c->id . '&after=99999&statesSince=' . urlencode('2000-01-01 00:00:00'))
+            ->assertOk()->json('states');
+
+        $ids = array_column($states, 'id');
+        $this->assertContains($old->id, $ids);
+        $row = collect($states)->firstWhere('id', $old->id);
+        $this->assertSame('👍', $row['reactions'][0]['emoji']);
+    }
+
     public function test_blue_tick_watermark_reflects_the_other_person_reading(): void
     {
         $va = $this->va();

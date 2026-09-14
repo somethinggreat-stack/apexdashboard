@@ -1546,6 +1546,9 @@
             }
         };
         xhr.onerror = function () { btn.disabled = false; if (progressBox) progressBox.hidden = true; toast('Network error — try again'); };
+        // Never leave the composer permanently locked if the connection stalls.
+        xhr.timeout = pending.length ? 60000 : 20000;   // allow longer for uploads
+        xhr.ontimeout = function () { btn.disabled = false; if (progressBox) progressBox.hidden = true; toast('Send timed out — try again'); };
         xhr.send(fd);
     });
 
@@ -1562,10 +1565,12 @@
         }
         return null;
     }
+    var statesSince = '';   // round-trips the server's statesToken so edits/reactions/deletes on ANY message sync
     function poll(force){
         if (!force && document.hidden) return;   // background tab: wait for a realtime wake instead
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
-        fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId + '&_=' + Date.now(),
+        fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId
+                + '&statesSince=' + encodeURIComponent(statesSince) + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(okJson)
             .then(function (res) {
@@ -1577,6 +1582,7 @@
                 }
                 applyReadReceipts(res.readUpTo);
                 applyStates(res.states);
+                if (res.statesToken) statesSince = res.statesToken;
                 updateTyping(res.typing);
                 if (res.watermarks) { WATERMARKS = res.watermarks; updateSeen(); }
                 updateHeaderPresence(res.presence);
@@ -1956,7 +1962,7 @@
         var el = box.querySelector('.tc-msg[data-id="' + menuMsg.id + '"]');
         var isPinned = el && el.dataset.pinned === '1';
         postJson(BASE + '/pin', { message_id: menuMsg.id, pinned: isPinned ? 0 : 1 })
-            .then(function (res) { if (res && res.ok) location.reload(); });
+            .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not update pin — try again'); });
     }
 
     // Pinned banner: expand/collapse, jump to a pinned message, unpin.
@@ -1966,7 +1972,7 @@
         pinnedHead.addEventListener('click', function () { pinnedDrop.hidden = !pinnedDrop.hidden; });
         pinnedDrop.addEventListener('click', function (e) {
             var un = e.target.closest('[data-unpin]');
-            if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res) { if (res && res.ok) location.reload(); }); return; }
+            if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res) { if (res && res.ok) location.reload(); else toast('Could not unpin — try again'); }); return; }
             var go = e.target.closest('[data-goto]');
             if (go){
                 var t = box.querySelector('.tc-msg[data-id="' + go.dataset.goto + '"]');
@@ -2012,7 +2018,7 @@
     function doForward(id, name){
         postJson(FORWARD, { message_id: forwardId, recipient_id: id }).then(function (res) {
             fwdModal.hidden = true;
-            if (res && res.ok) toast('Forwarded to ' + name);
+            toast(res && res.ok ? 'Forwarded to ' + name : 'Could not forward — try again');
         });
     }
 
@@ -2257,7 +2263,7 @@
             window.tcConfirm('Remove this member from the group?', 'Remove').then(function (ok) {
                 if (!ok) return;
                 gpost('/members/' + rem.dataset.admin, function (fd) { fd.append('_method', 'DELETE'); })
-                    .then(function (res) { if (res && res.ok) location.reload(); });
+                    .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not remove — try again'); });
             });
         });
         var addBtn = document.getElementById('tcAddMembersBtn');
@@ -2265,17 +2271,17 @@
             var ids = Array.prototype.map.call(membersModal.querySelectorAll('.tc-member-add-list input:checked'), function (c) { return c.value; });
             if (!ids.length) { toast('Select teammates to add'); return; }
             gpost('/members', function (fd) { ids.forEach(function (i) { fd.append('members[]', i); }); })
-                .then(function (res) { if (res && res.ok) location.reload(); });
+                .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not add members — try again'); });
         });
         var renameBtn = document.getElementById('tcRenameBtn');
         if (renameBtn) renameBtn.addEventListener('click', function () {
             var nm = document.getElementById('tcRenameName').value.trim(); if (!nm) { toast('Name required'); return; }
-            gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) { if (res && res.ok) location.reload(); });
+            gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) { if (res && res.ok) location.reload(); else toast('Could not rename — try again'); });
         });
         document.getElementById('tcLeaveBtn').addEventListener('click', function () {
             window.tcConfirm('Leave this group?', 'Leave').then(function (ok) {
                 if (!ok) return;
-                gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); });
+                gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); else toast('Could not leave — try again'); });
             });
         });
     }
