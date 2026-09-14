@@ -198,13 +198,12 @@
             .catch(function () {});
     }
 
+    var chimeAudio = null;
     function chime(){
         try {
-            var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-            var c = new C(), o = c.createOscillator(), g = c.createGain();
-            o.type = 'sine'; o.frequency.value = 920; g.gain.value = 0.04; o.connect(g); g.connect(c.destination); o.start();
-            g.gain.linearRampToValueAtTime(0, c.currentTime + 0.28); o.stop(c.currentTime + 0.3);
-            setTimeout(function () { try { c.close(); } catch (e) {} }, 600);
+            if (!chimeAudio) { chimeAudio = new Audio(@json(asset('sounds/notify.mp3'))); chimeAudio.volume = 0.6; }
+            chimeAudio.currentTime = 0;
+            var p = chimeAudio.play(); if (p && p.catch) p.catch(function () {});
         } catch (e) {}
     }
     function desktop(m){

@@ -1372,6 +1372,24 @@
     // Auto-fetch when the reader scrolls near the very top of the thread.
     box.addEventListener('scroll', function () { if (hasOlder && !loadingOlder && box.scrollTop < 120) loadOlder(); });
 
+    // Notification sound for reactions on my own messages.
+    var reactAudio = null;
+    function reactChime(){
+        try {
+            if (!reactAudio) { reactAudio = new Audio(@json(asset('sounds/notify.mp3'))); reactAudio.volume = 0.55; }
+            reactAudio.currentTime = 0;
+            var p = reactAudio.play(); if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+    }
+    function reactSum(list){ var n = 0; if (list) list.forEach(function (r) { n += (r.count || 1); }); return n; }
+    function domReactSum(rr){
+        var n = 0;
+        rr.querySelectorAll('.tc-react').forEach(function (p) {
+            var c = p.querySelector('.tc-react-n'); n += c ? (parseInt(c.textContent, 10) || 1) : 1;
+        });
+        return n;
+    }
+
     // Live-sync reactions and deletions on messages already on screen.
     function applyStates(states){
         if (!states) return;
@@ -1379,7 +1397,14 @@
             var el = box.querySelector('.tc-msg[data-id="' + s.id + '"]');
             if (!el) return;
             var rr = el.querySelector('.tc-reacts');
-            if (rr){ var rh = reactsHtml(s.reactions); if (rr.innerHTML !== rh) rr.innerHTML = rh; }   // only touch DOM on change
+            if (rr){
+                var rh = reactsHtml(s.reactions);
+                if (rr.innerHTML !== rh){
+                    // Someone reacted to one of my messages → play the notification sound.
+                    if (el.classList.contains('mine') && reactSum(s.reactions) > domReactSum(rr)) reactChime();
+                    rr.innerHTML = rh;
+                }
+            }
             if (s.deleted){
                 var b = el.querySelector('.tc-bubble');
                 if (b && !b.classList.contains('deleted')){
