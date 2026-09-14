@@ -1132,8 +1132,9 @@
     function reactsHtml(list){
         if (!list || !list.length) return '';
         return list.map(function (r) {
-            return '<span class="tc-react' + (r.mine ? ' mine' : '') + '" data-emoji="' + r.emoji + '">'
-                + r.emoji + (r.count > 1 ? ' ' + r.count : '') + '</span>';
+            var e = esc(r.emoji);   // never trust the stored reaction — escape before inserting as HTML
+            return '<span class="tc-react' + (r.mine ? ' mine' : '') + '" data-emoji="' + e + '">'
+                + e + (r.count > 1 ? ' ' + r.count : '') + '</span>';
         }).join('');
     }
 

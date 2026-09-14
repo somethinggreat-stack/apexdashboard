@@ -118,6 +118,49 @@ class TeamAttachmentTest extends TestCase
         $this->actingAs($outsider, 'admin')->get($url)->assertForbidden();
     }
 
+    public function test_a_non_image_is_forced_to_download_and_never_rendered_inline(): void
+    {
+        $va = $this->va();
+        $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'recipient_id' => $va->id, 'attachments' => [UploadedFile::fake()->create('doc.pdf', 20)],
+        ])->assertOk();
+        $att = MessageAttachment::firstOrFail();
+
+        // Even WITHOUT ?dl, a non-image is sent as a nosniff attachment with a neutral type
+        // (so a file renamed to an allowed extension can never be rendered as HTML/script).
+        $res = $this->actingAs($this->super, 'admin')->get('/admin/team-messages/attachment/' . $att->id)->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Content-Type', 'application/octet-stream');
+        $this->assertStringContainsString('attachment', (string) $res->headers->get('Content-Disposition'));
+    }
+
+    public function test_an_image_is_served_inline_with_an_explicit_image_type(): void
+    {
+        $va = $this->va();
+        $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'recipient_id' => $va->id, 'attachments' => [UploadedFile::fake()->image('pic.png', 20, 20)],
+        ])->assertOk();
+        $att = MessageAttachment::firstOrFail();
+
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages/attachment/' . $att->id)->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Content-Type', 'image/png');
+    }
+
+    public function test_an_overlong_filename_is_truncated_not_errored(): void
+    {
+        $va = $this->va();
+        $long = str_repeat('a', 300) . '.pdf';
+
+        $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'recipient_id' => $va->id, 'attachments' => [UploadedFile::fake()->create($long, 20)],
+        ])->assertOk();
+
+        $att = MessageAttachment::firstOrFail();
+        $this->assertLessThanOrEqual(200, mb_strlen($att->original_name));
+        $this->assertStringEndsWith('.pdf', $att->original_name);
+    }
+
     public function test_deleting_a_message_purges_its_files(): void
     {
         $va = $this->va();

@@ -29,6 +29,8 @@ class TeamMessageController extends Controller
     private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 
     private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
+    private const IMAGE_MIME = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+    private const MAX_NAME = 200;
     private const MAX_KB = 25600;
     private const MAX_FILES = 10;
     private const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -336,10 +338,15 @@ class TeamMessageController extends Controller
         ]);
 
         $msg = $this->participantMessage($me, $data['message_id']);
-        abort_if($msg->isSystem(), 404);
+        abort_if($msg->isSystem() || $msg->deleted_at, 404);   // no reacting to a tombstone
 
         $r = $msg->reactions ?? [];
         $emoji = $data['emoji'] ?? null;
+        // A reaction must be a real emoji, never HTML/markup — the value is broadcast to every
+        // participant and shown on their bubbles (defends against stored XSS in the reaction).
+        if (is_string($emoji) && preg_match('~[<>&"\'`\x00-\x1f\x7f]~u', $emoji)) {
+            throw ValidationException::withMessages(['emoji' => 'That reaction is not allowed.']);
+        }
         $added = false;
         if ($emoji === null || ($r[$me->id] ?? null) === $emoji) {
             unset($r[$me->id]);
@@ -642,7 +649,12 @@ class TeamMessageController extends Controller
     public function update(Request $request, TeamMessage $message)
     {
         $me = Auth::guard('admin')->user();
-        abort_unless($message->sender_id === $me->id && ! $message->isSystem() && ! $message->deleted_at, 403);
+        // Must be my own live message AND I must still be a participant (e.g. not removed from the group).
+        abort_unless(
+            $message->sender_id === $me->id && ! $message->isSystem() && ! $message->deleted_at
+                && $this->isParticipant($me, $message->conversation_id),
+            403
+        );
 
         $data = $request->validate([
             'body'       => ['required', 'string', 'max:5000'],
@@ -700,11 +712,22 @@ class TeamMessageController extends Controller
         $disk = Storage::disk('private');
         abort_unless($disk->exists($attachment->disk_path), 404);
 
-        $headers = ['Cache-Control' => 'private, no-store, max-age=0'];
+        $headers = [
+            'Cache-Control'          => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',   // don't let the browser sniff into an active type
+        ];
 
-        return $request->boolean('dl')
-            ? $disk->download($attachment->disk_path, $attachment->original_name, $headers)
-            : $disk->response($attachment->disk_path, $attachment->original_name, $headers);
+        $ext  = strtolower(pathinfo($attachment->disk_path, PATHINFO_EXTENSION));
+        $path = $disk->path($attachment->disk_path);
+
+        // Only genuine images are served INLINE, and with an explicit image content-type derived
+        // from the extension — never a server-sniffed type. Everything else is forced to download,
+        // so a file renamed to an allowed extension can never be rendered as HTML/script.
+        if (! $request->boolean('dl') && isset(self::IMAGE_MIME[$ext])) {
+            return response()->file($path, $headers + ['Content-Type' => self::IMAGE_MIME[$ext]]);
+        }
+
+        return response()->download($path, $attachment->original_name, $headers + ['Content-Type' => 'application/octet-stream']);
     }
 
     // ---------------------------------------------------------------- groups
@@ -1103,8 +1126,14 @@ class TeamMessageController extends Controller
 
             $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $ext, 'private');
 
+            // Cap the client-supplied display name so an overlong name can't error the insert.
+            $name = (string) $file->getClientOriginalName();
+            if (mb_strlen($name) > self::MAX_NAME) {
+                $name = mb_substr($name, 0, self::MAX_NAME - mb_strlen($ext) - 2) . '.' . $ext;
+            }
+
             $msg->attachments()->create([
-                'disk_path' => $path, 'original_name' => $file->getClientOriginalName(),
+                'disk_path' => $path, 'original_name' => $name,
                 'mime' => $file->getClientMimeType(), 'size' => $file->getSize(), 'width' => $w, 'height' => $h,
             ]);
         }

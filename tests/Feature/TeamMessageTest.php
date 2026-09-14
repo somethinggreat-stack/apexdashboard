@@ -183,6 +183,55 @@ class TeamMessageTest extends TestCase
         $this->assertNotNull($mine->fresh()->deleted_at);
     }
 
+    public function test_a_reaction_with_markup_is_rejected(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $va, ['body' => 'react to me']);
+
+        // XSS attempt via the reaction value must be refused, and nothing stored.
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '<img src=x onerror=alert(1)>'])
+            ->assertStatus(422)->assertJsonValidationErrors('emoji');
+        $this->assertNull($m->fresh()->reactions);
+
+        // A real emoji still works.
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '😍'])
+            ->assertOk()->assertJsonPath('reactions.0.emoji', '😍');
+    }
+
+    public function test_cannot_react_to_a_deleted_message(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = $this->msg($c, $va, ['body' => 'gone']);
+        $m->forceFill(['deleted_at' => now(), 'deleted_by' => $va->id])->save();   // tombstone (deleted_at isn't fillable)
+
+        $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/react', ['message_id' => $m->id, 'emoji' => '👍'])
+            ->assertNotFound();
+    }
+
+    public function test_a_removed_group_member_cannot_edit_their_old_message(): void
+    {
+        $abid = $this->va('Abid');
+        $convId = $this->actingAs($this->super, 'admin')
+            ->postJson('/admin/team-messages/group', ['name' => 'T', 'members' => [$abid->id]])->json('conversation_id');
+
+        $sent = $this->actingAs($abid, 'admin')
+            ->postJson('/admin/team-messages', ['conversation_id' => $convId, 'body' => 'abid here'])->json('message.id');
+
+        // Super removes Abid from the group.
+        $this->actingAs($this->super, 'admin')
+            ->deleteJson('/admin/team-messages/group/' . $convId . '/members/' . $abid->id)->assertOk();
+
+        // Abid can no longer edit the message he sent there.
+        $this->actingAs($abid, 'admin')
+            ->putJson('/admin/team-messages/' . $sent, ['body' => 'sneaky edit'])->assertForbidden();
+        $this->assertSame('abid here', TeamMessage::find($sent)->body);
+    }
+
     public function test_delete_for_me_hides_a_message_for_just_me(): void
     {
         $va = $this->va();
