@@ -19,6 +19,8 @@ class TeamEditGalleryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->withHeader("User-Agent", "ApexDesktop/1.0");   // chat is desktop-app only
         Storage::fake('private');
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret', 'full_name' => 'Umair']);
         $this->super->role = 'super';

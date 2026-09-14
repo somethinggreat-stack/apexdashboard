@@ -17,6 +17,8 @@ class TeamMentionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->withHeader("User-Agent", "ApexDesktop/1.0");   // chat is desktop-app only
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret', 'full_name' => 'Umair Arshad']);
         $this->super->role = 'super';
         $this->super->save();

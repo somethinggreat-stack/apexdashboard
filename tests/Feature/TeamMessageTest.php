@@ -18,6 +18,8 @@ class TeamMessageTest extends TestCase
     {
         parent::setUp();
 
+        $this->withHeader("User-Agent", "ApexDesktop/1.0");   // chat is desktop-app only
+
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret-pass', 'full_name' => 'Umair Arshad']);
         $this->super->role = 'super';
         $this->super->save();
