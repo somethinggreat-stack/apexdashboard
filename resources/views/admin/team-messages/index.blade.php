@@ -1553,7 +1553,7 @@
     var progressBar = progressBox ? progressBox.querySelector('i') : null;
     var ALLOWED = ['jpg','jpeg','png','gif','webp','pdf','zip','doc','docx','xls','xlsx','csv','txt','ppt','pptx'];
     var IMG_EXT = ['jpg','jpeg','png','gif','webp'];
-    var MAX_BYTES = 25600 * 1024;
+    var MAX_BYTES = 51200 * 1024;   // 50 MB per file
     var pending = [];
 
     function extOf(name){ var i = name.lastIndexOf('.'); return i >= 0 ? name.slice(i + 1).toLowerCase() : ''; }
@@ -1562,7 +1562,7 @@
         Array.prototype.slice.call(list || []).forEach(function (f) {
             if (pending.length >= 10) { toast('Up to 10 files per message'); return; }
             if (ALLOWED.indexOf(extOf(f.name)) < 0) { toast(f.name + ': file type not allowed'); return; }
-            if (f.size > MAX_BYTES) { toast(f.name + ': larger than 25 MB'); return; }
+            if (f.size > MAX_BYTES) { toast(f.name + ': larger than 50 MB'); return; }
             var it = { file: f };
             if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);
             pending.push(it);

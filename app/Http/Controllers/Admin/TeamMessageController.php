@@ -30,7 +30,7 @@ class TeamMessageController extends Controller
     private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
     private const IMAGE_MIME = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
     private const MAX_NAME = 200;
-    private const MAX_KB = 25600;
+    private const MAX_KB = 51200;   // 50 MB per file
     private const MAX_FILES = 10;
     private const PAGE = 50;   // messages loaded per page (initial + each "load earlier")
     private const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
