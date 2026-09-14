@@ -1,7 +1,11 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home2/apexgrow/public_html/
+    # Each checkout deploys to its own folder: a checkout with a .deploy-target file
+    # (the chat subdomain) uses that path; without one (the dashboard) it stays on
+    # public_html. This lets the same repo deploy the dashboard and the chat app
+    # independently, so deploying one never overwrites the other.
+    - export DEPLOYPATH="$(cat .deploy-target 2>/dev/null || echo /home2/apexgrow/public_html/)"
     - /bin/cp -R app $DEPLOYPATH
     - /bin/cp -R bootstrap $DEPLOYPATH
     - /bin/cp -R config $DEPLOYPATH
