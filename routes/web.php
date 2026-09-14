@@ -26,6 +26,9 @@ Route::get('/service-areas/{slug}',    [ServiceAreasController::class, 'show'])-
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
+// Desktop app download page (the installer itself is a static file in public/download/).
+Route::get('/download', fn () => view('download'))->name('download');
+
 /*
 |--------------------------------------------------------------------------
 | Public Lead Capture (rate-limited per IP)

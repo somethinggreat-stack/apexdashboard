@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>Download Apex Team Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e1330; --muted:#7b82a6; --line:#e4e6f2;
+    --brand:#4f46e5; --brand-2:#6366f1; --brand-dark:#4338ca;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:var(--font);color:var(--ink);
+    background:radial-gradient(120% 90% at 50% 0%, #1e1b4b 0%, #141033 45%, #0a0a1f 100%);
+    display:flex;align-items:center;justify-content:center;padding:32px 20px;-webkit-font-smoothing:antialiased;}
+  .card{width:100%;max-width:440px;background:#fff;border-radius:22px;padding:40px 34px 32px;
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.7);text-align:center;}
+  .badge{width:64px;height:64px;border-radius:18px;margin:0 auto 18px;display:grid;place-items:center;
+    background:linear-gradient(160deg,#6366f1,#4338ca);box-shadow:0 14px 30px -10px rgba(67,56,201,.6);}
+  .badge svg{width:34px;height:34px;color:#fff}
+  h1{margin:0 0 6px;font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .sub{margin:0 0 26px;color:var(--muted);font-size:15px;line-height:1.5}
+  .dl{display:inline-flex;align-items:center;justify-content:center;gap:11px;width:100%;height:58px;
+    font:700 16px/1 var(--font);color:#fff;background:linear-gradient(180deg,#6366f1,#4338ca);
+    border:0;border-radius:13px;text-decoration:none;cursor:pointer;
+    box-shadow:0 12px 26px -10px rgba(67,56,201,.7);transition:transform .12s, filter .16s;}
+  .dl:hover{filter:brightness(1.06)} .dl:active{transform:translateY(1px)}
+  .dl svg{width:20px;height:20px}
+  .meta{margin:12px 0 0;font-size:12.5px;color:#9aa0bd}
+  .steps{margin:26px 0 0;text-align:left;border-top:1px solid var(--line);padding-top:22px}
+  .steps h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);margin:0 0 12px;font-weight:700}
+  .step{display:flex;gap:12px;align-items:flex-start;margin:0 0 13px;font-size:14px;line-height:1.45;color:#3a4162}
+  .step b{color:var(--ink)}
+  .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:#eef0ff;color:var(--brand-dark);
+    font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+  .note{margin:18px 0 0;font-size:12.5px;color:#8b91ad;background:#f6f7fb;border:1px solid var(--line);
+    border-radius:10px;padding:11px 13px;line-height:1.5}
+  .foot{margin:24px 0 0;font-size:12px;color:#a2a8c4}
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    </span>
+    <h1>Apex Team Chat</h1>
+    <p class="sub">The desktop app for the Apex team — messages, files and notifications, right on your PC.</p>
+
+    <a class="dl" href="/download/apex-team-chat-setup.exe" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Download for Windows
+    </a>
+    <p class="meta">Windows 10 / 11 · ~2 MB installer</p>
+
+    <div class="steps">
+      <h2>How to install</h2>
+      <div class="step"><span class="n">1</span><span>Run the downloaded <b>Apex Team Chat setup</b>.</span></div>
+      <div class="step"><span class="n">2</span><span>Windows may show <b>“Windows protected your PC.”</b> Click <b>More info → Run anyway</b> — it's safe, just not code-signed.</span></div>
+      <div class="step"><span class="n">3</span><span>Open <b>Apex Team Chat</b> from your Start menu and sign in with your Apex email.</span></div>
+    </div>
+
+    <div class="note">Tip: right-click the app icon in your taskbar → <b>Pin to taskbar</b>, and enable notifications so you never miss a message.</div>
+    <p class="foot">© {{ date('Y') }} Apex Growth Solutions · authorized staff only</p>
+  </div>
+</body>
+</html>
