@@ -46,10 +46,4 @@ class Conversation extends Model
     {
         return optional($this->participants->firstWhere('admin_id', '!=', $meId))->admin;
     }
-
-    /** Does this admin currently belong to the conversation? */
-    public function hasMember(int $adminId): bool
-    {
-        return $this->participants->contains('admin_id', $adminId);
-    }
 }

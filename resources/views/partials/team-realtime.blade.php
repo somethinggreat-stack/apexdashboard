@@ -244,7 +244,7 @@
         var msgs = data.messages || [];
         if (!msgs.length) return;
         var floor = lastNotified();   // messages at/below this were already chimed/notified elsewhere
-        var maxId = floor, didNotify = false;
+        var maxId = floor, didNotify = false, shown = 0, TOAST_CAP = 4;
         msgs.forEach(function (m) {
             // UI update (sidebar/thread) happens once per TAB — so every tab reflects the message.
             if (!seen[m.id]){ seen[m.id] = 1; window.dispatchEvent(new CustomEvent('apex:team-message', { detail: m })); }
@@ -253,10 +253,21 @@
             if (m.id <= floor) return;
             var muted = isActive(m.conversation_id);   // conversation open+focused somewhere → stay quiet
             addNotif(m);
-            // When Web Push is active the service worker shows the OS toast (works backgrounded/closed);
-            // only fall back to an in-page Notification when push isn't subscribed.
-            if (!muted){ didNotify = true; if (amLeader() && !pushActive) desktop(m); }
+            if (!muted){
+                didNotify = true;
+                // Cap the OS-toast burst after a long absence: show the first few, then a summary
+                // (the notification center still has them all). Web Push suppresses in-page toasts.
+                if (amLeader() && !pushActive){
+                    if (shown < TOAST_CAP){ desktop(m); shown++; }
+                    else shown++;
+                }
+            }
         });
+        if (amLeader() && !pushActive && shown > TOAST_CAP){
+            desktop({ title: 'Apex Team Chat', sender: '', mention: false,
+                snippet: '', conversation_id: 'summary',
+                body: shown + ' new messages' });
+        }
         if (maxId > floor) ls(NLKEY, String(maxId));   // advance the global notify watermark
         if (didNotify && amLeader()) chime();
     }

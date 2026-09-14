@@ -187,6 +187,63 @@ class TeamMessageTest extends TestCase
         $this->assertSame('👍', $row['reactions'][0]['emoji']);
     }
 
+    public function test_the_thread_loads_only_the_newest_page_and_flags_more_older(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        for ($i = 1; $i <= 60; $i++) {
+            $this->msg($c, $i % 2 ? $va : $this->super, ['body' => 'm' . $i]);
+        }
+
+        $res  = $this->actingAs($this->super, 'admin')->get('/admin/team-messages?c=' . $c->id)->assertOk();
+        $view = $res->viewData('messages');
+
+        // Only the newest 50 render initially, and the "more older" flag is set.
+        $this->assertCount(50, $view);
+        $this->assertSame('m11', $view->first()->body);
+        $this->assertSame('m60', $view->last()->body);
+        $this->assertTrue($res->viewData('hasMoreOlder'));
+    }
+
+    public function test_load_older_returns_the_previous_page_in_chronological_order(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $ids = [];
+        for ($i = 1; $i <= 60; $i++) {
+            $ids[$i] = $this->msg($c, $i % 2 ? $va : $this->super, ['body' => 'm' . $i])->id;
+        }
+
+        // The newest page starts at m11 (id $ids[11]); ask for everything older than it.
+        $res = $this->actingAs($this->super, 'admin')
+            ->getJson('/admin/team-messages/older?c=' . $c->id . '&before=' . $ids[11])
+            ->assertOk();
+
+        $bodies = array_column($res->json('messages'), 'body');
+        $this->assertSame('m1', $bodies[0]);        // oldest first (chronological)
+        $this->assertSame('m10', end($bodies));     // up to just before the current page
+        $this->assertCount(10, $bodies);
+        $this->assertFalse($res->json('hasMore'));  // nothing older than m1
+        // Each row carries the day-separator metadata the client needs to prepend correctly.
+        $this->assertArrayHasKey('dayKey', $res->json('messages.0'));
+        $this->assertArrayHasKey('day', $res->json('messages.0'));
+    }
+
+    public function test_load_older_rejects_a_conversation_i_am_not_in(): void
+    {
+        $va      = $this->va();
+        $outsider = new Admin(['email' => 'out@test.com', 'password' => 'secret', 'full_name' => 'Out Sider']);
+        $outsider->role = 'super';
+        $outsider->save();
+
+        $c   = $this->dm($va, $this->super);
+        $mid = $this->msg($c, $va, ['body' => 'private'])->id;
+
+        $this->actingAs($outsider, 'admin')
+            ->getJson('/admin/team-messages/older?c=' . $c->id . '&before=' . ($mid + 1))
+            ->assertNotFound();
+    }
+
     public function test_blue_tick_watermark_reflects_the_other_person_reading(): void
     {
         $va = $this->va();

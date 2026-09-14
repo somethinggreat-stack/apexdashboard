@@ -107,3 +107,31 @@ prompt/click itself needs real Chrome — headless can't fire `beforeinstallprom
 - Throwaway sqlite + `php artisan serve` with `DB_CONNECTION=sqlite DB_DATABASE=<path>`.
 - Windows openssl EC keygen needs `OPENSSL_CONF=<a minimal .cnf>`; the Linux server does not.
 - Crypto verified against the known-good library by decrypting its wire output.
+- Playwright (via `playwright-core`) drives the local server for UI checks (login as
+  `super@test.com` / `password123`, `?c=<id>&standalone=1`).
+
+## Full end-to-end audit (four fix phases — all shipped)
+A complete audit of Team Chat (backend + frontend + a live Playwright battery) was run, then
+fixed in four phases. **235 tests green; 3 skipped** (Windows-only openssl EC keygen — passes on
+the Linux server).
+
+- **Phase 1 — security & data integrity:** reject markup in reaction emoji (422); can't react to
+  a deleted/system message (404); removed group members can't edit old messages; attachment
+  serving hardened (`X-Content-Type-Options: nosniff`, non-images forced to
+  `application/octet-stream` download, images served with an explicit image type); attachment
+  filename capped at 200 chars.
+- **Phase 2 — real-time correctness:** notification rows carry `sender_id`; sidebar adopts
+  peer-only rows on first message (`apex:conv-adopted`); thread poll guards on auth/redirect
+  with a one-time "session expired" toast; SW `focusedHere` matches the exact conversation.
+- **Phase 3 — robustness & concurrency:** reaction read-modify-write wrapped in a row-locked
+  transaction; unread counts exclude "delete-for-me" + tombstoned messages; `touchConversation`
+  is a guarded conditional update; thread state sync is "changed-since" (`statesSince`/token);
+  DM creation is race-safe via a canonical `dm_key` + transaction/retry.
+- **Phase 4 — scale & polish:** **message pagination** (newest 50 on open, "Load earlier"
+  pill + auto-fetch near the top, `older` endpoint, prepend with day separators, boundary-dedupe,
+  `offsetTop`-anchored scroll preservation — drift 0, live-verified); poll endpoints throttled
+  (`throttle:240,1`); filter-aware sidebar live updates (`apex:sidebar-changed`); lazy-image
+  re-scroll; catch-up desktop-toast cap (`TOAST_CAP=4` + summary); dead-code cleanup
+  (removed `TeamMessage::recipient()/scopeBetween()`, `Conversation::hasMember()`, unused EMOJI
+  const). Pagination: `TeamMessageController::older()` + `GET admin/team-messages/older`;
+  `index()` loads only `PAGE=50` newest + `hasMoreOlder`; `present()` returns `day`/`dayKey`.

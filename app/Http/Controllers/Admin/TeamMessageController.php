@@ -25,7 +25,6 @@ class TeamMessageController extends Controller
 {
     private const TZ = 'America/New_York';
 
-    private const EMOJI = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
     private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 
     private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
@@ -33,6 +32,7 @@ class TeamMessageController extends Controller
     private const MAX_NAME = 200;
     private const MAX_KB = 25600;
     private const MAX_FILES = 10;
+    private const PAGE = 50;   // messages loaded per page (initial + each "load earlier")
     private const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
     // ---------------------------------------------------------------- pages
@@ -95,11 +95,15 @@ class TeamMessageController extends Controller
             if ($peer) $active = $dmByPeer[$peer->id] ?? null;   // may be null → virtual DM
         }
 
-        $pinned = collect(); $mentionables = []; $notifyLevel = 'all';
+        $pinned = collect(); $mentionables = []; $notifyLevel = 'all'; $hasMoreOlder = false;
 
         if ($active) {
+            // Load only the newest page; older messages come in on demand ("load earlier").
             $messages = $active->messages()->visibleTo($me->id)
-                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')->orderBy('id')->get();
+                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
+                ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
+            $hasMoreOlder = $messages->isNotEmpty()
+                && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
             $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
@@ -122,8 +126,8 @@ class TeamMessageController extends Controller
 
         return view($this->adminView('admin.team-messages.index'), [
             'me' => $me, 'favorites' => $favorites, 'chats' => $chats, 'active' => $active, 'peer' => $peer,
-            'messages' => $messages, 'members' => $members, 'addable' => $addable, 'pinned' => $pinned,
-            'teammates' => $teammates, 'emoji' => self::EMOJI, 'groupIcons' => self::GROUP_ICONS,
+            'messages' => $messages, 'members' => $members, 'addable' => $addable, 'pinned' => $pinned, 'hasMoreOlder' => $hasMoreOlder,
+            'teammates' => $teammates, 'groupIcons' => self::GROUP_ICONS,
             'readUpTo' => $active ? $this->readUpTo($active, $me->id) : 0,
             'watermarks' => $active ? $this->watermarks($active, $me->id) : [],
             'peerOnline' => $peer ? $peer->isOnline() : false,
@@ -294,6 +298,28 @@ class TeamMessageController extends Controller
             'typing'      => $typing,
             'watermarks'  => $this->watermarks($conv, $me->id),
             'presence'    => $this->presenceOf($others),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /** Older page: the messages just before `before`, oldest-first, for "load earlier". */
+    public function older(Request $request)
+    {
+        $me   = Auth::guard('admin')->user();
+        $conv = $this->findConversation($me, (int) $request->query('c'));
+        $before = (int) $request->query('before', 0);
+        abort_if($before <= 0, 422);
+
+        $msgs = $conv->messages()->visibleTo($me->id)
+            ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
+            ->where('id', '<', $before)->orderByDesc('id')->limit(self::PAGE)->get();
+
+        $oldest  = $msgs->min('id');
+        $hasMore = $oldest && $conv->messages()->visibleTo($me->id)->where('id', '<', $oldest)->exists();
+
+        return response()->json([
+            'messages' => $msgs->reverse()->values()->map(fn ($m) => $this->present($m, $me->id))->values(),
+            'hasMore'  => (bool) $hasMore,
+            'isGroup'  => $conv->isGroup(),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
@@ -861,9 +887,12 @@ class TeamMessageController extends Controller
 
     private function present(TeamMessage $m, int $meId): array
     {
+        $day = $this->dayLabel($m->created_at);
+
         if ($m->isSystem()) {
             return ['id' => $m->id, 'system' => true, 'body' => $m->body,
-                    'at' => $m->created_at->timezone(self::TZ)->format('M j · g:i A')];
+                    'at' => $m->created_at->timezone(self::TZ)->format('M j · g:i A'),
+                    'dayKey' => $day['key'], 'day' => $day['label']];
         }
 
         return [
@@ -872,6 +901,8 @@ class TeamMessageController extends Controller
             'mine'        => $m->sender_id === $meId,
             'body'        => $m->deleted_at ? '' : $m->body,
             'at'          => $m->created_at->timezone(self::TZ)->format('M j · g:i A'),
+            'dayKey'      => $day['key'],
+            'day'         => $day['label'],
             'deleted'     => (bool) $m->deleted_at,
             'forwarded'   => (bool) $m->forwarded,
             'reactions'   => $this->reactionsOf($m, $meId),
@@ -884,6 +915,16 @@ class TeamMessageController extends Controller
             'mentionLabels' => $m->deleted_at ? [] : $this->mentionLabels($m),
             'edited'      => ! $m->deleted_at && (bool) $m->edited_at,
         ];
+    }
+
+    /** The day-separator key + label for a message (matches the initial Blade render). */
+    private function dayLabel(\Illuminate\Support\Carbon $at): array
+    {
+        $d = $at->copy()->timezone(self::TZ);
+        $now = now(self::TZ);
+        $label = $d->isSameDay($now) ? 'Today' : ($d->isSameDay($now->copy()->subDay()) ? 'Yesterday' : $d->format('F j, Y'));
+
+        return ['key' => $d->format('Y-m-d'), 'label' => $label];
     }
 
     private function senderInfo(?Admin $a): array

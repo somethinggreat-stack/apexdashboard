@@ -166,10 +166,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Team Chat — internal direct messages between the org's admins (super + VAs).
         Route::get('team-messages', [Admin\TeamMessageController::class, 'index'])->name('team-messages.index');
         Route::post('team-messages', [Admin\TeamMessageController::class, 'store'])->name('team-messages.store');
-        Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
+        // The recurring poll endpoints get a generous per-user rate cap (a few open tabs are fine,
+        // but a runaway loop can't hammer the DB).
+        Route::middleware('throttle:240,1')->group(function () {
+            Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
+            Route::get('team-messages/older', [Admin\TeamMessageController::class, 'older'])->name('team-messages.older');
+            Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
+            Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');
+        });
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
-        Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
-        Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');
         Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');

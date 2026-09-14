@@ -127,7 +127,11 @@
             <div class="tc-messages" id="tcMessages"
                  @if ($active) data-conversation="{{ $active->id }}" @endif
                  @if ($peer && ! $active) data-peer="{{ $peer->id }}" @endif
-                 data-group="{{ $isGroup ? 1 : 0 }}" data-last="{{ $messages->last()->id ?? 0 }}">
+                 data-group="{{ $isGroup ? 1 : 0 }}" data-last="{{ $messages->last()->id ?? 0 }}"
+                 data-first="{{ $messages->first()->id ?? 0 }}" data-more="{{ $hasMoreOlder ? 1 : 0 }}">
+                @if ($hasMoreOlder)
+                    <div class="tc-load-older" id="tcLoadOlder"><button type="button">Load earlier messages</button></div>
+                @endif
                 @php $tcLastDay = null; $tcPrevSender = null; $tcNow = \Illuminate\Support\Carbon::now($tz); @endphp
                 @forelse ($messages as $msg)
                     @php
@@ -139,7 +143,7 @@
                         $tcPrevSender = $msg->isSystem() ? null : $msg->sender_id;
                     @endphp
                     @if ($dayChanged)
-                        <div class="tc-daysep"><span>{{ $dayLabel }}</span></div>
+                        <div class="tc-daysep" data-daykey="{{ $dayKey }}"><span>{{ $dayLabel }}</span></div>
                         @php $tcLastDay = $dayKey; @endphp
                     @endif
                     @include('partials.team-message', ['msg' => $msg, 'isGroup' => $isGroup, 'showSender' => $showSender, 'readUpTo' => $readUpTo])
@@ -798,6 +802,12 @@
     .tc-daysep { align-self:center; z-index:1; margin:8px 0 2px; }
     .tc-daysep span { font-size:11px; font-weight:700; color:#64748b; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,.78); border:1px solid rgba(148,163,184,.2); box-shadow:0 3px 12px -5px rgba(30,41,59,.28); }
 
+    .tc-load-older { align-self:center; z-index:1; margin:6px 0 2px; }
+    .tc-load-older button { font-size:12px; font-weight:600; color:#475569; padding:6px 16px; border-radius:999px; background:rgba(255,255,255,.85); border:1px solid rgba(148,163,184,.28); box-shadow:0 3px 12px -6px rgba(30,41,59,.3); cursor:pointer; transition:background .12s, color .12s; }
+    .tc-load-older button:hover { background:#fff; color:#1e293b; }
+    .tc-load-older.loading button { opacity:.55; pointer-events:none; }
+    .tc-load-older.loading button::after { content:'…'; }
+
     .tc-react { border-radius:999px; background:rgba(255,255,255,.97); box-shadow:0 4px 10px -4px rgba(30,41,59,.3); }
 
     .tc-thread-empty { z-index:1; margin:auto; display:flex; flex-direction:column; align-items:center; gap:10px; color:#94a3b8; }
@@ -974,6 +984,8 @@
     :root[data-theme="dark"] .tc-thread-head, :root[data-theme="dark"] .tc-composer { background:linear-gradient(180deg, rgba(17,24,39,.7), rgba(13,17,32,.4)); }
     :root[data-theme="dark"] .tc-composer textarea { background:rgba(11,17,32,.9); color:#e2e8f0; border-color:rgba(51,65,85,.6); }
     :root[data-theme="dark"] .tc-daysep span { background:rgba(20,29,51,.82); color:#94a3b8; border-color:rgba(51,65,85,.6); }
+    :root[data-theme="dark"] .tc-load-older button { background:rgba(20,29,51,.82); color:#94a3b8; border-color:rgba(51,65,85,.6); }
+    :root[data-theme="dark"] .tc-load-older button:hover { background:rgba(30,41,64,.95); color:#e2e8f0; }
     :root[data-theme="dark"] .tc-react { background:rgba(20,29,51,.92); }
     :root[data-theme="dark"] .tc-contact:hover { background:rgba(99,102,241,.12); }
 </style>
@@ -1059,6 +1071,7 @@
             var sub2 = row.querySelector('.tc-c-sub'); if (sub2) sub2.insertBefore(mb, row.querySelector('[data-badge]') || null);
         }
         var listParent = row.parentNode; if (listParent && listParent.firstChild !== row) listParent.insertBefore(row, listParent.firstChild);
+        window.dispatchEvent(new CustomEvent('apex:sidebar-changed'));   // keep filter/search view consistent
     }
 
     // Authoritative per-conversation unread — sets EACH row to exactly its own count
@@ -1083,6 +1096,7 @@
                 if (isOpen){ var mb = row.querySelector('.tc-mention-badge'); if (mb) mb.remove(); }
             }
         });
+        window.dispatchEvent(new CustomEvent('apex:sidebar-changed'));   // re-apply active filter/search
     }
 
     TCW('apex:team-unread', function (e) { applyRowUnread(e.detail || {}); });
@@ -1125,6 +1139,7 @@
     var TC_PEERS = @js($teammates->map(fn ($t) => ['id' => $t->id, 'name' => $t->full_name, 'avatar' => $t->avatarUrl()])->values());
     var WATERMARKS = @js($watermarks ?? []);
     var TYPING_URL = @js(route('admin.team-messages.typing'));
+    var OLDER_URL = @js(route('admin.team-messages.older'));
     var MENTIONABLES = @js($mentionables ?? []);
 
     var TICK = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6.6l3 3 5.5-6.4"/><path d="M8 9.6l1 1 5.5-6.4"/></svg>';
@@ -1233,24 +1248,105 @@
         if (row.parentNode) row.parentNode.insertBefore(row, row.parentNode.firstChild); // move to top
     }
 
-    function append(m){
-        // Dedupe: a message can arrive from both the 3s poll and a realtime-forced poll.
-        if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (m.id > lastId) lastId = m.id; return; }
-        var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
+    // Build a single message row element (system or normal) — shared by append (newest) and
+    // prependOlder (pagination), so both render identically to the initial Blade paint.
+    function buildRow(m){
         var el = document.createElement('div');
         if (m.system){
-            el.className = 'tc-sys'; el.innerHTML = '<span>' + esc(m.body) + '</span>';
-            box.appendChild(el); if (m.id > lastId) lastId = m.id;
-            return;
+            el.className = 'tc-sys'; el.dataset.id = m.id; el.innerHTML = '<span>' + esc(m.body) + '</span>';
+            return el;
         }
         el.className = 'tc-msg' + (m.mine ? ' mine' : '') + (IS_GROUP && !m.mine ? ' tc-msg--grp' : '') + (m.mentionsMe ? ' tc-mentions-me' : '');
         el.dataset.id = m.id;
         el.dataset.pinned = m.pinned ? 1 : 0;
         el.innerHTML = senderChip(m) + bubbleInner(m);
+        return el;
+    }
+
+    function append(m){
+        // Dedupe: a message can arrive from both the 3s poll and a realtime-forced poll.
+        if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (m.id > lastId) lastId = m.id; return; }
+        var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
+        var el = buildRow(m);
         box.appendChild(el);
         if (m.id > lastId) lastId = m.id;
+        if (m.system) return;
+        // A lazy-loaded image resolves its height AFTER we scroll — re-stick to the bottom when it
+        // loads, but only if the reader was already at the bottom.
+        el.querySelectorAll('.tc-att-img img').forEach(function (img) {
+            var wasBottom = atBottom();
+            img.addEventListener('load', function () { if (wasBottom) toBottom(); }, { once: true });
+        });
         updatePreview(m);
     }
+
+    // ---------- Load-earlier pagination ----------
+    var firstId  = parseInt(box.dataset.first, 10) || 0;
+    var hasOlder = box.dataset.more === '1';
+    var loadingOlder = false;
+    var olderPill = document.getElementById('tcLoadOlder');
+
+    function makeDaysep(key, label){
+        var sep = document.createElement('div');
+        sep.className = 'tc-daysep'; sep.setAttribute('data-daykey', key);
+        sep.innerHTML = '<span>' + esc(label) + '</span>';
+        return sep;
+    }
+
+    // Prepend a chronological batch of older messages above the current thread, inserting day
+    // separators as the day changes and preserving the reader's scroll position. `afterInsert`
+    // runs inside the scroll-preserving window (so e.g. removing the pill doesn't cause a jump).
+    function prependOlder(list, afterInsert){
+        if (!list || !list.length){ if (afterInsert) afterInsert(); return; }
+        var anchor = olderPill ? olderPill.nextSibling : box.firstChild;   // insert batch before this
+        var existingSep = box.querySelector('.tc-daysep');
+        var existingKey = existingSep ? existingSep.getAttribute('data-daykey') : null;
+        // A stable reference element to pin the scroll to (the thread's current first message).
+        var pin = box.querySelector('.tc-msg, .tc-sys');
+        var pinBefore = pin ? pin.offsetTop : 0;
+
+        var frag = document.createDocumentFragment();
+        var prevDay = null, newFirst = firstId;
+        list.forEach(function (m) {
+            if (m.dayKey && m.dayKey !== prevDay){ frag.appendChild(makeDaysep(m.dayKey, m.day)); prevDay = m.dayKey; }
+            frag.appendChild(buildRow(m));
+            var id = parseInt(m.id, 10) || 0; if (id && (!newFirst || id < newFirst)) newFirst = id;
+        });
+        // Boundary dedupe: if the batch ends on the same day the thread already opened with, that
+        // pre-existing separator is now redundant.
+        if (existingSep && prevDay && existingKey === prevDay) existingSep.remove();
+
+        box.insertBefore(frag, anchor);
+        if (afterInsert) afterInsert();
+        // Shift the viewport by exactly how far the pinned message moved — keeps it under the cursor
+        // regardless of pill/separator/padding heights.
+        if (pin) box.scrollTop += pin.offsetTop - pinBefore;
+        firstId = newFirst;
+    }
+
+    function loadOlder(){
+        if (loadingOlder || !hasOlder || !firstId) return;
+        loadingOlder = true;
+        if (olderPill) olderPill.classList.add('loading');
+        var url = OLDER_URL + '?c=' + encodeURIComponent(CONV || '') + '&before=' + firstId;
+        fetch(url, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (res) {
+                if (res) prependOlder(res.messages, function () {
+                    hasOlder = !!res.hasMore;
+                    if (!hasOlder && olderPill){ olderPill.remove(); olderPill = null; }
+                });
+            })
+            .catch(function () {})
+            .then(function () { loadingOlder = false; if (olderPill) olderPill.classList.remove('loading'); });
+    }
+
+    if (olderPill){
+        var btn = olderPill.querySelector('button');
+        if (btn) btn.addEventListener('click', loadOlder);
+    }
+    // Auto-fetch when the reader scrolls near the very top of the thread.
+    box.addEventListener('scroll', function () { if (hasOlder && !loadingOlder && box.scrollTop < 120) loadOlder(); });
 
     // Live-sync reactions and deletions on messages already on screen.
     function applyStates(states){
@@ -2392,6 +2488,9 @@
         if (searching && q.length >= 2) scheduleSearch(search.value.trim());
         else { srBox.hidden = true; srBox.innerHTML = ''; lastQuery = ''; noRes.hidden = anyRow || !searching; }
     }
+    // Re-apply the active filter/search when a live poll changes unread/order, so (e.g.) the
+    // "Unread" filter reveals a chat that just became unread instead of leaving it hidden.
+    TCW('apex:sidebar-changed', applyView);
 
     function scheduleSearch(q){
         clearTimeout(searchTimer);
