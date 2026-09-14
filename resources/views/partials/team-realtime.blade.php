@@ -52,6 +52,27 @@
     var CSRF     = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
     var onChatPage = !!document.querySelector('.tc-wrap');   // the Team Chat page renders its own surface
 
+    // Native desktop app (Tauri): we fire OS-native, Apex-branded notifications instead of
+    // browser ones, and skip Web Push entirely (the app polls while it lives in the tray).
+    var IS_TAURI = !!window.__TAURI__;
+    if (IS_TAURI) {
+        try {
+            var _n = window.__TAURI__.notification;
+            if (_n && _n.isPermissionGranted) {
+                _n.isPermissionGranted().then(function (g) { if (!g && _n.requestPermission) return _n.requestPermission(); }).catch(function () {});
+            }
+        } catch (e) {}
+    }
+    function nativeNotify(title, body){
+        if (!IS_TAURI) return false;
+        var T = window.__TAURI__, opts = { title: title || 'Apex Team Chat', body: body };
+        try {
+            if (T.notification && T.notification.sendNotification) { T.notification.sendNotification(opts); }
+            else if (T.core && T.core.invoke) { T.core.invoke('plugin:notification|notify', { options: opts }); }
+        } catch (e) {}
+        return true;   // in the app we never fall back to a browser toast
+    }
+
     // ---------- shared state ----------
     var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs', NLKEY = 'apex-team-last-notified';
     function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
@@ -110,6 +131,7 @@
     var pushTried = false, pushActive = false;   // pushActive => the SW delivers OS toasts; don't also fire in-page ones
     function ensurePush(){
         if (pushTried) return;
+        if (IS_TAURI) return;   // the native app uses OS notifications, not Web Push
         if (!VAPID || permission() !== 'granted') return;
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
         pushTried = true;
@@ -154,10 +176,13 @@
         } catch (e) {}
     }
     function desktop(m){
+        var title = m.title || 'Apex Team Chat';
+        var body  = (m.body != null && m.body !== '') ? m.body : ((m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet);
+        if (nativeNotify(title, body)) return;   // native app → OS toast, Apex-branded, no browser
         if (permission() !== 'granted') return;
         try {
-            var n = new Notification(m.title || 'Apex Team Chat', {
-                body: (m.mention ? '@ ' : '') + m.sender + ': ' + m.snippet,
+            var n = new Notification(title, {
+                body: body,
                 icon: '/Images/pwa/icon-192.png', badge: '/Images/pwa/icon-192.png',
                 tag: 'apex-team-' + m.conversation_id, renotify: true
             });
