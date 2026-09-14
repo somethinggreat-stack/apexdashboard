@@ -78,6 +78,23 @@
         var T = window.__TAURI__;
         try { if (T.core && T.core.invoke) T.core.invoke('set_unread', { count: (n > 0 ? n : 0) }); } catch (e) {}
     }
+    // In the app, a link to another site opens in the real browser instead of navigating
+    // away from the chat window.
+    if (IS_TAURI) {
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest ? e.target.closest('a[href]') : null;
+            if (!a) return;
+            var href = a.getAttribute('href') || '';
+            if (!/^https?:\/\//i.test(href)) return;                 // in-app / relative links stay in-app
+            try { if (new URL(href, location.href).host === location.host) return; } catch (err) { return; }
+            e.preventDefault();
+            var T = window.__TAURI__;
+            try {
+                if (T.opener && T.opener.openUrl) T.opener.openUrl(href);
+                else if (T.core && T.core.invoke) T.core.invoke('plugin:opener|open_url', { url: href });
+            } catch (er) {}
+        }, true);
+    }
 
     // ---------- shared state ----------
     var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs', NLKEY = 'apex-team-last-notified';
