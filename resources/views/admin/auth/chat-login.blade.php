@@ -200,19 +200,19 @@ input:focus{outline:none;border-color:var(--blue-soft);box-shadow:0 0 0 4px rgba
 
         <div class="chatcard">
           <div class="chatcard-head">
-            <span class="cc-av">Z<span class="on"></span></span>
+            <span class="cc-av">A<span class="on"></span></span>
             <div>
-              <div class="cc-name">Zeeshan Ghazi</div>
+              <div class="cc-name">Apex Teammate</div>
               <div class="cc-status">Online</div>
             </div>
           </div>
           <div class="chatcard-body">
-            <div class="bub them">Sent the CFPB round for James — need a review 👀</div>
+            <div class="bub them">Sent the new dispute round — need a review 👀</div>
             <div class="bub me">On it. Nice work today 🔥<span class="rx">👍 3</span></div>
-            <div class="bub them">📎 James_Round2.pdf</div>
+            <div class="bub them">📎 Round2.pdf</div>
           </div>
           <div class="chatcard-foot">
-            <span class="cc-input">Message Zeeshan…</span>
+            <span class="cc-input">Message your team…</span>
             <span class="cc-send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m3 3 18 9-18 9 4-9-4-9z"/></svg></span>
           </div>
         </div>
