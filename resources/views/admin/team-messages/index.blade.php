@@ -1024,13 +1024,32 @@
     TCW('focus', announceActive);
     TCW('blur', announceActive);   // switched to another app → let taskbar notifications through
 
+    // If a row is still a "Tap to message" placeholder (a DM with no conversation yet), give it a
+    // real preview element so the first-ever message can render like any other.
+    function ensurePreviewEl(row){
+        var pv = row.querySelector('[data-preview-text]');
+        if (pv) return pv;
+        var sub = row.querySelector('.tc-c-sub'); if (!sub) return null;
+        var muted = sub.querySelector('.tc-c-muted'); if (muted) muted.remove();
+        var wrap = document.createElement('span'); wrap.className = 'tc-c-preview'; wrap.setAttribute('data-preview', '');
+        pv = document.createElement('span'); pv.setAttribute('data-preview-text', '');
+        wrap.appendChild(pv); sub.insertBefore(wrap, sub.firstChild);
+        return pv;
+    }
+
     // Update a conversation's row preview/time/mention and float it to the top of its list.
     // The numeric UNREAD count comes authoritatively from applyRowUnread(), not from here.
     function bumpSidebar(m){
         var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
-        if (!row) return;   // not in this sidebar (e.g. brand-new DM) — the next full load will show it
+        // First-ever DM: the row exists only as a peer placeholder (data-peer, no data-conversation).
+        // Adopt it — stamp the new conversation id so applyRowUnread + future updates find it.
+        if (!row && m.sender_id){
+            row = document.querySelector('.tc-contact[data-peer="' + m.sender_id + '"]:not([data-conversation])');
+            if (row) row.dataset.conversation = String(m.conversation_id);
+        }
+        if (!row) return;   // truly not in this sidebar (e.g. a brand-new group) — next full load shows it
         var isOpen = String(m.conversation_id) === String(CONV);
-        var pv = row.querySelector('[data-preview-text]');
+        var pv = ensurePreviewEl(row);
         // Match the server format: groups show "Name: text", DMs show just the text.
         if (pv) pv.textContent = (row.dataset.group === '1' ? m.sender + ': ' : '') + m.snippet;
         var tick = row.querySelector('[data-tick]'); if (tick) tick.remove();   // incoming message → no "sent" tick
@@ -1075,6 +1094,17 @@
         } else {
             bumpSidebar(m);
         }
+    });
+
+    // The thread just created a conversation (first message in a new DM). Adopt its id here too,
+    // so replies are recognised as the OPEN chat (no self-notifications) and it's marked active.
+    TCW('apex:conv-adopted', function (e) {
+        if (!e.detail || !e.detail.conv) return;
+        CONV = String(e.detail.conv);
+        var row = (e.detail.peer && document.querySelector('.tc-contact[data-peer="' + e.detail.peer + '"]'))
+            || document.querySelector('.tc-contact.active');
+        if (row) row.dataset.conversation = CONV;
+        announceActive();
     });
 })();
 
@@ -1505,6 +1535,8 @@
                 if (!CONV && res.conversation_id) {
                     CONV = String(res.conversation_id); box.dataset.conversation = CONV;
                     var r = activeRow(); if (r) r.dataset.conversation = CONV;
+                    // Tell the always-on sidebar layer so replies count as the OPEN chat (M2).
+                    window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: res.conversation_id, peer: PEER_ID } }));
                 }
                 append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
                 // If the message carried files, refresh an open Files/Photos tab.
@@ -1519,12 +1551,23 @@
 
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
     // browser from serving a stale empty response for the same ?after= URL.
+    // Guard poll responses: on an auth failure (session expired → redirect to login HTML) don't
+    // silently swallow r.json()'s throw — tell the user once so they can reload/reconnect.
+    var authWarned = false;
+    function okJson(r){
+        if (r.ok && !r.redirected){ authWarned = false; return r.json(); }
+        if (!authWarned && (r.status === 401 || r.status === 419 || r.status === 403 || r.redirected)){
+            authWarned = true;
+            if (window.apexToast) apexToast('Session expired — please reload the page.');
+        }
+        return null;
+    }
     function poll(force){
         if (!force && document.hidden) return;   // background tab: wait for a realtime wake instead
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
         fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
-            .then(function (r) { return r.json(); })
+            .then(okJson)
             .then(function (res) {
                 if (!res) return;
                 if (res.messages && res.messages.length) {
@@ -1726,7 +1769,7 @@
         galleryModal.hidden = false;
         var gbody = document.getElementById('tcGalleryBody'); gbody.innerHTML = '<div class="tc-gallery-empty">Loading…</div>';
         fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
-            .then(function (r) { return r.json(); }).then(function (res) { renderGallery(res.files || []); }).catch(function () {});
+            .then(function (r) { return r.ok ? r.json() : null; }).then(function (res) { if (res) renderGallery(res.files || []); }).catch(function () {});
     }
     function renderGallery(files){
         var gbody = document.getElementById('tcGalleryBody');
@@ -1838,8 +1881,8 @@
     function loadGallery(after){
         if (!CONV){ galleryData = []; after(); return; }
         fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
-            .then(function (r) { return r.json(); })
-            .then(function (res) { galleryData = res.files || []; after(); })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (res) { galleryData = (res && res.files) || []; after(); })
             .catch(function () { galleryData = galleryData || []; after(); });
     }
     function switchTab(tab){
@@ -2417,7 +2460,7 @@
     function tick(){
         if (document.hidden) return;   // don't poll a backgrounded tab
         fetch(URL + '?_=' + Date.now(), { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
-            .then(function (r) { return r.json(); })
+            .then(function (r) { return r.ok && !r.redirected ? r.json() : null; })
             .then(function (res) {
                 if (!res || !res.presence) return;
                 res.presence.forEach(function (p) { var d = document.querySelector('.tc-dot[data-dot="' + p.id + '"]'); if (d) d.classList.toggle('on', !!p.online); });

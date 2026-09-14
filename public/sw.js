@@ -44,8 +44,12 @@ self.addEventListener('push', (event) => {
         // Nudge every open tab to poll immediately (instant in-app update, no waiting for the timer).
         wins.forEach((c) => { try { c.postMessage({ type: 'apex-push', conv: conv }); } catch (e) {} });
 
-        // If a focused tab is already viewing this conversation, skip the OS toast (they can see it).
-        const focusedHere = wins.some((c) => c.focused && conv && c.url.indexOf('c=' + conv) !== -1);
+        // If a focused tab is already viewing this exact conversation, skip the OS toast.
+        // Match the `c` query param exactly — a substring match would confuse conv 5 with 53.
+        const focusedHere = wins.some((c) => {
+            if (!c.focused || !conv) return false;
+            try { return new URL(c.url).searchParams.get('c') === conv; } catch (e) { return false; }
+        });
         if (focusedHere) return;
 
         return self.registration.showNotification(title, {

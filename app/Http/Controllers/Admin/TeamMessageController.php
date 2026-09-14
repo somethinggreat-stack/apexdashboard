@@ -536,6 +536,7 @@ class TeamMessageController extends Controller
                 'id' => $m->id, 'conversation_id' => $m->conversation_id,
                 'title' => $this->convTitle($m->conversation, $me->id),
                 'sender' => $this->senderInfo($m->sender)['first'],
+                'sender_id' => $m->sender_id,   // lets the client match a not-yet-created DM's peer row
                 'snippet' => $m->body !== '' ? Str::limit($m->body, 60) : 'Sent a file',
                 'mention' => $mention,
             ];

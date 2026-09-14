@@ -112,15 +112,28 @@
             });
         }).then(function (sub) {
             if (!sub) return;
-            pushActive = true;
             var j = sub.toJSON() || {};
             var enc = (window.PushManager && PushManager.supportedContentEncodings) ? PushManager.supportedContentEncodings[0] : 'aesgcm';
+            // Only treat push as active once the server has STORED the endpoint — otherwise the SW
+            // can't deliver and suppressing the in-page fallback would mean zero notifications (M6).
             fetch(SUB_URL, {
                 method: 'POST', credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
                 body: JSON.stringify({ endpoint: sub.endpoint, keys: j.keys || {}, contentEncoding: enc })
-            }).catch(function () {});
+            }).then(function (r) { if (r && r.ok) pushActive = true; else pushTried = false; })
+              .catch(function () { pushTried = false; });   // keep the in-page fallback on failure
         }).catch(function () { pushTried = false; });
+    }
+
+    // Any tab where a push subscription already exists suppresses its own in-page notifications
+    // (the SW shows the OS toast). getSubscription() returns the browser-wide sub in EVERY tab,
+    // so this keeps a non-subscribing leader tab from double-notifying (M7).
+    function detectExistingPush(){
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        navigator.serviceWorker.ready
+            .then(function (reg) { return reg.pushManager.getSubscription(); })
+            .then(function (sub) { if (sub) pushActive = true; })
+            .catch(function () {});
     }
 
     function chime(){
@@ -287,6 +300,7 @@
 
     // ---------- boot ----------
     buildUI(); renderPanel(); setBadge(0);
+    detectExistingPush();                            // if a push sub already exists, suppress in-page dupes (M7)
     if (permission() === 'granted') ensurePush();   // already allowed → make sure a push subscription exists
     refreshEnablePill();
     schedule();
