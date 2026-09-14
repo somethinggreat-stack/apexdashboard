@@ -63,12 +63,20 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('business-owner') || $request->is('business-owner/*')) {
                 return route('client.login');
             }
+            // The desktop Team Chat app has its own sign-in, separate from the dashboard.
+            if (str_contains((string) $request->userAgent(), 'ApexDesktop')) {
+                return route('admin.chat-login');
+            }
             return route('admin.login');
         });
 
         $middleware->redirectUsersTo(function (Request $request) {
             if ($request->is('business-owner') || $request->is('business-owner/*')) {
                 return route('client.dashboard');
+            }
+            // A signed-in desktop app user lands in chat, never the dashboard.
+            if (str_contains((string) $request->userAgent(), 'ApexDesktop')) {
+                return route('admin.team-messages.index', ['standalone' => 1]);
             }
             return route('admin.client-selector.index');
         });
@@ -93,11 +101,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            $isPortal = $request->is('business-owner') || $request->is('business-owner/*');
-            $login    = $isPortal ? route('client.login') : route('admin.login');
+            $isPortal      = $request->is('business-owner') || $request->is('business-owner/*');
+            $isDesktopChat = ! $isPortal && str_contains((string) $request->userAgent(), 'ApexDesktop');
+            $login         = $isPortal
+                ? route('client.login')
+                : ($isDesktopChat ? route('admin.chat-login') : route('admin.login'));
 
             // Already on a login page — let it render normally, never loop.
-            if ($request->is('admin/login') || $request->is('business-owner/login')) {
+            if ($request->is('admin/login') || $request->is('admin/chat-login') || $request->is('business-owner/login')) {
                 return null;
             }
 

@@ -67,6 +67,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('login', [Admin\AuthController::class, 'showLoginForm'])->name('login');
         Route::post('login', [Admin\AuthController::class, 'login']);
+
+        // Dedicated Team Chat sign-in (used by the desktop app), separate from the dashboard.
+        Route::get('chat-login', [Admin\AuthController::class, 'showChatLogin'])->name('chat-login');
+        Route::post('chat-login', [Admin\AuthController::class, 'chatLogin'])->name('chat-login.attempt');
     });
 
     Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {

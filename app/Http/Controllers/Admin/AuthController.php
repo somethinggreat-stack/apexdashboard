@@ -63,6 +63,53 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
     }
 
+    /** Dedicated Team Chat sign-in (separate from the dashboard login). */
+    public function showChatLogin()
+    {
+        return view('admin.auth.chat-login');
+    }
+
+    /** Authenticate for Team Chat and drop the user straight into the standalone chat. */
+    public function chatLogin(Request $request)
+    {
+        $credentials = $request->validate([
+            'email'    => 'required|email|max:255',
+            'password' => 'required|string|max:255',
+        ]);
+
+        $key = $this->throttleKey($request);
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            throw ValidationException::withMessages([
+                'email' => "Too many login attempts. Try again in {$seconds} seconds.",
+            ]);
+        }
+
+        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::guard('admin')->user();
+
+            // Team Chat is for the super admin and VAs only — leads have no chat.
+            if ($user->isLeads()) {
+                Auth::guard('admin')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors(['email' => 'Team Chat is not available for your account.'])->onlyInput('email');
+            }
+
+            RateLimiter::clear($key);
+            $request->session()->regenerate();
+            $this->logLogin($request);
+
+            return redirect()->route('admin.team-messages.index', ['standalone' => 1]);
+        }
+
+        RateLimiter::hit($key, 60);
+
+        return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
+    }
+
     private function logLogin(Request $request): void
     {
         \App\Models\ActivityLog::create([
