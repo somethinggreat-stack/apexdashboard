@@ -92,7 +92,7 @@ class Admin extends Authenticatable
     public function avatarUrl(): ?string
     {
         if (! empty($this->avatar)) {
-            return asset('img/team/' . $this->avatar);
+            return $this->versionedAsset('img/team/' . $this->avatar);
         }
 
         $name = strtolower(trim((string) $this->full_name));
@@ -106,7 +106,18 @@ class Admin extends Authenticatable
             if (in_array($nospace, self::TEAM_AVATARS, true)) $slug = $nospace;
         }
 
-        return $slug ? asset('img/team/' . $slug . '.jpg') : null;
+        return $slug ? $this->versionedAsset('img/team/' . $slug . '.jpg') : null;
+    }
+
+    /**
+     * asset() URL with a ?v=<mtime> cache-buster, so replacing a team photo shows
+     * up immediately instead of being masked by the browser cache on the same filename.
+     */
+    private function versionedAsset(string $path): string
+    {
+        $full = public_path($path);
+
+        return is_file($full) ? asset($path) . '?v=' . filemtime($full) : asset($path);
     }
 
     public function clients()
