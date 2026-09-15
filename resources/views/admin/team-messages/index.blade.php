@@ -1541,6 +1541,18 @@
         var hs = document.getElementById('tcHeaderSearch'); if (!hs) return;
         var hsClear = document.getElementById('tcHeaderSearchClear');
         var hsRes = document.getElementById('tcHeaderSearchResults');
+        var hsBox = hs.closest('.tc-hsearch');
+        // The thread column is overflow:hidden and its messages area sits in the same stacking
+        // layer, so an in-flow dropdown gets clipped/painted-under. Move it to <body> and place
+        // it as a fixed popup right under the search box (same trick as the other menus).
+        if (hsRes) TCB(hsRes);
+        function positionHsRes(){
+            if (!hsBox) return;
+            var r = hsBox.getBoundingClientRect();
+            hsRes.style.top = (r.bottom + 7) + 'px';
+            hsRes.style.left = 'auto';
+            hsRes.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+        }
         var HS_URL = @json(route('admin.team-messages.search'));
         var HS_SA = @json(request()->boolean('standalone')) ? '&standalone=1' : '';
         var CHAT_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
@@ -1548,7 +1560,7 @@
         var hsT, hsLast = '';
         function hsRender(res){
             var m = res.messages || [], f = res.files || [];
-            if (!m.length && !f.length){ hsRes.innerHTML = '<div class="tc-hs-empty">No messages or files found.</div>'; hsRes.hidden = false; return; }
+            if (!m.length && !f.length){ hsRes.innerHTML = '<div class="tc-hs-empty">No messages or files found.</div>'; positionHsRes(); hsRes.hidden = false; return; }
             var h = '';
             if (m.length){ h += '<div class="tc-hs-group">Messages</div>' + m.map(function (x) {
                 return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + CHAT_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.title) + '</span><span class="tc-hs-sub">' + esc(x.sender) + ': ' + esc(x.snippet) + '</span></span></a>';
@@ -1556,7 +1568,7 @@
             if (f.length){ h += '<div class="tc-hs-group">Files</div>' + f.map(function (x) {
                 return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + FILE_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.name) + '</span><span class="tc-hs-sub">' + esc(x.title) + ' · ' + esc(x.size) + '</span></span></a>';
             }).join(''); }
-            hsRes.innerHTML = h; hsRes.hidden = false;
+            hsRes.innerHTML = h; positionHsRes(); hsRes.hidden = false;
         }
         function hsRun(){
             var q = hs.value.trim();
@@ -1572,7 +1584,10 @@
         hs.addEventListener('input', hsRun);
         hs.addEventListener('focus', function () { if (hs.value.trim().length >= 2) hsRun(); });
         hsClear.addEventListener('click', function () { hs.value = ''; hsRes.hidden = true; hsRes.innerHTML = ''; hsClear.hidden = true; hs.focus(); });
-        TCD('click', function (e) { if (!hsRes.hidden && !e.target.closest('.tc-hsearch')) hsRes.hidden = true; });
+        // Close on an outside click — but NOT when clicking inside the (now body-level) results.
+        TCD('click', function (e) { if (!hsRes.hidden && !e.target.closest('.tc-hsearch') && !e.target.closest('#tcHeaderSearchResults')) hsRes.hidden = true; });
+        // Keep the popup glued under the box if the window resizes.
+        TCW('resize', function () { if (!hsRes.hidden) positionHsRes(); });
     })();
 
     function postJson(url, data, method){
@@ -2648,20 +2663,43 @@
 })();
 
 // New-group modal — lives outside the thread scope so it works with no chat open.
-// Refresh button — reload the app fresh (clears the local thread cache) WITHOUT signing out.
+// Refresh button — a hard "reset the app" that wipes ALL local caches + previous
+// session state (IndexedDB, Cache Storage, localStorage, sessionStorage, service
+// workers) and reloads — WITHOUT signing you out. Login lives in an HTTP cookie,
+// which we never touch, so the session survives. Nothing here can break the app:
+// every store it clears is transient and repopulates on the fresh load.
 (function () {
     var btn = document.getElementById('tcRefresh'); if (!btn) return;
+
+    function delDB(name){ return new Promise(function (res){ try { var r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = function(){ res(); }; } catch (e) { res(); } }); }
+
+    function clearAll(){
+        var jobs = [];
+        // 1. Web/Cache Storage (service-worker + fetch caches).
+        try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks){ return Promise.all(ks.map(function (k){ return caches.delete(k); })); })); } catch (e) {}
+        // 2. Every IndexedDB database (thread cache + anything else this origin holds).
+        try {
+            if (indexedDB.databases) {
+                jobs.push(indexedDB.databases().then(function (dbs){
+                    return Promise.all((dbs || []).map(function (d){ return d && d.name ? delDB(d.name) : null; }));
+                }).catch(function(){ return delDB('apexChat'); }));
+            } else { jobs.push(delDB('apexChat')); }
+        } catch (e) {}
+        // 3. Unregister service workers (a fresh one re-registers on reload).
+        try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs){ return Promise.all(regs.map(function (r){ return r.unregister(); })); })); } catch (e) {}
+        return Promise.all(jobs);
+    }
+
     btn.addEventListener('click', function () {
         if (btn.dataset.busy) return; btn.dataset.busy = '1';
         btn.classList.add('spinning');
         var done = false;
         function reload(){ if (done) return; done = true; location.reload(); }
-        // Clear the on-disk thread cache (Tier 3) + any Cache Storage, then reload.
-        var jobs = [];
-        try { jobs.push(new Promise(function (res){ var r = indexedDB.deleteDatabase('apexChat'); r.onsuccess = r.onerror = r.onblocked = function(){ res(); }; })); } catch (e) {}
-        try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks){ return Promise.all(ks.map(function (k){ return caches.delete(k); })); })); } catch (e) {}
-        Promise.all(jobs).then(reload).catch(reload);
-        setTimeout(reload, 1200);   // never hang if a clear is slow/blocked
+        // Key/value stores are synchronous — clear them first (NOT cookies → stay logged in).
+        try { localStorage.clear(); } catch (e) {}
+        try { sessionStorage.clear(); } catch (e) {}
+        clearAll().then(reload).catch(reload);
+        setTimeout(reload, 1500);   // never hang if a clear is slow/blocked
     });
 })();
 
