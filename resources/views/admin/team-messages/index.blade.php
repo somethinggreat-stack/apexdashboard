@@ -229,7 +229,7 @@
                 @else
                     <input type="hidden" name="recipient_id" value="{{ $peer->id }}">
                 @endif
-                <input type="file" id="tcFile" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx">
+                <input type="file" id="tcFile" multiple hidden>
                 <button type="button" class="tc-attach" id="tcAttach" aria-label="Attach a file">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
@@ -947,7 +947,7 @@
     .tc-progress i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#6366f1,#7c3aed); transition:width .15s; }
 
     /* Drag-over highlight */
-    .tc-thread.tc-drag::after { content:'Drop files to send'; position:absolute; inset:12px; z-index:5; display:flex; align-items:center; justify-content:center; font-weight:800; color:#4f46e5; font-size:16px; border:2.5px dashed rgba(99,102,241,.6); border-radius:20px; background:rgba(99,102,241,.08); }
+    .tc-thread.tc-drag::after { content:'Drop files to attach'; position:absolute; inset:12px; z-index:5; display:flex; align-items:center; justify-content:center; font-weight:800; color:#4f46e5; font-size:16px; border:2.5px dashed rgba(99,102,241,.6); border-radius:20px; background:rgba(99,102,241,.08); }
 
     /* Lightbox */
     .tc-lightbox { position:fixed; inset:0; z-index:1002; background:rgba(8,11,22,.85); display:flex; align-items:center; justify-content:center; padding:32px; }
@@ -1680,7 +1680,6 @@
     var pendingBox = document.getElementById('tcPending');
     var progressBox = document.getElementById('tcProgress');
     var progressBar = progressBox ? progressBox.querySelector('i') : null;
-    var ALLOWED = ['jpg','jpeg','png','gif','webp','pdf','zip','doc','docx','xls','xlsx','csv','txt','ppt','pptx'];
     var IMG_EXT = ['jpg','jpeg','png','gif','webp'];
     var MAX_BYTES = 51200 * 1024;   // 50 MB per file
     var pending = [];
@@ -1701,7 +1700,6 @@
     function addFiles(list){
         Array.prototype.slice.call(list || []).forEach(function (f) {
             if (pending.length >= 10) { toast('Up to 10 files per message'); return; }
-            if (ALLOWED.indexOf(extOf(f.name)) < 0) { toast(f.name + ': file type not allowed'); return; }
             if (f.size > MAX_BYTES) { toast(f.name + ': larger than 50 MB'); return; }
             var it = { file: f };
             if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);

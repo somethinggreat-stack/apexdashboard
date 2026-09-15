@@ -28,7 +28,8 @@ class TeamMessageController extends Controller
 
     private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 
-    private const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx'];
+    // Any file type is accepted for upload. Only these image types are ever served INLINE;
+    // everything else is force-downloaded as octet-stream (see attachment()).
     private const IMAGE_MIME = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
     private const MAX_NAME = 200;
     private const MAX_KB = 51200;   // 50 MB per file
@@ -184,11 +185,9 @@ class TeamMessageController extends Controller
         if ($body === '' && empty($files)) {
             throw ValidationException::withMessages(['body' => 'Type a message or attach a file.']);
         }
-        foreach ($files as $file) {
-            if (! in_array(strtolower($file->getClientOriginalExtension()), self::ALLOWED_EXT, true)) {
-                throw ValidationException::withMessages(['attachments' => 'That file type is not allowed.']);
-            }
-        }
+        // Any file type is allowed (zip, pdf, images, docs, anything). It's safe because
+        // non-images are always force-downloaded as octet-stream from the private disk —
+        // see attachment() — so nothing here is ever executed or rendered inline.
 
         $replyToId = null;
         if (! empty($data['reply_to_id'])) {
@@ -1288,7 +1287,10 @@ class TeamMessageController extends Controller
     {
         foreach ($files as $file) {
             $ext = strtolower($file->getClientOriginalExtension());
-            if (! in_array($ext, self::ALLOWED_EXT, true)) continue;
+            // Any type is accepted. Keep the disk extension to a safe token so a file
+            // named "x.php" can't sit on disk as an executable path; the real name is
+            // preserved in original_name and used for the download filename.
+            $diskExt = preg_match('/^[a-z0-9]{1,10}$/', $ext) ? $ext : 'bin';
 
             $w = $h = null;
             if (in_array($ext, self::IMAGE_EXT, true)) {
@@ -1296,12 +1298,14 @@ class TeamMessageController extends Controller
                 if ($dims) { $w = $dims[0]; $h = $dims[1]; }
             }
 
-            $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $ext, 'private');
+            $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $diskExt, 'private');
 
             // Cap the client-supplied display name so an overlong name can't error the insert.
             $name = (string) $file->getClientOriginalName();
-            if (mb_strlen($name) > self::MAX_NAME) {
-                $name = mb_substr($name, 0, self::MAX_NAME - mb_strlen($ext) - 2) . '.' . $ext;
+            if ($name === '') {
+                $name = 'file.' . $diskExt;
+            } elseif (mb_strlen($name) > self::MAX_NAME) {
+                $name = mb_substr($name, 0, self::MAX_NAME - mb_strlen($diskExt) - 2) . '.' . $diskExt;
             }
 
             $msg->attachments()->create([

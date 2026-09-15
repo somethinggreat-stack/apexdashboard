@@ -67,17 +67,41 @@ class TeamAttachmentTest extends TestCase
         $this->assertSame(90, $att->height);
     }
 
-    public function test_disallowed_file_types_are_rejected(): void
+    public function test_any_file_type_is_accepted_and_still_served_safely(): void
     {
         $va = $this->va();
 
+        // Task 4: any type may be attached (zip, exe, anything). It stays safe because a
+        // non-image is force-downloaded as octet-stream from the private disk, never run.
         $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
             'recipient_id' => $va->id,
-            'attachments'  => [UploadedFile::fake()->create('evil.exe', 10)],
-        ])->assertStatus(422)->assertJsonValidationErrors('attachments');
+            'attachments'  => [UploadedFile::fake()->create('installer.exe', 10)],
+        ])->assertOk()->assertJsonPath('ok', true)
+            ->assertJsonPath('message.attachments.0.name', 'installer.exe')
+            ->assertJsonPath('message.attachments.0.image', false);
 
-        $this->assertSame(0, MessageAttachment::count());
-        $this->assertSame(0, TeamMessage::count());
+        $att = MessageAttachment::firstOrFail();
+        Storage::disk('private')->assertExists($att->disk_path);
+
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages/attachment/' . $att->id)->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Content-Type', 'application/octet-stream');
+    }
+
+    public function test_a_multi_dot_file_name_keeps_its_full_display_name(): void
+    {
+        $va = $this->va();
+
+        // The download name must survive intact; only the final extension drives the disk token.
+        $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'recipient_id' => $va->id,
+            'attachments'  => [UploadedFile::fake()->create('archive.tar.gz', 20)],
+        ])->assertOk()->assertJsonPath('message.attachments.0.name', 'archive.tar.gz');
+
+        $att = MessageAttachment::firstOrFail();
+        $this->assertSame('archive.tar.gz', $att->original_name);
+        $this->assertStringEndsWith('.gz', $att->disk_path);   // "gz" is a clean token, kept as-is
+        Storage::disk('private')->assertExists($att->disk_path);
     }
 
     public function test_oversized_files_are_rejected(): void
