@@ -2428,7 +2428,7 @@
         }
         TCD('click', function (e) {
             if (picker.hidden) return;
-            if (!picker.contains(e.target) && !e.target.closest('[data-more]') && e.target.id !== 'tcEmojiBtn' && !e.target.closest('#tcEmojiBtn')) closePicker();
+            if (!picker.contains(e.target) && !e.target.closest('[data-more]') && !e.target.closest('[data-qr-more]') && e.target.id !== 'tcEmojiBtn' && !e.target.closest('#tcEmojiBtn')) closePicker();
         });
     }
     // Composer emoji button (compose mode). Focus search so you can type to find one instantly.
