@@ -24,3 +24,4 @@ yarn-error.log
 
 # Stray local files (not part of the app)
 AppData/
+storage/framework/team-chat-purge.at
