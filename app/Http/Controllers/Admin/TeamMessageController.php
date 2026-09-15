@@ -375,7 +375,10 @@ class TeamMessageController extends Controller
                 && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
             $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
-            $this->markRead($active, $me);
+            // Prefetch (hover warm-up) must NOT mark the thread read — only a real open does.
+            if (! $request->boolean('prefetch')) {
+                $this->markRead($active, $me);
+            }
             $notifyLevel = optional($active->participantFor($me->id))->notify_level ?: 'all';
 
             if ($active->isGroup()) {

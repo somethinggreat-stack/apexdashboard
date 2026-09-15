@@ -3153,19 +3153,53 @@
 // Tier 1 — open DMs / self-notes with a LIGHT in-place swap (JSON, no script re-run),
 // taking over from the heavier full-HTML tcNav for the common 1:1 case. Groups and any
 // error fall through to tcNav (still reload-free), never a hard page reload.
+// Tier 2 — prefetch the /open payload on hover/idle so the click is already loaded.
 (function () {
     var contacts = document.getElementById('tcContacts');
     if (!contacts) return;
 
     function toTcNav(url){ if (window.tcNav) window.tcNav(url, true); else location.href = url; }
 
+    // The /open query for a sidebar row, or null if this row can't be swapped in place.
+    function rowQuery(a){
+        if (!a || a.dataset.group === '1') return null;
+        if (a.dataset.self === '1') return 'self=1';
+        if (a.dataset.conversation) return 'c=' + encodeURIComponent(a.dataset.conversation);
+        if (a.dataset.peer) return 'with=' + encodeURIComponent(a.dataset.peer);
+        return null;
+    }
+
+    // ---- Tier 2 prefetch cache: q -> { data, ts } (short TTL; a real open reconciles via poll) ----
+    var PREFETCH_TTL = 25000;
+    var cache = {};
+    function fresh(q){ var c = cache[q]; return c && (Date.now() - c.ts) < PREFETCH_TTL ? c.data : null; }
+    function prefetch(a){
+        if (!window.tcOpenUrl) return;
+        var q = rowQuery(a); if (!q) return;
+        if (fresh(q)) return;                       // already warm
+        if (a.classList.contains('active')) return; // no point warming the open chat
+        cache[q] = cache[q] || { ts: 0 };           // de-dupe concurrent hovers
+        if (cache[q].pending) return; cache[q].pending = true;
+        // prefetch=1 tells the server NOT to mark the thread read (hovering must not mark read).
+        fetch(window.tcOpenUrl + '?' + q + '&prefetch=1&_=' + Date.now(),
+            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data){ cache[q] = { data: data, ts: Date.now() }; })
+            .catch(function (){ delete cache[q]; });
+    }
+
+    function applyData(data, url){
+        window.tcApplyOpen(data, url, true);
+        // A cached/real open still needs the server to mark it read + surface anything newer:
+        // force one thread poll (it calls markRead and appends any messages past the cache).
+        window.dispatchEvent(new CustomEvent('apex:thread-poll'));
+    }
+
     function openInPlace(a){
-        var q;
-        if (a.dataset.self === '1') q = 'self=1';
-        else if (a.dataset.conversation) q = 'c=' + encodeURIComponent(a.dataset.conversation);
-        else if (a.dataset.peer) q = 'with=' + encodeURIComponent(a.dataset.peer);
-        else return false;
+        var q = rowQuery(a); if (!q) return false;
         var url = a.getAttribute('href');
+        var warm = fresh(q);
+        if (warm){ delete cache[q]; applyData(warm, url); return true; }   // instant from cache
         fetch(window.tcOpenUrl + '?' + q + '&_=' + Date.now(),
             { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
@@ -3173,6 +3207,27 @@
             .catch(function (){ toTcNav(url); });   // fall back to the reload-free full-HTML path
         return true;
     }
+
+    // Warm on hover (desktop) and on touchstart (mobile), only for swap-eligible rows.
+    var hoverT = null;
+    contacts.addEventListener('mouseover', function (e){
+        if (!window.tcApplyOpen) return;
+        var a = e.target.closest('a.tc-contact'); if (!a || !window.tcSwapEligible(false)) return;
+        clearTimeout(hoverT); hoverT = setTimeout(function (){ prefetch(a); }, 90);
+    });
+    contacts.addEventListener('touchstart', function (e){
+        if (!window.tcApplyOpen) return;
+        var a = e.target.closest('a.tc-contact'); if (a && window.tcSwapEligible(false)) prefetch(a);
+    }, { passive: true });
+
+    // Idle-warm the first few visible DM rows so the very first click is instant too.
+    function idleWarm(){
+        if (!window.tcApplyOpen || !window.tcSwapEligible(false)) return;
+        var rows = contacts.querySelectorAll('a.tc-contact:not(.active)');
+        var n = 0;
+        for (var i = 0; i < rows.length && n < 5; i++){ if (rowQuery(rows[i])){ prefetch(rows[i]); n++; } }
+    }
+    if (window.requestIdleCallback) requestIdleCallback(idleWarm, { timeout: 2000 }); else setTimeout(idleWarm, 1200);
 
     contacts.addEventListener('click', function (e){
         // Only when the in-place machinery is present (a thread is open) and eligible.

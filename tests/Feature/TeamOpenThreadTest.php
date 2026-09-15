@@ -75,6 +75,23 @@ class TeamOpenThreadTest extends TestCase
         $this->assertGreaterThanOrEqual($m->id, (int) $p->last_read_message_id);
     }
 
+    public function test_open_with_prefetch_flag_does_not_mark_read(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = TeamMessage::create(['conversation_id' => $c->id, 'type' => 'text', 'sender_id' => $va->id, 'body' => 'ping']);
+
+        // A hover prefetch must NOT mark the thread read.
+        $this->actingAs($this->super, 'admin')->getJson("/admin/team-messages/open?c={$c->id}&prefetch=1")->assertOk();
+        $p = $c->participants()->where('admin_id', $this->super->id)->first();
+        $this->assertLessThan($m->id, (int) $p->last_read_message_id);
+
+        // A real open (no prefetch) does mark it read.
+        $this->actingAs($this->super, 'admin')->getJson("/admin/team-messages/open?c={$c->id}")->assertOk();
+        $p = $c->participants()->where('admin_id', $this->super->id)->first();
+        $this->assertGreaterThanOrEqual($m->id, (int) $p->last_read_message_id);
+    }
+
     public function test_open_supports_a_virtual_dm_with_no_conversation_yet(): void
     {
         $va = $this->va('Fresh Teammate');
