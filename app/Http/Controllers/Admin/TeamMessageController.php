@@ -399,7 +399,30 @@ class TeamMessageController extends Controller
         $title = $active ? $this->convTitle($active, $me->id) : ($peer->full_name ?? 'Direct message');
         $sInfo = $peer ? $this->senderInfo($peer) : null;
 
+        // Group roster for the members panel (rendered client-side on a light swap).
+        // Permissions are still enforced server-side on every add/remove/rename call.
+        $groupData = null;
+        if ($isGroup) {
+            $iAmAdmin = optional($members->firstWhere('admin_id', $me->id))->role === 'admin';
+            $groupData = [
+                'id'      => $active->id,
+                'name'    => $active->name,
+                'icon'    => $active->icon ?: '💬',
+                'isAdmin' => $iAmAdmin,
+                'members' => $members->sortByDesc('role')->map(function ($p) use ($me) {
+                    $s = $this->senderInfo($p->admin);
+                    return [
+                        'id' => $p->admin_id, 'name' => $s['name'], 'avatar' => $s['avatar'],
+                        'mono' => $s['mono'], 'color' => $s['color'],
+                        'admin' => $p->role === 'admin', 'you' => $p->admin_id === $me->id,
+                    ];
+                })->values(),
+                'addable' => $addable->map(fn ($t) => ['id' => $t->id, 'name' => $t->full_name])->values(),
+            ];
+        }
+
         return response()->json([
+            'group'      => $groupData,
             'conversation_id' => $active?->id,
             'isGroup'    => $isGroup,
             'isSelf'     => $isSelf,

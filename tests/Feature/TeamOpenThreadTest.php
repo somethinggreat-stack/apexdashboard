@@ -127,7 +127,20 @@ class TeamOpenThreadTest extends TestCase
             ->assertOk()
             ->assertJsonPath('isGroup', true)
             ->assertJsonPath('title', 'CFPB Team')
-            ->assertJsonPath('membersCount', 3);
+            ->assertJsonPath('membersCount', 3)
+            ->assertJsonPath('group.id', $g->id)
+            ->assertJsonPath('group.isAdmin', true)
+            ->assertJsonCount(3, 'group.members')
+            ->assertJsonCount(0, 'group.addable');   // both VAs already in the group
+    }
+
+    public function test_open_group_roster_is_null_for_a_dm(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+
+        $this->actingAs($this->super, 'admin')->getJson("/admin/team-messages/open?c={$c->id}")
+            ->assertOk()->assertJsonPath('group', null);
     }
 
     public function test_open_rejects_a_conversation_i_am_not_in(): void

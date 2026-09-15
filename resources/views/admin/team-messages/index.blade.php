@@ -2910,101 +2910,137 @@
         fwdModal.addEventListener('click', function (e) { if (e.target === fwdModal) fwdModal.hidden = true; });
     }
 
-    // ---------- Group members panel (active group only) ----------
+    // ---------- Group members panel (works across light swaps between groups) ----------
+    // A persistent modal shell (server-rendered one if present, else created) + a mutable
+    // GID, so switching groups in place just re-renders the roster and re-points GID.
+    // Every add/remove/rename is still authorised server-side.
+    var GID = '';
     var membersModal = document.getElementById('tcMembers');
-    var membersBtn = document.getElementById('tcMembersBtn');
-    if (membersModal) TCB(membersModal);
-    if (membersModal && membersBtn){
-        var GID = membersModal.dataset.group;
-        function gpost(path, extra){
-            var fd = new FormData(); fd.append('_token', csrf);
-            if (extra) extra(fd);
-            return fetch(GBASE + '/' + GID + path, { method:'POST', body:fd,
-                headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).then(function (r) { return r.json(); });
-        }
-        membersBtn.addEventListener('click', function () { membersModal.hidden = false; });
-
-        // Inline group-name edit (Teams-style pencil in the header).
-        var nameEl = document.getElementById('tcGroupName');
-        var nameEdit = document.getElementById('tcGroupNameEdit');
-        if (nameEl && nameEdit){
-            var editing = false;
-            function startNameEdit(){
-                if (editing) return; editing = true;
-                var cur = nameEl.textContent.trim();
-                var inp = document.createElement('input');
-                inp.type = 'text'; inp.className = 'tc-th-name-input'; inp.maxLength = 80; inp.value = cur;
-                nameEl.hidden = true; nameEdit.hidden = true;
-                nameEl.parentNode.insertBefore(inp, nameEl);
-                inp.focus(); inp.select();
-                var done = false;
-                function finish(save){
-                    if (done) return; done = true;
-                    var nm = inp.value.trim();
-                    inp.remove(); nameEl.hidden = false; nameEdit.hidden = false; editing = false;
-                    if (save && nm && nm !== cur){
-                        gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) {
-                            if (res && res.ok){
-                                nameEl.textContent = nm;
-                                var rn = document.getElementById('tcRenameName'); if (rn) rn.value = nm;
-                                var row = document.querySelector('.tc-contact[data-conversation="' + GID + '"] .tc-c-name');
-                                if (row) row.textContent = nm;
-                                if (typeof toast === 'function') toast('Group renamed');
-                            } else { toast('Could not rename'); }
-                        });
-                    }
-                }
-                inp.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
-                    else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
-                });
-                inp.addEventListener('blur', function () { finish(true); });
-            }
-            nameEdit.addEventListener('click', startNameEdit);
-        }
-        document.getElementById('tcMembersClose').addEventListener('click', function () { membersModal.hidden = true; });
-        membersModal.addEventListener('click', function (e) { if (e.target === membersModal) membersModal.hidden = true; });
-
-        membersModal.addEventListener('click', function (e) {
-            var rem = e.target.closest('.tc-member-remove'); if (!rem) return;
-            window.tcConfirm('Remove this member from the group?', 'Remove').then(function (ok) {
-                if (!ok) return;
-                gpost('/members/' + rem.dataset.admin, function (fd) { fd.append('_method', 'DELETE'); })
-                    .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not remove — try again'); });
-            });
-        });
-        var addBtn = document.getElementById('tcAddMembersBtn');
-        if (addBtn) addBtn.addEventListener('click', function () {
-            var ids = Array.prototype.map.call(membersModal.querySelectorAll('.tc-member-add-list input:checked'), function (c) { return c.value; });
-            if (!ids.length) { toast('Select teammates to add'); return; }
-            gpost('/members', function (fd) { ids.forEach(function (i) { fd.append('members[]', i); }); })
-                .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not add members — try again'); });
-        });
-        var renameBtn = document.getElementById('tcRenameBtn');
-        if (renameBtn) renameBtn.addEventListener('click', function () {
-            var nm = document.getElementById('tcRenameName').value.trim(); if (!nm) { toast('Name required'); return; }
-            gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) { if (res && res.ok) location.reload(); else toast('Could not rename — try again'); });
-        });
-        document.getElementById('tcLeaveBtn').addEventListener('click', function () {
-            window.tcConfirm('Leave this group?', 'Leave').then(function (ok) {
-                if (!ok) return;
-                gpost('/leave').then(function (res) { if (res && res.ok) location.href = @js(route('admin.team-messages.index')); else toast('Could not leave — try again'); });
-            });
-        });
+    if (!membersModal){
+        membersModal = document.createElement('div');
+        membersModal.className = 'tc-modal'; membersModal.id = 'tcMembers'; membersModal.hidden = true;
+        membersModal.innerHTML = '<div class="tc-modal-card"></div>';
     }
+    TCB(membersModal);
+    if (membersModal.dataset.group) GID = membersModal.dataset.group;   // initial server-rendered group
+    else if (box.dataset.group === '1' && CONV) GID = CONV;
+
+    function gpost(path, extra){
+        var fd = new FormData(); fd.append('_token', csrf);
+        if (extra) extra(fd);
+        return fetch(GBASE + '/' + GID + path, { method:'POST', body:fd,
+            headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } }).then(function (r) { return r.json(); });
+    }
+
+    // Render the members-modal card from an /open group payload + re-point GID.
+    function renderMembersModal(g){
+        GID = String(g.id);
+        membersModal.dataset.group = GID; membersModal.dataset.admin = g.isAdmin ? '1' : '0';
+        var rows = (g.members || []).map(function (mp){
+            var av = mp.avatar ? '<span class="tc-avatar sm has-img"><img src="' + mp.avatar + '" alt=""></span>'
+                : '<span class="tc-avatar sm" style="background:' + mp.color + '">' + esc(mp.mono) + '</span>';
+            return '<div class="tc-member-row" data-admin="' + mp.id + '">' + av
+                + '<span class="tc-member-name">' + esc(mp.name) + (mp.you ? ' (you)' : '') + '</span>'
+                + (mp.admin ? '<span class="tc-member-badge">Admin</span>' : '')
+                + ((g.isAdmin && !mp.you) ? '<button type="button" class="tc-member-remove" data-admin="' + mp.id + '" title="Remove">&times;</button>' : '')
+                + '</div>';
+        }).join('');
+        var tools = g.isAdmin
+            ? '<div class="tc-member-tools"><input type="text" id="tcRenameName" class="tc-inp" value="' + esc(g.name) + '" maxlength="80" placeholder="Group name"><button type="button" class="tc-btn-mini" id="tcRenameBtn">Rename</button></div>'
+            : '';
+        var addSection = (g.isAdmin && (g.addable || []).length)
+            ? '<div class="tc-member-add"><div class="tc-member-add-title">Add members</div><div class="tc-member-add-list">'
+                + g.addable.map(function (t){ return '<label class="tc-addable"><input type="checkbox" value="' + t.id + '"> ' + esc(t.name) + '</label>'; }).join('')
+                + '</div><button type="button" class="tc-btn-mini" id="tcAddMembersBtn">Add selected</button></div>'
+            : '';
+        membersModal.querySelector('.tc-modal-card').innerHTML =
+            '<div class="tc-modal-head"><span>' + esc(g.name) + ' · ' + (g.members || []).length + ' members</span><button type="button" id="tcMembersClose" aria-label="Close">&times;</button></div>'
+            + tools + '<div class="tc-modal-list">' + rows + '</div>' + addSection
+            + '<button type="button" class="tc-leave-btn" id="tcLeaveBtn">Leave group</button>';
+    }
+
+    // Inline group-name edit (header pencil) — queries the current #tcGroupName each time.
+    function startNameEdit(){
+        var nameEl = document.getElementById('tcGroupName'); if (!nameEl || nameEl.dataset.editing) return;
+        var nameEdit = document.getElementById('tcGroupNameEdit');
+        nameEl.dataset.editing = '1';
+        var cur = nameEl.textContent.trim();
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'tc-th-name-input'; inp.maxLength = 80; inp.value = cur;
+        nameEl.hidden = true; if (nameEdit) nameEdit.hidden = true;
+        nameEl.parentNode.insertBefore(inp, nameEl); inp.focus(); inp.select();
+        var done = false;
+        function finish(save){
+            if (done) return; done = true;
+            var nm = inp.value.trim();
+            inp.remove(); nameEl.hidden = false; if (nameEdit) nameEdit.hidden = false; delete nameEl.dataset.editing;
+            if (save && nm && nm !== cur){
+                gpost('/rename', function (fd) { fd.append('name', nm); }).then(function (res) {
+                    if (res && res.ok){
+                        nameEl.textContent = nm;
+                        var rn = document.getElementById('tcRenameName'); if (rn) rn.value = nm;
+                        var row = document.querySelector('.tc-contact[data-conversation="' + GID + '"] .tc-c-name'); if (row) row.textContent = nm;
+                        toast('Group renamed');
+                    } else toast('Could not rename');
+                });
+            }
+        }
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+            else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+        });
+        inp.addEventListener('blur', function () { finish(true); });
+    }
+
+    // Header controls survive rebuilds via delegation on the (stable) thread section.
+    var threadHeadSec = box.closest('.tc-thread');
+    if (threadHeadSec) threadHeadSec.addEventListener('click', function (e){
+        if (e.target.closest('#tcMembersBtn')){ if (GID) membersModal.hidden = false; return; }
+        if (e.target.closest('#tcGroupNameEdit')){ startNameEdit(); }
+    });
+
+    // Modal actions (close, remove, add, rename, leave) — delegated, read GID dynamically.
+    membersModal.addEventListener('click', function (e){
+        if (e.target === membersModal || e.target.closest('#tcMembersClose')){ membersModal.hidden = true; return; }
+        var rem = e.target.closest('.tc-member-remove');
+        if (rem){
+            window.tcConfirm('Remove this member from the group?', 'Remove').then(function (ok){ if (!ok) return;
+                gpost('/members/' + rem.dataset.admin, function (fd){ fd.append('_method', 'DELETE'); })
+                    .then(function (res){ if (res && res.ok) location.reload(); else toast('Could not remove — try again'); });
+            });
+            return;
+        }
+        if (e.target.closest('#tcAddMembersBtn')){
+            var ids = Array.prototype.map.call(membersModal.querySelectorAll('.tc-member-add-list input:checked'), function (c){ return c.value; });
+            if (!ids.length){ toast('Select teammates to add'); return; }
+            gpost('/members', function (fd){ ids.forEach(function (i){ fd.append('members[]', i); }); })
+                .then(function (res){ if (res && res.ok) location.reload(); else toast('Could not add members — try again'); });
+            return;
+        }
+        if (e.target.closest('#tcRenameBtn')){
+            var rn = document.getElementById('tcRenameName'); var nm = rn ? rn.value.trim() : '';
+            if (!nm){ toast('Name required'); return; }
+            gpost('/rename', function (fd){ fd.append('name', nm); }).then(function (res){ if (res && res.ok) location.reload(); else toast('Could not rename — try again'); });
+            return;
+        }
+        if (e.target.closest('#tcLeaveBtn')){
+            window.tcConfirm('Leave this group?', 'Leave').then(function (ok){ if (!ok) return;
+                gpost('/leave').then(function (res){ if (res && res.ok) location.href = @js(route('admin.team-messages.index')); else toast('Could not leave — try again'); });
+            });
+        }
+    });
 
     // ============================================================
     // Tier 1 — open a chat WITHOUT a full page reload (in-app swap).
-    // Scope: DM ↔ DM ↔ self only. They share one header structure and
-    // IS_GROUP stays false throughout, so no handler ever needs rebinding.
-    // Anything involving a GROUP (current or target), or any error, falls
-    // back to a normal navigation — so behaviour can never regress.
+    // Scope: DM ↔ DM ↔ self ↔ GROUP — all handled in place. The header identity
+    // block is rebuilt for the target type and the group members panel is rendered
+    // from the payload; only a fetch error falls back to the reload-free tcNav.
     // ============================================================
     var isSelf = @js($isSelf ?? false);
     var OPEN_URL = @js(route('admin.team-messages.open'));
 
-    // Eligible only when neither the current thread nor the target is a group.
-    function swapEligible(targetIsGroup){ return !IS_GROUP && !targetIsGroup; }
+    // Every conversation (DM, self, group) can now be swapped in place.
+    function swapEligible(targetIsGroup){ return true; }
 
     function renderThreadMessages(list, hasMore){
         box.innerHTML = '';
@@ -3018,7 +3054,9 @@
         if (!list || !list.length){
             var empty = document.createElement('div');
             empty.className = 'tc-thread-empty';
-            empty.innerHTML = '<div class="tc-thread-empty-emoji">👋</div><p>No messages yet — say hello!</p>';
+            empty.innerHTML = IS_GROUP
+                ? '<div class="tc-thread-empty-emoji">🎉</div><p>Group created — say hello to the team!</p>'
+                : '<div class="tc-thread-empty-emoji">👋</div><p>No messages yet — say hello!</p>';
             box.appendChild(empty);
             firstId = 0; lastId = 0; hasOlder = false; return;
         }
@@ -3062,18 +3100,35 @@
     // Swap-created "Load earlier" pills work via delegation (guarded loadOlder is idempotent).
     box.addEventListener('click', function (e){ if (e.target.closest('#tcLoadOlder button')) loadOlder(); });
 
-    function updateDmHeader(data){
-        var head = document.querySelector('.tc-thread-head'); if (!head) return false;
-        var av = head.querySelector('.tc-av'); if (!av) return false;   // a group head — never reached (eligibility bails)
-        var avi = data.avatar
+    var EDIT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+    var MEMBERS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
+    // Rebuild the header's IDENTITY block (everything before the Chat/Files/Photos tabs),
+    // for a DM/self OR a group. The shared tabs/search/bell after it stay bound.
+    function headerIdentity(data){
+        if (data.isGroup){
+            return '<span class="tc-avatar sm tc-avatar--group">' + esc(data.groupIcon || '💬') + '</span>'
+                + '<div class="tc-th-info"><div class="tc-th-nameline">'
+                + '<span class="tc-th-name" id="tcGroupName">' + esc(data.title) + '</span>'
+                + '<button type="button" class="tc-th-edit" id="tcGroupNameEdit" title="Edit group name" aria-label="Edit group name">' + EDIT_SVG + '</button>'
+                + '</div><div class="tc-th-role">' + (data.membersCount || 0) + ' members<span id="tcOnlineCount">' + ((data.onlineCount || 0) > 0 ? ' · ' + data.onlineCount + ' online' : '') + '</span></div></div>'
+                + '<button type="button" class="tc-th-btn" id="tcMembersBtn" title="Members">' + MEMBERS_SVG + '<span>' + (data.membersCount || 0) + '</span></button>';
+        }
+        var av = data.avatar
             ? '<span class="tc-avatar sm has-img"><img src="' + data.avatar + '" alt=""></span>'
             : '<span class="tc-avatar sm" style="background:' + (data.color || '#64748b') + '">' + esc(data.mono || '?') + '</span>';
-        if (!data.isSelf) avi += '<i class="tc-dot ' + (data.online ? 'on' : '') + '" id="tcHeaderDot"></i>';
-        av.innerHTML = avi;
-        var nm = head.querySelector('.tc-th-name'); if (nm) nm.textContent = data.title;
-        var seen = document.getElementById('tcHeaderSeen'); if (seen){ seen.textContent = data.subtitle || ''; seen.classList.toggle('online', !!data.online); }
+        var dot = data.isSelf ? '' : '<i class="tc-dot ' + (data.online ? 'on' : '') + '" id="tcHeaderDot"></i>';
+        return '<span class="tc-av">' + av + dot + '</span>'
+            + '<div class="tc-th-info"><div class="tc-th-name">' + esc(data.title) + '</div>'
+            + '<div class="tc-th-role tc-presence" id="tcHeaderSeen">' + esc(data.subtitle || '') + '</div></div>';
+    }
+    function setHeader(data){
+        var head = document.querySelector('.tc-thread-head'); if (!head) return;
+        var tabs = head.querySelector('.tc-tabs'); if (!tabs) return;   // no tabs → unexpected layout, bail
+        while (head.firstChild && head.firstChild !== tabs) head.removeChild(head.firstChild);
+        var tmp = document.createElement('div'); tmp.innerHTML = headerIdentity(data);
+        while (tmp.firstChild) head.insertBefore(tmp.firstChild, tabs);
         var bell = document.getElementById('tcBell'); if (bell) bell.dataset.level = data.notifyLevel || 'all';
-        return true;
     }
 
     function updateComposerTarget(data){
@@ -3109,16 +3164,20 @@
     function applyOpen(data, url, push){
         CONV = data.conversation_id ? String(data.conversation_id) : '';
         PEER_ID = data.peer_id ? String(data.peer_id) : '';
-        PEER_NAME = data.isSelf ? '' : (data.title || '');
+        IS_GROUP = !!data.isGroup;
+        PEER_NAME = (data.isSelf || data.isGroup) ? '' : (data.title || '');
         isSelf = !!data.isSelf;
         WATERMARKS = data.watermarks || {};
         MENTIONABLES = data.mentionables || [];
         statesSince = '';
         box.dataset.conversation = CONV;
         if (PEER_ID) box.dataset.peer = PEER_ID; else box.removeAttribute('data-peer');
-        box.dataset.group = '0';
+        box.dataset.group = IS_GROUP ? '1' : '0';
 
-        updateDmHeader(data);
+        setHeader(data);
+        // Group members panel: render it from the payload; hide it for DMs/self.
+        if (IS_GROUP && data.group && typeof renderMembersModal === 'function') renderMembersModal(data.group);
+        else if (typeof membersModal !== 'undefined' && membersModal) membersModal.hidden = true;
         updateComposerTarget(data);
         cancelReply(); if (typeof cancelEdit === 'function') cancelEdit();
         if (typeof clearPending === 'function') clearPending();
@@ -3162,9 +3221,9 @@
 
     // The /open query for a sidebar row, or null if this row can't be swapped in place.
     function rowQuery(a){
-        if (!a || a.dataset.group === '1') return null;
+        if (!a) return null;
         if (a.dataset.self === '1') return 'self=1';
-        if (a.dataset.conversation) return 'c=' + encodeURIComponent(a.dataset.conversation);
+        if (a.dataset.conversation) return 'c=' + encodeURIComponent(a.dataset.conversation);   // DM or group
         if (a.dataset.peer) return 'with=' + encodeURIComponent(a.dataset.peer);
         return null;
     }
