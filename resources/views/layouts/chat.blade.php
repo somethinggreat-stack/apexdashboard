@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,7 +19,7 @@
         :root[data-theme="dark"] { --pro-surface:#0f1629; --pro-soft:#0b1120; --pro-line:#233150; --pro-text:#e2e8f0; color-scheme:dark; }
         * { box-sizing:border-box; }
         html, body { margin:0; height:100%; }
-        body { font-family:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background:var(--pro-soft,#f4f6fb); color:var(--pro-text); }
+        body { font-family:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background:#ffffff; color:var(--pro-text); }
         img { max-width:100%; }
         [hidden] { display:none !important; }
         .tc-standalone { height:100vh; padding:14px; }
@@ -48,14 +48,9 @@
     </div>
 
     <script>
-        // Respect a saved theme (matches the admin app's data-theme convention).
-        (function () {
-            try {
-                var t = localStorage.getItem('apex-theme') || localStorage.getItem('theme');
-                if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
-                else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
-            } catch (e) {}
-        })();
+        // Team Chat follows light mode only — always a clean white app, regardless of
+        // the operating system's dark-mode setting.
+        document.documentElement.setAttribute('data-theme', 'light');
         // Minimal toast used across the chat UI.
         window.apexToast = function (msg) {
             var host = document.getElementById('apexToast'); if (!host) return;

@@ -904,8 +904,10 @@
     /* Attachments in a bubble */
     .tc-atts { display:flex; flex-direction:column; gap:8px; }
     .tc-atts:not(:last-child) { margin-bottom:8px; }
-    .tc-bubble--media { padding:6px; background:rgba(255,255,255,.97); }
-    .tc-msg.mine .tc-bubble--media { background:rgba(99,102,241,.14); }
+    .tc-bubble--media { padding:6px; background:#ffffff; border:1px solid var(--pro-line,#e6ebf2); }
+    /* Sent media sits in the same purple as a sent text bubble (Teams-style) so its
+       file card / image frame reads clearly as "sent". */
+    .tc-msg.mine .tc-bubble--media { background:linear-gradient(135deg,#4f46e5,#6366f1); border-color:transparent; }
     .tc-att-img { position:relative; display:block; max-width:260px; border-radius:12px; overflow:hidden; line-height:0; cursor:zoom-in; }
     .tc-att-img img { width:100%; max-height:320px; object-fit:cover; display:block; }
 
@@ -920,10 +922,14 @@
     .tc-att-grid--1 .tc-att-img img { height:auto; max-height:320px; }
     .tc-att-grid--3 .tc-att-img:first-child { grid-column:1 / -1; aspect-ratio:2 / 1; }
     .tc-att-more { position:absolute; inset:0; display:grid; place-items:center; background:rgba(6,10,25,.55); color:#fff; font-size:23px; font-weight:700; line-height:1; letter-spacing:-.01em; }
-    .tc-att-file { display:flex; align-items:center; gap:11px; min-width:220px; max-width:300px; padding:10px 12px; border-radius:12px; text-decoration:none; background:rgba(255,255,255,.9); border:1px solid rgba(148,163,184,.24); color:var(--pro-text,#0f172a); transition:transform .12s, box-shadow .14s; }
+    /* Received file card — neutral slate, dark text (the other person). */
+    .tc-att-file { display:flex; align-items:center; gap:11px; min-width:220px; max-width:300px; padding:10px 12px; border-radius:12px; text-decoration:none; background:#eef2f8; border:1px solid #e2e8f0; color:var(--pro-text,#0f172a); transition:transform .12s, box-shadow .14s; }
     .tc-att-file:hover { transform:translateY(-1px); box-shadow:0 8px 18px -8px rgba(30,41,59,.3); }
-    .tc-msg.mine .tc-att-file { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28); color:#fff; }
+    /* Sent file card — frosted white on the purple bubble, white text. */
+    .tc-msg.mine .tc-att-file { background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.42); color:#fff; }
     .tc-att-ic { flex:none; width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; }
+    /* On a sent card the purple icon would vanish into the purple bubble — use a white chip. */
+    .tc-msg.mine .tc-att-ic { background:rgba(255,255,255,.92); color:#4f46e5; }
     .tc-att-ic svg { width:19px; height:19px; }
     .tc-att-meta { flex:1; min-width:0; display:flex; flex-direction:column; }
     .tc-att-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
