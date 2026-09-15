@@ -3184,9 +3184,40 @@
         fetch(window.tcOpenUrl + '?' + q + '&prefetch=1&_=' + Date.now(),
             { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
-            .then(function (data){ cache[q] = { data: data, ts: Date.now() }; })
+            .then(function (data){ persist(q, data); })
             .catch(function (){ delete cache[q]; });
     }
+
+    // ---- Tier 3: persistent on-disk cache (IndexedDB) so opens are instant even on
+    // app restart / for chats the idle-warm didn't reach. Best-effort: any failure just
+    // falls back to the network path. ----
+    var idbP = null;
+    function idb(){
+        if (idbP) return idbP;
+        idbP = new Promise(function (resolve){
+            try {
+                var rq = indexedDB.open('apexChat', 1);
+                rq.onupgradeneeded = function (){ try { rq.result.createObjectStore('threads'); } catch (e) {} };
+                rq.onsuccess = function (){ resolve(rq.result); };
+                rq.onerror = function (){ resolve(null); };
+            } catch (e){ resolve(null); }
+        });
+        return idbP;
+    }
+    function idbGet(key){
+        return idb().then(function (db){ if (!db) return null; return new Promise(function (res){
+            try { var t = db.transaction('threads','readonly').objectStore('threads').get(key);
+                t.onsuccess = function (){ res(t.result || null); }; t.onerror = function (){ res(null); };
+            } catch (e){ res(null); } }); });
+    }
+    function idbSet(key, val){
+        idb().then(function (db){ if (!db) return; try {
+            db.transaction('threads','readwrite').objectStore('threads').put(val, key);
+        } catch (e){} });
+    }
+    function sig(d){ if (!d) return ''; var ms = d.messages || []; return [d.conversation_id, ms.length, ms.length?ms[ms.length-1].id:0, d.readUpTo, (d.pinned||[]).length, d.subtitle, d.title].join('|'); }
+
+    function persist(q, data){ cache[q] = { data: data, ts: Date.now() }; idbSet(q, { data: data, ts: Date.now() }); }
 
     function applyData(data, url){
         window.tcApplyOpen(data, url, true);
@@ -3195,16 +3226,34 @@
         window.dispatchEvent(new CustomEvent('apex:thread-poll'));
     }
 
+    function fetchFresh(q, url, onData){
+        return fetch(window.tcOpenUrl + '?' + q + '&_=' + Date.now(),
+            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data){ persist(q, data); onData(data); });
+    }
+
     function openInPlace(a){
         var q = rowQuery(a); if (!q) return false;
         var url = a.getAttribute('href');
+
         var warm = fresh(q);
-        if (warm){ delete cache[q]; applyData(warm, url); return true; }   // instant from cache
-        fetch(window.tcOpenUrl + '?' + q + '&_=' + Date.now(),
-            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
-            .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
-            .then(function (data){ window.tcApplyOpen(data, url, true); })
-            .catch(function (){ toTcNav(url); });   // fall back to the reload-free full-HTML path
+        if (warm){ delete cache[q]; applyData(warm, url); persist(q, warm); return true; }   // in-memory (Tier 2)
+
+        // Tier 3: paint from the on-disk snapshot immediately, then refresh in the background.
+        idbGet(q).then(function (snap){
+            if (snap && snap.data){
+                var before = sig(snap.data);
+                window.tcApplyOpen(snap.data, url, true);
+                // Real refresh: marks read + authoritative header/pins/messages; re-apply only if changed.
+                fetchFresh(q, url, function (fresh2){ if (sig(fresh2) !== before) window.tcApplyOpen(fresh2, url, true); })
+                    .catch(function (){ window.dispatchEvent(new CustomEvent('apex:thread-poll')); });
+            } else {
+                // No snapshot: straight network open (Tier 1).
+                fetchFresh(q, url, function (data){ window.tcApplyOpen(data, url, true); })
+                    .catch(function (){ toTcNav(url); });
+            }
+        });
         return true;
     }
 
