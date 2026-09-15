@@ -712,3 +712,6 @@
     :root[data-theme="dark"] .tc-load-older button:hover { background:rgba(30,41,64,.95); color:#e2e8f0; }
     :root[data-theme="dark"] .tc-react { background:rgba(20,29,51,.92); }
     :root[data-theme="dark"] .tc-contact:hover { background:rgba(99,102,241,.12); }
+    /* Refresh button spin feedback */
+    #tcRefresh.spinning svg { animation:tcSpin .6s linear infinite; }
+    @keyframes tcSpin { to { transform:rotate(360deg); } }

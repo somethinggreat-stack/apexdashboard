@@ -31,6 +31,9 @@
                 <div class="tc-me-info">
                     <span class="tc-me-name">{{ $me->full_name }}</span>
                 </div>
+                <button type="button" class="tc-newgroup" id="tcRefresh" title="Refresh" aria-label="Refresh">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                </button>
                 <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 </button>
@@ -2641,6 +2644,23 @@
 })();
 
 // New-group modal — lives outside the thread scope so it works with no chat open.
+// Refresh button — reload the app fresh (clears the local thread cache) WITHOUT signing out.
+(function () {
+    var btn = document.getElementById('tcRefresh'); if (!btn) return;
+    btn.addEventListener('click', function () {
+        if (btn.dataset.busy) return; btn.dataset.busy = '1';
+        btn.classList.add('spinning');
+        var done = false;
+        function reload(){ if (done) return; done = true; location.reload(); }
+        // Clear the on-disk thread cache (Tier 3) + any Cache Storage, then reload.
+        var jobs = [];
+        try { jobs.push(new Promise(function (res){ var r = indexedDB.deleteDatabase('apexChat'); r.onsuccess = r.onerror = r.onblocked = function(){ res(); }; })); } catch (e) {}
+        try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks){ return Promise.all(ks.map(function (k){ return caches.delete(k); })); })); } catch (e) {}
+        Promise.all(jobs).then(reload).catch(reload);
+        setTimeout(reload, 1200);   // never hang if a clear is slow/blocked
+    });
+})();
+
 (function () {
     var modal = document.getElementById('tcGroupModal');
     var openBtn = document.getElementById('tcNewGroup');
