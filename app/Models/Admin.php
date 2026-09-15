@@ -97,9 +97,15 @@ class Admin extends Authenticatable
         }
         // A photo they uploaded themselves is streamed through a guarded route
         // (stored on the private disk, not in public/). Cache-bust on each change.
+        // The file lives on whichever host it was uploaded to; if it isn't present
+        // on THIS host (e.g. the dashboard vs the chat server, which share only the
+        // DB), fall through to a bundled photo / monogram instead of a broken image.
         if (! empty($this->avatar) && str_starts_with($this->avatar, 'team-avatars/')) {
-            return route('admin.team-messages.avatar', ['admin' => $this->id])
-                . '?v=' . optional($this->updated_at)->timestamp;
+            if (\Illuminate\Support\Facades\Storage::disk('private')->exists($this->avatar)) {
+                return route('admin.team-messages.avatar', ['admin' => $this->id])
+                    . '?v=' . optional($this->updated_at)->timestamp;
+            }
+            return null;
         }
         if (! empty($this->avatar)) {
             return $this->versionedAsset('img/team/' . $this->avatar);
