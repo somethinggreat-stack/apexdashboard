@@ -3150,10 +3150,14 @@
     window.tcOpenUrl     = OPEN_URL;
 })();
 
-// Tier 1 — intercept sidebar clicks and open the chat in place instead of a full reload.
+// Tier 1 — open DMs / self-notes with a LIGHT in-place swap (JSON, no script re-run),
+// taking over from the heavier full-HTML tcNav for the common 1:1 case. Groups and any
+// error fall through to tcNav (still reload-free), never a hard page reload.
 (function () {
     var contacts = document.getElementById('tcContacts');
     if (!contacts) return;
+
+    function toTcNav(url){ if (window.tcNav) window.tcNav(url, true); else location.href = url; }
 
     function openInPlace(a){
         var q;
@@ -3166,25 +3170,26 @@
             { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
             .then(function (data){ window.tcApplyOpen(data, url, true); })
-            .catch(function (){ location.href = url; });   // graceful fallback: behave exactly like today
+            .catch(function (){ toTcNav(url); });   // fall back to the reload-free full-HTML path
         return true;
     }
 
     contacts.addEventListener('click', function (e){
         // Only when the in-place machinery is present (a thread is open) and eligible.
-        if (!window.tcApplyOpen || !window.tcOpenUrl) return;
+        if (!window.tcApplyOpen || !window.tcOpenUrl) return;   // no thread yet → let tcNav open it
         if (e.defaultPrevented) return;
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return;   // let "open in new tab" work
         if (e.target.closest('.tc-row-actions')) return;   // fav/mute buttons keep working
         var a = e.target.closest('a.tc-contact'); if (!a) return;
         var targetIsGroup = a.dataset.group === '1';
-        if (!window.tcSwapEligible(targetIsGroup)) return;   // groups (either side) → normal navigation
-        if (a.classList.contains('active')) { e.preventDefault(); return; }   // already open
-        if (openInPlace(a)) e.preventDefault();
+        if (!window.tcSwapEligible(targetIsGroup)) return;   // groups (either side) → let tcNav handle (reload-free)
+        // Handle it here AND stop the event so the heavier tcNav doesn't also run.
+        e.preventDefault();
+        e.stopPropagation();
+        if (a.classList.contains('active')) return;   // already open
+        openInPlace(a);
     });
-
-    // Back/forward across in-place opens: reload to the correct URL (simple + correct).
-    window.addEventListener('popstate', function (e){ if (e.state && e.state.tcUrl) location.reload(); });
+    // Back/forward is handled by tcNav's own popstate (reload-free) — no handler needed here.
 })();
 
 // New-group modal — lives outside the thread scope so it works with no chat open.
