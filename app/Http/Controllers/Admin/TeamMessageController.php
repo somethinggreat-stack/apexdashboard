@@ -85,15 +85,24 @@ class TeamMessageController extends Controller
         $favorites = array_values(array_filter($items, fn ($it) => $it['favorite']));
         $chats     = array_values(array_filter($items, fn ($it) => ! $it['favorite']));
 
-        // Resolve the active thread: ?c=<conversation> or ?with=<teammate>.
+        // Resolve the active thread: ?self=1 (notes), ?c=<conversation> or ?with=<teammate>.
         $active = null; $peer = null; $messages = collect(); $members = collect(); $addable = collect();
+        $isSelf = false;
 
-        if ($request->filled('c')) {
+        if ($request->boolean('self')) {
+            $active = $this->findOrCreateSelf($me);
+            $isSelf = true;
+        } elseif ($request->filled('c')) {
             $active = $convos->firstWhere('id', (int) $request->query('c'));
+            $isSelf = $this->isSelfConv($active);
         } elseif ($request->filled('with')) {
             $peer = $teammates->firstWhere('id', (int) $request->query('with'));
             if ($peer) $active = $dmByPeer[$peer->id] ?? null;   // may be null → virtual DM
         }
+
+        // The private "message yourself" notes thread (existing one, for the sidebar entry).
+        $selfConv = $convos->first(fn ($c) => $this->isSelfConv($c));
+        $selfLast = $selfConv && $selfConv->last_message_id ? $lastMsgs->get($selfConv->last_message_id) : null;
 
         $pinned = collect(); $mentionables = []; $notifyLevel = 'all'; $hasMoreOlder = false;
 
@@ -110,8 +119,8 @@ class TeamMessageController extends Controller
             $notifyLevel = optional($active->participantFor($me->id))->notify_level ?: 'all';
 
             if ($active->isDm()) {
-                $peer = $active->otherAdmin($me->id);
-                if ($peer) $mentionables[] = ['id' => $peer->id, 'name' => $peer->full_name, 'avatar' => $peer->avatarUrl()];
+                $peer = $isSelf ? $me : $active->otherAdmin($me->id);
+                if ($peer && ! $isSelf) $mentionables[] = ['id' => $peer->id, 'name' => $peer->full_name, 'avatar' => $peer->avatarUrl()];
             } else {
                 $members = $active->participants->load('admin');
                 $inIds   = $active->participants->pluck('admin_id')->all();
@@ -136,6 +145,7 @@ class TeamMessageController extends Controller
                 ? $active->participants->filter(fn ($p) => $p->admin_id !== $me->id && optional($p->admin)->isOnline())->count()
                 : 0,
             'mentionables' => $mentionables, 'notifyLevel' => $notifyLevel,
+            'isSelf' => $isSelf, 'selfConv' => $selfConv, 'selfLast' => $selfLast,
             'tz' => self::TZ,
         ]);
     }
@@ -651,6 +661,7 @@ class TeamMessageController extends Controller
 
     private function convTitle(Conversation $conv, int $meId): string
     {
+        if ($this->isSelfConv($conv)) return 'Notes (You)';
         if ($conv->isGroup()) return $conv->name ?: 'Group';
         $other = $conv->otherAdmin($meId);
 
@@ -1117,6 +1128,36 @@ class TeamMessageController extends Controller
         } catch (\Throwable $e) {
             return $find() ?: throw $e;
         }
+    }
+
+    /** The "message yourself" conversation — a private notes thread (one participant: me). */
+    private function findOrCreateSelf(Admin $me): Conversation
+    {
+        $key  = 'self:' . $me->id;
+        $find = fn () => Conversation::where('type', 'dm')->where('data_owner_id', $me->dataOwnerId())
+            ->where('dm_key', $key)->with('participants.admin')->first();
+
+        if ($conv = $find()) {
+            return $conv;
+        }
+
+        try {
+            return DB::transaction(function () use ($me, $key) {
+                $conv = Conversation::create([
+                    'type' => 'dm', 'data_owner_id' => $me->dataOwnerId(), 'created_by' => $me->id, 'dm_key' => $key,
+                ]);
+                $conv->participants()->create(['admin_id' => $me->id, 'role' => 'member', 'joined_at' => now()]);
+
+                return $conv->load('participants.admin');
+            });
+        } catch (\Throwable $e) {
+            return $find() ?: throw $e;
+        }
+    }
+
+    private function isSelfConv(?Conversation $conv): bool
+    {
+        return $conv && str_starts_with((string) $conv->dm_key, 'self:');
     }
 
     private function participantMessage(Admin $me, int $id): TeamMessage

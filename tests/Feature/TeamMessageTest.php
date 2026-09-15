@@ -189,6 +189,25 @@ class TeamMessageTest extends TestCase
         $this->assertSame('👍', $row['reactions'][0]['emoji']);
     }
 
+    public function test_i_can_message_myself_in_a_private_notes_thread(): void
+    {
+        // Opening notes creates a single-participant self conversation.
+        $this->actingAs($this->super, 'admin')->get('/admin/team-messages?self=1')->assertOk();
+
+        $conv = Conversation::where('dm_key', 'self:' . $this->super->id)->first();
+        $this->assertNotNull($conv);
+        $this->assertSame(1, $conv->participants()->count());
+
+        // I can post a note to it, and it belongs only to me.
+        $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'conversation_id' => $conv->id, 'body' => 'remember this',
+        ])->assertOk()->assertJsonPath('ok', true);
+
+        $this->assertDatabaseHas('team_messages', [
+            'conversation_id' => $conv->id, 'body' => 'remember this', 'sender_id' => $this->super->id,
+        ]);
+    }
+
     public function test_the_thread_loads_only_the_newest_page_and_flags_more_older(): void
     {
         $va = $this->va();

@@ -48,6 +48,17 @@
             </div>
         </div>
         <div class="tc-contacts" id="tcContacts">
+            <a class="tc-contact tc-self-row {{ $isSelf ? 'active' : '' }}" data-self="1" data-name="message yourself notes you saved"
+               @if ($selfConv) data-conversation="{{ $selfConv->id }}" @endif
+               href="{{ route('admin.team-messages.index', array_merge(['self' => 1], request()->boolean('standalone') ? ['standalone' => 1] : [])) }}">
+                <span class="tc-av tc-self-av">{!! $avatar($me, 'sm') !!}<i class="tc-self-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2z"/></svg>
+                </i></span>
+                <span class="tc-c-body">
+                    <span class="tc-c-top"><span class="tc-c-name">Message yourself</span></span>
+                    <span class="tc-c-sub"><span class="tc-c-preview">{{ $selfLast ? \Illuminate\Support\Str::limit($selfLast->body ?: '📎 Attachment', 40) : 'Notes, reminders &amp; files' }}</span></span>
+                </span>
+            </a>
             <div id="tcChatList">
                 @forelse (array_merge($favorites, $chats) as $it)
                     @include('partials.team-chat-row', ['it' => $it])
@@ -80,10 +91,10 @@
                         <span>{{ $members->count() }}</span>
                     </button>
                 @else
-                    <span class="tc-av">{!! $avatar($peer, 'sm') !!}<i class="tc-dot {{ $peerOnline ? 'on' : '' }}" id="tcHeaderDot"></i></span>
+                    <span class="tc-av">{!! $avatar($peer, 'sm') !!}@unless ($isSelf)<i class="tc-dot {{ $peerOnline ? 'on' : '' }}" id="tcHeaderDot"></i>@endunless</span>
                     <div class="tc-th-info">
-                        <div class="tc-th-name">{{ $peer->full_name }}</div>
-                        <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $peerSeen }}</div>
+                        <div class="tc-th-name">{{ $isSelf ? 'Message yourself' : $peer->full_name }}</div>
+                        <div class="tc-th-role tc-presence" id="tcHeaderSeen">{{ $isSelf ? 'Notes · visible only to you' : $peerSeen }}</div>
                     </div>
                 @endif
                 <nav class="tc-tabs" id="tcTabs" role="tablist">
@@ -225,7 +236,7 @@
                 <button type="button" class="tc-emoji-btn" id="tcEmojiBtn" aria-label="Emoji">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
-                <textarea name="body" id="tcInput" rows="1" placeholder="Message {{ $isGroup ? $active->name : $peer->full_name }}…" maxlength="5000"></textarea>
+                <textarea name="body" id="tcInput" rows="1" placeholder="{{ $isSelf ? 'Write a note to yourself…' : 'Message ' . ($isGroup ? $active->name : $peer->full_name) . '…' }}" maxlength="5000"></textarea>
                 <button type="submit" class="tc-send" aria-label="Send">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
@@ -661,6 +672,15 @@
     :root[data-theme="dark"] .tc-hs-item:hover { background:#182444; }
     :root[data-theme="dark"] .tc-hs-title { color:#e2e8f0; }
     @media (max-width:900px){ .tc-hsearch { width:190px; } }
+
+    /* "Message yourself" row */
+    .tc-self-row { border-bottom:1px solid var(--pro-line,#eef2f7); margin-bottom:4px; }
+    .tc-self-row .tc-c-name { font-weight:700; }
+    .tc-self-av { position:relative; }
+    .tc-self-badge { position:absolute; right:-3px; bottom:-3px; width:17px; height:17px; border-radius:50%; background:#4f46e5; border:2px solid var(--pro-surface,#fff); display:grid; place-items:center; color:#fff; }
+    .tc-self-badge svg { width:9px; height:9px; }
+    :root[data-theme="dark"] .tc-self-badge { border-color:#0f1629; }
+    :root[data-theme="dark"] .tc-self-row { border-color:#1e2a44; }
 
     :root[data-theme="dark"] .tc-search input { background:#0b1120; border-color:#233150; color:#e2e8f0; }
     :root[data-theme="dark"] .tc-row-actions { background:#141d33; }
