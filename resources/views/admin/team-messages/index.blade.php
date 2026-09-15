@@ -248,7 +248,9 @@
             {{-- Image lightbox (moved to <body> by JS) --}}
             <div class="tc-lightbox" id="tcLightbox" hidden>
                 <button type="button" class="tc-lb-x" id="tcLbClose" aria-label="Close">&times;</button>
+                <button type="button" class="tc-lb-nav tc-lb-prev" id="tcLbPrev" aria-label="Previous" hidden>&#8249;</button>
                 <img src="" alt="" id="tcLbImg">
+                <button type="button" class="tc-lb-nav tc-lb-next" id="tcLbNext" aria-label="Next" hidden>&#8250;</button>
             </div>
 
             {{-- Message action menu (WhatsApp-style). Moved to <body> by JS so position:fixed is exact. --}}
@@ -861,6 +863,7 @@
     .tc-att-grid--2, .tc-att-grid--3, .tc-att-grid--4 { grid-template-columns:1fr 1fr; }
     .tc-att-grid .tc-att-img { max-width:none; border-radius:0; aspect-ratio:1; cursor:zoom-in; }
     .tc-att-grid .tc-att-img img { width:100%; height:100%; max-height:none; object-fit:cover; }
+    .tc-att-grid .tc-att-img:nth-child(n+5) { display:none; }   /* extras stay in the DOM for the viewer, hidden in the grid */
     .tc-att-grid--1 .tc-att-img { aspect-ratio:auto; border-radius:12px; max-width:260px; }
     .tc-att-grid--1 .tc-att-img img { height:auto; max-height:320px; }
     .tc-att-grid--3 .tc-att-img:first-child { grid-column:1 / -1; aspect-ratio:2 / 1; }
@@ -900,6 +903,10 @@
     /* Lightbox */
     .tc-lightbox { position:fixed; inset:0; z-index:1002; background:rgba(8,11,22,.85); display:flex; align-items:center; justify-content:center; padding:32px; }
     .tc-lightbox img { max-width:92vw; max-height:88vh; border-radius:12px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .tc-lb-nav { position:fixed; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff; font-size:32px; line-height:1; display:grid; place-items:center; cursor:pointer; transition:background .12s; }
+    .tc-lb-nav:hover { background:rgba(255,255,255,.28); }
+    .tc-lb-prev { left:22px; } .tc-lb-next { right:22px; }
+    .tc-lb-nav[hidden] { display:none !important; }
     .tc-lb-x { position:fixed; top:20px; right:24px; width:44px; height:44px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:26px; line-height:1; cursor:pointer; }
     .tc-lb-x:hover { background:rgba(255,255,255,.25); }
 
@@ -1240,10 +1247,10 @@
         var files = list.filter(function (a) { return !a.image; });
         var html = '';
         if (imgs.length){
-            var show = imgs.slice(0, 4), extra = imgs.length - show.length;
+            var extra = imgs.length - 4;
             html += '<div class="tc-att-grid tc-att-grid--' + Math.min(imgs.length, 4) + '">'
-                + show.map(function (a, i) {
-                    var more = (extra > 0 && i === show.length - 1) ? '<span class="tc-att-more">+' + extra + '</span>' : '';
+                + imgs.map(function (a, i) {
+                    var more = (extra > 0 && i === 3) ? '<span class="tc-att-more">+' + extra + '</span>' : '';
                     return '<a class="tc-att-img" href="' + a.url + '" data-lightbox><img src="' + a.url + '" alt="' + esc(a.name) + '" loading="lazy">' + more + '</a>';
                 }).join('') + '</div>';
         }
@@ -1858,16 +1865,35 @@
     // ---------- Image lightbox ----------
     var lightbox = document.getElementById('tcLightbox');
     var lbImg = document.getElementById('tcLbImg');
+    var lbPrev = document.getElementById('tcLbPrev'), lbNext = document.getElementById('tcLbNext');
+    var lbImages = [], lbIndex = 0;
     if (lightbox) TCB(lightbox);
     function closeLightbox(){ if (lightbox) { lightbox.hidden = true; lbImg.src = ''; } }
+    function lbShow(){
+        if (!lbImages.length) return;
+        lbImg.src = lbImages[lbIndex];
+        var multi = lbImages.length > 1;
+        if (lbPrev) lbPrev.hidden = !multi;
+        if (lbNext) lbNext.hidden = !multi;
+    }
+    function lbNav(d){
+        if (lbImages.length < 2) return;
+        lbIndex = (lbIndex + d + lbImages.length) % lbImages.length;   // wrap around
+        lbShow();
+    }
     box.addEventListener('click', function (e) {
         var img = e.target.closest('.tc-att-img'); if (!img) return;
         e.preventDefault();
-        lbImg.src = img.getAttribute('href'); lightbox.hidden = false;
+        // Every image in the thread becomes navigable (including the hidden "+N" ones).
+        lbImages = Array.prototype.map.call(box.querySelectorAll('.tc-att-img'), function (a) { return a.getAttribute('href'); });
+        lbIndex = Math.max(0, lbImages.indexOf(img.getAttribute('href')));
+        lightbox.hidden = false; lbShow();
     });
     if (lightbox){
         document.getElementById('tcLbClose').addEventListener('click', closeLightbox);
         lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
+        if (lbPrev) lbPrev.addEventListener('click', function (e) { e.stopPropagation(); lbNav(-1); });
+        if (lbNext) lbNext.addEventListener('click', function (e) { e.stopPropagation(); lbNav(1); });
     }
 
     function postJson(url, data, method){
@@ -2470,6 +2496,7 @@
     box.addEventListener('scroll', function () { if (menu && !menu.hidden) closeMenu(); });
     TCD('keydown', function (e) {
         if (e.key === 'Escape'){ closeMenu(); if (fwdModal) fwdModal.hidden = true; closeLightbox(); closePicker(); }
+        else if (lightbox && !lightbox.hidden){ if (e.key === 'ArrowLeft') lbNav(-1); else if (e.key === 'ArrowRight') lbNav(1); }
     });
 
     var rc = document.getElementById('tcReplyCancel'); if (rc) rc.addEventListener('click', cancelReply);

@@ -72,17 +72,16 @@
             @php
                 $imgs  = $msg->attachments->filter(fn ($a) => $a->isImage())->values();
                 $files = $msg->attachments->filter(fn ($a) => ! $a->isImage())->values();
-                $imgShow  = $imgs->take(4);
-                $imgExtra = $imgs->count() - $imgShow->count();
+                $imgExtra = $imgs->count() - 4;
             @endphp
             <div class="tc-atts">
                 @if ($imgs->isNotEmpty())
                     <div class="tc-att-grid tc-att-grid--{{ min($imgs->count(), 4) }}">
-                        @foreach ($imgShow as $att)
+                        @foreach ($imgs as $att)
                             @php $u = route('admin.team-messages.attachment', $att->id); @endphp
                             <a class="tc-att-img" href="{{ $u }}" data-lightbox>
                                 <img src="{{ $u }}" alt="{{ $att->original_name }}" loading="lazy">
-                                @if ($imgExtra > 0 && $loop->last)<span class="tc-att-more">+{{ $imgExtra }}</span>@endif
+                                @if ($imgExtra > 0 && $loop->iteration === 4)<span class="tc-att-more">+{{ $imgExtra }}</span>@endif
                             </a>
                         @endforeach
                     </div>
