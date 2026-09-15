@@ -2992,6 +2992,199 @@
             });
         });
     }
+
+    // ============================================================
+    // Tier 1 — open a chat WITHOUT a full page reload (in-app swap).
+    // Scope: DM ↔ DM ↔ self only. They share one header structure and
+    // IS_GROUP stays false throughout, so no handler ever needs rebinding.
+    // Anything involving a GROUP (current or target), or any error, falls
+    // back to a normal navigation — so behaviour can never regress.
+    // ============================================================
+    var isSelf = @js($isSelf ?? false);
+    var OPEN_URL = @js(route('admin.team-messages.open'));
+
+    // Eligible only when neither the current thread nor the target is a group.
+    function swapEligible(targetIsGroup){ return !IS_GROUP && !targetIsGroup; }
+
+    function renderThreadMessages(list, hasMore){
+        box.innerHTML = '';
+        olderPill = null;
+        if (hasMore){
+            olderPill = document.createElement('div');
+            olderPill.className = 'tc-load-older'; olderPill.id = 'tcLoadOlder';
+            olderPill.innerHTML = '<button type="button">Load earlier messages</button>';
+            box.appendChild(olderPill);
+        }
+        if (!list || !list.length){
+            var empty = document.createElement('div');
+            empty.className = 'tc-thread-empty';
+            empty.innerHTML = '<div class="tc-thread-empty-emoji">👋</div><p>No messages yet — say hello!</p>';
+            box.appendChild(empty);
+            firstId = 0; lastId = 0; hasOlder = false; return;
+        }
+        var prevDay = null;
+        list.forEach(function (m){
+            if (m.dayKey && m.dayKey !== prevDay){ box.appendChild(makeDaysep(m.dayKey, m.day)); prevDay = m.dayKey; }
+            box.appendChild(buildRow(m));
+        });
+        firstId = parseInt(list[0].id, 10) || 0;
+        lastId  = parseInt(list[list.length - 1].id, 10) || 0;
+        hasOlder = !!hasMore;
+    }
+
+    function renderPins(pins){
+        var head = document.querySelector('.tc-thread-head');
+        var old = document.getElementById('tcPinned'); if (old) old.remove();
+        if (!pins || !pins.length || !head) return;
+        var latest = pins[0];
+        var items = pins.map(function (p){
+            return '<div class="tc-pinned-item" data-goto="' + p.id + '"><span class="tc-pinned-text">' + esc(p.text) + '</span>'
+                + '<button type="button" class="tc-pinned-x" data-unpin="' + p.id + '" title="Unpin">&times;</button></div>';
+        }).join('');
+        var bar = document.createElement('div'); bar.className = 'tc-pinned'; bar.id = 'tcPinned';
+        bar.innerHTML = '<button type="button" class="tc-pinned-head" id="tcPinnedHead">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>'
+            + '<span class="tc-pinned-latest">' + esc(latest.text) + '</span>'
+            + (pins.length > 1 ? '<span class="tc-pinned-count">' + pins.length + '</span>' : '')
+            + '</button><div class="tc-pinned-drop" id="tcPinnedDrop" hidden>' + items + '</div>';
+        head.parentNode.insertBefore(bar, head.nextSibling);
+    }
+    // Delegated pinned interactions on the (stable) thread section survive a rebuilt bar.
+    var threadSection = box.closest('.tc-thread');
+    if (threadSection) threadSection.addEventListener('click', function (e){
+        var hd = e.target.closest('#tcPinnedHead');
+        if (hd){ var dp = document.getElementById('tcPinnedDrop'); if (dp) dp.hidden = !dp.hidden; return; }
+        var un = e.target.closest('[data-unpin]');
+        if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res){ if (res && res.ok){ var it = un.closest('.tc-pinned-item'); if (it) it.remove(); } else toast('Could not unpin — try again'); }); return; }
+        var go = e.target.closest('.tc-pinned-drop [data-goto]');
+        if (go){ var t = box.querySelector('.tc-msg[data-id="' + go.dataset.goto + '"]'); if (t){ t.scrollIntoView({ behavior:'smooth', block:'center' }); t.classList.add('tc-flash'); setTimeout(function(){ t.classList.remove('tc-flash'); }, 1300); } var dp2 = document.getElementById('tcPinnedDrop'); if (dp2) dp2.hidden = true; }
+    });
+    // Swap-created "Load earlier" pills work via delegation (guarded loadOlder is idempotent).
+    box.addEventListener('click', function (e){ if (e.target.closest('#tcLoadOlder button')) loadOlder(); });
+
+    function updateDmHeader(data){
+        var head = document.querySelector('.tc-thread-head'); if (!head) return false;
+        var av = head.querySelector('.tc-av'); if (!av) return false;   // a group head — never reached (eligibility bails)
+        var avi = data.avatar
+            ? '<span class="tc-avatar sm has-img"><img src="' + data.avatar + '" alt=""></span>'
+            : '<span class="tc-avatar sm" style="background:' + (data.color || '#64748b') + '">' + esc(data.mono || '?') + '</span>';
+        if (!data.isSelf) avi += '<i class="tc-dot ' + (data.online ? 'on' : '') + '" id="tcHeaderDot"></i>';
+        av.innerHTML = avi;
+        var nm = head.querySelector('.tc-th-name'); if (nm) nm.textContent = data.title;
+        var seen = document.getElementById('tcHeaderSeen'); if (seen){ seen.textContent = data.subtitle || ''; seen.classList.toggle('online', !!data.online); }
+        var bell = document.getElementById('tcBell'); if (bell) bell.dataset.level = data.notifyLevel || 'all';
+        return true;
+    }
+
+    function updateComposerTarget(data){
+        var conv = form.querySelector('input[name="conversation_id"]');
+        var rcpt = form.querySelector('input[name="recipient_id"]');
+        if (data.conversation_id){
+            if (rcpt) rcpt.remove();
+            if (!conv){ conv = document.createElement('input'); conv.type = 'hidden'; conv.name = 'conversation_id'; form.appendChild(conv); }
+            conv.value = data.conversation_id;
+        } else {
+            if (conv) conv.remove();
+            if (!rcpt){ rcpt = document.createElement('input'); rcpt.type = 'hidden'; rcpt.name = 'recipient_id'; form.appendChild(rcpt); }
+            rcpt.value = data.peer_id || '';
+        }
+        input.placeholder = data.placeholder || 'Message…';
+    }
+
+    function markActiveRow(){
+        document.querySelectorAll('.tc-contact.active').forEach(function (r){ r.classList.remove('active'); });
+        var row = CONV ? document.querySelector('.tc-contact[data-conversation="' + CONV + '"]')
+                       : (PEER_ID ? document.querySelector('.tc-contact[data-peer="' + PEER_ID + '"]') : null);
+        if (row){
+            row.classList.add('active');
+            // Opening marks it read — clear its unread/mention affordances immediately.
+            var b = row.querySelector('[data-badge]'); if (b) b.remove();
+            row.dataset.unread = '0';
+            row.querySelectorAll('.tc-c-preview, .tc-c-time').forEach(function (el){ el.classList.remove('unread'); });
+            var mb = row.querySelector('.tc-mention-badge'); if (mb) mb.remove();
+        }
+    }
+
+    // Apply an open() payload to the open thread panel, in place (no reload).
+    function applyOpen(data, url, push){
+        CONV = data.conversation_id ? String(data.conversation_id) : '';
+        PEER_ID = data.peer_id ? String(data.peer_id) : '';
+        PEER_NAME = data.isSelf ? '' : (data.title || '');
+        isSelf = !!data.isSelf;
+        WATERMARKS = data.watermarks || {};
+        MENTIONABLES = data.mentionables || [];
+        statesSince = '';
+        box.dataset.conversation = CONV;
+        if (PEER_ID) box.dataset.peer = PEER_ID; else box.removeAttribute('data-peer');
+        box.dataset.group = '0';
+
+        updateDmHeader(data);
+        updateComposerTarget(data);
+        cancelReply(); if (typeof cancelEdit === 'function') cancelEdit();
+        if (typeof clearPending === 'function') clearPending();
+        pendingMentions = [];
+
+        renderThreadMessages(data.messages || [], data.hasMore);
+        renderPins(data.pinned || []);
+        applyReadReceipts(data.readUpTo);
+        updateSeen();
+        toBottom();
+
+        if (typeof switchTab === 'function') switchTab('chat');
+        galleryData = null;   // per-conversation; re-fetched when Files/Photos is opened
+
+        markActiveRow();
+        if (window.ApexRealtime && CONV){
+            var looking = !document.hidden && document.hasFocus();
+            window.ApexRealtime.setActive(CONV, looking);
+            if (looking) window.ApexRealtime.markConversationRead(CONV);
+        }
+        if (CONV) window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: CONV, peer: PEER_ID } }));
+        if (push && url && window.history && history.pushState){ try { history.pushState({ tcUrl: url }, '', url); } catch (e) {} }
+        input.focus();
+    }
+
+    // Expose for the sidebar click interceptor (and later the prefetch/cache tiers).
+    window.tcApplyOpen   = applyOpen;
+    window.tcSwapEligible = swapEligible;
+    window.tcOpenUrl     = OPEN_URL;
+})();
+
+// Tier 1 — intercept sidebar clicks and open the chat in place instead of a full reload.
+(function () {
+    var contacts = document.getElementById('tcContacts');
+    if (!contacts) return;
+
+    function openInPlace(a){
+        var q;
+        if (a.dataset.self === '1') q = 'self=1';
+        else if (a.dataset.conversation) q = 'c=' + encodeURIComponent(a.dataset.conversation);
+        else if (a.dataset.peer) q = 'with=' + encodeURIComponent(a.dataset.peer);
+        else return false;
+        var url = a.getAttribute('href');
+        fetch(window.tcOpenUrl + '?' + q + '&_=' + Date.now(),
+            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data){ window.tcApplyOpen(data, url, true); })
+            .catch(function (){ location.href = url; });   // graceful fallback: behave exactly like today
+        return true;
+    }
+
+    contacts.addEventListener('click', function (e){
+        // Only when the in-place machinery is present (a thread is open) and eligible.
+        if (!window.tcApplyOpen || !window.tcOpenUrl) return;
+        if (e.defaultPrevented) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return;   // let "open in new tab" work
+        if (e.target.closest('.tc-row-actions')) return;   // fav/mute buttons keep working
+        var a = e.target.closest('a.tc-contact'); if (!a) return;
+        var targetIsGroup = a.dataset.group === '1';
+        if (!window.tcSwapEligible(targetIsGroup)) return;   // groups (either side) → normal navigation
+        if (a.classList.contains('active')) { e.preventDefault(); return; }   // already open
+        if (openInPlace(a)) e.preventDefault();
+    });
+
+    // Back/forward across in-place opens: reload to the correct URL (simple + correct).
+    window.addEventListener('popstate', function (e){ if (e.state && e.state.tcUrl) location.reload(); });
 })();
 
 // New-group modal — lives outside the thread scope so it works with no chat open.
