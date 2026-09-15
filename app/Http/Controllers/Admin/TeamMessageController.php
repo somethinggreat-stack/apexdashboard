@@ -9,6 +9,7 @@ use App\Models\MessageAttachment;
 use App\Models\TeamMessage;
 use App\Services\WebPushSender;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -589,6 +590,7 @@ class TeamMessageController extends Controller
     public function notifications(Request $request)
     {
         $me = Auth::guard('admin')->user();
+        $this->maybePurgeRetention();
         $after = (int) $request->query('after', 0);
         $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
 
@@ -1158,6 +1160,28 @@ class TeamMessageController extends Controller
     private function isSelfConv(?Conversation $conv): bool
     {
         return $conv && str_starts_with((string) $conv->dm_key, 'self:');
+    }
+
+    /**
+     * Cron-less 7-day retention: at most once an hour, triggered by normal chat traffic and run
+     * AFTER the response so it never slows a request. It runs on whichever server the app is
+     * talking to (the chat subdomain), so THAT server's files are cleared too — no cron needed.
+     * The marker lives in this docroot's storage, so each server keeps its own hourly cadence.
+     */
+    private function maybePurgeRetention(): void
+    {
+        if (app()->runningUnitTests()) {
+            return;   // the purge is covered by PurgeOldTeamChatTest; don't run it mid-suite
+        }
+        $marker = storage_path('framework/team-chat-purge.at');
+        if (is_file($marker) && (time() - filemtime($marker)) < 3600) {
+            return;   // already ran within the last hour on this server
+        }
+        @touch($marker);   // claim this hour (best-effort; the purge is idempotent if it double-runs)
+
+        app()->terminating(function () {
+            try { Artisan::call('team-chat:purge'); } catch (\Throwable $e) {}
+        });
     }
 
     private function participantMessage(Admin $me, int $id): TeamMessage
