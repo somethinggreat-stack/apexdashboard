@@ -812,6 +812,99 @@ class TeamMessageController extends Controller
         return response()->download($path, $attachment->original_name, $headers + ['Content-Type' => 'application/octet-stream']);
     }
 
+    // ---------------------------------------------------------------- avatars
+
+    /** Stream a teammate's uploaded profile photo (org-scoped, private disk). */
+    public function avatar(Request $request, Admin $admin)
+    {
+        $me = Auth::guard('admin')->user();
+        // Only people in my org (super + their VAs), or myself.
+        abort_unless($admin->id === $me->id || $admin->dataOwnerId() === $me->dataOwnerId(), 403);
+        abort_unless($admin->avatar && str_starts_with($admin->avatar, 'team-avatars/'), 404);
+
+        $disk = Storage::disk('private');
+        abort_unless($disk->exists($admin->avatar), 404);
+
+        return response()->file($disk->path($admin->avatar), [
+            'Content-Type'           => 'image/jpeg',
+            'Cache-Control'          => 'private, max-age=0, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** Replace my own profile photo with an uploaded (already cropped) image. */
+    public function avatarUpdate(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],   // 8 MB
+        ]);
+
+        $img = $request->file('photo');
+        // Re-encode to a normalised square JPEG so we never store an oversized or odd
+        // format, and every avatar is served as a clean image/jpeg.
+        $data = $this->normaliseAvatar($img->getRealPath());
+        if ($data === null) {
+            throw ValidationException::withMessages(['photo' => 'That image could not be processed.']);
+        }
+
+        $path = 'team-avatars/' . $me->id . '.jpg';
+        Storage::disk('private')->put($path, $data);
+
+        $me->forceFill(['avatar' => $path])->save();
+
+        return response()->json(['ok' => true, 'url' => $me->fresh()->avatarUrl()]);
+    }
+
+    /** Remove my photo — falls back to a monogram (sentinel "-"). */
+    public function avatarRemove(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        if ($me->avatar && str_starts_with($me->avatar, 'team-avatars/')) {
+            Storage::disk('private')->delete($me->avatar);
+        }
+        $me->forceFill(['avatar' => '-'])->save();
+
+        return response()->json(['ok' => true, 'url' => $me->fresh()->avatarUrl()]);
+    }
+
+    /** Downscale + centre-crop to a square JPEG (max 512px). Returns binary or null. */
+    private function normaliseAvatar(string $srcPath): ?string
+    {
+        if (! function_exists('imagecreatetruecolor')) {
+            // No GD — fall back to storing the original bytes as-is.
+            $raw = @file_get_contents($srcPath);
+
+            return $raw !== false ? $raw : null;
+        }
+        $info = @getimagesize($srcPath);
+        if (! $info) return null;
+
+        switch ($info[2]) {
+            case IMAGETYPE_JPEG: $src = @imagecreatefromjpeg($srcPath); break;
+            case IMAGETYPE_PNG:  $src = @imagecreatefrompng($srcPath); break;
+            case IMAGETYPE_WEBP: $src = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($srcPath) : null; break;
+            default: return null;
+        }
+        if (! $src) return null;
+
+        $w = imagesx($src); $h = imagesy($src);
+        $side = min($w, $h);
+        $sx = (int) (($w - $side) / 2);
+        $sy = (int) (($h - $side) / 2);
+        $out = min(512, $side);
+
+        $dst = imagecreatetruecolor($out, $out);
+        imagecopyresampled($dst, $src, 0, 0, $sx, $sy, $out, $out, $side, $side);
+
+        ob_start();
+        imagejpeg($dst, null, 88);
+        $bytes = ob_get_clean();
+        imagedestroy($src); imagedestroy($dst);
+
+        return $bytes ?: null;
+    }
+
     // ---------------------------------------------------------------- groups
 
     public function storeGroup(Request $request)

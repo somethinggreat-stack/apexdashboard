@@ -13,7 +13,7 @@ class Admin extends Authenticatable
     // NOTE: role + parent_admin_id are intentionally NOT mass-assignable — they
     // are set only via explicit assignment (seeder / UserController) so a stray
     // create()/update() can never escalate an account. Security invariant.
-    protected $fillable = ['email', 'password', 'full_name'];
+    protected $fillable = ['email', 'password', 'full_name', 'avatar'];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['password' => 'hashed', 'last_seen_at' => 'datetime'];
 
@@ -91,6 +91,16 @@ class Admin extends Authenticatable
      */
     public function avatarUrl(): ?string
     {
+        // The person deliberately removed their photo — show a monogram.
+        if ($this->avatar === '-') {
+            return null;
+        }
+        // A photo they uploaded themselves is streamed through a guarded route
+        // (stored on the private disk, not in public/). Cache-bust on each change.
+        if (! empty($this->avatar) && str_starts_with($this->avatar, 'team-avatars/')) {
+            return route('admin.team-messages.avatar', ['admin' => $this->id])
+                . '?v=' . optional($this->updated_at)->timestamp;
+        }
         if (! empty($this->avatar)) {
             return $this->versionedAsset('img/team/' . $this->avatar);
         }

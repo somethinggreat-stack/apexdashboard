@@ -24,10 +24,12 @@
     <aside class="tc-list">
         <div class="tc-list-head">
             <div class="tc-me">
-                <span class="tc-me-av">{!! $avatar($me, 'sm') !!}<i class="tc-me-dot"></i></span>
+                <button type="button" class="tc-me-av" id="tcMeAvatar" title="Change your photo" aria-label="Change your photo">
+                    {!! $avatar($me, 'sm') !!}<i class="tc-me-dot"></i>
+                    <span class="tc-me-av-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+                </button>
                 <div class="tc-me-info">
                     <span class="tc-me-name">{{ $me->full_name }}</span>
-                    <span class="tc-me-sub"><i class="tc-me-online"></i>Active</span>
                 </div>
                 <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
@@ -273,6 +275,38 @@
             {{-- Downloads dock — shows live progress + a saved/failed state (moved to <body> by JS) --}}
             <div class="tc-dl-dock" id="tcDlDock" hidden></div>
 
+            {{-- Profile-photo menu + cropper (moved to <body> by JS) --}}
+            <div class="tc-avm" id="tcAvMenu" hidden>
+                <button type="button" id="tcAvChange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Change photo
+                </button>
+                <button type="button" class="danger" id="tcAvRemove">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Remove photo
+                </button>
+            </div>
+            <input type="file" id="tcAvFile" accept="image/png,image/jpeg,image/webp" hidden>
+            <div class="tc-crop-mask" id="tcCropMask" hidden>
+                <div class="tc-crop-card">
+                    <h3 class="tc-crop-title">Adjust your photo</h3>
+                    <p class="tc-crop-hint">Drag to move · use the slider to zoom. Keep your face inside the circle.</p>
+                    <div class="tc-crop-stage" id="tcCropStage">
+                        <img id="tcCropImg" alt="">
+                        <div class="tc-crop-ring"></div>
+                    </div>
+                    <div class="tc-crop-zoom">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                        <input type="range" id="tcCropZoom" min="1" max="4" step="0.01" value="1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+                    </div>
+                    <div class="tc-crop-actions">
+                        <button type="button" class="tc-crop-cancel" id="tcCropCancel">Cancel</button>
+                        <button type="button" class="tc-crop-save" id="tcCropSave">Save photo</button>
+                    </div>
+                </div>
+            </div>
+
             {{-- Message action menu (WhatsApp-style). Moved to <body> by JS so position:fixed is exact. --}}
             <div class="tc-menu" id="tcMenu" hidden>
                 <div class="tc-menu-emoji" id="tcMenuEmoji"></div>
@@ -431,13 +465,41 @@
     .tc-list-head { padding:18px 18px 12px; border-bottom:1px solid var(--pro-line,#eef2f7); }
     /* Identity header — your avatar + name, with a compact New-group action. */
     .tc-me { display:flex; align-items:center; gap:11px; }
-    .tc-me-av { position:relative; flex:none; }
+    .tc-me-av { position:relative; flex:none; padding:0; border:0; background:none; cursor:pointer; line-height:0; border-radius:13px; }
     .tc-me-av .tc-avatar { width:42px; height:42px; border-radius:13px; font-size:15px; }
-    .tc-me-dot { position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2.5px var(--pro-surface,#fff); }
+    .tc-me-av-edit { position:absolute; inset:0; border-radius:13px; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); opacity:0; transition:opacity .14s; }
+    .tc-me-av-edit svg { width:18px; height:18px; color:#fff; }
+    .tc-me-av:hover .tc-me-av-edit, .tc-me-av:focus-visible .tc-me-av-edit { opacity:1; }
+    .tc-me-dot { position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2.5px var(--pro-surface,#fff); pointer-events:none; z-index:1; }
     .tc-me-info { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.25; }
     .tc-me-name { font-size:15.5px; font-weight:800; color:var(--pro-text,#0f172a); letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .tc-me-sub { font-size:12px; font-weight:600; color:#94a3b8; display:flex; align-items:center; }
-    .tc-me-online { width:7px; height:7px; border-radius:50%; background:#22c55e; margin-right:5px; flex:none; }
+
+    /* Avatar change menu + cropper */
+    .tc-avm { position:fixed; z-index:1006; min-width:190px; background:#fff; border:1px solid var(--pro-line,#e6ebf2); border-radius:13px; box-shadow:0 20px 48px -16px rgba(15,23,42,.4); padding:6px; }
+    .tc-avm[hidden] { display:none !important; }
+    .tc-avm button { display:flex; align-items:center; gap:10px; width:100%; border:0; background:none; padding:9px 11px; border-radius:9px; font:600 13.5px system-ui,sans-serif; color:var(--pro-text,#0f172a); cursor:pointer; text-align:left; }
+    .tc-avm button:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-avm button.danger { color:#e11d48; }
+    .tc-avm button.danger:hover { background:rgba(244,63,94,.1); }
+    .tc-avm svg { width:17px; height:17px; flex:none; }
+    .tc-crop-mask { position:fixed; inset:0; z-index:1007; background:rgba(8,11,22,.7); display:flex; align-items:center; justify-content:center; padding:20px; }
+    .tc-crop-mask[hidden] { display:none !important; }
+    .tc-crop-card { width:360px; max-width:100%; background:#fff; border-radius:18px; padding:20px; box-shadow:0 30px 70px rgba(0,0,0,.4); }
+    .tc-crop-title { font:800 16px system-ui,sans-serif; color:#0f172a; margin:0 0 4px; }
+    .tc-crop-hint { font-size:12.5px; color:#64748b; margin:0 0 14px; }
+    .tc-crop-stage { position:relative; width:280px; height:280px; max-width:100%; margin:0 auto; border-radius:14px; overflow:hidden; background:#0f172a; touch-action:none; cursor:grab; }
+    .tc-crop-stage.drag { cursor:grabbing; }
+    .tc-crop-stage img { position:absolute; left:0; top:0; transform-origin:0 0; user-select:none; -webkit-user-drag:none; pointer-events:none; max-width:none; }
+    .tc-crop-ring { position:absolute; inset:0; pointer-events:none; box-shadow:0 0 0 9999px rgba(15,23,42,.55); border-radius:50%; }
+    .tc-crop-ring::after { content:''; position:absolute; inset:0; border-radius:50%; border:2px solid rgba(255,255,255,.85); }
+    .tc-crop-zoom { display:flex; align-items:center; gap:10px; margin:16px 2px 4px; }
+    .tc-crop-zoom svg { width:16px; height:16px; color:#94a3b8; flex:none; }
+    .tc-crop-zoom input[type=range] { flex:1; accent-color:#6366f1; }
+    .tc-crop-actions { display:flex; gap:10px; margin-top:14px; }
+    .tc-crop-actions button { flex:1; border:0; border-radius:11px; padding:11px; font:700 13.5px system-ui,sans-serif; cursor:pointer; }
+    .tc-crop-cancel { background:var(--pro-soft,#f1f5f9); color:#334155; }
+    .tc-crop-save { background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; }
+    .tc-crop-save:disabled { opacity:.6; cursor:default; }
     .tc-newgroup { flex:none; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; border-radius:12px; color:#4f46e5; background:var(--pro-surface,#fff); transition:background .12s, border-color .12s, transform .1s; }
     .tc-newgroup:hover { background:var(--pro-soft,#f1f5f9); border-color:#c7d2fe; transform:translateY(-1px); }
     .tc-newgroup:active { transform:translateY(0); }
@@ -2082,6 +2144,105 @@
         var nm = f.querySelector('.tc-att-name'); nm = nm ? nm.textContent : '';
         window.tcDownload(f.getAttribute('href'), nm);
     });
+
+    // ---------- Profile photo: change (with a face-crop frame) / remove ----------
+    (function () {
+        var avBtn = document.getElementById('tcMeAvatar'); if (!avBtn) return;
+        var menu = document.getElementById('tcAvMenu'), fileInp = document.getElementById('tcAvFile');
+        var mask = document.getElementById('tcCropMask'), stage = document.getElementById('tcCropStage');
+        var cImg = document.getElementById('tcCropImg'), zoom = document.getElementById('tcCropZoom');
+        var saveBtn = document.getElementById('tcCropSave'), cancelBtn = document.getElementById('tcCropCancel');
+        var chBtn = document.getElementById('tcAvChange'), rmBtn = document.getElementById('tcAvRemove');
+        [menu, mask, fileInp].forEach(function (n) { if (n) TCB(n); });
+        var UP_URL = @json(route('admin.team-messages.avatar.update'));
+        var RM_URL = @json(route('admin.team-messages.avatar.remove'));
+        var CSRF = (document.querySelector('meta[name=csrf-token]') || {}).content || (typeof csrf !== 'undefined' ? csrf : '');
+        var STAGE = 280;   // stage px (matches CSS)
+
+        // ----- menu open / close -----
+        function openMenu(){
+            var r = avBtn.getBoundingClientRect();
+            menu.style.left = r.left + 'px'; menu.style.top = (r.bottom + 8) + 'px';
+            menu.hidden = false;
+        }
+        function closeMenu(){ menu.hidden = true; }
+        avBtn.addEventListener('click', function (e){ e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu(); });
+        document.addEventListener('click', function (e){ if (!menu.hidden && !menu.contains(e.target) && e.target !== avBtn) closeMenu(); });
+        chBtn.addEventListener('click', function (){ closeMenu(); fileInp.click(); });
+        rmBtn.addEventListener('click', function (){ closeMenu(); removePhoto(); });
+
+        // ----- cropper state -----
+        var img = new Image(), natW = 0, natH = 0, base = 1, tx = 0, ty = 0;
+        function scale(){ return base * parseFloat(zoom.value || '1'); }
+        function clamp(){
+            var s = scale(), iw = natW * s, ih = natH * s;
+            tx = Math.min(0, Math.max(STAGE - iw, tx));
+            ty = Math.min(0, Math.max(STAGE - ih, ty));
+        }
+        function paint(){ clamp(); cImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale() + ')'; }
+
+        fileInp.addEventListener('change', function (){
+            var f = fileInp.files && fileInp.files[0]; if (!f) return;
+            if (!/^image\//.test(f.type)) { toast('Please choose an image'); return; }
+            var url = URL.createObjectURL(f);
+            img = new Image();
+            img.onload = function (){
+                natW = img.naturalWidth; natH = img.naturalHeight;
+                base = Math.max(STAGE / natW, STAGE / natH);   // cover the stage
+                cImg.src = url; cImg.style.width = natW + 'px'; cImg.style.height = natH + 'px';
+                zoom.value = '1';
+                tx = (STAGE - natW * base) / 2; ty = (STAGE - natH * base) / 2;
+                paint(); mask.hidden = false;
+            };
+            img.onerror = function (){ toast('That image could not be opened'); };
+            img.src = url;
+            fileInp.value = '';
+        });
+        zoom.addEventListener('input', function (){
+            // Zoom around the stage centre so the face stays put.
+            var cx = STAGE / 2, cy = STAGE / 2, prev = cImg._s || scale();
+            var ns = scale(), k = ns / prev;
+            tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k;
+            cImg._s = ns; paint();
+        });
+
+        // ----- drag to pan (mouse + touch via pointer events) -----
+        var dragging = false, px = 0, py = 0;
+        stage.addEventListener('pointerdown', function (e){ dragging = true; px = e.clientX; py = e.clientY; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); });
+        stage.addEventListener('pointermove', function (e){ if (!dragging) return; tx += e.clientX - px; ty += e.clientY - py; px = e.clientX; py = e.clientY; paint(); });
+        function endDrag(){ dragging = false; stage.classList.remove('drag'); }
+        stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+
+        cancelBtn.addEventListener('click', function (){ mask.hidden = true; });
+        mask.addEventListener('click', function (e){ if (e.target === mask) mask.hidden = true; });
+
+        // ----- export the crop → upload -----
+        saveBtn.addEventListener('click', function (){
+            var OUT = 320, s = scale();
+            var cv = document.createElement('canvas'); cv.width = OUT; cv.height = OUT;
+            var ctx = cv.getContext('2d');
+            // Map the visible stage square back to source-image pixels.
+            var sx = -tx / s, sy = -ty / s, sSide = STAGE / s;
+            ctx.drawImage(img, sx, sy, sSide, sSide, 0, 0, OUT, OUT);
+            saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+            cv.toBlob(function (blob){
+                if (!blob) { saveBtn.disabled = false; saveBtn.textContent = 'Save photo'; toast('Could not prepare the image'); return; }
+                var fd = new FormData();
+                fd.append('_token', CSRF); fd.append('photo', blob, 'avatar.jpg');
+                fetch(UP_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd })
+                    .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
+                    .then(function (){ toast('Photo updated'); setTimeout(function(){ location.reload(); }, 400); })
+                    .catch(function (){ saveBtn.disabled = false; saveBtn.textContent = 'Save photo'; toast('Could not save photo — try again'); });
+            }, 'image/jpeg', 0.9);
+        });
+
+        function removePhoto(){
+            fetch(RM_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-HTTP-Method-Override': 'DELETE', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + encodeURIComponent(CSRF) + '&_method=DELETE' })
+                .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (){ toast('Photo removed'); setTimeout(function(){ location.reload(); }, 400); })
+                .catch(function (){ toast('Could not remove photo'); });
+        }
+    })();
 
     // ---------- Header search: messages + file names across every chat ----------
     (function () {

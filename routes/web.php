@@ -181,6 +181,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
         Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');
+        Route::get('team-messages/avatar/{admin}', [Admin\TeamMessageController::class, 'avatar'])->name('team-messages.avatar');
+        Route::post('team-messages/avatar', [Admin\TeamMessageController::class, 'avatarUpdate'])->name('team-messages.avatar.update');
+        Route::delete('team-messages/avatar', [Admin\TeamMessageController::class, 'avatarRemove'])->name('team-messages.avatar.remove');
         Route::post('team-messages/react', [Admin\TeamMessageController::class, 'react'])->name('team-messages.react');
         Route::get('team-messages/search', [Admin\TeamMessageController::class, 'search'])->name('team-messages.search');
         Route::post('team-messages/favorite', [Admin\TeamMessageController::class, 'favorite'])->name('team-messages.favorite');
