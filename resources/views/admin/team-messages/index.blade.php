@@ -1244,6 +1244,10 @@
     // sidebar + notify wiring. When a message lands in THIS open conversation it asks the
     // thread to fetch the full message(s).
     TCW('apex:thread-poll', function () { poll(true); });
+    // Coming back to the window (focus) or on visibility restore → refresh the OPEN thread now,
+    // so its newest messages are there instantly without waiting for the 3s timer or a click.
+    TCW('focus', function () { poll(true); });
+    TCD('visibilitychange', function () { if (!document.hidden) poll(true); });
 
     // ---------- Message actions: menu, react, reply, copy, forward, delete ----------
     var menu     = document.getElementById('tcMenu');

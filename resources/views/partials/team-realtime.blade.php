@@ -332,7 +332,7 @@
 
     // ---------- the poll loop (leader hits the network; others ride broadcasts) ----------
     var timer = null;
-    function schedule(){ clearTimeout(timer); timer = setTimeout(loop, document.hidden ? 15000 : 4000); }
+    function schedule(){ clearTimeout(timer); timer = setTimeout(loop, document.hidden ? 8000 : 4000); }
     function loop(){
         claim();
         if (!amLeader()){ schedule(); return; }   // a peer is the poller — we update via BroadcastChannel
@@ -382,6 +382,16 @@
     refreshEnablePill();
     schedule();
     document.addEventListener('visibilitychange', function () { if (!document.hidden){ claim(); clearTimeout(timer); loop(); } });
+    // A window that regains FOCUS (even if it was never "hidden", e.g. it was just occluded
+    // behind another app) must catch up instantly — so new messages show the moment you come
+    // back, without needing to click anything. Belt-and-suspenders alongside the desktop app's
+    // no-background-throttle flags.
+    window.addEventListener('focus', function () { claim(); clearTimeout(timer); loop(); });
+    // Any pointer/key interaction also nudges a catch-up poll (cheap; de-duped by the timer).
+    var lastNudge = 0;
+    function nudge(){ var n = Date.now(); if (n - lastNudge < 1500) return; lastNudge = n; claim(); clearTimeout(timer); loop(); }
+    window.addEventListener('pointerdown', nudge, true);
+    window.addEventListener('keydown', nudge, true);
     // A user gesture is the only time we may prompt; make the whole page a one-shot enabler when still "default".
     if (permission() === 'default') window.addEventListener('pointerdown', function once(){ window.removeEventListener('pointerdown', once); askPermission(); }, { once: true });
 

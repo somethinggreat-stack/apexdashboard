@@ -4,9 +4,9 @@
     .tc-list, .tc-thread { background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:18px; overflow:hidden; display:flex; flex-direction:column; }
     .tc-list-head { padding:18px 18px 12px; border-bottom:1px solid var(--pro-line,#eef2f7); }
     /* Identity header — your avatar + name, with a compact New-group action. */
-    .tc-me { display:flex; align-items:center; gap:11px; }
-    .tc-me-av { position:relative; flex:none; padding:0; border:0; background:none; cursor:pointer; line-height:0; border-radius:13px; }
-    .tc-me-av .tc-avatar { width:42px; height:42px; border-radius:13px; font-size:15px; }
+    .tc-me { display:flex; align-items:center; gap:8px; }
+    .tc-me-av { position:relative; flex:none; padding:0; border:0; background:none; cursor:pointer; line-height:0; border-radius:11px; }
+    .tc-me-av .tc-avatar { width:38px; height:38px; border-radius:11px; font-size:14px; }
     .tc-me-av-edit { position:absolute; inset:0; border-radius:13px; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); opacity:0; transition:opacity .14s; }
     .tc-me-av-edit svg { width:18px; height:18px; color:#fff; }
     .tc-me-av:hover .tc-me-av-edit, .tc-me-av:focus-visible .tc-me-av-edit { opacity:1; }
@@ -40,10 +40,10 @@
     .tc-crop-cancel { background:var(--pro-soft,#f1f5f9); color:#334155; }
     .tc-crop-save { background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; }
     .tc-crop-save:disabled { opacity:.6; cursor:default; }
-    .tc-newgroup { flex:none; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; border-radius:12px; color:#4f46e5; background:var(--pro-surface,#fff); transition:background .12s, border-color .12s, transform .1s; }
+    .tc-newgroup { flex:none; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid var(--pro-line,#e6ebf2); cursor:pointer; border-radius:9px; color:#4f46e5; background:var(--pro-surface,#fff); transition:background .12s, border-color .12s, transform .1s; }
     .tc-newgroup:hover { background:var(--pro-soft,#f1f5f9); border-color:#c7d2fe; transform:translateY(-1px); }
     .tc-newgroup:active { transform:translateY(0); }
-    .tc-newgroup svg { width:18px; height:18px; }
+    .tc-newgroup svg { width:15px; height:15px; }
     .tc-logout { color:#ef4444; text-decoration:none; }
     .tc-logout:hover { background:rgba(239,68,68,.09); border-color:rgba(239,68,68,.4); }
     :root[data-theme="dark"] .tc-logout { color:#f87171; }
