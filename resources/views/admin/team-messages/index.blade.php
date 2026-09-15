@@ -270,6 +270,9 @@
                 <button type="button" class="tc-lb-nav tc-lb-next" id="tcLbNext" aria-label="Next" hidden>&#8250;</button>
             </div>
 
+            {{-- Downloads dock — shows live progress + a saved/failed state (moved to <body> by JS) --}}
+            <div class="tc-dl-dock" id="tcDlDock" hidden></div>
+
             {{-- Message action menu (WhatsApp-style). Moved to <body> by JS so position:fixed is exact. --}}
             <div class="tc-menu" id="tcMenu" hidden>
                 <div class="tc-menu-emoji" id="tcMenuEmoji"></div>
@@ -958,6 +961,29 @@
     .tc-lb-nav[hidden] { display:none !important; }
     .tc-lb-x { position:fixed; top:20px; right:24px; width:44px; height:44px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:26px; line-height:1; cursor:pointer; }
     .tc-lb-x:hover { background:rgba(255,255,255,.25); }
+
+    /* Downloads dock — bottom-right stack of progress cards */
+    .tc-dl-dock { position:fixed; right:20px; bottom:20px; z-index:1004; display:flex; flex-direction:column; gap:10px; width:320px; max-width:calc(100vw - 40px); pointer-events:none; }
+    .tc-dl-dock[hidden] { display:none !important; }
+    .tc-dl-card { pointer-events:auto; background:#fff; border:1px solid rgba(148,163,184,.28); border-radius:14px; padding:12px 13px; box-shadow:0 16px 40px -12px rgba(15,23,42,.4); display:flex; align-items:center; gap:11px; transform:translateY(8px); opacity:0; transition:opacity .2s, transform .2s; }
+    .tc-dl-card.in { transform:translateY(0); opacity:1; }
+    .tc-dl-card.out { opacity:0; transform:translateY(8px); }
+    .tc-dl-ic { flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:rgba(99,102,241,.12); color:#4f46e5; }
+    .tc-dl-ic svg { width:19px; height:19px; }
+    .tc-dl-card.done .tc-dl-ic { background:rgba(16,185,129,.14); color:#059669; }
+    .tc-dl-card.fail .tc-dl-ic { background:rgba(244,63,94,.14); color:#e11d48; }
+    .tc-dl-body { flex:1 1 auto; min-width:0; }
+    .tc-dl-name { font-size:13px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-dl-sub { font-size:11.5px; color:#64748b; margin-top:2px; }
+    .tc-dl-track { margin-top:6px; height:5px; border-radius:99px; background:rgba(148,163,184,.24); overflow:hidden; }
+    .tc-dl-track i { display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,#6366f1,#8b5cf6); transition:width .15s ease; }
+    .tc-dl-card.done .tc-dl-track i { background:#10b981; }
+    .tc-dl-card.indet .tc-dl-track i { width:35% !important; animation:tcDlSlide 1s linear infinite; }
+    @keyframes tcDlSlide { 0%{ margin-left:-35%; } 100%{ margin-left:100%; } }
+    .tc-dl-x { flex:none; width:26px; height:26px; border:0; border-radius:8px; background:transparent; color:#94a3b8; font-size:18px; line-height:1; cursor:pointer; }
+    .tc-dl-x:hover { background:rgba(148,163,184,.16); color:#475569; }
+    :root[data-theme="dark"] .tc-dl-card { background:#141d33; border-color:#233150; }
+    :root[data-theme="dark"] .tc-dl-name { color:#e2e8f0; }
 
     :root[data-theme="dark"] .tc-att-file { background:rgba(20,29,51,.9); border-color:rgba(51,65,85,.6); color:#e2e8f0; }
     :root[data-theme="dark"] .tc-pending-chip { background:#141d33; border-color:#233150; }
@@ -1943,6 +1969,114 @@
         if (lbNext) lbNext.addEventListener('click', function (e) { e.stopPropagation(); lbNav(1); });
     }
 
+    // ---------- Downloads with visible progress + a saved / failed state ----------
+    // File clicks used to hand off to the webview and download silently. Now every
+    // download streams through here so the user sees it start, progress, and finish.
+    var dlDock = document.getElementById('tcDlDock');
+    if (dlDock) TCB(dlDock);
+    var DL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    var DONE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    var FAIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    function fmtBytes(n){
+        if (!n && n !== 0) return '';
+        if (n < 1024) return n + ' B';
+        if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+        if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+        return (n / 1073741824).toFixed(2) + ' GB';
+    }
+    // Prefer the real filename the server declares (Content-Disposition), else the hint.
+    function nameFromDisposition(cd, fallback){
+        if (cd){
+            var star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(cd);
+            if (star && star[1]) { try { return decodeURIComponent(star[1].trim().replace(/^"|"$/g, '')); } catch (e) {} }
+            var plain = /filename="?([^";]+)"?/i.exec(cd);
+            if (plain && plain[1]) return plain[1].trim();
+        }
+        return fallback || 'download';
+    }
+    function dlCard(name){
+        var el = document.createElement('div');
+        el.className = 'tc-dl-card indet';
+        el.innerHTML = '<span class="tc-dl-ic">' + DL_ICON + '</span>'
+            + '<span class="tc-dl-body"><span class="tc-dl-name"></span><span class="tc-dl-sub">Starting…</span>'
+            + '<span class="tc-dl-track"><i></i></span></span>'
+            + '<button type="button" class="tc-dl-x" aria-label="Dismiss">&times;</button>';
+        el.querySelector('.tc-dl-name').textContent = name || 'File';
+        dlDock.appendChild(el); dlDock.hidden = false;
+        requestAnimationFrame(function () { el.classList.add('in'); });
+        var bar = el.querySelector('.tc-dl-track i'), sub = el.querySelector('.tc-dl-sub');
+        var api = {
+            el: el,
+            setName: function (n) { el.querySelector('.tc-dl-name').textContent = n; },
+            progress: function (loaded, total) {
+                el.classList.remove('indet');
+                if (total) { bar.style.width = Math.round(loaded / total * 100) + '%'; sub.textContent = fmtBytes(loaded) + ' / ' + fmtBytes(total); }
+                else sub.textContent = fmtBytes(loaded) + ' downloaded';
+            },
+            done: function () {
+                el.classList.remove('indet'); el.classList.add('done');
+                bar.style.width = '100%'; sub.textContent = 'Saved to your Downloads';
+                el.querySelector('.tc-dl-ic').innerHTML = DONE_ICON;
+                dismiss(4500);
+            },
+            fail: function (msg) {
+                el.classList.remove('indet'); el.classList.add('fail');
+                sub.textContent = msg || 'Download failed'; el.querySelector('.tc-dl-ic').innerHTML = FAIL_ICON;
+            }
+        };
+        function remove(){ el.classList.add('out'); setTimeout(function () { el.remove(); if (!dlDock.children.length) dlDock.hidden = true; }, 220); }
+        function dismiss(after){ setTimeout(remove, after); }
+        el.querySelector('.tc-dl-x').addEventListener('click', remove);
+        return api;
+    }
+
+    // Stream a file to the user's Downloads with a live progress card.
+    window.tcDownload = function (url, nameHint){
+        var card = dlCard(nameHint);
+        // Streaming fetch (WebView2 / Chromium) gives us byte-level progress.
+        if (window.fetch && window.ReadableStream){
+            fetch(url, { credentials: 'same-origin', cache: 'no-store' }).then(function (resp){
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var name = nameFromDisposition(resp.headers.get('Content-Disposition'), nameHint);
+                card.setName(name);
+                var total = parseInt(resp.headers.get('Content-Length') || '0', 10) || 0;
+                if (!resp.body || !resp.body.getReader) return resp.blob().then(function (b){ return { blob: b, name: name }; });
+                var reader = resp.body.getReader(), chunks = [], received = 0;
+                return (function pump(){
+                    return reader.read().then(function (r){
+                        if (r.done) return { blob: new Blob(chunks), name: name };
+                        chunks.push(r.value); received += r.value.length; card.progress(received, total);
+                        return pump();
+                    });
+                })();
+            }).then(function (out){
+                saveBlob(out.blob, out.name); card.done();
+            }).catch(function (err){
+                card.fail('Couldn’t download — tap the file to retry');
+                console && console.warn && console.warn('download failed', err);
+            });
+        } else {
+            // Old fallback: let the browser handle it, just show a generic "saved" note.
+            var a = document.createElement('a'); a.href = url; a.rel = 'noopener'; TCB(a); a.click(); a.remove();
+            card.el.classList.remove('indet'); card.done();
+        }
+    };
+    function saveBlob(blob, name){
+        var u = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = u; a.download = name || 'download';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(u); }, 8000);
+    }
+
+    // Intercept file-card clicks in the thread so downloads go through the progress dock.
+    box.addEventListener('click', function (e){
+        var f = e.target.closest('.tc-att-file'); if (!f) return;
+        e.preventDefault();
+        var nm = f.querySelector('.tc-att-name'); nm = nm ? nm.textContent : '';
+        window.tcDownload(f.getAttribute('href'), nm);
+    });
+
     // ---------- Header search: messages + file names across every chat ----------
     (function () {
         var hs = document.getElementById('tcHeaderSearch'); if (!hs) return;
@@ -2111,10 +2245,16 @@
             return '<a href="' + f.url + '" data-lightbox><img src="' + f.url + '" loading="lazy"></a>';
         }).join('') + '</div>';
         if (docs.length) html += '<div class="tc-gallery-sub">Files</div>' + docs.map(function (f) {
-            return '<a class="tc-gallery-file" href="' + f.download + '"><span class="tc-att-ic">' + FILE_SVG + '</span><span class="tc-gallery-meta"><b>'
+            return '<a class="tc-gallery-file" href="' + f.download + '" data-dlname="' + esc(f.name) + '"><span class="tc-att-ic">' + FILE_SVG + '</span><span class="tc-gallery-meta"><b>'
                 + esc(f.name) + '</b><span>' + esc(f.size) + ' · ' + esc(f.by) + ' · ' + esc(f.at) + '</span></span></a>';
         }).join('');
         gbody.innerHTML = html;
+        gbody.onclick = function (e){
+            var lb = e.target.closest('a[data-lightbox]');
+            if (lb){ e.preventDefault(); lbImg.src = lb.getAttribute('href'); lightbox.hidden = false; return; }
+            var fl = e.target.closest('a[data-dlname]');
+            if (fl){ e.preventDefault(); downloadUrls([{ url: fl.getAttribute('href'), name: fl.getAttribute('data-dlname') }]); }
+        };
     }
 
     // ---------- Header tabs: Chat / Files / Photos ----------
@@ -2135,13 +2275,23 @@
         return '<span style="background:' + v[1] + '">' + v[0] + '</span>';
     }
 
-    // Sequential, popup-safe downloads via a reused hidden iframe.
+    // Route Files-tab downloads through the same progress dock (window.tcDownload).
+    // Accepts either a list of URLs or a list of {url, name} so each card is labelled.
     var dlFrame = null;
     function downloadUrls(urls){
-        if (!urls.length) return;
+        if (!urls || !urls.length) return;
+        if (window.tcDownload){
+            urls.forEach(function (u){
+                if (typeof u === 'string') window.tcDownload(u, '');
+                else window.tcDownload(u.url, u.name || '');
+            });
+            return;
+        }
+        // Legacy fallback (no fetch/streaming): reuse a hidden iframe, sequentially.
+        var list = urls.map(function (u){ return typeof u === 'string' ? u : u.url; });
         if (!dlFrame){ dlFrame = document.createElement('iframe'); dlFrame.style.display = 'none'; TCB(dlFrame); }
         var i = 0;
-        (function next(){ if (i >= urls.length) return; dlFrame.src = urls[i++]; setTimeout(next, 500); })();
+        (function next(){ if (i >= list.length) return; dlFrame.src = list[i++]; setTimeout(next, 500); })();
     }
 
     var fSort = { key: 'ts', dir: -1 };
@@ -2165,10 +2315,10 @@
         function arrow(k){ return fSort.key === k ? (fSort.dir === 1 ? ' ↑' : ' ↓') : ''; }
         var rows = files.map(function (f) {
             var sel = fSelected[f.url] ? ' sel' : '';
-            return '<tr class="' + sel.trim() + '" data-url="' + esc(f.url) + '" data-dl="' + esc(f.download) + '">'
+            return '<tr class="' + sel.trim() + '" data-url="' + esc(f.url) + '" data-dl="' + esc(f.download) + '" data-name="' + esc(f.name) + '">'
                 + '<td class="tc-fcheck"><input type="checkbox" ' + (fSelected[f.url] ? 'checked' : '') + '></td>'
                 + '<td class="tc-ficon">' + extIcon(f.name, f.image) + '</td>'
-                + '<td class="tc-fname"><a href="' + esc(f.image ? f.url : f.download) + '"' + (f.image ? ' data-lightbox' : '') + '>' + esc(f.name) + '</a></td>'
+                + '<td class="tc-fname"><a href="' + esc(f.image ? f.url : f.download) + '"' + (f.image ? ' data-lightbox' : ' data-dlname="' + esc(f.name) + '"') + '>' + esc(f.name) + '</a></td>'
                 + '<td class="tc-fcol-when tc-fmeta">' + esc(f.at) + ' · ' + esc(f.time || '') + '</td>'
                 + '<td class="tc-fcol-by"><span class="tc-fby">' + esc(f.by) + '</span></td>'
                 + '<td style="width:38px;text-align:right"><button type="button" class="tc-fdl" title="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button></td>'
@@ -2239,8 +2389,10 @@
         filesScroll.addEventListener('click', function (e) {
             var img = e.target.closest('a[data-lightbox]');
             if (img){ e.preventDefault(); lbImg.src = img.getAttribute('href'); lightbox.hidden = false; return; }
+            var nameLink = e.target.closest('a[data-dlname]');
+            if (nameLink){ e.preventDefault(); downloadUrls([{ url: nameLink.getAttribute('href'), name: nameLink.getAttribute('data-dlname') }]); return; }
             var dl = e.target.closest('.tc-fdl');
-            if (dl){ var tr = dl.closest('tr'); if (tr) downloadUrls([tr.dataset.dl]); return; }
+            if (dl){ var tr = dl.closest('tr'); if (tr) downloadUrls([{ url: tr.dataset.dl, name: tr.dataset.name }]); return; }
             var all = e.target.closest('#tcFilesAll');
             if (all){
                 var on = all.checked;
@@ -2257,8 +2409,8 @@
     if (upBtn){ var fileInput = document.getElementById('tcFile'); if (fileInput) upBtn.addEventListener('click', function () { fileInput.click(); }); }
     var dlSel = document.getElementById('tcFilesDownload');
     if (dlSel) dlSel.addEventListener('click', function () {
-        var urls = (galleryData || []).filter(function (f) { return fSelected[f.url]; }).map(function (f) { return f.download; });
-        if (urls.length){ downloadUrls(urls); toast('Downloading ' + urls.length + ' file' + (urls.length > 1 ? 's' : '')); }
+        var urls = (galleryData || []).filter(function (f) { return fSelected[f.url]; }).map(function (f) { return { url: f.download, name: f.name }; });
+        if (urls.length){ downloadUrls(urls); }
     });
     var clrSel = document.getElementById('tcFilesClearSel');
     if (clrSel) clrSel.addEventListener('click', function () { fSelected = {}; renderFiles(); });
