@@ -117,4 +117,37 @@ class PurgeOldTeamChatTest extends TestCase
         $this->artisan('team-chat:purge --days=2')->assertSuccessful();
         $this->assertSame(0, TeamMessage::where('conversation_id', $c->id)->count());
     }
+
+    public function test_days_zero_is_clamped_and_does_not_wipe_recent_messages(): void
+    {
+        Storage::fake('private');
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $this->msg($c, $va, now()->subMinutes(5), 'just now');
+
+        // --days=0 must NOT nuke everything (safety clamp back to 7 days).
+        $this->artisan('team-chat:purge --days=0')->assertSuccessful();
+        $this->assertSame(1, TeamMessage::where('conversation_id', $c->id)->count());
+    }
+
+    public function test_all_flag_wipes_every_message_and_file_but_keeps_the_conversation(): void
+    {
+        Storage::fake('private');
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+
+        // Brand-new messages (seconds old) + files — nothing a days-window would touch.
+        $m1 = $this->msg($c, $va, now(), 'fresh one');
+        Storage::disk('private')->put('team-chat/1/a.zip', 'x');
+        $m1->attachments()->create(['disk_path' => 'team-chat/1/a.zip', 'original_name' => 'a.zip', 'mime' => 'application/zip', 'size' => 1]);
+        $this->msg($c, $this->super, now(), 'fresh two');
+        $c->update(['last_message_id' => $m1->id, 'last_message_at' => now()]);
+
+        $this->artisan('team-chat:purge --all')->assertSuccessful();
+
+        $this->assertSame(0, TeamMessage::count());
+        Storage::disk('private')->assertMissing('team-chat/1/a.zip');
+        // The chat/contact itself stays (sidebar intact), pointer cleared.
+        $this->assertDatabaseHas('conversations', ['id' => $c->id, 'last_message_id' => null]);
+    }
 }

@@ -20,18 +20,21 @@ class PurgeOldTeamChat extends Command
 {
     protected $signature = 'team-chat:purge
                             {--days=7 : Keep only chat and files newer than this many days}
+                            {--all : Wipe ALL chat content for everyone (ignores --days). Contacts/groups stay.}
                             {--dry-run : Report what would be deleted without deleting anything}';
 
-    protected $description = 'Delete Team Chat messages, attachments and their files older than the retention window (default 7 days). Nothing older is kept — not in the database, not on the private disk.';
+    protected $description = 'Delete Team Chat messages, attachments and their files older than the retention window (default 7 days), or ALL of them with --all. Nothing purged is kept — not in the database, not on the private disk.';
 
     public function handle(): int
     {
+        $all = (bool) $this->option('all');
         $days = (int) $this->option('days');
-        if ($days < 1) {
-            $days = 7;
+        if (! $all && $days < 1) {
+            $days = 7;   // guard: a stray --days=0 must never silently wipe everything — use --all for that
         }
         $dry    = (bool) $this->option('dry-run');
-        $cutoff = now()->subDays($days);
+        // --all: a far-future cutoff so every message (created before "now + 1 year") is purged.
+        $cutoff = $all ? now()->addYear() : now()->subDays($days);
         $disk   = Storage::disk('private');
 
         // Files belonging to messages that are about to be purged.
@@ -44,9 +47,11 @@ class PurgeOldTeamChat extends Command
 
         $oldMessages = TeamMessage::where('created_at', '<', $cutoff)->count();
 
+        $scope = $all ? 'ALL' : "older than {$days} day(s)";
+
         if ($dry) {
             $orphans = $this->orphanFiles($disk);
-            $this->info("[dry-run] Would delete {$oldMessages} message(s) and {$oldPaths->count()} attachment file(s) older than {$days} day(s), plus {$orphans->count()} orphaned file(s).");
+            $this->info("[dry-run] Would delete {$oldMessages} message(s) and {$oldPaths->count()} attachment file(s) ({$scope}), plus {$orphans->count()} orphaned file(s).");
 
             return self::SUCCESS;
         }
@@ -77,7 +82,8 @@ class PurgeOldTeamChat extends Command
             $disk->delete($path);
         }
 
-        $this->info("Team Chat purge: {$deleted} message(s) removed, {$oldPaths->count()} attachment file(s) deleted, {$orphans->count()} orphaned file(s) swept. Only the last {$days} day(s) of chat and files remain.");
+        $remain = $all ? 'No chat content remains.' : "Only the last {$days} day(s) of chat and files remain.";
+        $this->info("Team Chat purge ({$scope}): {$deleted} message(s) removed, {$oldPaths->count()} attachment file(s) deleted, {$orphans->count()} orphaned file(s) swept. {$remain}");
 
         return self::SUCCESS;
     }
