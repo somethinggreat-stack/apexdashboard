@@ -488,24 +488,45 @@ class TeamMessageController extends Controller
     {
         $me = Auth::guard('admin')->user();
         $q = trim((string) $request->query('q'));
-        if (mb_strlen($q) < 2) return response()->json(['messages' => []]);
+        if (mb_strlen($q) < 2) return response()->json(['messages' => [], 'files' => []]);
 
         $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
+        $like    = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%';
 
+        // Message-text matches.
         $msgs = TeamMessage::whereIn('conversation_id', $convIds)
-            ->where('type', 'text')->whereNull('deleted_at')
-            ->where('body', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%')
+            ->where('type', 'text')->whereNull('deleted_at')->visibleTo($me->id)
+            ->where('body', 'like', $like)
             ->with('sender', 'conversation.participants.admin')
+            ->latest('id')->limit(20)->get();
+
+        // File-name matches (attachment original_name), across all conversations I'm in.
+        $fileMsgs = TeamMessage::whereIn('conversation_id', $convIds)
+            ->whereNull('deleted_at')->visibleTo($me->id)
+            ->whereHas('attachments', fn ($a) => $a->where('original_name', 'like', $like))
+            ->with(['sender', 'conversation.participants.admin',
+                    'attachments' => fn ($a) => $a->where('original_name', 'like', $like)])
             ->latest('id')->limit(20)->get();
 
         return response()->json([
             'messages' => $msgs->map(fn ($m) => [
                 'conversation_id' => $m->conversation_id,
+                'message_id' => $m->id,
                 'title'   => $this->convTitle($m->conversation, $me->id),
                 'snippet' => Str::limit($m->body, 80),
                 'sender'  => $this->senderInfo($m->sender)['first'],
                 'at'      => $m->created_at->timezone(self::TZ)->format('M j'),
             ])->values(),
+            'files' => $fileMsgs->flatMap(fn ($m) => $m->attachments->map(fn ($a) => [
+                'conversation_id' => $m->conversation_id,
+                'message_id' => $m->id,
+                'title'   => $this->convTitle($m->conversation, $me->id),
+                'name'    => $a->original_name,
+                'size'    => $a->humanSize(),
+                'image'   => $a->isImage(),
+                'sender'  => $this->senderInfo($m->sender)['first'],
+                'at'      => $m->created_at->timezone(self::TZ)->format('M j'),
+            ]))->take(25)->values(),
         ])->header('Cache-Control', 'no-store');
     }
 

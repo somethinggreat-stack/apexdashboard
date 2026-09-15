@@ -92,6 +92,12 @@
                     <button type="button" class="tc-tab" data-tab="photos" role="tab">Photos</button>
                 </nav>
                 <div class="tc-th-spacer"></div>
+                <div class="tc-hsearch" id="tcHSearch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="tcHeaderSearch" placeholder="Search messages &amp; files" autocomplete="off">
+                    <button type="button" id="tcHeaderSearchClear" hidden aria-label="Clear">&times;</button>
+                    <div class="tc-hsearch-results" id="tcHeaderSearchResults" hidden></div>
+                </div>
                 <button type="button" class="tc-bell {{ $notifyLevel === 'none' ? 'muted' : '' }}" id="tcBell" data-level="{{ $notifyLevel }}" title="Notifications">
                     @if ($notifyLevel === 'none')
                         @include('partials.mute-icon')
@@ -632,6 +638,29 @@
     .tc-sr-item:hover { background:var(--pro-soft,#f5f7fb); }
     .tc-sr-title { font-size:13px; font-weight:700; color:var(--pro-text,#0f172a); }
     .tc-sr-snip { font-size:12px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Header search bar (searches messages + file names across all chats) */
+    .tc-hsearch { position:relative; width:280px; max-width:34vw; flex:none; }
+    .tc-hsearch > svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:#94a3b8; pointer-events:none; }
+    .tc-hsearch input { width:100%; height:38px; border:1px solid var(--pro-line,#e6ebf2); border-radius:10px; padding:0 30px 0 33px; font:inherit; font-size:13px; background:var(--pro-soft,#f7f9fc); color:var(--pro-text,#0f172a); outline:none; }
+    .tc-hsearch input:focus { border-color:#6366f1; background:var(--pro-surface,#fff); box-shadow:0 0 0 3px rgba(99,102,241,.13); }
+    #tcHeaderSearchClear { position:absolute; right:7px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#94a3b8; font-size:17px; line-height:1; cursor:pointer; padding:2px 4px; }
+    .tc-hsearch-results { position:absolute; top:calc(100% + 7px); right:0; width:430px; max-width:82vw; max-height:62vh; overflow-y:auto; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2); border-radius:14px; box-shadow:0 22px 54px -20px rgba(15,23,42,.42); padding:6px; z-index:60; }
+    .tc-hsearch-results[hidden] { display:none !important; }
+    .tc-hs-group { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#94a3b8; font-weight:700; padding:9px 10px 4px; }
+    .tc-hs-item { display:flex; gap:11px; align-items:center; padding:9px 10px; border-radius:10px; text-decoration:none; color:inherit; }
+    .tc-hs-item:hover { background:var(--pro-soft,#f1f5f9); }
+    .tc-hs-ic { flex:none; width:36px; height:36px; border-radius:9px; display:grid; place-items:center; background:rgba(99,102,241,.12); color:#4f46e5; }
+    .tc-hs-ic svg { width:17px; height:17px; }
+    .tc-hs-meta { min-width:0; flex:1; }
+    .tc-hs-title { display:block; font-size:13px; font-weight:600; color:var(--pro-text,#0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-hs-sub { display:block; font-size:12px; color:#8a93a6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-hs-empty { padding:16px 10px; font-size:13px; color:#94a3b8; text-align:center; }
+    :root[data-theme="dark"] .tc-hsearch input { background:#0b1120; border-color:#233150; color:#e2e8f0; }
+    :root[data-theme="dark"] .tc-hsearch-results { background:#0f1629; border-color:#233150; }
+    :root[data-theme="dark"] .tc-hs-item:hover { background:#182444; }
+    :root[data-theme="dark"] .tc-hs-title { color:#e2e8f0; }
+    @media (max-width:900px){ .tc-hsearch { width:190px; } }
 
     :root[data-theme="dark"] .tc-search input { background:#0b1120; border-color:#233150; color:#e2e8f0; }
     :root[data-theme="dark"] .tc-row-actions { background:#141d33; }
@@ -1895,6 +1924,45 @@
         if (lbPrev) lbPrev.addEventListener('click', function (e) { e.stopPropagation(); lbNav(-1); });
         if (lbNext) lbNext.addEventListener('click', function (e) { e.stopPropagation(); lbNav(1); });
     }
+
+    // ---------- Header search: messages + file names across every chat ----------
+    (function () {
+        var hs = document.getElementById('tcHeaderSearch'); if (!hs) return;
+        var hsClear = document.getElementById('tcHeaderSearchClear');
+        var hsRes = document.getElementById('tcHeaderSearchResults');
+        var HS_URL = @json(route('admin.team-messages.search'));
+        var HS_SA = @json(request()->boolean('standalone')) ? '&standalone=1' : '';
+        var CHAT_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+        var FILE_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        var hsT, hsLast = '';
+        function hsRender(res){
+            var m = res.messages || [], f = res.files || [];
+            if (!m.length && !f.length){ hsRes.innerHTML = '<div class="tc-hs-empty">No messages or files found.</div>'; hsRes.hidden = false; return; }
+            var h = '';
+            if (m.length){ h += '<div class="tc-hs-group">Messages</div>' + m.map(function (x) {
+                return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + CHAT_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.title) + '</span><span class="tc-hs-sub">' + esc(x.sender) + ': ' + esc(x.snippet) + '</span></span></a>';
+            }).join(''); }
+            if (f.length){ h += '<div class="tc-hs-group">Files</div>' + f.map(function (x) {
+                return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + FILE_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.name) + '</span><span class="tc-hs-sub">' + esc(x.title) + ' · ' + esc(x.size) + '</span></span></a>';
+            }).join(''); }
+            hsRes.innerHTML = h; hsRes.hidden = false;
+        }
+        function hsRun(){
+            var q = hs.value.trim();
+            hsClear.hidden = !q;
+            if (q.length < 2){ hsRes.hidden = true; hsRes.innerHTML = ''; hsLast = ''; return; }
+            clearTimeout(hsT);
+            hsT = setTimeout(function () {
+                if (q === hsLast) return; hsLast = q;
+                fetch(HS_URL + '?q=' + encodeURIComponent(q), { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+                    .then(function (r) { return r.json(); }).then(function (res) { if (hs.value.trim() === q) hsRender(res); }).catch(function () {});
+            }, 250);
+        }
+        hs.addEventListener('input', hsRun);
+        hs.addEventListener('focus', function () { if (hs.value.trim().length >= 2) hsRun(); });
+        hsClear.addEventListener('click', function () { hs.value = ''; hsRes.hidden = true; hsRes.innerHTML = ''; hsClear.hidden = true; hs.focus(); });
+        TCD('click', function (e) { if (!hsRes.hidden && !e.target.closest('.tc-hsearch')) hsRes.hidden = true; });
+    })();
 
     function postJson(url, data, method){
         var fd = new FormData(); fd.append('_token', csrf);

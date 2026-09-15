@@ -91,6 +91,20 @@ class TeamOrganizeTest extends TestCase
             ->assertJsonPath('messages.0.title', 'Abid');
     }
 
+    public function test_search_finds_messages_by_file_name(): void
+    {
+        $va  = $this->va('Abid');
+        $c   = $this->dm($va, $this->super);
+        $msg = TeamMessage::create(['conversation_id' => $c->id, 'type' => 'text', 'sender_id' => $va->id, 'body' => '']);
+        $msg->attachments()->create(['disk_path' => 'team-chat/1/x.pdf', 'original_name' => 'Chantal Invoice.pdf', 'mime' => 'application/pdf', 'size' => 100]);
+
+        $this->actingAs($this->super, 'admin')->getJson('/admin/team-messages/search?q=invoice')
+            ->assertOk()
+            ->assertJsonCount(1, 'files')
+            ->assertJsonPath('files.0.name', 'Chantal Invoice.pdf')
+            ->assertJsonPath('files.0.conversation_id', $c->id);
+    }
+
     public function test_search_only_covers_my_own_conversations(): void
     {
         $va = $this->va();
