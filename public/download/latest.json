@@ -1,10 +1,10 @@
 {
-  "version": "0.1.0",
-  "notes": "Apex Team Chat desktop app.",
-  "pub_date": "2026-09-14T23:15:09Z",
+  "version": "0.1.1",
+  "notes": "Reliability update: messages and notifications now arrive in real time even while the app is in the background.",
+  "pub_date": "2026-09-15T03:17:37Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTliekJxWkdTcC9rT3hGc0ZPNHZPbGIrak95K3BaRDdtMGYvMHhLdW0rWE95K25iajBqSHJ4VmhPbGpjNFBVdTlXcmF4TC9PQTBpS25WcUc4clpIdEFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDI3NjI1CWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjBfeDY0LXNldHVwLmV4ZQpTT1luUmhKeXdFZkJhOXBRZzhPT0JjbERBYzIzZ2U2N0JnanpwMkg1K3JNV2NHN0t4bXk0MEdoTFFTRlVRTFZDZkZ5dzNwNWJNdVZLN1c3QTJON0FDZz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTAvVXgwaGdtZFFWTUt4ZWpGMTRGSlBkQjFFenVvaTNXa3hscHNsY0RtdEs2S2d3VE56aE9jbTFaR3NVMTZ0ZE5HcjByTFFnS3lUSFJtWjJxandmblF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDQyMTkyCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjFfeDY0LXNldHVwLmV4ZQpITzUwL05SYk5FVWdLbEJ0NkllRGpRRWp3K0QvaFNaOGZJZ2QzaitMVC9wK3RuVmptY1Z2NGErSEE5Tm5TWmJtV0JlWG9xWnlTV1R6YlBvUlR4eVBEUT09Cg==",
       "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe"
     }
   }
