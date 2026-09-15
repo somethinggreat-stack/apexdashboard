@@ -174,6 +174,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // but a runaway loop can't hammer the DB).
         Route::middleware('throttle:240,1')->group(function () {
             Route::get('team-messages/thread', [Admin\TeamMessageController::class, 'thread'])->name('team-messages.thread');
+            Route::get('team-messages/open', [Admin\TeamMessageController::class, 'open'])->name('team-messages.open');
             Route::get('team-messages/older', [Admin\TeamMessageController::class, 'older'])->name('team-messages.older');
             Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
             Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');

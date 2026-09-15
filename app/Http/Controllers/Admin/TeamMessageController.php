@@ -333,6 +333,108 @@ class TeamMessageController extends Controller
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
+    /**
+     * Everything the client needs to OPEN a thread without a full page reload:
+     * the newest page + header + composer state, as JSON. Mirrors what index()
+     * computes for the active thread, but skips all the sidebar work — so it's
+     * ~3x cheaper on the server and avoids the whole document/JS re-init on the
+     * client. Accepts ?c=<id>, ?with=<peer>, or ?self=1 (same as index()).
+     */
+    public function open(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+
+        $active = null; $peer = null; $isSelf = false;
+        if ($request->boolean('self')) {
+            $active = $this->findOrCreateSelf($me);
+            $isSelf = true;
+            $peer = $me;
+        } elseif ($request->filled('c')) {
+            $active = $this->findConversation($me, (int) $request->query('c'));
+            $isSelf = $this->isSelfConv($active);
+            if ($isSelf) $peer = $me;
+            elseif ($active->isDm()) $peer = $active->otherAdmin($me->id);
+        } elseif ($request->filled('with')) {
+            $peer = $this->teammates($me)->where('id', (int) $request->query('with'))->first();
+            abort_unless($peer, 404);
+            $active = $this->myConversations($me)->first(function ($c) use ($me, $peer) {
+                return $c->isDm() && $c->participants->firstWhere('admin_id', $peer->id)
+                    && ! $this->isSelfConv($c);
+            });
+        }
+        abort_unless($active || $peer, 404);
+
+        $messages = collect(); $hasMore = false; $pinned = collect();
+        $members = collect(); $addable = collect(); $mentionables = []; $notifyLevel = 'all';
+
+        if ($active) {
+            $messages = $active->messages()->visibleTo($me->id)
+                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
+                ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
+            $hasMore = $messages->isNotEmpty()
+                && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
+            $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
+                ->orderByDesc('pinned_at')->limit(10)->get();
+            $this->markRead($active, $me);
+            $notifyLevel = optional($active->participantFor($me->id))->notify_level ?: 'all';
+
+            if ($active->isGroup()) {
+                $members = $active->participants->load('admin');
+                $inIds   = $active->participants->pluck('admin_id')->all();
+                $addable = $this->teammates($me)->whereNotIn('id', $inIds)->orderBy('full_name')->get();
+                foreach ($members as $p) {
+                    if ($p->admin_id !== $me->id && $p->admin) {
+                        $mentionables[] = ['id' => $p->admin_id, 'name' => $p->admin->full_name, 'avatar' => $p->admin->avatarUrl()];
+                    }
+                }
+            } elseif ($peer && ! $isSelf) {
+                $mentionables[] = ['id' => $peer->id, 'name' => $peer->full_name, 'avatar' => $peer->avatarUrl()];
+            }
+        }
+
+        $isGroup = (bool) ($active && $active->isGroup());
+        $title = $active ? $this->convTitle($active, $me->id) : ($peer->full_name ?? 'Direct message');
+        $sInfo = $peer ? $this->senderInfo($peer) : null;
+
+        return response()->json([
+            'conversation_id' => $active?->id,
+            'isGroup'    => $isGroup,
+            'isSelf'     => $isSelf,
+            'peer_id'    => (! $isGroup && $peer && ! $isSelf) ? $peer->id : null,
+            'title'      => $title,
+            'avatar'     => $isGroup ? null : ($isSelf ? null : ($sInfo['avatar'] ?? null)),
+            'groupIcon'  => $isGroup ? ($active->icon ?: '💬') : null,
+            'mono'       => $sInfo['mono'] ?? '?',
+            'color'      => $sInfo['color'] ?? '#64748b',
+            'subtitle'   => $isSelf ? 'Notes · visible only to you'
+                : ($isGroup ? trim($members->count() . ' members' . ($this->groupOnlineCount($active, $me->id) ? ' · ' . $this->groupOnlineCount($active, $me->id) . ' online' : ''))
+                    : ($peer ? ($peer->isOnline() ? 'Online' : ($peer->lastSeenHuman() ?? 'Offline')) : '')),
+            'online'     => $peer && ! $isSelf ? $peer->isOnline() : false,
+            'membersCount' => $isGroup ? $members->count() : 0,
+            'onlineCount'  => $isGroup ? $this->groupOnlineCount($active, $me->id) : 0,
+            'messages'   => $messages->map(fn ($m) => $this->present($m, $me->id))->values(),
+            'hasMore'    => (bool) $hasMore,
+            'readUpTo'   => $active ? $this->readUpTo($active, $me->id) : 0,
+            'watermarks' => $active ? $this->watermarks($active, $me->id) : [],
+            'pinned'     => $pinned->map(fn ($m) => [
+                'id' => $m->id,
+                'author' => $m->sender_id === $me->id ? 'You' : ($this->senderInfo($m->sender)['first']),
+                'text' => $m->body !== '' ? \Illuminate\Support\Str::limit($m->body, 70) : '📎 Attachment',
+            ])->values(),
+            'mentionables' => $mentionables,
+            'notifyLevel'  => $notifyLevel,
+            'placeholder'  => $isSelf ? 'Write a note to yourself…' : 'Message ' . $title . '…',
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /** Count of other participants currently online in a group. */
+    private function groupOnlineCount(?Conversation $conv, int $meId): int
+    {
+        if (! $conv || ! $conv->isGroup()) return 0;
+
+        return $conv->participants->filter(fn ($p) => $p->admin_id !== $meId && optional($p->admin)->isOnline())->count();
+    }
+
     /** I'm typing in this conversation — refresh my typing timestamp (poll-driven). */
     public function typing(Request $request)
     {
