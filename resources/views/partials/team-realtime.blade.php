@@ -296,11 +296,15 @@
     }
 
     // ---------- ingest a payload (from network on the leader, or from a peer tab) ----------
+    var catchUpHeld = 0;   // toasts held back while walking through a backlog
     function ingest(data, fromNetwork){
         if (!data) return;
         applyUnread(data.unread, data.perConv);
         var msgs = data.messages || [];
         if (!msgs.length) return;
+        // The server says there are more batches to come (a long absence): show nothing yet,
+        // just count, and end with a single "N new messages" when caught up.
+        var holding = !!data.more;
         var floor = lastNotified();   // messages at/below this were already chimed/notified elsewhere
         var maxId = floor, didNotify = false, shown = 0, TOAST_CAP = 4;
         msgs.forEach(function (m) {
@@ -316,18 +320,25 @@
                 // Cap the OS-toast burst after a long absence: show the first few, then a summary
                 // (the notification center still has them all). Web Push suppresses in-page toasts.
                 if (amLeader() && !pushActive){
-                    if (shown < TOAST_CAP){ desktop(m); shown++; }
-                    else shown++;
+                    if (!holding && shown < TOAST_CAP) desktop(m);
+                    shown++;
                 }
             }
         });
-        if (amLeader() && !pushActive && shown > TOAST_CAP){
-            desktop({ title: 'Apex Team Chat', sender: '', mention: false,
-                snippet: '', conversation_id: 'summary',
-                body: shown + ' new messages' });
+        if (amLeader() && !pushActive){
+            if (holding){
+                catchUpHeld += shown;   // still catching up — summarise once at the end
+            } else {
+                var total = catchUpHeld + shown; catchUpHeld = 0;
+                if (total > TOAST_CAP){
+                    desktop({ title: 'Apex Team Chat', sender: '', mention: false,
+                        snippet: '', conversation_id: 'summary',
+                        body: total + ' new messages' });
+                }
+            }
         }
         if (maxId > floor) ls(NLKEY, String(maxId));   // advance the global notify watermark
-        if (didNotify && amLeader()) chime();
+        if (didNotify && !holding && amLeader()) chime();
     }
 
     // ---------- the poll loop (leader hits the network; others ride broadcasts) ----------
@@ -336,14 +347,17 @@
     function loop(){
         claim();
         if (!amLeader()){ schedule(); return; }   // a peer is the poller — we update via BroadcastChannel
-        fetch(POLL_URL + '?after=' + lastId, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+        // No stored position yet (new install / after Refresh): ask where history ends instead
+        // of pulling the backlog in as "new".
+        fetch(POLL_URL + '?after=' + lastId + (primed ? '' : '&prime=1'), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data){ schedule(); return; }
                 // Authoritative unread every poll — so counts also DROP when read elsewhere.
                 applyUnread(data.unread, data.perConv);
                 post({ kind: 'unread', unread: data.unread, perConv: data.perConv });
-                if (!primed){ if (data.lastId){ lastId = data.lastId; ls(LKEY, String(lastId)); } primed = true; schedule(); return; }
+                // The priming answer carries no messages — just the current end of history.
+                if (!primed){ lastId = data.lastId || 0; ls(LKEY, String(lastId)); primed = true; schedule(); return; }
                 if (data.lastId > lastId){ lastId = data.lastId; ls(LKEY, String(lastId)); }
                 if ((data.messages || []).length){ ingest(data, true); post({ kind: 'data', data: data }); }
                 schedule();

@@ -157,7 +157,7 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Build:** `cd Z:\Projects\apex-desktop; npm run tauri build` (~2–3 min incremental). Outputs:
   - Installer: `src-tauri\target\release\bundle\nsis\Apex Team Chat_<version>_x64-setup.exe`
   - Signature: `...exe.sig`
-- **App version** comes from `tauri.conf.json` `version` (currently **0.1.2**; `Cargo.toml` + `package.json` now match).
+- **App version** comes from `tauri.conf.json` `version` (currently **0.1.3**; `Cargo.toml` + `package.json` now match).
 - **Publish for auto-update:** copy the installer to `public/download/apex-team-chat-setup.exe` (stable name — renaming does NOT break the signature, which is over the file bytes), and update `public/download/latest.json`:
   ```json
   { "version": "<new>", "notes": "...", "pub_date": "<ISO8601 Z>",
@@ -218,6 +218,13 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Desktop 0.1.2:** `dragDropEnabled: false` — required for HTML5 drag-and-drop on Windows (Tauri's own schema says so); without it the app swallowed dropped files. Installer URL is now versioned (`?v=0.1.2`) so Cloudflare can't serve a stale exe against a new signature.
 - Fixed while in there: `res.messages.forEach(append)` passed the array index as append's `own` flag, so only one new message per poll advanced the cursor (batches re-fetched until they trickled through). `append` now takes `own === true` only.
 
+### Unread / read / seen (Phase 3, 2026-09-17)
+- **Priming, not replaying.** A client with no stored position polls `notifications?after=0&prime=1`; the server answers with **no messages** and `lastId = MAX(id)` (plus the unread counts). Before this it returned the OLDEST 30 and the client walked 7 days of history, firing notifications for days-old messages — every first launch and after every Refresh.
+- **Catch-up bursts.** `notifications()` returns `more: true` while further batches follow; the client holds its toasts and chime and shows a single "N new messages" once caught up (`catchUpHeld` in `team-realtime`).
+- **Read only when actually looking.** `isViewing()` = `!document.hidden && document.hasFocus()`. The thread poll sends `&read=0` when the window isn't in front and `thread()` then skips `markRead` (no flag at all = old client = previous behaviour). So no "Seen"/blue ticks for messages nobody looked at while the app sat in the tray or behind another window. Opening a chat still marks it read; a hover prefetch still doesn't.
+- **Badges match.** The sidebar treats the open chat as read **only while `isViewing()`**, so messages that arrive while the VA is away keep their badge (and `bumpSidebar` still updates that row). Returning to the window polls with `read=1`, which clears both. Unread counts come from one server helper, `unreadForBadge()`.
+- **Taskbar dot (desktop 0.1.3).** `set_unread` was rejected for the remote page: since Tauri 2.11 an app command called from a remote origin needs the ACL to resolve it. `build.rs` now declares the command (`AppManifest::new().commands(&["set_unread"])`) and `capabilities/remote.json` grants `allow-set-unread` — only to `*.apexgrowthsolution.com`. Verified in `gen/schemas/capabilities.json`. The dot shows the unread total across all chats and clears when caught up.
+
 ---
 
 ## 11. Bugs & fixes worth remembering
@@ -269,6 +276,7 @@ Every async request in the thread script checks, when it returns, that the chat 
 9. **Every async request in the chat script must check freshness on return** (`runAlive` / `viewAlive(gen)` / `chatAlive(key)` / nav ticket — see §6). Every message insert goes through `serializedSend` (see §10 Send integrity).
 10. **Never `location.reload()` from a chat action** — an upload may be in flight. Update in place, or go through `window.tcConfirmIfSending()` first.
 11. **Upload limits come from `uploadLimits()`**, never hard-coded in the page; keep the client and server checks in step.
+12. **Never call an app command from the chat page without granting it in `capabilities/remote.json` AND declaring it in `build.rs`** — a remote origin is refused otherwise (that is what broke the taskbar dot).
 
 ---
 

@@ -506,6 +506,9 @@
 (function () {
     var activeRow = document.querySelector('.tc-contact.active');
     var CONV = (activeRow && activeRow.dataset.conversation) || '';
+    // Is the VA actually looking at this window right now? (Not in the tray, not behind
+    // another app.) Everything "read"/"seen" hangs off this.
+    function isViewing(){ return !document.hidden && document.hasFocus(); }
 
     // Tell the poller which conversation is open+focused (so it never notifies the chat you're
     // reading, and marks it read).
@@ -514,7 +517,7 @@
         // No conversation open (e.g. a teammate you've never messaged): nothing is "being read",
         // so every other chat's messages keep their badges and notifications.
         if (!CONV){ window.ApexRealtime.setActive(null, false); return; }
-        var looking = !document.hidden && document.hasFocus();
+        var looking = isViewing();
         window.ApexRealtime.setActive(CONV, looking);
         if (looking) window.ApexRealtime.markConversationRead(CONV);
     }
@@ -574,7 +577,7 @@
         }
         if (!row && m.is_group) row = addGroupRow(m);
         if (!row) return;   // truly not in this sidebar — next full load shows it
-        var isOpen = String(m.conversation_id) === String(CONV);
+        var isOpen = String(m.conversation_id) === String(CONV) && isViewing();
         var pv = ensurePreviewEl(row);
         // Match the server format: groups show "Name: text", DMs show just the text.
         if (pv) pv.textContent = (row.dataset.group === '1' ? m.sender + ': ' : '') + m.snippet;
@@ -592,9 +595,12 @@
     // (the open conversation is always 0). Fired every poll, so counts also drop on read.
     function applyRowUnread(map){
         map = map || {};
+        // The open chat only counts as "being read" while the VA is looking at it; away from
+        // the window its new messages keep their badge, exactly like any other chat.
+        var viewing = isViewing();
         document.querySelectorAll('.tc-contact[data-conversation]').forEach(function (row) {
             var id = row.dataset.conversation;
-            var isOpen = String(id) === String(CONV);
+            var isOpen = String(id) === String(CONV) && viewing;
             var n = isOpen ? 0 : (parseInt(map[id], 10) || 0);
             var badge = row.querySelector('[data-badge]');
             var sub = row.querySelector('.tc-c-sub');
@@ -618,7 +624,9 @@
         var m = e.detail; if (!m) return;
         if (CONV && String(m.conversation_id) === String(CONV)){
             window.dispatchEvent(new CustomEvent('apex:thread-poll'));   // the open thread fetches the full message
-            if (!document.hidden && window.ApexRealtime) window.ApexRealtime.markConversationRead(CONV);
+            if (isViewing() && window.ApexRealtime) window.ApexRealtime.markConversationRead(CONV);
+            // Away from the window: the message still updates this chat's row and badge.
+            if (!isViewing()) bumpSidebar(m);
         } else {
             bumpSidebar(m);
         }
@@ -682,6 +690,8 @@
         if (!IS_GROUP && PEER_ID) return 'p' + PEER_ID;
         return 'c' + (CONV || '');
     }
+    // Is the VA actually looking at this window? Drives read/seen (see poll's read= flag).
+    function isViewing(){ return !document.hidden && document.hasFocus(); }
     function runAlive(){ return RUN === window.__tcRun; }
     function viewAlive(gen){ return runAlive() && gen === VIEW_GEN; }
     function chatAlive(key){ return runAlive() && key === chatKey(); }
@@ -1564,7 +1574,11 @@
         if (!force && document.hidden) return;   // background tab: wait for a realtime wake instead
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
         var gen = VIEW_GEN, conv = CONV;
+        // read=0 while the app is in the tray or behind another window: the messages are
+        // fetched and shown, but not marked read — no "Seen"/blue ticks for something the
+        // VA hasn't looked at, and the chat keeps its unread badge until they come back.
         fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId
+                + '&read=' + (isViewing() ? 1 : 0)
                 + '&statesSince=' + encodeURIComponent(statesSince) + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return viewAlive(gen) ? okJson(r) : null; })

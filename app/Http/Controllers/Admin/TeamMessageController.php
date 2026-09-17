@@ -448,7 +448,14 @@ class TeamMessageController extends Controller
         $msgs = $conv->messages()->visibleTo($me->id)->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
             ->where('id', '>', $after)->orderBy('id')->get();
 
-        $this->markRead($conv, $me);
+        // Only mark read when the client says the VA is actually looking at this window
+        // (`read=0` while the app sits in the tray or behind another app). Without this the
+        // 3s poll kept marking an open chat read — the sender saw "Seen"/blue ticks for
+        // messages nobody had looked at, and the chat never showed an unread badge.
+        // Old clients don't send the flag at all; they keep the previous behaviour.
+        if ($request->query('read', '1') !== '0') {
+            $this->markRead($conv, $me);
+        }
 
         // Reaction/edit/delete "states": on the first poll sync the visible window (latest 80);
         // after that, return only what CHANGED since the client's last poll — so edits/reactions/
@@ -898,6 +905,21 @@ class TeamMessageController extends Controller
         $after = (int) $request->query('after', 0);
         $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
 
+        // First poll of a fresh client (new install, or right after the Refresh button wiped
+        // its stored position) — it asks with prime=1 and gets back only where the history
+        // currently ENDS. Returning the oldest messages here is what made days-old messages
+        // arrive as "new" notifications, 30 at a time, until the client had walked through
+        // the whole retention window. From then on it polls normally with ?after=<id>.
+        if ($request->boolean('prime')) {
+            return response()->json([
+                'messages' => [],
+                'lastId'   => (int) TeamMessage::whereIn('conversation_id', $convIds)->max('id'),
+                'more'     => false,
+                'unread'   => (int) collect($this->unreadForBadge($me))->sum(),
+                'perConv'  => (object) $this->unreadForBadge($me),
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
+
         $rows = TeamMessage::whereIn('conversation_id', $convIds)
             ->where('type', 'text')->whereNull('deleted_at')->where('sender_id', '!=', $me->id)
             ->where('id', '>', $after)->visibleTo($me->id)
@@ -929,9 +951,28 @@ class TeamMessageController extends Controller
             ];
         }
 
-        // Authoritative unread (unmuted), per conversation — drives the sidebar badges and
-        // the nav badge with no client-side drift. Keyed by conversation id.
-        $perConv = DB::table('team_messages as m')
+        $perConv = $this->unreadForBadge($me);
+
+        return response()->json([
+            'messages' => $out,
+            'lastId'   => $maxId,
+            // There is at least one more batch to walk through (a long absence): the client
+            // holds its toasts and shows one summary when it has caught up.
+            'more'     => $rows->count() >= 30,
+            'unread'   => (int) collect($perConv)->sum(),
+            'perConv'  => (object) $perConv,
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /**
+     * Authoritative unread (unmuted) per conversation — drives the sidebar badges, the nav
+     * badge and the desktop app's taskbar dot, with no client-side drift.
+     *
+     * @return array<int,int> conversation id => unread count
+     */
+    private function unreadForBadge(Admin $me): array
+    {
+        return DB::table('team_messages as m')
             ->join('conversation_participants as p', 'p.conversation_id', '=', 'm.conversation_id')
             ->where('p.admin_id', $me->id)->where('p.muted', false)->where('m.type', 'text')
             ->where('m.sender_id', '!=', $me->id)
@@ -941,14 +982,7 @@ class TeamMessageController extends Controller
                 ->whereColumn('mh.team_message_id', 'm.id')->where('mh.admin_id', $me->id))
             ->groupBy('m.conversation_id')
             ->selectRaw('m.conversation_id as cid, COUNT(*) as c')
-            ->pluck('c', 'cid');
-
-        return response()->json([
-            'messages' => $out,
-            'lastId'   => $maxId,
-            'unread'   => (int) $perConv->sum(),
-            'perConv'  => (object) $perConv->all(),
-        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+            ->pluck('c', 'cid')->all();
     }
 
     /** Unread @mentions of me, per conversation (for the "@" badge). */
