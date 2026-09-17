@@ -267,6 +267,33 @@ class ResultsTrackingTest extends TestCase
             ->assertDontSee('Round 3 sent; Round 3 sent'); // not repeated in the copy text
     }
 
+    public function test_eod_splits_round_errors_and_new_client_errors(): void
+    {
+        $this->seedWorld();
+        $this->eu($this->clinecea, 'Diana', ['intake_status' => 'round_error', 'error_type' => 'billing eror']);
+        $this->eu($this->clinecea, 'Mariah', ['intake_status' => 'error', 'intake_review_note' => 'login missing']);
+        $this->eu($this->clinecea, 'Victoria', ['intake_status' => 'error']);   // no note recorded
+        $this->eu($this->clinecea, 'Shynea', ['intake_status' => 'round_error', 'error_type' => 'x', 'held_at' => now()]);
+
+        $res = $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->clinecea->id])
+            ->get('/admin/results/eod')
+            ->assertOk()
+            ->assertDontSee('Issues/Errors');
+
+        preg_match('/<textarea id="eodText"[^>]*>(.*?)<\/textarea>/s', $res->getContent(), $m);
+        $text = html_entity_decode($m[1] ?? '', ENT_QUOTES);
+
+        $this->assertStringContainsString(
+            "Round Errors: 1\n- Diana X (billing eror)\nNew Client Errors: 2\n",
+            $text
+        );
+        $this->assertStringContainsString('- Mariah X (login missing)', $text);
+        $this->assertStringContainsString('- Victoria X (Error)', $text);
+        // A held client is listed under On hold only, never as an error.
+        $this->assertStringNotContainsString('Shynea X (', $text);
+        $this->assertStringContainsString('- Shynea X', $text);
+    }
+
     public function test_round_approval_flow(): void
     {
         $this->seedWorld();

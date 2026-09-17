@@ -80,12 +80,21 @@ trait BuildsEodReport
         $onHold = $clients->whereNotNull('held_at')
             ->map(fn ($eu) => ['name' => $eu->full_name, 'reason' => $eu->move_reason])->values();
 
-        // Show the SPECIFIC error type (e.g. "billing error - Account deactivated"),
-        // falling back to the generic bucket label only when none is recorded.
-        $issues = $clients->whereIn('intake_status', ['error', 'round_error'])
+        // Errors, split the same way as the sidebar lists. Held clients are left out
+        // (they already appear under On hold), matching the Errors pages. Each shows
+        // the specific error the VA recorded, as those pages do.
+        $errorName = fn (?string ...$vals) => collect($vals)->map(fn ($v) => trim((string) $v))->first(fn ($v) => $v !== '');
+
+        $roundErrors = $clients->where('intake_status', 'round_error')->whereNull('held_at')
             ->map(fn ($eu) => [
                 'name' => $eu->full_name,
-                'type' => trim((string) $eu->error_type) !== '' ? $eu->error_type : $eu->resultsStatusLabel(),
+                'type' => $errorName($eu->error_type, $eu->intake_review_note) ?? 'Round Error',
+            ])->values();
+
+        $newClientErrors = $clients->where('intake_status', 'error')->whereNull('held_at')
+            ->map(fn ($eu) => [
+                'name' => $eu->full_name,
+                'type' => $errorName($eu->intake_review_note, $eu->error_type) ?? 'Error',
             ])->values();
 
         ksort($worked);
@@ -99,7 +108,9 @@ trait BuildsEodReport
             'waitingApproval' => $waitingApproval,
             'nearing'         => $nearing,
             'onHold'          => $onHold,
-            'issues'          => $issues,
+            'roundErrors'     => $roundErrors,
+            'newClientErrors' => $newClientErrors,
+            'issues'          => $roundErrors->concat($newClientErrors),   // combined count (dashboard box)
             'enabled'         => $boIds->isNotEmpty(),
             'workDate'        => $date,
             'workLabel'       => WorkDay::label($date),

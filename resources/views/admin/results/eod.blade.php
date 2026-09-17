@@ -25,8 +25,10 @@
     foreach ($nearing as $n) { $L[] = "- {$n['name']} ({$n['left']} left)"; }
     $L[] = "On hold: " . ($onHold->count() ?: 'None');
     foreach ($onHold as $h) { $L[] = "- {$h['name']}" . ($h['reason'] ? " — {$h['reason']}" : ''); }
-    $L[] = "Issues/Errors: " . ($issues->count() ?: 'None');
-    foreach ($issues as $i) { $L[] = "- {$i['name']} ({$i['type']})"; }
+    $L[] = "Round Errors: " . ($roundErrors->count() ?: 'None');
+    foreach ($roundErrors as $i) { $L[] = "- {$i['name']} ({$i['type']})"; }
+    $L[] = "New Client Errors: " . ($newClientErrors->count() ?: 'None');
+    foreach ($newClientErrors as $i) { $L[] = "- {$i['name']} ({$i['type']})"; }
     $eodText = implode("\n", $L);
 @endphp
 
@@ -112,8 +114,12 @@
         @forelse ($onHold as $h)<div class="eod-li">{{ $h['name'] }}@if ($h['reason']) <span class="muted">· {{ $h['reason'] }}</span>@endif</div>@empty<p class="muted">None.</p>@endforelse
     </div>
     <div class="pro-panel eod-list">
-        <h3>Issues / Errors</h3>
-        @forelse ($issues as $i)<div class="eod-li">{{ $i['name'] }} <span class="muted">· {{ $i['type'] }}</span></div>@empty<p class="muted">None.</p>@endforelse
+        <h3>Round Errors</h3>
+        @forelse ($roundErrors as $i)<div class="eod-li">{{ $i['name'] }} <span class="muted">· {{ $i['type'] }}</span></div>@empty<p class="muted">None.</p>@endforelse
+    </div>
+    <div class="pro-panel eod-list">
+        <h3>New Client Errors</h3>
+        @forelse ($newClientErrors as $i)<div class="eod-li">{{ $i['name'] }} <span class="muted">· {{ $i['type'] }}</span></div>@empty<p class="muted">None.</p>@endforelse
     </div>
 </div>
 @endif
