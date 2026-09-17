@@ -341,7 +341,8 @@ Reported from production: a message arrived as text only, with the sender seeing
 
 ## 15. Open / watch items
 
-- **Field-check after this deploy** (can't be tested from here — they need the real built app): drag-and-drop onto the window, the taskbar unread dot, `Ctrl+Alt+A` summoning the window, starting the PC with no internet, and `/admin/system/upload-limits` output.
+- **0.1.5 smoke-tested by running the built binary on the dev machine (2026-09-18)** — all confirmed in real WebView2: the waiting room hands over to the live chat and the signed-in page renders; a second launch does not start a second process; autostart is rewritten once to `<exe> --autostarted` and the `autostart-configured` marker is written; a launch with `--autostarted` leaves the "Apex Team Chat" window `visible=False` (tray only). The registry entry and marker were restored afterwards. **Useful trick:** capture the window with `Graphics.CopyFromScreen` over the `GetWindowRect` of the process's `MainWindowHandle` and look at the PNG — that is how "does it actually reach the chat" was answered without guessing. Note `MainWindowTitle` reports the single-instance plugin's 14×14 `…-siw` helper window, so enumerate windows instead of trusting it.
+- **Still field-check after this deploy** (needs a VA's real machine): drag-and-drop onto the window, the taskbar unread dot, `Ctrl+Alt+A` actually summoning the window (registration is best-effort across `SUMMON_KEYS`), a PC started with no internet, and `/admin/system/upload-limits` output.
 - Confirm in the field that the **no-throttle flags** actually keep background polling + OS notifications alive.
 - `apex-desktop` is **not under version control** — consider `git init` so config/version changes are tracked.
 - The 2.65MB installer binary is committed under `public/download/` — acceptable but bloats history over time.
