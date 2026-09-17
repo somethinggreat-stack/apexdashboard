@@ -19,8 +19,14 @@
 })();
 </script>
 
-@php $me = Auth::guard('admin')->user(); @endphp
-@if ($me && in_array($me->role, ['super', 'va'], true))
+@php
+    $me = Auth::guard('admin')->user();
+    // The chat host serves the chat only: this poll's route isn't allowed there, so the
+    // request was redirected and the server rendered the ENTIRE chat page instead — every
+    // 45 seconds, for every VA — while the alert itself could never work. Skip it there.
+    $chatSurface = request()->getHost() === config('app.chat_host') || request()->boolean('standalone');
+@endphp
+@if ($me && in_array($me->role, ['super', 'va'], true) && ! $chatSurface)
 {{-- Desktop notifications: raise a native toast when a new client arrives.
      Works while the app is open (the team's whole shift). Fulfillment team only. --}}
 <script>
@@ -128,7 +134,13 @@
 })();
 </script>
 
+@endif
+
 {{-- Team Chat global realtime layer (always-on polling + cross-tab sync + notification
-     center + desktop notifications). Replaces the old pause-on-hidden notifier. --}}
-@include('partials.team-realtime')
+     center + desktop notifications). Only where the chat can actually be used: in a plain
+     browser on the dashboard host every one of these polls is refused by ChatAppOnly, which
+     was thousands of rejected requests a day and a notification bell that never worked. --}}
+@if ($me && in_array($me->role, ['super', 'va'], true)
+    && (str_contains((string) request()->userAgent(), 'ApexDesktop') || request()->getHost() === config('app.chat_host')))
+    @include('partials.team-realtime')
 @endif

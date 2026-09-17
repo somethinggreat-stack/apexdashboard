@@ -124,6 +124,14 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        // Handed to the login page so it can clear THIS person's chat data from this browser
+        // (saved chats, drafts, notification list) — including a tray sign-out that never
+        // touches the chat page. Scoped on purpose: another account's data and unrelated
+        // dashboard storage must survive.
+        $chatLogout = [
+            'uid'   => (string) Auth::guard('admin')->id(),
+            'stamp' => \App\Http\Middleware\TeamChatSession::stamp($request),
+        ];
         if ($id = Auth::guard('admin')->id()) {
             \App\Models\ActivityLog::create([
                 'admin_id'    => $id,
@@ -145,11 +153,9 @@ class AuthController extends Controller
             ? route('admin.chat-login')
             : route('admin.login');
 
-        // Wipe this browser's stored chat data (saved chats, drafts, notification list) on the
-        // way out, so the next VA on a shared PC starts clean — this also covers sign-outs that
-        // never touch the chat page, like the desktop app's tray menu. Browsers only honour it
-        // over HTTPS, so the chat page clears the same things itself as well.
-        return redirect()->to($to)->header('Clear-Site-Data', '"storage"');
+        // The login page also cleans up direct/tray logout on HTTP. Avoid origin-wide
+        // Clear-Site-Data: unrelated dashboard data and other accounts must survive.
+        return redirect()->to($to)->with('chat_logout', $chatLogout);
     }
 
     private function throttleKey(Request $request): string

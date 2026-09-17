@@ -18,7 +18,11 @@ class TrackPresence
         $admin = Auth::guard('admin')->user();
 
         if ($admin && (! $admin->last_seen_at || $admin->last_seen_at->lt(now()->subSeconds(20)))) {
-            $admin->forceFill(['last_seen_at' => now()])->saveQuietly();
+            // A plain UPDATE, not a model save: saving also bumped `updated_at`, which is the
+            // cache-buster in every avatar URL — so every avatar in the app changed URL (and was
+            // re-downloaded) roughly every 20 seconds, for everyone.
+            \App\Models\Admin::whereKey($admin->id)->toBase()->update(['last_seen_at' => now()]);
+            $admin->last_seen_at = now();
         }
 
         return $next($request);

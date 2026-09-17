@@ -157,7 +157,7 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Build:** `cd Z:\Projects\apex-desktop; npm run tauri build` (~2–3 min incremental). Outputs:
   - Installer: `src-tauri\target\release\bundle\nsis\Apex Team Chat_<version>_x64-setup.exe`
   - Signature: `...exe.sig`
-- **App version** comes from `tauri.conf.json` `version` (currently **0.1.3**; `Cargo.toml` + `package.json` now match).
+- **App version** comes from `tauri.conf.json` `version` (currently **0.1.4**; `Cargo.toml` + `package.json` now match).
 - **Publish for auto-update:** copy the installer to `public/download/apex-team-chat-setup.exe` (stable name — renaming does NOT break the signature, which is over the file bytes), and update `public/download/latest.json`:
   ```json
   { "version": "<new>", "notes": "...", "pub_date": "<ISO8601 Z>",
@@ -239,6 +239,33 @@ Every async request in the thread script checks, when it returns, that the chat 
 - Per-chat drafts (the other half of that list) shipped in Phase 2 — see the Uploads section.
 - **Deploy note:** the reconnect-draft key changed, so a draft stashed by the previous version at the exact moment of this deploy is not restored. One-off, affects only a send that hit a 419 mid-deploy.
 
+### Routine UI actions (2026-09-18)
+- **Downloads:** one at a time (a queue), so "Download selected" no longer holds every zip in memory at once. An expired session is detected (401/redirect/HTML) and reported instead of saving the login page under the zip's name. The card says "Downloaded — check your Downloads folder" only once the bytes are in.
+- **Paste:** copying cells from Excel/Word puts a picture AND text on the clipboard — the text wins now. Screenshots (no text) and files copied from Explorer (real name) still attach.
+- **Search jump:** `search` already returned `message_id`; result links carry `&m=<id>`, and `index()`/`open()` load the page AROUND that message (`messagePage()`, `focusId`) so the app scrolls to it and flashes it. Header-search results open in place.
+- **Image viewer:** one `openLightbox(container, link)` builds the list from wherever it was opened (thread, Files, Photos, gallery). The Photos grid had NO click handler at all — clicking a photo used to navigate the app to the raw image.
+- Pinned bar double-toggle was fixed in Phase 2; re-verified here.
+
+### Shared-PC session lifetime (Codex work, reviewed and repaired 2026-09-18)
+- `TeamChatSession` middleware + `public/js/team-chat-privacy.js` + `partials/team-chat-session|logout`: chat requests carry `X-Apex-Chat-Session: <uid>.<token>`; a tab belonging to a DIFFERENT account gets 401 and clears itself, and logout hands the login page a scoped cleanup instead of an origin-wide `Clear-Site-Data` (unrelated dashboard data survives).
+- **Repairs made to that work:** (1) a renewed session used to 401 and bounce the VA to the login page — the token is now a per-sign-in scope kept IN the session, and a mismatch for the SAME person returns **409 + a fresh stamp** which the page adopts and retries, so a session rolling over never interrupts anything; (2) `Cache-Control: private, no-store` was being forced onto EVERY admin response (killing back/forward cache and the image caching below) — now only chat paths, and never over a deliberate `max-age`; (3) the chat page called `window.ApexChatPrivacy.*` directly and would break if that file failed to load — all calls go through `tcPriv()` with a safe fallback.
+- Drafts moved from sessionStorage to localStorage (per user, cleared on sign-out) so a desktop update restart can't lose typed text.
+
+### Server load & waste (2026-09-18)
+- The **new-clients poller** no longer runs on the chat surface (it was redirected by `ChatHostGuard`, making the server render the whole chat page every 45s per VA, for an alert that could never fire there).
+- `/favicon.ico` didn't exist, so the chat host rendered the whole chat page for it — the chat layout now points at `favicon.svg`.
+- The **realtime poller only loads where the chat can be used** (ApexDesktop UA or chat host). In a plain dashboard browser every one of those polls was refused by `ChatAppOnly`, 15×/minute, all day.
+- **Images and avatars are cacheable now:** chat images `private, max-age=31536000, immutable`; avatars `private, max-age=86400` — both set AFTER building the response, because a file response marks itself `public` and these are private files behind Cloudflare. Avatar URLs are versioned by the PHOTO's mtime, not `admins.updated_at`, which presence writes bumped every ~20s (so every avatar re-downloaded constantly). `TrackPresence` now uses a plain UPDATE that doesn't touch `updated_at`.
+- **Idle windows cost far less:** notifier 4s while focused / 10s otherwise; the open thread's 3s poll drops to one in five when not being looked at; presence dots pause unfocused; the 5-thread idle warm runs once per page, not on every chat switch. Focus, click, key press and visibility changes still poll immediately.
+- Added indexes `(conversation_id, updated_at)` and `(created_at)` on `team_messages` (migration `2026_09_24_000001`) for the states poll and the purge — both were full scans on the shared database.
+
+### Sessions & desktop updates (2026-09-18)
+- **Session lifetime:** chat requests keep their own session alive for `team.chat.session_days` (default 30, `TEAM_CHAT_SESSION_DAYS`), never shorter than `SESSION_LIFETIME`. A 2-hour idle no longer makes the next send fail with "Reconnecting…", whatever production's `.env` says. `/admin/system/upload-limits` now also reports the live session settings.
+- **Desktop 0.1.4:** updates are checked at startup AND every 6 hours (an app that lives in the tray for weeks used to sit on an old version until a reboot). Only the first check of a fresh launch installs immediately; later ones **download** and wait — a tray item "Install update & restart" plus a notification, and it installs automatically on Quit. No more silent mid-session exit that threw away typed text.
+
+### Attachment shown without its file (2026-09-18)
+Reported from production: a message arrived as text only, with the sender seeing the file. The cause was the pre-Phase-1 half-saved send, but a client that had already drawn it kept it text-only until a reload. `thread()`'s states now carry `atts` (attachment count) and the page redraws just that message when its bubble has no files. Covered by `phase8.js` A1.
+
 ---
 
 ## 11. Bugs & fixes worth remembering
@@ -290,7 +317,8 @@ Every async request in the thread script checks, when it returns, that the chat 
 9. **Every async request in the chat script must check freshness on return** (`runAlive` / `viewAlive(gen)` / `chatAlive(key)` / nav ticket — see §6). Every message insert goes through `serializedSend` (see §10 Send integrity).
 10. **Never `location.reload()` from a chat action** — an upload may be in flight. Update in place, or go through `window.tcConfirmIfSending()` first.
 11. **Upload limits come from `uploadLimits()`**, never hard-coded in the page; keep the client and server checks in step.
-12. **Never call an app command from the chat page without granting it in `capabilities/remote.json` AND declaring it in `build.rs`** — a remote origin is refused otherwise (that is what broke the taskbar dot).
+12. **Durable browser suites live in `tests/Browser/TeamChat/`** — `node tests/Browser/TeamChat/run.cjs` gives each suite its own throwaway SQLite database and PHP process (needs `PLAYWRIGHT_MODULE`/`CHROMIUM_PATH`). Keep them in step with the session scratchpad copies.
+13. **Never call an app command from the chat page without granting it in `capabilities/remote.json` AND declaring it in `build.rs`** — a remote origin is refused otherwise (that is what broke the taskbar dot).
 
 ---
 

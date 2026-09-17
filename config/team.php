@@ -26,5 +26,13 @@ return [
     */
     'chat' => [
         'max_request_mb' => (int) env('TEAM_CHAT_MAX_REQUEST_MB', 95),
+
+        /*
+        | How long a Team Chat sign-in stays valid. The desktop app lives in the tray all
+        | shift, so the dashboard's 2-hour SESSION_LIFETIME would expire under a VA and make
+        | their next message fail with "Reconnecting…". Chat requests extend their own session
+        | to this instead (never shorter than the app-wide setting).
+        */
+        'session_days' => (int) env('TEAM_CHAT_SESSION_DAYS', 30),
     ],
 ];

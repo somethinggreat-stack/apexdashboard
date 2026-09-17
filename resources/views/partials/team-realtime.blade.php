@@ -38,6 +38,7 @@
   :root[data-theme="dark"] .apex-nc-head b, :root[data-theme="dark"] .apex-nc-tx b { color:#e2e8f0; }
   :root[data-theme="dark"] .apex-nc-item:hover { background:#182444; }
 </style>
+@include('partials.team-chat-session')
 <script>
 (function () {
     'use strict';
@@ -111,7 +112,7 @@
     var ME_ID = @json((string) (Auth::guard('admin')->id() ?? ''));
     var U = ':u' + ME_ID;
     var LKEY = 'apex-team-last-msg' + U, NKEY = 'apex-team-notifs' + U, NLKEY = 'apex-team-last-notified' + U;
-    function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+    function ls(k, v){ if (window.__tcPrivacyStopped) return null; try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
     var lastId = parseInt(ls(LKEY) || '0', 10) || 0;
     var primed = lastId > 0;               // if we have a baseline, deliver new msgs (no backlog spam)
     var seen = {};                          // id -> 1, per-tab UI dedupe
@@ -131,6 +132,7 @@
     function leaderFresh(){ var l = leader(); return l && (Date.now() - l.ts < 8000); }
     function amLeader(){ var l = leader(); return l && l.id === TAB; }
     function claim(){
+        if (window.__tcPrivacyStopped) return;
         var l = leader(), fresh = l && (Date.now() - l.ts < 8000), vis = !document.hidden;
         // Claim if: no fresh leader, I already am, or I'm visible and the current leader is hidden.
         if (!fresh || (l && l.id === TAB) || (vis && l && !l.vis)) {
@@ -142,14 +144,16 @@
 
     // ---------- cross-tab bus ----------
     var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('apex-team' + U) : null;
+    window.addEventListener('apex:chat-session-ended', function () { if (bc) bc.close(); nativeBadge(0); });
     if (bc) bc.onmessage = function (e) {
+        if (window.__tcPrivacyStopped) return;
         var d = e.data || {};
         if (d.kind === 'active'){ if (d.conv) activeByTab[d.tab] = String(d.conv); else delete activeByTab[d.tab]; return; }
         if (d.kind === 'seen'){ hydrate(); renderPanel(); return; }
         if (d.kind === 'unread'){ applyUnread(d.unread, d.perConv); return; }   // authoritative counts from the leader
         if (d.kind === 'data'){ ingest(d.data, false); }   // from the leader — update in-app UI, don't re-notify/re-broadcast
     };
-    function post(o){ if (bc) bc.postMessage(o); }
+    function post(o){ if (bc && !window.__tcPrivacyStopped) bc.postMessage(o); }
 
     // ---------- desktop notification permission ----------
     function permission(){ return ('Notification' in window) ? Notification.permission : 'denied'; }
@@ -347,8 +351,15 @@
 
     // ---------- the poll loop (leader hits the network; others ride broadcasts) ----------
     var timer = null;
-    function schedule(){ clearTimeout(timer); timer = setTimeout(loop, document.hidden ? 8000 : 4000); }
+    // 4s while the VA is actually at the window; slower when it sits in the tray or behind
+    // another app — focus, a click, a key press or a visibility change all poll immediately,
+    // so nothing arrives late, and the server stops carrying pointless traffic all night.
+    function schedule(){
+        var idle = document.hidden || !document.hasFocus();
+        clearTimeout(timer); timer = setTimeout(loop, idle ? 10000 : 4000);
+    }
     function loop(){
+        if (window.__tcPrivacyStopped) return;
         claim();
         if (!amLeader()){ schedule(); return; }   // a peer is the poller — we update via BroadcastChannel
         // No stored position yet (new install / after Refresh): ask where history ends instead
@@ -356,6 +367,7 @@
         fetch(POLL_URL + '?after=' + lastId + (primed ? '' : '&prime=1'), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
+                if (window.__tcPrivacyStopped) return;
                 if (!data){ schedule(); return; }
                 // Authoritative unread every poll — so counts also DROP when read elsewhere.
                 applyUnread(data.unread, data.perConv);

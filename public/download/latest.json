@@ -1,11 +1,11 @@
 {
-  "version": "0.1.3",
-  "notes": "Taskbar unread dot now works. Drag and drop files into the chat (0.1.2).",
-  "pub_date": "2026-09-17T18:22:12Z",
+  "version": "0.1.4",
+  "notes": "Updates now install when you quit instead of closing the app mid-message, and are checked every few hours. Taskbar unread dot (0.1.3) and drag-and-drop (0.1.2) included.",
+  "pub_date": "2026-09-17T20:52:34Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTJRWDIzTyt2N2ZMUkR4Ums2L1djblYwUnh1ek8wSnZOTWNFVWh6UVFBWFc5UDR6Q29Fcnhrck5mSG5nNlY1WnQ2aXhiZXY2K3FrQlZ2T0lrT2lpREE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjY4MzA5CWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjNfeDY0LXNldHVwLmV4ZQpETThBSlRCZGxUUEMvTmh6UlprT29kL2VoOWtWQjE5Rk9PMkJsODFFakhXQ1NvQVNTb25rU0RBdlBCYWhXdHIyc0JEdTBBaEpjMWx5QUY1RGU0bThCUT09Cg==",
-      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.3"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTNlSzBWdmRrWWRmZDkvRG9FRFRIbFhSS2RGMi9NcFY4M0E3VWErZUx1UDV6dFFaa1UwaE1ZVVJ1ZXB5UTR1TWd2Qi93SkpaY0c1MStQUTVUcWNjRUE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5Njc4MjUzCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjRfeDY0LXNldHVwLmV4ZQpQNFkzRDg0Y0tUK2JSZUpKL2x6aVRGajNVa0UxTjFlZThFdWVhdERTdktUVkdEbnJKVnBDclc5TlE1dnFUMFBab3hwR25HSmU4QzdHS3l4MnJKTnVCUT09Cg==",
+      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.4"
     }
   }
 }

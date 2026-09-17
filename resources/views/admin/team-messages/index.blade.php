@@ -154,6 +154,7 @@
                  {{-- The teammate of any 1:1 chat (same as the /open payload), so the chat has one
                       identity whether it was loaded in full or swapped in place. --}}
                  @if ($peer && ! $isGroup && ! $isSelf) data-peer="{{ $peer->id }}" @endif
+                 @if (!empty($focusId)) data-focus="{{ $focusId }}" @endif
                  data-group="{{ $isGroup ? 1 : 0 }}" data-last="{{ $messages->last()->id ?? 0 }}"
                  data-first="{{ $messages->first()->id ?? 0 }}" data-more="{{ $hasMoreOlder ? 1 : 0 }}">
                 @if ($hasMoreOlder)
@@ -480,6 +481,15 @@
     // SPA swap) checks it on return and drops its result instead of touching the new page.
     window.__tcRun = (window.__tcRun || 0) + 1;
     window.__tcAllowLeave = false;   // set only after the VA agreed to cancel an in-flight upload
+    // The shared-PC session module (public/js/team-chat-privacy.js). Looked up lazily and with
+    // a safe fallback, so the chat still works if that file ever fails to load — it simply
+    // keeps no saved chats, which is the safe direction.
+    window.tcPriv = function () {
+        return window.ApexChatPrivacy || {
+            live: function () { return true; }, token: function () { return null; },
+            renew: function () { return false; }, logout: function () { return Promise.resolve(); }
+        };
+    };
     window.TCI = function (fn, ms) { var id = setInterval(fn, ms); reg.intervals.push(id); return id; };
     window.TCB = function (node) { document.body.appendChild(node); reg.nodes.push(node); return node; };
     window.TCD = function (t, fn, o) { document.addEventListener(t, fn, o); reg.docs.push([t, fn, o]); };
@@ -696,7 +706,7 @@
     }
     // Is the VA actually looking at this window? Drives read/seen (see poll's read= flag).
     function isViewing(){ return !document.hidden && document.hasFocus(); }
-    function runAlive(){ return RUN === window.__tcRun; }
+    function runAlive(){ return !window.__tcPrivacyStopped && RUN === window.__tcRun; }
     function viewAlive(gen){ return runAlive() && gen === VIEW_GEN; }
     function chatAlive(key){ return runAlive() && key === chatKey(); }
 
@@ -947,12 +957,37 @@
         return n;
     }
 
+    // A message drawn without its files (it reached an older build while the message was
+    // still being saved) repairs itself: fetch that one message again and redraw its bubble,
+    // rather than sitting there as text-only until someone reloads.
+    var repaired = {};
+    function repairMessage(id){
+        if (repaired[id] || !CONV) return;
+        repaired[id] = true;
+        var gen = VIEW_GEN, conv = CONV;
+        fetch(THREAD + '?c=' + encodeURIComponent(conv) + '&after=' + (id - 1) + '&read=0&_=' + Date.now(),
+            { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (res) {
+                if (!res || !viewAlive(gen) || conv !== CONV) return;
+                var m = (res.messages || []).filter(function (x) { return String(x.id) === String(id); })[0];
+                var el = m && box.querySelector('.tc-msg[data-id="' + id + '"]');
+                if (!el) return;
+                var stick = atBottom();
+                el.innerHTML = senderChip(m) + bubbleInner(m);
+                if (stick) toBottom();
+            })
+            .catch(function () {});
+    }
+
     // Live-sync reactions and deletions on messages already on screen.
     function applyStates(states){
         if (!states) return;
         states.forEach(function (s) {
             var el = box.querySelector('.tc-msg[data-id="' + s.id + '"]');
             if (!el) return;
+            // The server says this message has files but the bubble shows none → redraw it.
+            if (!s.deleted && s.atts > 0 && !el.querySelector('.tc-atts')) repairMessage(s.id);
             var rr = el.querySelector('.tc-reacts');
             if (rr){
                 var rh = reactsHtml(s.reactions);
@@ -1057,6 +1092,8 @@
     }
 
     toBottom();
+    // Loaded from a search result (?m=<id>): land on that message, not at the bottom.
+    if (box.dataset.focus) setTimeout(function () { jumpToMessage(box.dataset.focus); }, 60);
     if (input) input.focus(); // ready to type the moment the chat opens
     // Restore a draft stashed during a reconnect, so nothing typed is ever lost.
     var restoredDraft = null;
@@ -1261,16 +1298,24 @@
     function handlePaste(e){
         var dt = e.clipboardData || window.clipboardData; if (!dt) return;
         var files = [];
+        var named = false;   // a real file copied from Explorer (has its own name)
         if (dt.files && dt.files.length) {
             // Files copied from the OS file manager arrive here with real names.
-            Array.prototype.forEach.call(dt.files, function (f) { files.push(namedFile(f)); });
+            Array.prototype.forEach.call(dt.files, function (f) { if (f.name) named = true; files.push(namedFile(f)); });
         } else if (dt.items && dt.items.length) {
             // A pasted screenshot/image comes through as an item of kind "file", no name.
             Array.prototype.forEach.call(dt.items, function (it) {
-                if (it.kind === 'file') { var f = it.getAsFile(); if (f) files.push(namedFile(f)); }
+                if (it.kind === 'file') { var f = it.getAsFile(); if (f) { if (f.name) named = true; files.push(namedFile(f)); } }
             });
         }
-        if (files.length) { e.preventDefault(); addFiles(files); }   // let plain-text paste through untouched
+        // Copying cells from Excel (or a table from Word/a browser) puts BOTH a picture and the
+        // text on the clipboard. The VA means the text — paste it, and ignore the picture.
+        // A screenshot has no text, and a file copied from Explorer keeps its own name, so
+        // both of those still attach.
+        var text = '';
+        try { text = dt.getData('text/plain') || ''; } catch (err) {}
+        var onlyImages = files.length > 0 && files.every(function (f) { return /^image\//.test(f.type || ''); });
+        if (files.length && !(text.trim() && onlyImages && !named)) { e.preventDefault(); addFiles(files); }
     }
     // Attach to ONE element only. The thread panel catches a composer paste as it bubbles
     // up from the textarea, so a single listener handles it exactly once.
@@ -1294,14 +1339,18 @@
     var DRAFTS = window.__tcDrafts = window.__tcDrafts || {};
     // Per signed-in user: a draft must never reappear in the next VA's session on a shared PC.
     var DRAFT_TEXT_KEY = 'tc-drafts:u' + @json((string) $me->id);
-    function readDraftTexts(){ try { return JSON.parse(sessionStorage.getItem(DRAFT_TEXT_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    // Drafts live in localStorage, not sessionStorage: a desktop update restarts the app,
+    // and what a VA had typed must still be there afterwards. Cleared on sign-out with the
+    // rest of this person's chat data.
+    function readDraftTexts(){ try { return JSON.parse(localStorage.getItem(DRAFT_TEXT_KEY) || sessionStorage.getItem(DRAFT_TEXT_KEY) || '{}') || {}; } catch (e) { return {}; } }
     // After a reload the in-memory store is empty: bring back the saved texts first, so saving
     // one chat's draft never drops another's.
     (function () { var t = readDraftTexts(); Object.keys(t).forEach(function (k) { if (!DRAFTS[k] && t[k]) DRAFTS[k] = { body: t[k] }; }); })();
     function persistDraftTexts(){
+        if (window.__tcPrivacyStopped) return;
         var out = {};
         Object.keys(DRAFTS).forEach(function (k) { if (DRAFTS[k] && DRAFTS[k].body && DRAFTS[k].body.trim()) out[k] = DRAFTS[k].body; });
-        try { sessionStorage.setItem(DRAFT_TEXT_KEY, JSON.stringify(out)); } catch (e) {}
+        try { localStorage.setItem(DRAFT_TEXT_KEY, JSON.stringify(out)); sessionStorage.removeItem(DRAFT_TEXT_KEY); } catch (e) {}
     }
     function replySnapshot(){
         if (!replyId || !replyBar) return null;
@@ -1510,6 +1559,13 @@
                 var toLogin = /\/(chat-)?login(\?|$)/.test(xhr.responseURL || '');
                 if (s >= 200 && s < 300 && res && res.ok) return succeeded(res);
                 if (toLogin || s === 401) return signedOut();
+                if (s === 409 && res && res.reason === 'session-renewed'){
+                    // The session rolled over (e.g. "keep me signed in" after an idle spell).
+                    // Take the new stamp and send again — same client id, so no duplicate.
+                    tcPriv().renew(res.stamp);
+                    if (tries > 0) return notSent('Could not send — press Enter to try again');
+                    return attempt(tries + 1);
+                }
                 if (s === 419){
                     // Token went stale (e.g. after an update, or the session was renewed):
                     // get a fresh one and resend once — same client id, files kept.
@@ -1568,6 +1624,7 @@
     // if the session is truly gone, the sign-in). No scary "CSRF token mismatch".
     var reconnecting = false;
     function reconnect(draft){
+        if (window.__tcPrivacyStopped) return;
         if (reconnecting) return; reconnecting = true;
         // Stash the unsent text with the chat it belongs to (and its client id), so after the
         // reload it goes back into THAT chat only, and a resend can't duplicate it.
@@ -1646,7 +1703,14 @@
             })
             .catch(function () {});
     }
-    TCI(poll, 3000);
+    // The open chat refreshes every 3s while it is being looked at. Away from the window the
+    // notifier (above) is what wakes it, so this drops to a slow safety net instead of asking
+    // the server for the same thread twenty times a minute, all night, per VA.
+    var pollTick = 0;
+    TCI(function () {
+        pollTick++;
+        if (isViewing() || pollTick % 5 === 0) poll();
+    }, 3000);
 
     // The always-on sidebar block (defined earlier, runs even with no chat open) drives the
     // sidebar + notify wiring. When a message lands in THIS open conversation it asks the
@@ -1686,14 +1750,14 @@
     ];
 
     function getRecent(){
-        try { var r = JSON.parse(localStorage.getItem('tc-recent-emoji') || '[]'); return (r && r.length) ? r : DEFAULT_EMOJI.slice(); }
+        try { var r = JSON.parse(localStorage.getItem('tc-recent-emoji:u' + @json((string) $me->id)) || '[]'); return (r && r.length) ? r : DEFAULT_EMOJI.slice(); }
         catch (e) { return DEFAULT_EMOJI.slice(); }
     }
     function recordRecent(emoji){
         try {
             var r = getRecent().filter(function (x) { return x !== emoji; });
             r.unshift(emoji); r = r.slice(0, 8);
-            localStorage.setItem('tc-recent-emoji', JSON.stringify(r));
+            localStorage.setItem('tc-recent-emoji:u' + @json((string) $me->id), JSON.stringify(r));
         } catch (e) {}
     }
     function renderQuickEmojis(){
@@ -1722,13 +1786,33 @@
         lbIndex = (lbIndex + d + lbImages.length) % lbImages.length;   // wrap around
         lbShow();
     }
+    // Scroll a message into view and flash it (search results, quote and pinned jumps).
+    function jumpToMessage(id){
+        if (!id) return false;
+        var t = box.querySelector('.tc-msg[data-id="' + id + '"]'); if (!t) return false;
+        t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        t.classList.add('tc-flash');
+        setTimeout(function () { t.classList.remove('tc-flash'); }, 1600);
+        return true;
+    }
+    window.tcJumpTo = jumpToMessage;
+
+    // Open the viewer on `link`, with the prev/next arrows walking every image in the SAME
+    // place it was opened from (the thread, the Files table, the Photos grid or the gallery).
+    function openLightbox(container, link){
+        var sel = 'a.tc-att-img, a.tc-photo, a[data-lightbox]';
+        lbImages = Array.prototype.map.call((container || document).querySelectorAll(sel), function (a) { return a.getAttribute('href'); })
+            .filter(function (h, i, all) { return h && all.indexOf(h) === i; });
+        var href = link.getAttribute('href');
+        if (lbImages.indexOf(href) < 0) lbImages = [href];
+        lbIndex = Math.max(0, lbImages.indexOf(href));
+        lightbox.hidden = false; lbShow();
+    }
     box.addEventListener('click', function (e) {
         var img = e.target.closest('.tc-att-img'); if (!img) return;
         e.preventDefault();
         // Every image in the thread becomes navigable (including the hidden "+N" ones).
-        lbImages = Array.prototype.map.call(box.querySelectorAll('.tc-att-img'), function (a) { return a.getAttribute('href'); });
-        lbIndex = Math.max(0, lbImages.indexOf(img.getAttribute('href')));
-        lightbox.hidden = false; lbShow();
+        openLightbox(box, img);
     });
     if (lightbox){
         document.getElementById('tcLbClose').addEventListener('click', closeLightbox);
@@ -1782,9 +1866,13 @@
                 if (total) { bar.style.width = Math.round(loaded / total * 100) + '%'; sub.textContent = fmtBytes(loaded) + ' / ' + fmtBytes(total); }
                 else sub.textContent = fmtBytes(loaded) + ' downloaded';
             },
+            waiting: function (n) { sub.textContent = n > 1 ? 'Waiting (' + n + ' in queue)…' : 'Waiting…'; },
             done: function () {
                 el.classList.remove('indet'); el.classList.add('done');
-                bar.style.width = '100%'; sub.textContent = 'Saved to your Downloads';
+                bar.style.width = '100%';
+                // The bytes are here and the file has been handed to the browser — say that,
+                // rather than claiming it is already sitting in the Downloads folder.
+                sub.textContent = 'Downloaded — check your Downloads folder';
                 el.querySelector('.tc-dl-ic').innerHTML = DONE_ICON;
                 dismiss(4500);
             },
@@ -1799,13 +1887,36 @@
         return api;
     }
 
-    // Stream a file to the user's Downloads with a live progress card.
-    window.tcDownload = function (url, nameHint){
-        var card = dlCard(nameHint);
+    // Downloads run ONE AT A TIME. Each file is held in memory while it downloads, so
+    // "Download selected" on a set of big zips used to hold all of them at once and could
+    // take the window down with it.
+    var dlQueue = [], dlBusy = false;
+    function dlNext(){
+        if (dlBusy) return;
+        var job = dlQueue.shift(); if (!job) return;
+        dlBusy = true;
+        runDownload(job.url, job.name, job.card).then(function (){
+            dlBusy = false;
+            if (dlQueue.length) dlNext();
+        });
+    }
+    function runDownload(url, nameHint, card){
         // Streaming fetch (WebView2 / Chromium) gives us byte-level progress.
-        if (window.fetch && window.ReadableStream){
-            fetch(url, { credentials: 'same-origin', cache: 'no-store' }).then(function (resp){
+        if (!window.fetch || !window.ReadableStream){
+            // Old fallback: let the browser handle it.
+            var a0 = document.createElement('a'); a0.href = url; a0.rel = 'noopener'; TCB(a0); a0.click(); a0.remove();
+            card.el.classList.remove('indet'); card.done();
+            return Promise.resolve();
+        }
+        // Accept anything + the ajax header: if the session has expired the server answers
+        // 401 instead of a login PAGE, which used to be saved as "<the zip's name>".
+        return fetch(url, { credentials: 'same-origin', cache: 'no-store',
+                headers: { 'Accept': '*/*', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (resp){
+                if (resp.status === 401 || resp.status === 419 || resp.redirected) throw new Error('signed-out');
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var ct = (resp.headers.get('Content-Type') || '').toLowerCase();
+                if (ct.indexOf('text/html') === 0) throw new Error('signed-out');   // a page, not a file
                 var name = nameFromDisposition(resp.headers.get('Content-Disposition'), nameHint);
                 card.setName(name);
                 var total = parseInt(resp.headers.get('Content-Length') || '0', 10) || 0;
@@ -1818,17 +1929,21 @@
                         return pump();
                     });
                 })();
-            }).then(function (out){
-                saveBlob(out.blob, out.name); card.done();
-            }).catch(function (err){
-                card.fail('Couldn’t download — tap the file to retry');
+            })
+            .then(function (out){ saveBlob(out.blob, out.name); card.done(); })
+            .catch(function (err){
+                var signedOut = err && err.message === 'signed-out';
+                card.fail(signedOut ? 'Your session ended — sign in again, then download it'
+                                    : 'Couldn’t download — tap the file to retry');
+                if (signedOut && window.apexToast) window.apexToast('Your session ended — sign in again to download files');
                 console && console.warn && console.warn('download failed', err);
             });
-        } else {
-            // Old fallback: let the browser handle it, just show a generic "saved" note.
-            var a = document.createElement('a'); a.href = url; a.rel = 'noopener'; TCB(a); a.click(); a.remove();
-            card.el.classList.remove('indet'); card.done();
-        }
+    }
+    window.tcDownload = function (url, nameHint){
+        var card = dlCard(nameHint);
+        dlQueue.push({ url: url, name: nameHint, card: card });
+        if (dlBusy) card.waiting(dlQueue.length);
+        dlNext();
     };
     function saveBlob(blob, name){
         var u = URL.createObjectURL(blob);
@@ -1989,10 +2104,10 @@
             if (!m.length && !f.length){ hsRes.innerHTML = '<div class="tc-hs-empty">No messages or files found.</div>'; positionHsRes(); hsRes.hidden = false; return; }
             var h = '';
             if (m.length){ h += '<div class="tc-hs-group">Messages</div>' + m.map(function (x) {
-                return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + CHAT_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.title) + '</span><span class="tc-hs-sub">' + esc(x.sender) + ': ' + esc(x.snippet) + '</span></span></a>';
+                return '<a class="tc-hs-item" data-jump="' + (x.message_id || '') + '" href="?c=' + x.conversation_id + (x.message_id ? '&m=' + x.message_id : '') + HS_SA + '"><span class="tc-hs-ic">' + CHAT_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.title) + '</span><span class="tc-hs-sub">' + esc(x.sender) + ': ' + esc(x.snippet) + '</span></span></a>';
             }).join(''); }
             if (f.length){ h += '<div class="tc-hs-group">Files</div>' + f.map(function (x) {
-                return '<a class="tc-hs-item" href="?c=' + x.conversation_id + HS_SA + '"><span class="tc-hs-ic">' + FILE_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.name) + '</span><span class="tc-hs-sub">' + esc(x.title) + ' · ' + esc(x.size) + '</span></span></a>';
+                return '<a class="tc-hs-item" data-jump="' + (x.message_id || '') + '" href="?c=' + x.conversation_id + (x.message_id ? '&m=' + x.message_id : '') + HS_SA + '"><span class="tc-hs-ic">' + FILE_IC + '</span><span class="tc-hs-meta"><span class="tc-hs-title">' + esc(x.name) + '</span><span class="tc-hs-sub">' + esc(x.title) + ' · ' + esc(x.size) + '</span></span></a>';
             }).join(''); }
             hsRes.innerHTML = h; positionHsRes(); hsRes.hidden = false;
         }
@@ -2143,7 +2258,7 @@
         document.getElementById('tcGalleryClose').addEventListener('click', function () { galleryModal.hidden = true; });
         galleryModal.addEventListener('click', function (e) {
             if (e.target === galleryModal){ galleryModal.hidden = true; return; }
-            var a = e.target.closest('a[data-lightbox]'); if (a){ e.preventDefault(); lbImg.src = a.getAttribute('href'); lightbox.hidden = false; }
+            var a = e.target.closest('a[data-lightbox]'); if (a){ e.preventDefault(); openLightbox(galleryModal, a); }
         });
     }
     function openGallery(){
@@ -2168,7 +2283,7 @@
         gbody.innerHTML = html;
         gbody.onclick = function (e){
             var lb = e.target.closest('a[data-lightbox]');
-            if (lb){ e.preventDefault(); lbImg.src = lb.getAttribute('href'); lightbox.hidden = false; return; }
+            if (lb){ e.preventDefault(); openLightbox(gbody, lb); return; }
             var fl = e.target.closest('a[data-dlname]');
             if (fl){ e.preventDefault(); downloadUrls([{ url: fl.getAttribute('href'), name: fl.getAttribute('data-dlname') }]); }
         };
@@ -2306,7 +2421,7 @@
     if (filesScroll){
         filesScroll.addEventListener('click', function (e) {
             var img = e.target.closest('a[data-lightbox]');
-            if (img){ e.preventDefault(); lbImg.src = img.getAttribute('href'); lightbox.hidden = false; return; }
+            if (img){ e.preventDefault(); openLightbox(filesScroll, img); return; }
             var nameLink = e.target.closest('a[data-dlname]');
             if (nameLink){ e.preventDefault(); downloadUrls([{ url: nameLink.getAttribute('href'), name: nameLink.getAttribute('data-dlname') }]); return; }
             var dl = e.target.closest('.tc-fdl');
@@ -2323,6 +2438,13 @@
             if (th){ var k = th.dataset.sort; if (fSort.key === k) fSort.dir *= -1; else { fSort.key = k; fSort.dir = k === 'ts' ? -1 : 1; } renderFiles(); }
         });
     }
+    // Photos tab: open the viewer (arrows walk the whole grid). Without this the click
+    // followed the link and navigated the app away from the chat to the raw image.
+    if (photosScroll) photosScroll.addEventListener('click', function (e) {
+        var img = e.target.closest('a.tc-photo, a[data-lightbox]');
+        if (img){ e.preventDefault(); openLightbox(photosScroll, img); }
+    });
+
     var upBtn = document.getElementById('tcFilesUpload');
     if (upBtn && fileInput) upBtn.addEventListener('click', function () {
         // The composer is hidden on the Files/Photos tabs — bring the VA to Chat, where the
@@ -3026,6 +3148,8 @@
         applyReadReceipts(data.readUpTo);
         updateSeen();
         toBottom();
+        // Opened from a search result: land on that message instead of the bottom.
+        if (data.focusId) setTimeout(function () { jumpToMessage(data.focusId); }, 30);
 
         if (typeof switchTab === 'function') switchTab('chat');
         galleryData = null;   // per-conversation; re-fetched when Files/Photos is opened
@@ -3078,7 +3202,7 @@
     // ---- Tier 2 prefetch cache: q -> { data, ts } (short TTL; a real open reconciles via poll) ----
     var PREFETCH_TTL = 25000;
     var cache = {};
-    function fresh(q){ var c = cache[q]; return c && (Date.now() - c.ts) < PREFETCH_TTL ? c.data : null; }
+    function fresh(q){ var c = cache[q]; return !window.__tcPrivacyStopped && c && usable(c) && (Date.now() - c.ts) < PREFETCH_TTL ? c.data : null; }
     function prefetch(a){
         if (!window.tcOpenUrl) return;
         var q = rowQuery(a); if (!q) return;
@@ -3104,7 +3228,9 @@
     var SNAP_TTL = 24 * 60 * 60 * 1000;
     function idbKey(q){ return 'u' + ME_ID + '|' + q; }
     function usable(rec){
-        return !!(rec && rec.data && String(rec.uid || '') === ME_ID && rec.ts && (Date.now() - rec.ts) < SNAP_TTL);
+        return !!(!window.__tcPrivacyStopped && rec && rec.data && String(rec.uid || '') === ME_ID
+            && rec.ts <= Date.now()
+            && (Date.now() - rec.ts) < SNAP_TTL && Number(rec.data.cacheExpiresAt) > Date.now());
     }
 
     var idbP = null;
@@ -3134,7 +3260,7 @@
     // written by the previous version, which had no owner stamp.
     function idbSweep(){
         idb().then(function (db){
-            if (!db) return;
+            if (!db || !tcPriv().live()) return;
             try {
                 var st = db.transaction('threads','readwrite').objectStore('threads');
                 var cur = st.openCursor();
@@ -3149,7 +3275,7 @@
     }
     idbSweep();
     function idbSet(key, val){
-        idb().then(function (db){ if (!db) return; try {
+        idb().then(function (db){ if (!db || !tcPriv().live() || !usable(val)) return; try {
             db.transaction('threads','readwrite').objectStore('threads').put(val, idbKey(key));
         } catch (e){} });
     }
@@ -3168,7 +3294,12 @@
 
     // Every saved chat is stamped with its owner and the time, so it can only ever be painted
     // back for that same VA, and only for a day.
-    function persist(q, data){ var now = Date.now(); cache[q] = { data: data, ts: now }; idbSet(q, { data: data, ts: now, uid: ME_ID }); }
+    function persist(q, data){
+        if (!tcPriv().live()) return;
+        var rec = { data: data, ts: Date.now(), uid: ME_ID };
+        if (!usable(rec)) { delete cache[q]; idbDel(q); return; }
+        cache[q] = rec; idbSet(q, rec);
+    }
 
     function applyData(data, url){
         window.tcApplyOpen(data, url, true);
@@ -3208,7 +3339,7 @@
         // Tier 3: paint from the on-disk snapshot immediately, then refresh in the background.
         idbGet(q).then(function (snap){
             if (!ticketLive(ticket)) return;   // the VA already clicked something else
-            if (snap && snap.data){
+            if (snap && usable(snap)){
                 var before = sig(snap.data);
                 window.tcApplyOpen(snap.data, url, true);
                 // Real refresh: marks read + authoritative header/pins/messages; re-apply only if changed.
@@ -3246,8 +3377,11 @@
     }, { passive: true });
 
     // Idle-warm the first few visible DM rows so the very first click is instant too.
+    // ONCE per page, not on every in-app chat switch: that was five extra chat loads on the
+    // server every time a VA clicked a different chat.
     function idleWarm(){
-        if (!window.tcApplyOpen || !window.tcSwapEligible(false)) return;
+        if (window.__tcWarmed || !window.tcApplyOpen || !window.tcSwapEligible(false)) return;
+        window.__tcWarmed = true;
         var rows = contacts.querySelectorAll('a.tc-contact:not(.active)');
         var n = 0;
         for (var i = 0; i < rows.length && n < 5; i++){ if (rowQuery(rows[i])){ prefetch(rows[i]); n++; } }
@@ -3273,32 +3407,12 @@
 })();
 
 // New-group modal — lives outside the thread scope so it works with no chat open.
-// Refresh button — a hard "reset the app" that wipes ALL local caches + previous
-// session state (IndexedDB, Cache Storage, localStorage, sessionStorage, service
-// workers) and reloads — WITHOUT signing you out. Login lives in an HTTP cookie,
-// which we never touch, so the session survives. Nothing here can break the app:
-// every store it clears is transient and repopulates on the fresh load.
+// Refresh button — "reset the app": clears THIS VA's local chat state (saved chats,
+// drafts, notification list) and reloads, WITHOUT signing them out. Login lives in an
+// HTTP cookie, which we never touch, so the session survives; other accounts' and other
+// apps' storage on this PC is left alone. Everything cleared repopulates on the reload.
 (function () {
     var btn = document.getElementById('tcRefresh'); if (!btn) return;
-
-    function delDB(name){ return new Promise(function (res){ try { var r = indexedDB.deleteDatabase(name); r.onsuccess = r.onerror = r.onblocked = function(){ res(); }; } catch (e) { res(); } }); }
-
-    function clearAll(){
-        var jobs = [];
-        // 1. Web/Cache Storage (service-worker + fetch caches).
-        try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks){ return Promise.all(ks.map(function (k){ return caches.delete(k); })); })); } catch (e) {}
-        // 2. Every IndexedDB database (thread cache + anything else this origin holds).
-        try {
-            if (indexedDB.databases) {
-                jobs.push(indexedDB.databases().then(function (dbs){
-                    return Promise.all((dbs || []).map(function (d){ return d && d.name ? delDB(d.name) : null; }));
-                }).catch(function(){ return delDB('apexChat'); }));
-            } else { jobs.push(delDB('apexChat')); }
-        } catch (e) {}
-        // 3. Unregister service workers (a fresh one re-registers on reload).
-        try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs){ return Promise.all(regs.map(function (r){ return r.unregister(); })); })); } catch (e) {}
-        return Promise.all(jobs);
-    }
 
     // Sign out: ask first if something is still sending, then wipe this browser's chat data
     // (saved chats, drafts, notification list) so the next VA on a shared PC starts clean.
@@ -3308,9 +3422,7 @@
         function go(){
             var done = false;
             var leave = function () { if (done) return; done = true; location.href = outLink.href; };
-            try { localStorage.clear(); } catch (e2) {}
-            try { sessionStorage.clear(); } catch (e2) {}
-            clearAll().then(leave, leave);
+            tcPriv().logout().then(leave, leave);
             setTimeout(leave, 1500);   // never hang on a blocked clear
         }
         if (window.tcSendInFlight && window.tcSendInFlight() && !window.__tcAllowLeave){
@@ -3331,9 +3443,7 @@
         var done = false;
         function reload(){ if (done) return; done = true; location.reload(); }
         // Key/value stores are synchronous — clear them first (NOT cookies → stay logged in).
-        try { localStorage.clear(); } catch (e) {}
-        try { sessionStorage.clear(); } catch (e) {}
-        clearAll().then(reload).catch(reload);
+        tcPriv().logout().then(reload, reload);
         setTimeout(reload, 1500);   // never hang if a clear is slow/blocked
     });
 })();
@@ -3472,7 +3582,7 @@
         else {
             var sa = @js(request()->boolean('standalone')) ? '&standalone=1' : '';
             srBox.innerHTML = '<div class="tc-section">Messages</div>' + msgs.map(function (m) {
-                return '<a class="tc-sr-item" href="?c=' + m.conversation_id + sa + '"><span class="tc-sr-title">' + esc(m.title)
+                return '<a class="tc-sr-item" data-jump="' + (m.message_id || '') + '" href="?c=' + m.conversation_id + (m.message_id ? '&m=' + m.message_id : '') + sa + '"><span class="tc-sr-title">' + esc(m.title)
                     + '</span><span class="tc-sr-snip">' + esc(m.sender) + ': ' + esc(m.snippet) + '</span></a>';
             }).join('');
             srBox.hidden = false;
@@ -3528,7 +3638,7 @@
     if (!document.querySelector('.tc-contact')) return;
     var URL = @js(route('admin.team-messages.presence'));
     function tick(){
-        if (document.hidden) return;   // don't poll a backgrounded tab
+        if (document.hidden || !document.hasFocus()) return;   // nobody is looking at the dots
         fetch(URL + '?_=' + Date.now(), { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.ok && !r.redirected ? r.json() : null; })
             .then(function (res) {
@@ -3575,7 +3685,9 @@
     };
 
     document.addEventListener('click', function (e) {
-        var a = e.target.closest('a.tc-contact, a.tc-sr-item');
+        // Header-search results (.tc-hs-item) are included so a result opens in place, keeping
+        // whatever is typed, instead of a full page load.
+        var a = e.target.closest('a.tc-contact, a.tc-sr-item, a.tc-hs-item');
         if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         if (a.getAttribute('target') === '_blank' || !samePath(a.href)) return;
         e.preventDefault();

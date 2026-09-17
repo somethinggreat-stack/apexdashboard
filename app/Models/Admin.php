@@ -110,9 +110,15 @@ class Admin extends Authenticatable
         // on THIS host (e.g. the dashboard vs the chat server, which share only the
         // DB), fall through to a bundled photo / monogram instead of a broken image.
         if (! empty($this->avatar) && str_starts_with($this->avatar, 'team-avatars/')) {
-            if (\Illuminate\Support\Facades\Storage::disk('private')->exists($this->avatar)) {
-                return route('admin.team-messages.avatar', ['admin' => $this->id])
-                    . '?v=' . optional($this->updated_at)->timestamp;
+            $disk = \Illuminate\Support\Facades\Storage::disk('private');
+            if ($disk->exists($this->avatar)) {
+                // Version by the PHOTO's own timestamp, not the row's `updated_at`: presence
+                // writes touched that every ~20s, so every avatar URL in the app changed (and
+                // every avatar was re-downloaded) minute after minute.
+                $v = 0;
+                try { $v = (int) $disk->lastModified($this->avatar); } catch (\Throwable $e) {}
+
+                return route('admin.team-messages.avatar', ['admin' => $this->id]) . '?v=' . $v;
             }
             return null;
         }

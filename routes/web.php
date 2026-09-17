@@ -73,7 +73,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('chat-login', [Admin\AuthController::class, 'chatLogin'])->name('chat-login.attempt');
     });
 
-    Route::middleware(['auth:admin', \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {
+    Route::middleware(['auth:admin', \App\Http\Middleware\TeamChatSession::class, \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
 
         // Self-service profile — any authenticated admin (super, VA, leads agent)

@@ -108,13 +108,12 @@ class TeamMessageController extends Controller
 
         $pinned = collect(); $mentionables = []; $notifyLevel = 'all'; $hasMoreOlder = false;
 
+        $focusId = 0;
+
         if ($active) {
-            // Load only the newest page; older messages come in on demand ("load earlier").
-            $messages = $active->messages()->visibleTo($me->id)
-                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
-                ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
-            $hasMoreOlder = $messages->isNotEmpty()
-                && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
+            // Normally the newest page; with ?m=<id> (a search result) the page AROUND that
+            // message, so the app can jump straight to it. Older messages come in on demand.
+            [$messages, $hasMoreOlder, $focusId] = $this->messagePage($active, $me, (int) $request->query('m'));
             $pinned = $active->messages()->visibleTo($me->id)->whereNull('deleted_at')->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
@@ -150,6 +149,7 @@ class TeamMessageController extends Controller
             'isSelf' => $isSelf, 'selfConv' => $selfConv, 'selfLast' => $selfLast,
             'tz' => self::TZ,
             'uploadLimits' => self::uploadLimits(),
+            'focusId' => $focusId,
         ]);
     }
 
@@ -355,9 +355,49 @@ class TeamMessageController extends Controller
                 'version'             => PHP_VERSION,
                 'user_ini_filename'   => ini_get('user_ini.filename'),
             ],
+            'session' => [
+                // What production actually runs with. SESSION_LIFETIME is the app-wide value;
+                // chat requests keep their own session alive for chat_session_days so an idle
+                // VA's next message never fails with "Reconnecting…".
+                'app_lifetime_minutes' => (int) config('session.lifetime'),
+                'chat_session_days'    => (int) config('team.chat.session_days', 30),
+                'driver'               => config('session.driver'),
+                'expire_on_close'      => (bool) config('session.expire_on_close'),
+            ],
             'server' => request()->server('SERVER_SOFTWARE'),
             'host'   => request()->getHost(),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * One page of a conversation: the newest messages, or — when `m` names a message in it —
+     * the page around that message so a search result can be opened at the right spot.
+     *
+     * @return array{0:\Illuminate\Support\Collection,1:bool,2:int} [messages, hasMoreOlder, focusId]
+     */
+    private function messagePage(Conversation $conv, Admin $me, int $m = 0): array
+    {
+        $base = fn () => $conv->messages()->visibleTo($me->id)
+            ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins');
+
+        $focusId = 0;
+        if ($m > 0 && $conv->messages()->visibleTo($me->id)->whereKey($m)->exists()) {
+            $focusId = $m;
+        }
+
+        if ($focusId) {
+            $half   = (int) floor(self::PAGE / 2);
+            $before = $base()->where('id', '<=', $focusId)->orderByDesc('id')->limit($half)->get()->reverse()->values();
+            $after  = $base()->where('id', '>', $focusId)->orderBy('id')->limit($half)->get();
+            $messages = $before->concat($after)->values();
+        } else {
+            $messages = $base()->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
+        }
+
+        $hasMoreOlder = $messages->isNotEmpty()
+            && $conv->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
+
+        return [$messages, $hasMoreOlder, $focusId];
     }
 
     /** A message I already sent with this client id, if I'm still in its conversation. */
@@ -462,7 +502,7 @@ class TeamMessageController extends Controller
         // deletes on ANY message (not just the newest 80) propagate live.
         $statesSince = (string) $request->query('statesSince', '');
         $stateToken  = now()->toDateTimeString();   // captured before the query, round-tripped by the client
-        $statesQuery = $conv->messages()->with('deletedByAdmin', 'mentionedAdmins');
+        $statesQuery = $conv->messages()->with('deletedByAdmin', 'mentionedAdmins')->withCount('attachments');
         if ($statesSince !== '') {
             $statesQuery->where('updated_at', '>=', $statesSince)->latest('updated_at')->limit(300);
         } else {
@@ -476,6 +516,10 @@ class TeamMessageController extends Controller
                 // Carry the current text only for edited messages, so peers see edits live.
                 'body' => (! $m->deleted_at && $m->edited_at) ? $m->body : null,
                 'mentionLabels' => (! $m->deleted_at && $m->edited_at) ? $this->mentionLabels($m) : [],
+                // How many files the message has. A client that drew it without them (it
+                // reached an older build mid-save) notices the difference and redraws that one
+                // message, instead of showing a file message as text-only until a reload.
+                'atts' => (int) ($m->attachments_count ?? 0),
             ])->values();
 
         $others = $conv->participants->where('admin_id', '!=', $me->id);
@@ -548,15 +592,12 @@ class TeamMessageController extends Controller
         }
         abort_unless($active || $peer, 404);
 
-        $messages = collect(); $hasMore = false; $pinned = collect();
+        $messages = collect(); $hasMore = false; $pinned = collect(); $focusId = 0;
         $members = collect(); $addable = collect(); $mentionables = []; $notifyLevel = 'all';
 
         if ($active) {
-            $messages = $active->messages()->visibleTo($me->id)
-                ->with('sender', 'replyTo.sender', 'attachments', 'deletedByAdmin', 'mentionedAdmins')
-                ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
-            $hasMore = $messages->isNotEmpty()
-                && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
+            // ?m=<id> (a search result) opens the page AROUND that message instead of the newest.
+            [$messages, $hasMore, $focusId] = $this->messagePage($active, $me, (int) $request->query('m'));
             $pinned = $active->messages()->visibleTo($me->id)->whereNull('deleted_at')->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             // Prefetch (hover warm-up) must NOT mark the thread read — only a real open does.
@@ -624,6 +665,12 @@ class TeamMessageController extends Controller
             'onlineCount'  => $isGroup ? $this->groupOnlineCount($active, $me->id) : 0,
             'messages'   => $messages->map(fn ($m) => $this->present($m, $me->id))->values(),
             'hasMore'    => (bool) $hasMore,
+            // Expire when the oldest cached message, quote or pin reaches retention.
+            // A snapshot's age alone cannot enforce a message's seven-day lifetime.
+            'cacheExpiresAt' => $messages->concat($messages->pluck('replyTo')->filter())->concat($pinned)
+                ->min(fn ($message) => $message->created_at->copy()->addDays(7)->getTimestampMs())
+                ?? now()->addDay()->getTimestampMs(),
+            'focusId'    => $focusId,   // a search result: jump to and highlight this message
             'readUpTo'   => $active ? $this->readUpTo($active, $me->id) : 0,
             'watermarks' => $active ? $this->watermarks($active, $me->id) : [],
             'pinned'     => $pinned->map(fn ($m) => [
@@ -1242,7 +1289,19 @@ class TeamMessageController extends Controller
         // from the extension — never a server-sniffed type. Everything else is forced to download,
         // so a file renamed to an allowed extension can never be rendered as HTML/script.
         if (! $request->boolean('dl') && isset(self::IMAGE_MIME[$ext])) {
-            return response()->file($path, $headers + ['Content-Type' => self::IMAGE_MIME[$ext]]);
+            // An attachment id always points at the same bytes, so the browser may keep it.
+            // (This used to be no-store, which re-downloaded every photo on every chat switch,
+            // gallery open and lightbox — the heaviest traffic the chat produced.)
+            $img = response()->file($path, [
+                'Content-Type'           => self::IMAGE_MIME[$ext],
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+            // Set after building the response: a file response otherwise marks itself public,
+            // and these images are private — Cloudflare (or any shared cache) must never hold
+            // one and hand it to somebody else. "private" = this browser only.
+            $img->headers->set('Cache-Control', 'private, max-age=31536000, immutable');
+
+            return $img;
         }
 
         return response()->download($path, $attachment->original_name, $headers + ['Content-Type' => 'application/octet-stream']);
@@ -1261,11 +1320,17 @@ class TeamMessageController extends Controller
         $disk = Storage::disk('private');
         abort_unless($disk->exists($admin->avatar), 404);
 
-        return response()->file($disk->path($admin->avatar), [
+        $photo = response()->file($disk->path($admin->avatar), [
             'Content-Type'           => 'image/jpeg',
-            'Cache-Control'          => 'private, max-age=0, must-revalidate',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+        // The URL carries the photo's own timestamp (see Admin::avatarUrl), so it changes only
+        // when the photo does and the browser can keep it for a day. Set after building the
+        // response, which would otherwise mark itself public — these are private photos and a
+        // shared cache (Cloudflare) must never hold one.
+        $photo->headers->set('Cache-Control', 'private, max-age=86400');
+
+        return $photo;
     }
 
     /** Replace my own profile photo with an uploaded (already cropped) image. */

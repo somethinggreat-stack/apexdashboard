@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Team Chat') · Apex</title>
-    <link rel="icon" href="/favicon.ico">
+    {{-- /favicon.ico does not exist: the request would fall through to Laravel and the chat
+         host would render the whole chat page just to answer it. --}}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     {{-- Installable app — scoped to THIS page only (Team Chat), so the rest of the
          dashboard never shows an install prompt. --}}
     <link rel="manifest" href="/team-chat.webmanifest">
