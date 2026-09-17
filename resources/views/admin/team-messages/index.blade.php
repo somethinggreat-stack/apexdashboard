@@ -228,6 +228,7 @@
 
             <div class="tc-pending" id="tcPending" hidden></div>
             <div class="tc-progress" id="tcProgress" hidden><i></i></div>
+            <div class="tc-progress-label" id="tcProgressLabel" hidden></div>
 
             <form class="tc-composer" id="tcForm" method="POST" action="{{ route('admin.team-messages.store') }}" enctype="multipart/form-data">
                 @csrf
@@ -476,6 +477,7 @@
     // Each run of this script gets a number. A request started by an earlier run (before an
     // SPA swap) checks it on return and drops its result instead of touching the new page.
     window.__tcRun = (window.__tcRun || 0) + 1;
+    window.__tcAllowLeave = false;   // set only after the VA agreed to cancel an in-flight upload
     window.TCI = function (fn, ms) { var id = setInterval(fn, ms); reg.intervals.push(id); return id; };
     window.TCB = function (node) { document.body.appendChild(node); reg.nodes.push(node); return node; };
     window.TCD = function (t, fn, o) { document.addEventListener(t, fn, o); reg.docs.push([t, fn, o]); };
@@ -490,7 +492,7 @@
         reg.nodes.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
         // The previous run's thread functions point at elements that are about to be replaced.
         // Drop them, so a page with no open thread doesn't route clicks into dead code.
-        ['tcApplyOpen', 'tcSwapEligible', 'tcOpenUrl', 'tcGalleryDirty', 'tcDownload'].forEach(function (k) {
+        ['tcApplyOpen', 'tcSwapEligible', 'tcOpenUrl', 'tcGalleryDirty', 'tcDownload', 'tcSendInFlight', 'tcConfirmIfSending'].forEach(function (k) {
             try { delete window[k]; } catch (e) { window[k] = undefined; }
         });
     };
@@ -814,6 +816,7 @@
     // NOT move the poll cursor: a teammate's message with a lower id may not have been polled
     // yet, and jumping past it would skip it for good. The follow-up poll picks up both.
     function append(m, own){
+        own = own === true;   // only an explicit true (never an array index from forEach)
         // Dedupe: a message can arrive from both the 3s poll and a realtime-forced poll.
         if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (!own && m.id > lastId) lastId = m.id; return; }
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
@@ -1114,7 +1117,7 @@
 
     // Auto-grow + Enter to send (with mention-aware keys).
     function grow(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
-    input.addEventListener('input', function () { grow(); pingTyping(); mentionOnInput(); });
+    input.addEventListener('input', function () { grow(); pingTyping(); mentionOnInput(); saveDraft(); });
     input.addEventListener('keydown', function (e) {
         if (mentionPop && !mentionPop.hidden && lastMentionOpts.length){
             if (e.key === 'ArrowDown'){ e.preventDefault(); mentionActive = (mentionActive + 1) % lastMentionOpts.length; renderMentions(lastMentionOpts); return; }
@@ -1158,8 +1161,17 @@
     var progressBox = document.getElementById('tcProgress');
     var progressBar = progressBox ? progressBox.querySelector('i') : null;
     var IMG_EXT = ['jpg','jpeg','png','gif','webp'];
-    var MAX_BYTES = 51200 * 1024;   // 50 MB per file
+    // The limits this server really enforces (the smallest of the chat caps, PHP's upload
+    // settings and Cloudflare's 100 MiB request ceiling) — checked here before any upload.
+    var LIMITS = @js(\Illuminate\Support\Arr::only($uploadLimits ?? \App\Http\Controllers\Admin\TeamMessageController::uploadLimits(), ['file', 'total', 'count']));
+    var MAX_BYTES = LIMITS.file, MAX_TOTAL = LIMITS.total, MAX_COUNT = LIMITS.count;
     var pending = [];
+    function mbText(b){ var m = b / 1048576; return (m >= 10 ? Math.floor(m) : Math.round(m * 10) / 10) + ' MB'; }
+    function pendingBytes(){ return pending.reduce(function (s, it) { return s + (it.file.size || 0); }, 0); }
+    if (attachBtn){
+        attachBtn.title = 'Attach files — up to ' + mbText(MAX_BYTES) + ' each, ' + mbText(MAX_TOTAL) + ' per message'
+            + @js(($me->isSuper() ?? false) ? ' (server: upload_max_filesize ' . ($uploadLimits['php_upload'] ?? '?') . ', post_max_size ' . ($uploadLimits['php_post'] ?? '?') . ')' : '');
+    }
 
     function extOf(name){ var i = name.lastIndexOf('.'); return i >= 0 ? name.slice(i + 1).toLowerCase() : ''; }
 
@@ -1175,14 +1187,22 @@
     }
 
     function addFiles(list){
+        if (input.readOnly){ toast('Wait for the current message to finish sending'); return; }
+        var skipped = [];
         Array.prototype.slice.call(list || []).forEach(function (f) {
-            if (pending.length >= 10) { toast('Up to 10 files per message'); return; }
-            if (f.size > MAX_BYTES) { toast(f.name + ': larger than 50 MB'); return; }
+            if (pending.length >= MAX_COUNT) { skipped.push('Up to ' + MAX_COUNT + ' files per message — send the rest in another message'); return; }
+            if (f.size > MAX_BYTES) { skipped.push(f.name + ' is ' + mbText(f.size) + ' — one file can be at most ' + mbText(MAX_BYTES)); return; }
+            if (pendingBytes() + f.size > MAX_TOTAL) {
+                skipped.push(f.name + ' would make this message larger than ' + mbText(MAX_TOTAL) + ' — send it in a separate message');
+                return;
+            }
             var it = { file: f };
             if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);
             pending.push(it);
         });
         renderPending();
+        saveDraft();
+        if (skipped.length) toast(skipped[0] + (skipped.length > 1 ? ' (+' + (skipped.length - 1) + ' more not added)' : ''));
     }
     function renderPending(){
         if (!pending.length) { pendingBox.hidden = true; pendingBox.innerHTML = ''; return; }
@@ -1199,9 +1219,10 @@
     if (fileInput) fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
     if (pendingBox) pendingBox.addEventListener('click', function (e) {
         var x = e.target.closest('.tc-chip-x'); if (!x) return;
+        if (input.readOnly) return;   // files already on their way can't be pulled back
         var i = parseInt(x.dataset.i, 10);
         if (pending[i] && pending[i].url) URL.revokeObjectURL(pending[i].url);
-        pending.splice(i, 1); renderPending();
+        pending.splice(i, 1); renderPending(); saveDraft();
     });
 
     // Drag & drop anywhere on the thread panel.
@@ -1245,25 +1266,66 @@
     // retry gets that same message back instead of creating a duplicate.
     var sendingKey = null;
     var composeId = null, composeFp = null;
-    var unsent = {};   // chatKey -> a send that failed after the VA switched away (restored on return)
     if (restoredDraft && restoredDraft.id){ composeId = restoredDraft.id; composeFp = composeFingerprint(chatKey(), input.value.trim()); }
 
-    // Put a failed send back in the composer (same client id, so the retry can't duplicate).
-    function restoreUnsent(key){
-        var s = unsent[key]; if (!s) return;
-        if (input.value.trim() || pending.length) return;   // don't overwrite something new
-        delete unsent[key];
-        input.value = s.body || ''; grow();
-        (s.files || []).forEach(function (f) {
+    // ---------- Per-chat drafts ----------
+    // What's typed/attached/quoted in each chat is kept when the VA switches away and put back
+    // when they return (text also survives a reload; files survive an in-app swap). A send
+    // that fails after the VA left its chat is stored here too, with its client id.
+    var DRAFTS = window.__tcDrafts = window.__tcDrafts || {};
+    var DRAFT_TEXT_KEY = 'tc-drafts';
+    function readDraftTexts(){ try { return JSON.parse(sessionStorage.getItem(DRAFT_TEXT_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    // After a reload the in-memory store is empty: bring back the saved texts first, so saving
+    // one chat's draft never drops another's.
+    (function () { var t = readDraftTexts(); Object.keys(t).forEach(function (k) { if (!DRAFTS[k] && t[k]) DRAFTS[k] = { body: t[k] }; }); })();
+    function persistDraftTexts(){
+        var out = {};
+        Object.keys(DRAFTS).forEach(function (k) { if (DRAFTS[k] && DRAFTS[k].body && DRAFTS[k].body.trim()) out[k] = DRAFTS[k].body; });
+        try { sessionStorage.setItem(DRAFT_TEXT_KEY, JSON.stringify(out)); } catch (e) {}
+    }
+    function replySnapshot(){
+        if (!replyId || !replyBar) return null;
+        return { id: replyId,
+                 author: (replyBar.querySelector('.tc-reply-author') || {}).textContent || '',
+                 text: (replyBar.querySelector('.tc-reply-text') || {}).textContent || '' };
+    }
+    function composerSnapshot(){
+        return { body: input.value, files: pending.map(function (it) { return it.file; }),
+                 reply: replySnapshot(), mentions: pendingMentions.slice(), id: composeId };
+    }
+    function storeDraft(key, d){
+        if (!key) return;
+        if (!d || (!(d.body || '').trim() && !(d.files || []).length)) delete DRAFTS[key]; else DRAFTS[key] = d;
+        persistDraftTexts();
+    }
+    // Save the open chat's composer (user typing / attaching / quoting). Skipped while this
+    // chat's send is in flight (that content is on its way) and while editing a message.
+    function saveDraft(){
+        var key = chatKey();
+        if (sendingKey === key || editingId) return;
+        storeDraft(key, composerSnapshot());
+    }
+    function loadDraft(key){
+        var d = DRAFTS[key];
+        if (!d){ var t = readDraftTexts()[key]; if (t) d = { body: t }; }
+        if (!d || input.value.trim() || pending.length) return;
+        input.value = d.body || ''; grow();
+        (d.files || []).forEach(function (f) {
             var it = { file: f };
             if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);
             pending.push(it);
         });
         renderPending();
-        pendingMentions = (s.mentions || []).slice();
-        replyId = null;   // the quoted message's bar can't be rebuilt reliably; send without the quote
-        composeId = s.id; composeFp = composeFingerprint(key, input.value.trim());
+        pendingMentions = (d.mentions || []).slice();
+        if (d.reply && replyBar){
+            replyId = d.reply.id; replyBar.hidden = false;
+            replyBar.querySelector('.tc-reply-author').textContent = d.reply.author;
+            replyBar.querySelector('.tc-reply-text').textContent = d.reply.text;
+        }
+        composeId = d.id || null;
+        composeFp = composeId ? composeFingerprint(key, input.value.trim()) : null;
     }
+
     function newUuid(){
         try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
         return 'c' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
@@ -1271,16 +1333,47 @@
     function composeFingerprint(key, body){
         return [key, body, replyId || '', pending.map(function (it) { return it.file.name + ':' + it.file.size + ':' + (it.file.lastModified || 0); }).join('|')].join('');
     }
+    var progressLabel = document.getElementById('tcProgressLabel');
+    function setProgress(pct, text){
+        if (progressBox) progressBox.hidden = false;
+        if (progressBar) progressBar.style.width = pct + '%';
+        if (progressLabel){ progressLabel.hidden = false; progressLabel.textContent = text; }
+    }
     function setComposerBusy(on){
         var btn = form.querySelector('.tc-send'); if (btn) btn.disabled = !!on;
         input.readOnly = !!on;
         form.classList.toggle('tc-sending', !!on);
-        if (!on && progressBox) progressBox.hidden = true;
+        if (!on){
+            if (progressBox) progressBox.hidden = true;
+            if (progressLabel) progressLabel.hidden = true;
+        }
     }
     function chatTitle(){
         var n = document.querySelector('.tc-thread-head .tc-th-name');
         return n ? n.textContent.trim() : '';
     }
+    // A send in progress anywhere on this page (used to protect uploads from reloads).
+    window.tcSendInFlight = function () { return !!sendingKey; };
+
+    // A fresh CSRF token without reloading (the session may have been renewed by "keep me
+    // signed in"). Resolves to the token, or null if the VA is really signed out.
+    var CSRF_URL = @js(route('admin.team-messages.csrf'));
+    function refreshToken(){
+        return fetch(CSRF_URL + '?_=' + Date.now(), { cache:'no-store', credentials:'same-origin',
+                headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return (r.ok && !r.redirected) ? r.json() : null; })
+            .then(function (j) {
+                if (!j || !j.token) return null;
+                csrf = j.token;
+                var meta = document.querySelector('meta[name="csrf-token"]'); if (meta) meta.setAttribute('content', j.token);
+                return j.token;
+            })
+            .catch(function () { return null; });
+    }
+
+    var STALL_MS = 45000;      // no upload progress for this long → the connection is stuck
+    var PROCESS_MS = 180000;   // after the last byte: time for the server to store the files
+    var TEXT_MS = 20000;       // a text-only send
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -1289,14 +1382,16 @@
         if (sendingKey === key) return;       // this chat already has a send on its way
         var body = input.value.trim();
         if (!body && !pending.length) return;
+        if (pendingBytes() > MAX_TOTAL){ toast('These files are larger than ' + mbText(MAX_TOTAL) + ' together — send them in separate messages'); return; }
 
         var fp = composeFingerprint(key, body);
         if (fp !== composeFp || !composeId){ composeId = newUuid(); composeFp = fp; }
         var uuid = composeId;
         var sentConv = CONV, sentPeer = PEER_ID, sentSelf = isSelf, title = chatTitle();
         var hadFiles = pending.length > 0;
-        var snapshot = { body: input.value, id: uuid, files: pending.map(function (it) { return it.file; }), replyId: replyId, mentions: pendingMentions.slice() };
+        var snapshot = composerSnapshot();
         sendingKey = key;
+        delete DRAFTS[key]; persistDraftTexts();   // this content is now on its way
         setComposerBusy(true);
 
         var fd = new FormData();
@@ -1308,18 +1403,7 @@
         pending.forEach(function (it) { fd.append('attachments[]', it.file, it.file.name); });
         pendingMentions.forEach(function (pm) { if (body.indexOf('@' + pm.label) >= 0) fd.append('mentions[]', pm.key); });
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', STORE);
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.setRequestHeader('Accept', 'application/json');
-        if (hadFiles && progressBox) { progressBox.hidden = false; progressBar.style.width = '0%'; }
-        xhr.upload.onprogress = function (ev) {
-            if (!chatAlive(key) || !ev.lengthComputable || !progressBar) return;
-            if (progressBox) progressBox.hidden = false;   // e.g. the VA came back to this chat mid-upload
-            progressBar.style.width = Math.round(ev.loaded / ev.total * 100) + '%';
-        };
-
-        // Called once however the request ends. `here` = the same chat is still on screen.
+        // Called once however the send ends. `here` = the same chat is still on screen.
         function finish(){
             if (!runAlive()) return false;
             if (sendingKey === key) sendingKey = null;
@@ -1331,60 +1415,123 @@
             var here = finish();
             if (!runAlive()) return;
             // The composer still holds the message (and the same client id) — pressing Enter
-            // again retries safely. If the VA already moved to another chat, the message is kept
-            // and put back in the box when they reopen that chat.
-            if (!here) unsent[key] = snapshot;
-            toast(here ? msg : ('Your message' + (title ? ' to ' + title : '') + ' was not sent — it is waiting in that chat, open it and press Enter'));
+            // again retries safely. If the VA already moved to another chat, the message waits
+            // as that chat's draft and is put back when they reopen it.
+            if (here) saveDraft(); else storeDraft(key, snapshot);
+            toast(here ? msg : ('Your message' + (title ? ' to ' + title : '') + ' was not sent (' + msg.replace(/ — press Enter.*$/, '') + ') — it is waiting in that chat'));
             if (here) input.focus();
         }
-
-        xhr.onload = function () {
-            var res = null; try { res = JSON.parse(xhr.responseText); } catch (err) {}
-            if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
-                if (!runAlive()) return;
-                var here = finish();
-                var convId = res.conversation_id ? String(res.conversation_id) : '';
-                // First message in a brand-new DM: the conversation now exists. Stamp the row of
-                // the person it was SENT to (never "whatever row is active now").
-                if (!sentConv && convId){
-                    var sentRow = sentSelf ? document.querySelector('.tc-self-row')
-                        : (sentPeer ? document.querySelector('.tc-contact[data-peer="' + sentPeer + '"]') : null);
-                    if (sentRow) sentRow.dataset.conversation = convId;
-                    if (here && !CONV){
-                        CONV = convId; box.dataset.conversation = CONV;
-                        // Tell the always-on sidebar layer so replies count as the OPEN chat.
-                        window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: convId, peer: sentPeer, self: sentSelf } }));
-                    }
+        function succeeded(res){
+            if (!runAlive()) return;
+            var here = finish();
+            var convId = res.conversation_id ? String(res.conversation_id) : '';
+            // First message in a brand-new DM: the conversation now exists. Stamp the row of
+            // the person it was SENT to (never "whatever row is active now").
+            if (!sentConv && convId){
+                var sentRow = sentSelf ? document.querySelector('.tc-self-row')
+                    : (sentPeer ? document.querySelector('.tc-contact[data-peer="' + sentPeer + '"]') : null);
+                if (sentRow) sentRow.dataset.conversation = convId;
+                if (here && !CONV){
+                    CONV = convId; box.dataset.conversation = CONV;
+                    // Tell the always-on sidebar layer so replies count as the OPEN chat.
+                    window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: convId, peer: sentPeer, self: sentSelf } }));
                 }
-                if (here){
-                    composeId = null; composeFp = null;
-                    append(res.message, true);
-                    input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
-                    // Fetch anything a teammate sent just before this message.
-                    poll(true);
-                    // If the message carried files, refresh an open Files/Photos tab.
-                    if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
-                } else {
-                    // Sent from a chat that's no longer open: only refresh that chat's sidebar row.
-                    var row = convId ? document.querySelector('.tc-contact[data-conversation="' + convId + '"]') : null;
-                    if (row && res.message) updatePreview(res.message, row);
-                }
-            } else if (xhr.status === 419 || xhr.status === 401 || xhr.status === 403 || xhr.status === 302 || xhr.status === 0) {
-                var here2 = finish();
-                if (!runAlive()) return;
-                // Session/token went stale (e.g. just after an update) — reconnect smoothly,
-                // keeping this chat's text and its client id for a safe resend.
-                reconnect(here2 ? { key: key, body: body, id: uuid } : null);
-            } else {
-                notSent(res && res.message ? res.message : 'Could not send message');
             }
-        };
-        xhr.onerror = function () { notSent('Network error — press Enter to try again'); };
-        // Never leave the composer permanently locked if the connection stalls.
-        xhr.timeout = hadFiles ? 60000 : 20000;   // allow longer for uploads
-        xhr.ontimeout = function () { notSent('Send timed out — press Enter to try again'); };
-        xhr.send(fd);
+            if (here){
+                composeId = null; composeFp = null;
+                append(res.message, true);
+                input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
+                delete DRAFTS[key]; persistDraftTexts();
+                // Fetch anything a teammate sent just before this message.
+                poll(true);
+                // If the message carried files, refresh an open Files/Photos tab.
+                if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
+            } else {
+                // Sent from a chat that's no longer open: only refresh that chat's sidebar row.
+                var row = convId ? document.querySelector('.tc-contact[data-conversation="' + convId + '"]') : null;
+                if (row && res.message) updatePreview(res.message, row);
+            }
+        }
+        // The session is really gone: reload into the sign-in, keeping this chat's text.
+        function signedOut(){
+            var here = finish();
+            if (!runAlive()) return;
+            if (!here) storeDraft(key, snapshot);
+            if (hadFiles) toast('Your session ended — sign in again, then re-attach your files');
+            reconnect(here ? { key: key, body: body, id: uuid } : null);
+        }
+
+        function attempt(tries){
+            var xhr = new XMLHttpRequest();
+            var watchdog = null, stalled = false;
+            function arm(ms){ clearTimeout(watchdog); watchdog = setTimeout(function () { stalled = true; xhr.abort(); }, ms); }
+            xhr.open('POST', STORE);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            if (hadFiles && chatAlive(key)) setProgress(0, 'Uploading… 0%');
+            // No fixed time limit for uploads: a big zip on a slow line may take many minutes.
+            // Only a connection that stops making progress is given up on.
+            xhr.upload.onprogress = function (ev) {
+                if (hadFiles) arm(STALL_MS);
+                if (!chatAlive(key) || !ev.lengthComputable) return;
+                var pct = Math.min(100, Math.round(ev.loaded / ev.total * 100));
+                if (hadFiles) setProgress(pct, 'Uploading… ' + pct + '%  (' + mbText(ev.loaded) + ' of ' + mbText(ev.total) + ')');
+            };
+            xhr.upload.onload = function () {
+                arm(PROCESS_MS);
+                if (hadFiles && chatAlive(key)) setProgress(100, 'Processing…');
+            };
+            arm(hadFiles ? STALL_MS : TEXT_MS);
+
+            xhr.onload = function () {
+                clearTimeout(watchdog);
+                var res = null; try { res = JSON.parse(xhr.responseText); } catch (err) {}
+                var s = xhr.status;
+                var toLogin = /\/(chat-)?login(\?|$)/.test(xhr.responseURL || '');
+                if (s >= 200 && s < 300 && res && res.ok) return succeeded(res);
+                if (toLogin || s === 401) return signedOut();
+                if (s === 419){
+                    // Token went stale (e.g. after an update, or the session was renewed):
+                    // get a fresh one and resend once — same client id, files kept.
+                    if (tries > 0) return notSent('Could not send — press Enter to try again');
+                    return refreshToken().then(function (tok) {
+                        if (!tok) return signedOut();
+                        fd.set('_token', tok);
+                        attempt(tries + 1);
+                    });
+                }
+                if (s === 413) return notSent('Too large for the server — one message can carry up to ' + mbText(MAX_TOTAL) + '. Send the files in separate messages');
+                if (s === 422) return notSent(res && res.message ? res.message : 'This message could not be sent');
+                if (s === 404) return notSent('This chat is no longer available — you may have been removed from it');
+                if (s === 403) return notSent(res && res.message ? res.message : 'The server’s security filter blocked this message — try again, or remove unusual text or links');
+                if (s === 429) return notSent('Too many requests — wait a moment, then press Enter');
+                if (s >= 500) return notSent('Server error — press Enter to try again');
+                notSent('Could not send — press Enter to try again');
+            };
+            xhr.onerror = function () { clearTimeout(watchdog); notSent('Network error — press Enter to try again'); };
+            xhr.onabort = function () {
+                clearTimeout(watchdog);
+                notSent(stalled ? (hadFiles ? 'Upload stalled — check your connection, then press Enter to try again' : 'Send timed out — press Enter to try again')
+                                : 'Send cancelled — press Enter to try again');
+            };
+            xhr.send(fd);
+        }
+        attempt(0);
     });
+
+    // Leaving the page (reload, sign-out, closing the window) would cancel an upload.
+    TCW('beforeunload', function (e) {
+        if (!sendingKey || reconnecting || window.__tcAllowLeave) return;
+        e.preventDefault(); e.returnValue = 'A message is still sending.';
+        return e.returnValue;
+    });
+    // Ask before an in-app action that has to leave/reload while something is uploading.
+    window.tcConfirmIfSending = function (what) {
+        if (!sendingKey) return Promise.resolve(true);
+        var ask = window.tcConfirm ? window.tcConfirm('A message is still sending. ' + what + ' will cancel it. Continue?', 'Continue')
+                                   : Promise.resolve(window.confirm('A message is still sending. Continue?'));
+        return ask.then(function (ok) { if (ok) window.__tcAllowLeave = true; return ok; });
+    };
 
     // Live poll for new incoming messages. cache:'no-store' + a buster stop the
     // browser from serving a stale empty response for the same ?after= URL.
@@ -1427,7 +1574,8 @@
                 if (!res || !viewAlive(gen) || conv !== CONV) return;
                 if (res.messages && res.messages.length) {
                     var stick = atBottom();
-                    res.messages.forEach(append);
+                    // (Not forEach(append): the index would be taken as append's "own" flag.)
+                    res.messages.forEach(function (m) { append(m); });
                     if (stick) toBottom();
                 }
                 applyReadReceipts(res.readUpTo);
@@ -1660,7 +1808,7 @@
         }
         function closeMenu(){ menu.hidden = true; }
         avBtn.addEventListener('click', function (e){ e.stopPropagation(); if (menu.hidden) openMenu(); else closeMenu(); });
-        document.addEventListener('click', function (e){ if (!menu.hidden && !menu.contains(e.target) && e.target !== avBtn) closeMenu(); });
+        TCD('click', function (e){ if (!menu.hidden && !menu.contains(e.target) && e.target !== avBtn) closeMenu(); });
         chBtn.addEventListener('click', function (){ closeMenu(); fileInp.click(); });
         rmBtn.addEventListener('click', function (){ closeMenu(); removePhoto(); });
 
@@ -1724,7 +1872,11 @@
                 fd.append('_token', CSRF); fd.append('photo', blob, 'avatar.jpg');
                 fetch(UP_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd })
                     .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
-                    .then(function (){ toast('Photo updated'); setTimeout(function(){ location.reload(); }, 400); })
+                    .then(function (res){
+                        applyMyAvatar(res && res.url);
+                        mask.hidden = true; saveBtn.disabled = false; saveBtn.textContent = 'Save photo';
+                        toast('Photo updated');
+                    })
                     .catch(function (){ saveBtn.disabled = false; saveBtn.textContent = 'Save photo'; toast('Could not save photo — try again'); });
             }, 'image/jpeg', 0.9);
         });
@@ -1732,8 +1884,22 @@
         function removePhoto(){
             fetch(RM_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-HTTP-Method-Override': 'DELETE', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + encodeURIComponent(CSRF) + '&_method=DELETE' })
                 .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
-                .then(function (){ toast('Photo removed'); setTimeout(function(){ location.reload(); }, 400); })
+                .then(function (res){ applyMyAvatar(res && res.url); toast('Photo removed'); })
                 .catch(function (){ toast('Could not remove photo'); });
+        }
+
+        // Show the new photo (or my monogram) in place — no page reload, so an upload in
+        // progress keeps going.
+        var ME_MONO = @js($mono($me->full_name)), ME_COLOR = @js($color($me->full_name));
+        function applyMyAvatar(url){
+            var html = url
+                ? '<span class="tc-avatar sm has-img"><img src="' + esc(url) + '" alt=""></span>'
+                : '<span class="tc-avatar sm" style="background:' + ME_COLOR + '">' + esc(ME_MONO) + '</span>';
+            [avBtn.querySelector('.tc-avatar'), document.querySelector('.tc-self-av .tc-avatar')].forEach(function (el) {
+                if (!el) return;
+                var tmp = document.createElement('div'); tmp.innerHTML = html;
+                el.replaceWith(tmp.firstChild);
+            });
         }
     })();
 
@@ -1853,6 +2019,7 @@
         replyBar.querySelector('.tc-reply-author').textContent = menuMsg.mine ? 'You' : (menuMsg.author || PEER_NAME);
         replyBar.querySelector('.tc-reply-text').textContent = menuMsg.text.slice(0, 140);
         input.focus();
+        saveDraft();
     }
     function cancelReply(){ replyId = null; if (replyBar) replyBar.hidden = true; }
 
@@ -2086,7 +2253,14 @@
         });
     }
     var upBtn = document.getElementById('tcFilesUpload');
-    if (upBtn){ var fileInput = document.getElementById('tcFile'); if (fileInput) upBtn.addEventListener('click', function () { fileInput.click(); }); }
+    if (upBtn && fileInput) upBtn.addEventListener('click', function () {
+        // The composer is hidden on the Files/Photos tabs — bring the VA to Chat, where the
+        // picked files are staged and visible, ready to send.
+        fileInput.addEventListener('change', function () {
+            if (pending.length){ switchTab('chat'); toast('Files attached — add a note if you like, then press Enter to send'); input.focus(); }
+        }, { once: true });
+        fileInput.click();
+    });
     var dlSel = document.getElementById('tcFilesDownload');
     if (dlSel) dlSel.addEventListener('click', function () {
         var urls = (galleryData || []).filter(function (f) { return fSelected[f.url]; }).map(function (f) { return { url: f.download, name: f.name }; });
@@ -2119,25 +2293,36 @@
         var el = box.querySelector('.tc-msg[data-id="' + menuMsg.id + '"]');
         var isPinned = el && el.dataset.pinned === '1';
         postJson(BASE + '/pin', { message_id: menuMsg.id, pinned: isPinned ? 0 : 1 })
-            .then(function (res) { if (res && res.ok) location.reload(); else toast('Could not update pin — try again'); });
+            .then(function (res) { if (res && res.ok) refreshPins(); else toast('Could not update pin — try again'); });
     }
 
-    // Pinned banner: expand/collapse, jump to a pinned message, unpin.
-    var pinnedHead = document.getElementById('tcPinnedHead');
-    var pinnedDrop = document.getElementById('tcPinnedDrop');
-    if (pinnedHead && pinnedDrop){
-        pinnedHead.addEventListener('click', function () { pinnedDrop.hidden = !pinnedDrop.hidden; });
-        pinnedDrop.addEventListener('click', function (e) {
-            var un = e.target.closest('[data-unpin]');
-            if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res) { if (res && res.ok) location.reload(); else toast('Could not unpin — try again'); }); return; }
-            var go = e.target.closest('[data-goto]');
-            if (go){
-                var t = box.querySelector('.tc-msg[data-id="' + go.dataset.goto + '"]');
-                if (t){ t.scrollIntoView({ behavior:'smooth', block:'center' }); t.classList.add('tc-flash'); setTimeout(function () { t.classList.remove('tc-flash'); }, 1300); }
-                pinnedDrop.hidden = true;
-            }
+    // Re-read this chat's pins and update the pinned bar + the 📌 marks in place — no page
+    // reload, so an upload in progress keeps going.
+    function refreshPins(){
+        if (!CONV) return;
+        var gen = VIEW_GEN, conv = CONV;
+        fetch(OPEN_URL + '?c=' + encodeURIComponent(conv) + '&prefetch=1&_=' + Date.now(),
+            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) { if (data && viewAlive(gen) && conv === CONV) applyPinned(data.pinned || []); })
+            .catch(function () {});
+    }
+    function applyPinned(pins){
+        var wasOpen = !!(document.getElementById('tcPinnedDrop') && !document.getElementById('tcPinnedDrop').hidden);
+        renderPins(pins);
+        var dp = document.getElementById('tcPinnedDrop'); if (dp && wasOpen && pins.length) dp.hidden = false;
+        var ids = {}; pins.forEach(function (p) { ids[String(p.id)] = 1; });
+        box.querySelectorAll('.tc-msg[data-id]').forEach(function (el) {
+            var on = !!ids[el.dataset.id];
+            el.dataset.pinned = on ? 1 : 0;
+            var tl = el.querySelector('.tc-time'); if (!tl) return;
+            var ic = tl.querySelector('.tc-pin-ic');
+            if (on && !ic){ ic = document.createElement('span'); ic.className = 'tc-pin-ic'; ic.title = 'Pinned'; ic.textContent = '📌'; tl.insertBefore(ic, tl.firstChild); }
+            else if (!on && ic) ic.remove();
         });
     }
+    // (The pinned bar's clicks — open/close, jump, unpin — are handled once, by the delegated
+    // listener on the thread section further down, for server-rendered and rebuilt bars alike.)
 
     function delMsg(){
         if (!menuMsg) return;
@@ -2172,11 +2357,18 @@
         });
         fwdModal.hidden = false;
     }
+    var forwarding = false;
     function doForward(id, name){
+        if (forwarding) return; forwarding = true;   // one click = one forward
         postJson(FORWARD, { message_id: forwardId, recipient_id: id }).then(function (res) {
+            forwarding = false;
             fwdModal.hidden = true;
-            toast(res && res.ok ? 'Forwarded to ' + name : 'Could not forward — try again');
-        });
+            if (!res || !res.ok){ toast(res && res.message ? res.message : 'Could not forward — try again'); return; }
+            var extra = res.missing_files ? ' (' + res.missing_files + ' file' + (res.missing_files > 1 ? 's' : '') + ' no longer available)' : '';
+            toast('Forwarded to ' + name + extra);
+            // Forwarded into the chat that's open → show it now.
+            if (!IS_GROUP && String(PEER_ID) === String(id)) poll(true);
+        }).catch(function () { forwarding = false; toast('Could not forward — try again'); });
     }
 
     // Open the menu: right-click (desktop) or long-press (touch).
@@ -2417,7 +2609,7 @@
         else if (lightbox && !lightbox.hidden){ if (e.key === 'ArrowLeft') lbNav(-1); else if (e.key === 'ArrowRight') lbNav(1); }
     });
 
-    var rc = document.getElementById('tcReplyCancel'); if (rc) rc.addEventListener('click', cancelReply);
+    var rc = document.getElementById('tcReplyCancel'); if (rc) rc.addEventListener('click', function () { cancelReply(); saveDraft(); });
     if (fwdModal){
         var fc = document.getElementById('tcFwdClose'); if (fc) fc.addEventListener('click', function () { fwdModal.hidden = true; });
         fwdModal.addEventListener('click', function (e) { if (e.target === fwdModal) fwdModal.hidden = true; });
@@ -2512,6 +2704,27 @@
         if (e.target.closest('#tcGroupNameEdit')){ startNameEdit(); }
     });
 
+    // After a member/name change: re-read the group and update the header, the members panel
+    // and the sidebar row in place — no page reload, so an upload in progress keeps going.
+    function refreshGroup(){
+        var gid = GID, gen = VIEW_GEN; if (!gid) return;
+        fetch(OPEN_URL + '?c=' + encodeURIComponent(gid) + '&prefetch=1&_=' + Date.now(),
+            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data || !data.group) return;
+                var rowName = document.querySelector('.tc-contact[data-conversation="' + gid + '"] .tc-c-name');
+                if (rowName){ rowName.textContent = data.title; var rw = rowName.closest('.tc-contact'); if (rw) rw.dataset.name = String(data.title || '').toLowerCase(); }
+                if (!viewAlive(gen) || String(CONV) !== String(gid)) return;
+                var wasOpen = !membersModal.hidden;
+                setHeader(data);
+                renderMembersModal(data.group);
+                membersModal.hidden = !wasOpen;
+                poll(true);   // shows the "X added Y" notice
+            })
+            .catch(function () {});
+    }
+
     // Modal actions (close, remove, add, rename, leave) — delegated, read GID dynamically.
     membersModal.addEventListener('click', function (e){
         if (e.target === membersModal || e.target.closest('#tcMembersClose')){ membersModal.hidden = true; return; }
@@ -2519,7 +2732,8 @@
         if (rem){
             window.tcConfirm('Remove this member from the group?', 'Remove').then(function (ok){ if (!ok) return;
                 gpost('/members/' + rem.dataset.admin, function (fd){ fd.append('_method', 'DELETE'); })
-                    .then(function (res){ if (res && res.ok) location.reload(); else toast('Could not remove — try again'); });
+                    .then(function (res){ if (res && res.ok){ toast('Member removed'); refreshGroup(); } else toast('Could not remove — try again'); })
+                    .catch(function (){ toast('Could not remove — try again'); });
             });
             return;
         }
@@ -2527,18 +2741,32 @@
             var ids = Array.prototype.map.call(membersModal.querySelectorAll('.tc-member-add-list input:checked'), function (c){ return c.value; });
             if (!ids.length){ toast('Select teammates to add'); return; }
             gpost('/members', function (fd){ ids.forEach(function (i){ fd.append('members[]', i); }); })
-                .then(function (res){ if (res && res.ok) location.reload(); else toast('Could not add members — try again'); });
+                .then(function (res){ if (res && res.ok){ toast(ids.length > 1 ? 'Members added' : 'Member added'); refreshGroup(); } else toast('Could not add members — try again'); })
+                .catch(function (){ toast('Could not add members — try again'); });
             return;
         }
         if (e.target.closest('#tcRenameBtn')){
             var rn = document.getElementById('tcRenameName'); var nm = rn ? rn.value.trim() : '';
             if (!nm){ toast('Name required'); return; }
-            gpost('/rename', function (fd){ fd.append('name', nm); }).then(function (res){ if (res && res.ok) location.reload(); else toast('Could not rename — try again'); });
+            gpost('/rename', function (fd){ fd.append('name', nm); })
+                .then(function (res){ if (res && res.ok){ toast('Group renamed'); refreshGroup(); } else toast('Could not rename — try again'); })
+                .catch(function (){ toast('Could not rename — try again'); });
             return;
         }
         if (e.target.closest('#tcLeaveBtn')){
             window.tcConfirm('Leave this group?', 'Leave').then(function (ok){ if (!ok) return;
-                gpost('/leave').then(function (res){ if (res && res.ok) location.href = @js(route('admin.team-messages.index')); else toast('Could not leave — try again'); });
+                return window.tcConfirmIfSending('Leaving the group').then(function (go){ if (!go) return;
+                    var gid = GID;
+                    gpost('/leave').then(function (res){
+                        if (!res || !res.ok){ toast('Could not leave — try again'); return; }
+                        membersModal.hidden = true;
+                        var row = document.querySelector('.tc-contact[data-conversation="' + gid + '"]'); if (row) row.remove();
+                        delete DRAFTS['c' + gid]; persistDraftTexts();
+                        // Back to the chat list, keeping the desktop (standalone) layout.
+                        var url = STANDALONE ? @js(route('admin.team-messages.index', ['standalone' => 1])) : @js(route('admin.team-messages.index'));
+                        if (window.tcNav) window.tcNav(url, true); else location.href = url;
+                    }).catch(function (){ toast('Could not leave — try again'); });
+                });
             });
         }
     });
@@ -2606,7 +2834,7 @@
         var hd = e.target.closest('#tcPinnedHead');
         if (hd){ var dp = document.getElementById('tcPinnedDrop'); if (dp) dp.hidden = !dp.hidden; return; }
         var un = e.target.closest('[data-unpin]');
-        if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res){ if (res && res.ok){ var it = un.closest('.tc-pinned-item'); if (it) it.remove(); } else toast('Could not unpin — try again'); }); return; }
+        if (un){ e.stopPropagation(); postJson(BASE + '/pin', { message_id: un.dataset.unpin, pinned: 0 }).then(function (res){ if (res && res.ok) refreshPins(); else toast('Could not unpin — try again'); }); return; }
         var go = e.target.closest('.tc-pinned-drop [data-goto]');
         if (go){ var t = box.querySelector('.tc-msg[data-id="' + go.dataset.goto + '"]'); if (t){ t.scrollIntoView({ behavior:'smooth', block:'center' }); t.classList.add('tc-flash'); setTimeout(function(){ t.classList.remove('tc-flash'); }, 1300); } var dp2 = document.getElementById('tcPinnedDrop'); if (dp2) dp2.hidden = true; }
     });
@@ -2676,6 +2904,9 @@
     // Apply an open() payload to the open thread panel, in place (no reload).
     function applyOpen(data, url, push){
         var prevKey = chatKey();
+        // Whatever the VA had in the composer belongs to the chat being left (not while its own
+        // send is in flight, and not an edit in progress).
+        var prevDraft = (sendingKey !== prevKey && !editingId) ? composerSnapshot() : undefined;
         VIEW_GEN++;   // every request started for the previous view is now stale
         CONV = data.conversation_id ? String(data.conversation_id) : '';
         PEER_ID = data.peer_id ? String(data.peer_id) : '';
@@ -2698,13 +2929,15 @@
         else if (typeof membersModal !== 'undefined' && membersModal) membersModal.hidden = true;
         updateComposerTarget(data);
         if (!sameChat){
+            if (prevDraft !== undefined) storeDraft(prevKey, prevDraft);
             cancelReply(); if (typeof cancelEdit === 'function') cancelEdit();
+            // clearPending only frees the preview URLs; the File objects stay in the draft.
             if (typeof clearPending === 'function') clearPending();
             pendingMentions = [];
             composeId = null; composeFp = null;
             if (typeof closeMenu === 'function') closeMenu();   // a menu for the old chat's message must not act here
             if (typeof hideMentions === 'function') hideMentions();
-            restoreUnsent(chatKey());
+            loadDraft(chatKey());   // this chat's own draft (or a send that failed while away)
         }
         // Read-only only while THIS chat has a send on its way.
         setComposerBusy(sendingKey === chatKey());
@@ -2727,6 +2960,9 @@
         if (push && !sameChat && url && window.history && history.pushState){ try { history.pushState({ tcUrl: url }, '', url); } catch (e) {} }
         input.focus();
     }
+
+    // This chat's saved draft (after a switch away and back through a full swap, or a reload).
+    loadDraft(chatKey());
 
     // Expose for the sidebar click interceptor (and later the prefetch/cache tiers).
     window.tcApplyOpen   = applyOpen;
@@ -2807,7 +3043,10 @@
             db.transaction('threads','readwrite').objectStore('threads').put(val, key);
         } catch (e){} });
     }
-    function sig(d){ if (!d) return ''; var ms = d.messages || []; return [d.conversation_id, ms.length, ms.length?ms[ms.length-1].id:0, d.readUpTo, (d.pinned||[]).length, d.subtitle, d.title].join('|'); }
+    // What decides whether fresh data must be re-applied over a cached paint. Presence text
+    // ("Active 5m ago") is left out on purpose — it changes all the time and the thread poll
+    // updates it anyway — so opening a chat doesn't re-render it a moment later.
+    function sig(d){ if (!d) return ''; var ms = d.messages || []; return [d.conversation_id, ms.length, ms.length?ms[ms.length-1].id:0, d.readUpTo, (d.pinned||[]).map(function (p){ return p.id; }).join(','), d.title].join('|'); }
 
     function persist(q, data){ cache[q] = { data: data, ts: Date.now() }; idbSet(q, { data: data, ts: Date.now() }); }
 
@@ -2931,8 +3170,21 @@
         return Promise.all(jobs);
     }
 
+    // Sign out would cancel an upload too — ask first.
+    var outLink = document.querySelector('.tc-logout');
+    if (outLink) outLink.addEventListener('click', function (e) {
+        if (!window.tcSendInFlight || !window.tcSendInFlight() || window.__tcAllowLeave) return;
+        e.preventDefault();
+        window.tcConfirmIfSending('Signing out').then(function (ok) { if (ok) location.href = outLink.href; });
+    });
+
     btn.addEventListener('click', function () {
-        if (btn.dataset.busy) return; btn.dataset.busy = '1';
+        if (btn.dataset.busy) return;
+        if (window.tcSendInFlight && window.tcSendInFlight() && !window.__tcAllowLeave){
+            window.tcConfirmIfSending('Refreshing').then(function (ok) { if (ok) btn.click(); });
+            return;
+        }
+        btn.dataset.busy = '1';
         btn.classList.add('spinning');
         var done = false;
         function reload(){ if (done) return; done = true; location.reload(); }

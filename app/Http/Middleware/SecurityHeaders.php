@@ -30,7 +30,10 @@ class SecurityHeaders
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' data: https://fonts.gstatic.com",
-            "img-src 'self' data:",
+            // blob: is for previews the page itself creates with URL.createObjectURL — the
+            // staged-attachment thumbnails and the profile-photo cropper. Same-origin data
+            // the browser made from a file the user just picked; no external source is allowed.
+            "img-src 'self' data: blob:",
             "connect-src 'self'",
             "frame-ancestors 'none'",
             "base-uri 'self'",

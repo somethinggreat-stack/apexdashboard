@@ -100,6 +100,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('users/{id}/credentials-access', [Admin\UserController::class, 'toggleCredentials'])->name('users.credentials-access');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
+            // Diagnostic: the upload limits this server really enforces (PHP + chat caps).
+            Route::get('system/upload-limits', [Admin\TeamMessageController::class, 'uploadLimitsReport'])->name('system.upload-limits');
+
             // Referral commissions — each referrer earns per real client payment of their referred BOs
             Route::get('commissions', [Admin\CommissionController::class, 'index'])->name('commissions.index');
             Route::get('commissions/{id}', [Admin\CommissionController::class, 'show'])->whereNumber('id')->name('commissions.show');
@@ -179,6 +182,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
             Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');
         });
+        Route::get('team-messages/csrf', [Admin\TeamMessageController::class, 'csrf'])->name('team-messages.csrf');
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
         Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');
         Route::get('team-messages/attachment/{attachment}', [Admin\TeamMessageController::class, 'attachment'])->name('team-messages.attachment');

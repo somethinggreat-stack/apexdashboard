@@ -149,6 +149,7 @@ class TeamMessageController extends Controller
             'mentionables' => $mentionables, 'notifyLevel' => $notifyLevel,
             'isSelf' => $isSelf, 'selfConv' => $selfConv, 'selfLast' => $selfLast,
             'tz' => self::TZ,
+            'uploadLimits' => self::uploadLimits(),
         ]);
     }
 
@@ -163,13 +164,13 @@ class TeamMessageController extends Controller
             'recipient_id'    => ['nullable', 'integer'],
             'body'            => ['nullable', 'string', 'max:5000'],
             'reply_to_id'     => ['nullable', 'integer'],
-            'attachments'     => ['nullable', 'array', 'max:' . self::MAX_FILES],
-            'attachments.*'   => ['file', 'max:' . self::MAX_KB],
+            'attachments'     => ['nullable', 'array'],
             'mentions'        => ['nullable', 'array', 'max:50'],
             'mentions.*'      => ['string', 'max:20'],
             'client_uuid'     => ['nullable', 'string', 'regex:/^[A-Za-z0-9-]{8,64}$/'],
         ]);
         $uuid = $data['client_uuid'] ?? null;
+        $this->checkAttachments((array) $request->file('attachments', []));
 
         // A repeat of a send that already went through (double Enter, or a retry after a
         // timeout whose first attempt actually reached us) → return that message, no duplicate.
@@ -252,6 +253,111 @@ class TeamMessageController extends Controller
         }
 
         return redirect()->route('admin.team-messages.index', ['c' => $conv->id]);
+    }
+
+    /**
+     * The real upload limits for one chat message: the smallest of our own caps, PHP's
+     * upload_max_filesize / post_max_size / max_file_uploads, and the edge (Cloudflare)
+     * request ceiling. The client enforces the same numbers before uploading anything.
+     *
+     * @return array{file:int, total:int, count:int, php_upload:string, php_post:string}
+     */
+    public static function uploadLimits(): array
+    {
+        $bytes = function (string $v): int {
+            $v = trim($v);
+            if ($v === '' || $v === '-1' || $v === '0') return PHP_INT_MAX;   // unlimited
+            $n = (float) $v;
+            switch (strtolower(substr($v, -1))) {
+                case 'g': $n *= 1024;   // no break
+                case 'm': $n *= 1024;   // no break
+                case 'k': $n *= 1024;
+            }
+            return (int) $n;
+        };
+        $mb = 1024 * 1024;
+        $edge = max(1, (int) config('team.chat.max_request_mb', 95)) * $mb;
+        $post = $bytes((string) ini_get('post_max_size'));
+        // Leave room for the multipart framing and the other form fields.
+        $total = min($edge, $post) - (256 * 1024);
+        $file = min(self::MAX_KB * 1024, $bytes((string) ini_get('upload_max_filesize')), $total);
+        $count = min(self::MAX_FILES, (int) (ini_get('max_file_uploads') ?: self::MAX_FILES));
+
+        return [
+            'file' => $file, 'total' => $total, 'count' => $count,
+            'php_upload' => (string) ini_get('upload_max_filesize'), 'php_post' => (string) ini_get('post_max_size'),
+        ];
+    }
+
+    private static function mbLabel(int $bytes): string
+    {
+        $mb = $bytes / 1048576;
+
+        return ($mb >= 10 ? (string) floor($mb) : rtrim(rtrim(number_format($mb, 1), '0'), '.')) . ' MB';
+    }
+
+    /** Reject files the server can't take, with a message that names the file and the limit. */
+    private function checkAttachments(array $files): void
+    {
+        if (! $files) return;
+        $lim = self::uploadLimits();
+
+        if (count($files) > $lim['count']) {
+            throw ValidationException::withMessages(['attachments' => "Up to {$lim['count']} files per message."]);
+        }
+        $sum = 0;
+        foreach ($files as $f) {
+            if (! $f instanceof \Illuminate\Http\UploadedFile) {
+                throw ValidationException::withMessages(['attachments' => 'One of the files could not be read — attach it again.']);
+            }
+            $name = $f->getClientOriginalName() ?: 'A file';
+            if (! $f->isValid()) {
+                $tooBig = in_array($f->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+                throw ValidationException::withMessages(['attachments' => $tooBig
+                    ? "{$name} is larger than " . self::mbLabel($lim['file']) . ', the most one file can be.'
+                    : "{$name} didn't upload completely — please try again."]);
+            }
+            if ($f->getSize() > $lim['file']) {
+                throw ValidationException::withMessages(['attachments' => "{$name} is larger than " . self::mbLabel($lim['file']) . ', the most one file can be.']);
+            }
+            $sum += $f->getSize();
+        }
+        if ($sum > $lim['total']) {
+            throw ValidationException::withMessages(['attachments' => 'These files add up to ' . self::mbLabel($sum)
+                . '. One message can carry up to ' . self::mbLabel($lim['total']) . ' — send them in separate messages.']);
+        }
+    }
+
+    /** A fresh CSRF token for the open chat (lets a send retry after a session refresh, files intact). */
+    public function csrf(Request $request)
+    {
+        return response()->json(['token' => csrf_token()])->header('Cache-Control', 'no-store');
+    }
+
+    /** Super-admin diagnostic: the upload limits this server actually enforces. */
+    public function uploadLimitsReport()
+    {
+        $lim = self::uploadLimits();
+
+        return response()->json([
+            'chat_max_file'        => self::mbLabel($lim['file']),
+            'chat_max_per_message' => self::mbLabel($lim['total']),
+            'chat_max_files'       => $lim['count'],
+            'edge_cap_mb'          => (int) config('team.chat.max_request_mb', 95),
+            'php' => [
+                'upload_max_filesize' => ini_get('upload_max_filesize'),
+                'post_max_size'       => ini_get('post_max_size'),
+                'max_file_uploads'    => ini_get('max_file_uploads'),
+                'max_input_time'      => ini_get('max_input_time'),
+                'max_execution_time'  => ini_get('max_execution_time'),
+                'memory_limit'        => ini_get('memory_limit'),
+                'sapi'                => PHP_SAPI,
+                'version'             => PHP_VERSION,
+                'user_ini_filename'   => ini_get('user_ini.filename'),
+            ],
+            'server' => request()->server('SERVER_SOFTWARE'),
+            'host'   => request()->getHost(),
+        ])->header('Cache-Control', 'no-store');
     }
 
     /** A message I already sent with this client id, if I'm still in its conversation. */
@@ -891,19 +997,70 @@ class TeamMessageController extends Controller
             $peer = $this->teammates($me)->findOrFail($data['recipient_id']);
         }
 
-        $this->serializedSend($me, function () use ($me, $source, &$target, $peer) {
-            $target ??= $this->findOrCreateDm($me, $peer);
-            $msg = TeamMessage::create([
-                'conversation_id' => $target->id,
-                'type'            => 'text',
-                'sender_id'       => $me->id,
-                'body'            => $source->body,
-                'forwarded'       => true,
-            ]);
-            $this->touchConversation($target, $msg);
-        });
+        // Forward the files too: each gets its OWN copy (new name on the private disk), so the
+        // 7-day purge of the original message can never break the forwarded one.
+        $copies = $this->copyAttachments($source, $me->dataOwnerId());
+        if ($source->body === '' && ! $copies['rows']) {
+            $this->discardFiles($copies['rows']);
+            throw ValidationException::withMessages(['message_id' => $copies['missing']
+                ? 'That file is no longer available, so it can’t be forwarded.'
+                : 'Nothing to forward.']);
+        }
 
-        return response()->json(['ok' => true, 'conversation_id' => $target->id]);
+        try {
+            $this->serializedSend($me, function () use ($me, $source, &$target, $peer, $copies) {
+                $target ??= $this->findOrCreateDm($me, $peer);
+                $msg = TeamMessage::create([
+                    'conversation_id' => $target->id,
+                    'type'            => 'text',
+                    'sender_id'       => $me->id,
+                    'body'            => $source->body,
+                    'forwarded'       => true,
+                ]);
+                if ($copies['rows']) {
+                    $msg->attachments()->createMany($copies['rows']);
+                }
+                $this->touchConversation($target, $msg);
+            });
+        } catch (\Throwable $e) {
+            $this->discardFiles($copies['rows']);
+            throw $e;
+        }
+
+        return response()->json([
+            'ok' => true, 'conversation_id' => $target->id,
+            'files' => count($copies['rows']), 'missing_files' => $copies['missing'],
+        ]);
+    }
+
+    /**
+     * Copy a message's attachment files for a forward. Returns the new attachment rows and
+     * how many originals were no longer on this server's disk (those are skipped).
+     *
+     * @return array{rows: array<int, array>, missing: int}
+     */
+    private function copyAttachments(TeamMessage $source, int $ownerId): array
+    {
+        $disk = Storage::disk('private');
+        $rows = []; $missing = 0;
+        try {
+            foreach ($source->attachments as $a) {
+                if (! $a->disk_path || ! $disk->exists($a->disk_path)) { $missing++; continue; }
+                $ext = strtolower(pathinfo($a->disk_path, PATHINFO_EXTENSION));
+                $ext = preg_match('/^[a-z0-9]{1,10}$/', $ext) ? $ext : 'bin';
+                $path = 'team-chat/' . $ownerId . '/' . Str::uuid() . '.' . $ext;
+                if (! $disk->copy($a->disk_path, $path)) { $missing++; continue; }
+                $rows[] = [
+                    'disk_path' => $path, 'original_name' => $a->original_name, 'mime' => $a->mime,
+                    'size' => $a->size, 'width' => $a->width, 'height' => $a->height,
+                ];
+            }
+        } catch (\Throwable $e) {
+            $this->discardFiles($rows);
+            throw $e;
+        }
+
+        return ['rows' => $rows, 'missing' => $missing];
     }
 
     public function destroy(Request $request, TeamMessage $message)

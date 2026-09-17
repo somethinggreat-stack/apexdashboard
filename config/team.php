@@ -15,4 +15,16 @@ return [
         'password' => env('ADMIN_SUPER_PASSWORD'),
         'name'     => env('ADMIN_SUPER_NAME', 'Admin'),
     ],
+
+    /*
+    | Team Chat upload ceiling for ONE message (all its files + form data), in MiB.
+    | The chat host sits behind Cloudflare, which rejects request bodies over
+    | 100 MiB (measured 2026-09-17: 104,857,600 bytes accepted, 106,000,000
+    | rejected with Cloudflare's own 413 page). The chat also never exceeds PHP's
+    | post_max_size / upload_max_filesize — the effective limits are the smallest
+    | of all of these (see TeamMessageController::uploadLimits()).
+    */
+    'chat' => [
+        'max_request_mb' => (int) env('TEAM_CHAT_MAX_REQUEST_MB', 95),
+    ],
 ];

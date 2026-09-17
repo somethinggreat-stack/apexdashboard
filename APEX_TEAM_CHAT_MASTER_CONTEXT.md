@@ -157,7 +157,7 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Build:** `cd Z:\Projects\apex-desktop; npm run tauri build` (~2–3 min incremental). Outputs:
   - Installer: `src-tauri\target\release\bundle\nsis\Apex Team Chat_<version>_x64-setup.exe`
   - Signature: `...exe.sig`
-- **App version** comes from `tauri.conf.json` `version` (currently **0.1.1**). `Cargo.toml`/npm package still say 0.1.0 (cosmetic; the bundle/installer/updater use tauri.conf.json).
+- **App version** comes from `tauri.conf.json` `version` (currently **0.1.2**; `Cargo.toml` + `package.json` now match).
 - **Publish for auto-update:** copy the installer to `public/download/apex-team-chat-setup.exe` (stable name — renaming does NOT break the signature, which is over the file bytes), and update `public/download/latest.json`:
   ```json
   { "version": "<new>", "notes": "...", "pub_date": "<ISO8601 Z>",
@@ -206,6 +206,17 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Own send doesn't move the poll cursor:** `append(m, true)` shows my message but leaves `lastId`; a forced `poll(true)` then fetches anything a teammate sent just before, and `append` inserts rows in id order.
 - **Groups in notifications:** `notifications()` returns `is_group` + `icon`; the sidebar adopts a "tap to message" DM row only for `is_group === false`, and adds a new row for a group it doesn't know.
 - **Purge:** the orphan sweep skips files modified in the last 10 minutes (an in-progress send), except with `--all`.
+
+### Uploads & attachments (Phase 2, 2026-09-17)
+- **One set of limits, measured, not guessed.** `TeamMessageController::uploadLimits()` = the smallest of our caps (50 MB/file, 10 files), PHP's `upload_max_filesize` / `post_max_size` / `max_file_uploads`, and the edge cap `config('team.chat.max_request_mb')` (default **95 MiB**). **Cloudflare's real limit was measured on 2026-09-17: 104,857,600 bytes (100 MiB) accepted, 106,000,000 rejected with Cloudflare's own 413.** The page gets the same numbers (`$uploadLimits`), refuses files before uploading, and names the file + limit. Server-side `checkAttachments()` repeats every check. Super-admin diagnostic: **`/admin/system/upload-limits`** (dashboard host, browser) prints the live PHP values.
+- **No fixed upload timeout.** A stall watchdog replaces it: 45s without upload progress, 180s after the last byte (server processing), 20s for a text-only send. Progress shows "Uploading… 42% (8 MB of 19 MB)" then "Processing…" (`#tcProgressLabel`).
+- **Clear failures, no surprise reloads.** 413 → "Too large for the server — one message can carry up to X"; 422 → the server's own message; 404 → "you may have been removed"; 403 → security-filter wording; 429/5xx/network → "press Enter to try again". Only a real sign-out reloads. A **419 refreshes the token** (`admin/team-messages/csrf`) and resends once — same `client_uuid`, files kept.
+- **Per-chat drafts.** Text + staged files + the quoted message are kept per `chatKey()` in `window.__tcDrafts` (text also in sessionStorage `tc-drafts`, so it survives a reload) and restored on return; a send that fails after switching away becomes that chat's draft. Re-applying the same chat (cached paint → network) no longer clears the composer, and `sig()` ignores presence text so it rarely re-renders at all.
+- **No page reloads that kill uploads.** Pin/unpin (`refreshPins`), add/remove/rename members (`refreshGroup`), profile photo (`applyMyAvatar`) all update in place. Leaving a group goes through `tcNav` and keeps `standalone=1`. A `beforeunload` guard plus `window.tcConfirmIfSending()` (used by Refresh and Sign out) warns while a send is in flight.
+- **Forward carries the files.** `copyAttachments()` gives the forwarded message its OWN copies on the private disk (so purging the original can't break it); a file-only message whose file is gone is refused, text + missing file reports `missing_files`.
+- **CSP fix (was breaking the UI):** `img-src` lacked `blob:`, so staged image thumbnails were broken and "Change photo" failed with "That image could not be opened". Now `img-src 'self' data: blob:`.
+- **Desktop 0.1.2:** `dragDropEnabled: false` — required for HTML5 drag-and-drop on Windows (Tauri's own schema says so); without it the app swallowed dropped files. Installer URL is now versioned (`?v=0.1.2`) so Cloudflare can't serve a stale exe against a new signature.
+- Fixed while in there: `res.messages.forEach(append)` passed the array index as append's `own` flag, so only one new message per poll advanced the cursor (batches re-fetched until they trickled through). `append` now takes `own === true` only.
 
 ---
 
@@ -256,6 +267,8 @@ Every async request in the thread script checks, when it returns, that the chat 
 7. **When "search / file / message" behavior changes,** keep body-search AND attachment-name search in sync (`TeamMessageController::search`).
 8. **Don't build manual chat-clearing UX** — the 7-day auto-purge is the intended mechanism (user was explicit).
 9. **Every async request in the chat script must check freshness on return** (`runAlive` / `viewAlive(gen)` / `chatAlive(key)` / nav ticket — see §6). Every message insert goes through `serializedSend` (see §10 Send integrity).
+10. **Never `location.reload()` from a chat action** — an upload may be in flight. Update in place, or go through `window.tcConfirmIfSending()` first.
+11. **Upload limits come from `uploadLimits()`**, never hard-coded in the page; keep the client and server checks in step.
 
 ---
 

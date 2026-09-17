@@ -1,11 +1,11 @@
 {
-  "version": "0.1.1",
-  "notes": "Reliability update: messages and notifications now arrive in real time even while the app is in the background.",
-  "pub_date": "2026-09-15T03:17:37Z",
+  "version": "0.1.2",
+  "notes": "Drag and drop files into the chat now works in the desktop app.",
+  "pub_date": "2026-09-17T17:30:17Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTAvVXgwaGdtZFFWTUt4ZWpGMTRGSlBkQjFFenVvaTNXa3hscHNsY0RtdEs2S2d3VE56aE9jbTFaR3NVMTZ0ZE5HcjByTFFnS3lUSFJtWjJxandmblF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDQyMTkyCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjFfeDY0LXNldHVwLmV4ZQpITzUwL05SYk5FVWdLbEJ0NkllRGpRRWp3K0QvaFNaOGZJZ2QzaitMVC9wK3RuVmptY1Z2NGErSEE5Tm5TWmJtV0JlWG9xWnlTV1R6YlBvUlR4eVBEUT09Cg==",
-      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSSt2QTIydjZHSkw1S0xwbGhiN1BmK2Y0emVOOXRLV29LK09aWXE5VmJpMHhOMnFzemdZcGllOTJNa21VeTkvNUZoS1p1SnJaMlpoOG5IVy9SQUYxcUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjY2MDExCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjJfeDY0LXNldHVwLmV4ZQpMYWhaWjQvNGw0alJzTVdLSjlyekI2NEFiZW14Ykt1T2V5MXhFQmFwM2Q5ZFJ2b0E2aXJSNVJVOE5CWDgwMU1pcXhPYmdOTTZTaWl0L3FXVTl4RElDQT09Cg==",
+      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.2"
     }
   }
 }

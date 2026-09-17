@@ -718,3 +718,7 @@
     /* A message is on its way: the composer is read-only until the send finishes. */
     .tc-composer.tc-sending textarea { opacity:.6; cursor:progress; }
     .tc-composer.tc-sending .tc-send { cursor:progress; }
+    /* Upload progress text under the bar ("Uploading… 42% (8 MB of 19 MB)" / "Processing…"). */
+    .tc-progress-label { margin:4px 18px 0; font-size:11.5px; color:var(--pro-muted,#64748b); position:relative; z-index:1; font-variant-numeric:tabular-nums; }
+    .tc-progress-label[hidden] { display:none; }
+    .tcv-files .tc-progress-label, .tcv-photos .tc-progress-label { display:none !important; }
