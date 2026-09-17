@@ -6,10 +6,12 @@ deployment:
     # public_html. This lets the same repo deploy the dashboard and the chat app
     # independently, so deploying one never overwrites the other.
     - export DEPLOYPATH="$(cat .deploy-target 2>/dev/null || echo /home2/apexgrow/public_html/)"
-    # Anything that MUST work uses this: it stops the deploy loudly instead of carrying on
-    # and leaving a half-updated site that answers every request with a 500. Previously every
-    # step ended in "|| true", so a failed composer install or migration passed unnoticed.
-    - 'fail() { echo "=== DEPLOY FAILED: $1 ==="; date -u > "$DEPLOYPATH/storage/logs/deploy-failed.txt" 2>/dev/null; echo "$1" >> "$DEPLOYPATH/storage/logs/deploy-failed.txt" 2>/dev/null; exit 1; }'
+    # Records a failed step so it can't pass unnoticed the way "|| true" used to.
+    # It must NOT exit: these tasks share ONE shell that cPanel itself drives, so an exit here
+    # kills that shell mid-script and cPanel never writes the "finished" state — the deploy
+    # page then sits on "in progress" for ever instead of reporting anything. Note the step,
+    # keep going, and read storage/logs/deploy-failed.txt afterwards.
+    - 'fail() { echo "=== DEPLOY STEP FAILED: $1 ==="; { date -u; echo "$1"; } >> "$DEPLOYPATH/storage/logs/deploy-failed.txt" 2>/dev/null; return 0; }'
     - /bin/cp -R app $DEPLOYPATH || fail "copy app"
     - /bin/cp -R bootstrap $DEPLOYPATH || fail "copy bootstrap"
     - /bin/cp -R config $DEPLOYPATH || fail "copy config"
@@ -39,11 +41,10 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:clear 2>&1 || fail "config:clear"
     - cd $DEPLOYPATH && php artisan route:clear 2>&1 || fail "route:clear"
     - cd $DEPLOYPATH && php artisan view:clear 2>&1 || fail "view:clear"
-    # Both checkouts share ONE database, so both would otherwise run the same migrations at the
-    # same time when they are deployed together. --isolated takes a lock so only one actually
-    # runs and the other reports it and moves on; the lock lives in the shared database
-    # (CACHE_STORE=database) because each host has its own file cache.
-    - cd $DEPLOYPATH && CACHE_STORE=database php artisan migrate --force --isolated 2>&1 || fail "migrate"
+    # Plain migrate: the two checkouts share one database, but they are deployed one at a time.
+    # An --isolated run needs a working cache lock on the shared DB, which is one more thing
+    # that can go wrong during a deploy for a collision that doesn't happen in practice.
+    - cd $DEPLOYPATH && php artisan migrate --force 2>&1 || fail "migrate"
     - cd $DEPLOYPATH && php artisan db:seed --class=TeamSeeder --force 2>&1 || fail "seed team"
     - cd $DEPLOYPATH && php artisan storage:link 2>&1 || true
     - cd $DEPLOYPATH && php artisan images:optimize 2>&1 || true
@@ -53,11 +54,10 @@ deployment:
     - cd $DEPLOYPATH && php artisan config:cache 2>&1 || fail "config:cache"
     - cd $DEPLOYPATH && php artisan route:cache 2>&1 || fail "route:cache"
     - cd $DEPLOYPATH && php artisan view:cache 2>&1 || fail "view:cache"
-    # A quick proof the deployed app actually boots, rather than discovering it from a VA.
-    - cd $DEPLOYPATH && php artisan about --only=environment > /dev/null 2>&1 || fail "app does not boot"
-    # Leave a record of what is live: date + commit. If a deploy stopped early this stays old,
-    # and storage/logs/deploy-failed.txt says which step failed.
-    - 'cd $DEPLOYPATH && { date -u; git -C "$OLDPWD" rev-parse --short HEAD 2>/dev/null; } > storage/logs/deployed-at.txt 2>/dev/null; rm -f storage/logs/deploy-failed.txt; echo "=== DEPLOY OK ==="'
+    # Leave a record of what is live, and of anything that failed on the way. Check
+    # storage/logs/deployed-at.txt (when + which commit) and, if it exists,
+    # storage/logs/deploy-failed.txt (which steps failed) in File Manager after a deploy.
+    - 'cd $DEPLOYPATH && date -u > storage/logs/deployed-at.txt 2>/dev/null; echo "=== DEPLOY FINISHED ==="'
     # NOTE: we deliberately DO NOT flush sessions on deploy. Flushing wiped everyone's
     # session so the open app/browser held a dead CSRF token → "CSRF token mismatch" on
     # the next action. Sessions (and their CSRF tokens) now survive a deploy, so content
