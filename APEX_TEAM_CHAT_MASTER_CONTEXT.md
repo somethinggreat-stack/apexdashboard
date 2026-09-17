@@ -225,6 +225,14 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Badges match.** The sidebar treats the open chat as read **only while `isViewing()`**, so messages that arrive while the VA is away keep their badge (and `bumpSidebar` still updates that row). Returning to the window polls with `read=1`, which clears both. Unread counts come from one server helper, `unreadForBadge()`.
 - **Taskbar dot (desktop 0.1.3).** `set_unread` was rejected for the remote page: since Tauri 2.11 an app command called from a remote origin needs the ACL to resolve it. `build.rs` now declares the command (`AppManifest::new().commands(&["set_unread"])`) and `capabilities/remote.json` grants `allow-set-unread` — only to `*.apexgrowthsolution.com`. Verified in `gen/schemas/capabilities.json`. The dot shows the unread total across all chats and clears when caught up.
 
+### Groups, mentions, pins & membership (Phase 5, 2026-09-17)
+- **New-group field renamed** to `#tcNewGroupName` and read as `modal.querySelector(...)`. It used to share the id `tcGroupName` with the OPEN group's header name, so with a group open `getElementById` found the header span and "Create group" threw and did nothing. The button is also single-shot and clears the form.
+- **Mentions survive an edit.** `update()` re-resolves them from the NEW text (`mentionsInBody()`: any participant written as "@Their Name", plus `@everyone` in a group), unioned with what the client sent; the client also pre-fills the edit's mentions from the bubble. Editing out a name drops that mention; editing one in adds it.
+- **Pins never outlive their message.** `destroy()` clears `pinned_at`/`pinned_by`; both pinned queries add `whereNull('deleted_at')`; `pin()` allows UNpinning a deleted message (only pinning is refused). The open page refreshes the pinned bar when a pinned message is deleted (by me, or via the states poll).
+- **Removed members are told.** `findConversation()` now answers 403 "You're no longer a member of this group." (or 404 "This chat is no longer available.") instead of Laravel's raw model-not-found. `okJson`/the send path call `chatGone()`: toast, notice in the thread, sidebar row removed, cached snapshot dropped (`window.tcDropCache`), composer disabled, polling stopped. **Note:** an in-org non-participant now gets 403, not 404 — four tests were updated to match.
+- **A group can't be left without an admin.** `Conversation::handOverGroupAdminRoles()` runs from `Admin::deleting`, so deleting the only admin's account promotes the longest-standing remaining member (the same rule as leaving a group).
+- Leave Group keeping `standalone=1` was fixed in Phase 2.
+
 ---
 
 ## 11. Bugs & fixes worth remembering

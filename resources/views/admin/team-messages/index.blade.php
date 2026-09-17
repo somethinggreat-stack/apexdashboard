@@ -413,7 +413,9 @@
         <div class="tc-group-form">
             <div class="tc-group-top">
                 <button type="button" class="tc-icon-pick" id="tcIconPick">💬</button>
-                <input type="text" id="tcGroupName" class="tc-inp" placeholder="Group name" maxlength="80">
+                {{-- id must NOT be "tcGroupName": the open group's header name uses that, and
+                     getElementById would find the header span instead of this box. --}}
+                <input type="text" id="tcNewGroupName" class="tc-inp" placeholder="Group name" maxlength="80">
             </div>
             <div class="tc-icon-row" id="tcIconRow">
                 @foreach ($groupIcons as $gi)
@@ -492,7 +494,7 @@
         reg.nodes.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
         // The previous run's thread functions point at elements that are about to be replaced.
         // Drop them, so a page with no open thread doesn't route clicks into dead code.
-        ['tcApplyOpen', 'tcSwapEligible', 'tcOpenUrl', 'tcGalleryDirty', 'tcDownload', 'tcSendInFlight', 'tcConfirmIfSending'].forEach(function (k) {
+        ['tcApplyOpen', 'tcSwapEligible', 'tcOpenUrl', 'tcGalleryDirty', 'tcDownload', 'tcSendInFlight', 'tcConfirmIfSending', 'tcDropCache'].forEach(function (k) {
             try { delete window[k]; } catch (e) { window[k] = undefined; }
         });
     };
@@ -964,6 +966,11 @@
                     b.classList.add('deleted');
                     b.innerHTML = '<div class="tc-text tc-deleted-text">🚫 ' + deletedLabel(s.deletedBy) + '</div>';
                     var el0 = box.querySelector('.tc-msg[data-id="' + s.id + '"] .tc-dots'); if (el0) el0.remove();
+                    // Someone deleted a message that was pinned → drop it off the pinned bar.
+                    var wasPin = el.dataset.pinned === '1';
+                    el.dataset.pinned = 0;
+                    var pi = el.querySelector('.tc-pin-ic'); if (pi) pi.remove();
+                    if (wasPin) refreshPins();
                 }
             } else if (s.edited && s.body != null){
                 var txt = el.querySelector('.tc-bubble .tc-text');
@@ -1512,7 +1519,13 @@
                 }
                 if (s === 413) return notSent('Too large for the server — one message can carry up to ' + mbText(MAX_TOTAL) + '. Send the files in separate messages');
                 if (s === 422) return notSent(res && res.message ? res.message : 'This message could not be sent');
-                if (s === 404) return notSent('This chat is no longer available — you may have been removed from it');
+                if (s === 404 || (s === 403 && res && res.message && /no longer|not available|member/i.test(res.message))){
+                    // Removed from the chat (or it's gone): clear it away with a plain message.
+                    finish();
+                    if (chatAlive(key)) chatGone(res && res.message);
+                    else toast((res && res.message) || 'That chat is no longer available — your message was not sent');
+                    return;
+                }
                 if (s === 403) return notSent(res && res.message ? res.message : 'The server’s security filter blocked this message — try again, or remove unusual text or links');
                 if (s === 429) return notSent('Too many requests — wait a moment, then press Enter');
                 if (s >= 500) return notSent('Server error — press Enter to try again');
@@ -1560,10 +1573,39 @@
         setTimeout(function () { location.reload(); }, 500);
     }
 
+    // Removed from this chat (or it's gone): say so plainly, stop polling it, and clear it
+    // away — instead of a silent retry loop or a raw "No query results for model…".
+    var goneShown = false;
+    function chatGone(msg){
+        if (goneShown || !runAlive()) return;
+        goneShown = true;
+        var conv = CONV;
+        toast(msg || 'You’re no longer in this chat');
+        if (conv){
+            var row = document.querySelector('.tc-contact[data-conversation="' + conv + '"]');
+            if (row) row.remove();
+            if (typeof window.tcDropCache === 'function') window.tcDropCache('c=' + conv);
+            delete DRAFTS['c' + conv]; persistDraftTexts();
+        }
+        CONV = ''; box.dataset.conversation = '';
+        box.innerHTML = '<div class="tc-thread-empty"><div class="tc-thread-empty-emoji">🚫</div><p>'
+            + esc(msg || 'You’re no longer in this chat.') + '</p></div>';
+        renderPins([]);
+        if (typeof membersModal !== 'undefined' && membersModal) membersModal.hidden = true;
+        input.disabled = true; input.placeholder = 'You can’t post here any more';
+        var sb = form.querySelector('.tc-send'); if (sb) sb.disabled = true;
+        window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: '' } }));
+        window.dispatchEvent(new CustomEvent('apex:sidebar-changed'));
+    }
+
     var authWarned = false;
     function okJson(r){
         if (r.ok && !r.redirected){ authWarned = false; return r.json(); }
-        if (!authWarned && (r.status === 401 || r.status === 419 || r.status === 403 || r.redirected)){
+        // 403/404 here mean "this chat isn't yours any more", not a session problem.
+        if (r.status === 403 || r.status === 404){
+            return r.json().catch(function () { return null; }).then(function (j) { chatGone(j && j.message); return null; });
+        }
+        if (!authWarned && (r.status === 401 || r.status === 419 || r.redirected)){
             authWarned = true;
             reconnect();
         }
@@ -2047,6 +2089,18 @@
         var el = box.querySelector('.tc-msg[data-id="' + editingId + '"]');
         var t = el ? el.querySelector('.tc-bubble .tc-text') : null;
         input.value = t ? t.textContent : menuMsg.text;
+        // Carry the message's existing @mentions into the edit, so saving keeps them.
+        pendingMentions = [];
+        if (el) el.querySelectorAll('.tc-bubble .tc-mention').forEach(function (mEl) {
+            var label = mEl.textContent.replace(/^@/, '').trim();
+            if (!label) return;
+            var key = (label.toLowerCase() === 'everyone')
+                ? 'everyone'
+                : (MENTIONABLES.filter(function (x) { return x.name === label; })[0] || {}).id;
+            if (key && !pendingMentions.some(function (p) { return p.key === String(key); })) {
+                pendingMentions.push({ key: String(key), label: label });
+            }
+        });
         if (editBar) editBar.hidden = false;
         grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length);
     }
@@ -2351,7 +2405,12 @@
                 b.innerHTML = '<div class="tc-text tc-deleted-text">🚫 You deleted this message</div>';
                 var rr = el.querySelector('.tc-reacts'); if (rr) rr.innerHTML = '';
                 var dots = el.querySelector('.tc-dots'); if (dots) dots.remove();
+                // A deleted message is no longer pinned (the server clears it) — take it off
+                // the pinned bar here too, instead of leaving a pin that can't be removed.
+                var wasPinned = el.dataset.pinned === '1';
                 el.dataset.pinned = 0;
+                var pic = el.querySelector('.tc-pin-ic'); if (pic) pic.remove();
+                if (wasPinned) refreshPins();
             });
         });
     }
@@ -2954,6 +3013,8 @@
             loadDraft(chatKey());   // this chat's own draft (or a send that failed while away)
         }
         // Read-only only while THIS chat has a send on its way.
+        goneShown = false;
+        input.disabled = false;
         setComposerBusy(sendingKey === chatKey());
         if (typingEl) typingEl.hidden = true;
 
@@ -3057,6 +3118,14 @@
             db.transaction('threads','readwrite').objectStore('threads').put(val, key);
         } catch (e){} });
     }
+    function idbDel(key){
+        idb().then(function (db){ if (!db) return; try {
+            db.transaction('threads','readwrite').objectStore('threads').delete(key);
+        } catch (e){} });
+    }
+    // Forget a chat we can no longer open (e.g. removed from the group), so nothing stale is
+    // painted from the on-disk snapshot later.
+    window.tcDropCache = function (q){ delete cache[q]; idbDel(q); };
     // What decides whether fresh data must be re-applied over a cached paint. Presence text
     // ("Active 5m ago") is left out on purpose — it changes all the time and the thread poll
     // updates it anyway — so opening a chat doesn't re-render it a moment later.
@@ -3111,7 +3180,17 @@
             } else {
                 // No snapshot: straight network open (Tier 1).
                 fetchFresh(q, url, ticket, function (data){ window.tcApplyOpen(data, url, true); })
-                    .catch(function (){ if (ticketLive(ticket)) toTcNav(url); });
+                    .catch(function (st){
+                        if (!ticketLive(ticket)) return;
+                        // Removed from that chat (or it's gone): forget it instead of navigating into it.
+                        if (st === 403 || st === 404){
+                            window.tcDropCache(q); a.remove();
+                            if (window.apexToast) window.apexToast('You’re no longer in that chat');
+                            window.dispatchEvent(new CustomEvent('apex:sidebar-changed'));
+                            return;
+                        }
+                        toTcNav(url);
+                    });
             }
         });
         return true;
@@ -3232,20 +3311,31 @@
         b.classList.add('sel');
     });
 
-    document.getElementById('tcGroupCreate').addEventListener('click', function () {
-        var name = document.getElementById('tcGroupName').value.trim();
+    var createBtn = document.getElementById('tcGroupCreate');
+    var creating = false;
+    createBtn.addEventListener('click', function () {
+        if (creating) return;   // one click = one group
+        // Always read the field INSIDE this modal, never by a page-wide id.
+        var nameEl = modal.querySelector('#tcNewGroupName');
+        var name = nameEl ? nameEl.value.trim() : '';
         var members = Array.prototype.map.call(modal.querySelectorAll('.tc-group-members input:checked'), function (c) { return c.value; });
         if (!name) { toast('Name your group'); return; }
         if (!members.length) { toast('Pick at least one teammate'); return; }
+        creating = true; createBtn.disabled = true;
         var fd = new FormData(); fd.append('_token', csrf); fd.append('name', name); fd.append('icon', chosenIcon);
         members.forEach(function (m) { fd.append('members[]', m); });
         fetch(STORE_GROUP, { method:'POST', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                if (!res || !res.ok) { toast('Could not create group'); return; }
+                creating = false; createBtn.disabled = false;
+                if (!res || !res.ok) { toast(res && res.message ? res.message : 'Could not create group — try again'); return; }
+                modal.hidden = true;
+                if (nameEl) nameEl.value = '';
+                modal.querySelectorAll('.tc-group-members input:checked').forEach(function (c) { c.checked = false; });
                 var url = '?c=' + res.conversation_id + (@js(request()->boolean('standalone')) ? '&standalone=1' : '');
                 if (window.tcNav) window.tcNav(url, true); else location.href = url;
-            });
+            })
+            .catch(function () { creating = false; createBtn.disabled = false; toast('Could not create group — try again'); });
     });
 })();
 

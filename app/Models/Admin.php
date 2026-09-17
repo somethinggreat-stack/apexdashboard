@@ -17,6 +17,15 @@ class Admin extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['password' => 'hashed', 'last_seen_at' => 'datetime'];
 
+    protected static function booted(): void
+    {
+        // Deleting an account cascades its chat memberships away. Hand over group-admin
+        // rights first, so no group is left with members but nobody who can manage it.
+        static::deleting(function (Admin $admin) {
+            Conversation::handOverGroupAdminRoles($admin->id);
+        });
+    }
+
     /** Considered online if seen within the last minute (poll-based presence). */
     public function isOnline(): bool
     {

@@ -104,6 +104,6 @@ class TeamEditGalleryTest extends TestCase
         $outsider = $this->va('Out');
         $c = $this->dm($va, $this->super);
 
-        $this->actingAs($outsider, 'admin')->getJson('/admin/team-messages/gallery?c=' . $c->id)->assertNotFound();
+        $this->actingAs($outsider, 'admin')->getJson('/admin/team-messages/gallery?c=' . $c->id)->assertStatus(403);   // told plainly, not a raw 404
     }
 }

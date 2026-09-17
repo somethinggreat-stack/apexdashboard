@@ -478,8 +478,9 @@ class TeamMessageTest extends TestCase
 
         $this->actingAs($outsider, 'admin')->get('/admin/team-messages?c=' . $convId)->assertOk()
             ->assertViewHas('active', null);   // not resolved for a non-member
-        $this->actingAs($outsider, 'admin')->postJson('/admin/team-messages', ['conversation_id' => $convId, 'body' => 'hi'])
-            ->assertNotFound();
+        $res = $this->actingAs($outsider, 'admin')->postJson('/admin/team-messages', ['conversation_id' => $convId, 'body' => 'hi'])
+            ->assertStatus(403);
+        $this->assertStringContainsString('no longer a member', $res->json('message'));
     }
 
     public function test_group_message_shows_the_sender_and_body(): void

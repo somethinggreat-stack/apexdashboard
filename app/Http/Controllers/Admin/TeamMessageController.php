@@ -115,7 +115,7 @@ class TeamMessageController extends Controller
                 ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
             $hasMoreOlder = $messages->isNotEmpty()
                 && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
-            $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
+            $pinned = $active->messages()->visibleTo($me->id)->whereNull('deleted_at')->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             $this->markRead($active, $me);
             $notifyLevel = optional($active->participantFor($me->id))->notify_level ?: 'all';
@@ -557,7 +557,7 @@ class TeamMessageController extends Controller
                 ->orderByDesc('id')->limit(self::PAGE)->get()->reverse()->values();
             $hasMore = $messages->isNotEmpty()
                 && $active->messages()->visibleTo($me->id)->where('id', '<', $messages->first()->id)->exists();
-            $pinned = $active->messages()->visibleTo($me->id)->whereNotNull('pinned_at')->with('sender')
+            $pinned = $active->messages()->visibleTo($me->id)->whereNull('deleted_at')->whereNotNull('pinned_at')->with('sender')
                 ->orderByDesc('pinned_at')->limit(10)->get();
             // Prefetch (hover warm-up) must NOT mark the thread read — only a real open does.
             if (! $request->boolean('prefetch')) {
@@ -794,7 +794,10 @@ class TeamMessageController extends Controller
     {
         $me = Auth::guard('admin')->user();
         $msg = $this->participantMessage($me, (int) $request->input('message_id'));
-        abort_if($msg->isSystem() || $msg->deleted_at, 404);
+        abort_if($msg->isSystem(), 404);
+        // A deleted message can't be pinned, but it CAN always be unpinned — otherwise an old
+        // pin on a since-deleted message could never be cleared.
+        abort_if($msg->deleted_at && $request->boolean('pinned'), 404);
 
         if ($request->boolean('pinned')) {
             $msg->forceFill(['pinned_at' => now(), 'pinned_by' => $me->id])->save();
@@ -850,6 +853,34 @@ class TeamMessageController extends Controller
                 'at'      => $m->created_at->timezone(self::TZ)->format('M j'),
             ]))->take(25)->values(),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * The mentions an edited body still carries: everyone written as "@Their Name" in the text,
+     * plus whatever the client sent that is still present. Keeps mentions alive across an edit
+     * without depending on the client remembering them.
+     *
+     * @return array<int, string> mention keys for syncMentions()
+     */
+    private function mentionsInBody(Conversation $conv, Admin $me, string $body, array $clientMentions): array
+    {
+        $keys = [];
+        foreach ($conv->participants as $p) {
+            if ($p->admin_id === $me->id) continue;
+            $name = trim((string) optional($p->admin)->full_name);
+            if ($name !== '' && mb_stripos($body, '@' . $name) !== false) {
+                $keys[] = (string) $p->admin_id;
+            }
+        }
+        if ($conv->isGroup() && mb_stripos($body, '@everyone') !== false) {
+            $keys[] = 'everyone';
+        }
+        // Anything the client still claims (it validates against participants in syncMentions).
+        foreach ($clientMentions as $m) {
+            $keys[] = (string) $m;
+        }
+
+        return array_values(array_unique($keys));
     }
 
     /** Record who a message @mentions (ids that are participants, plus @everyone). */
@@ -1119,6 +1150,9 @@ class TeamMessageController extends Controller
 
         $message->forceFill([
             'body' => '', 'reactions' => null, 'deleted_at' => now(), 'deleted_by' => $me->id,
+            // A deleted message must not stay on the pinned bar (it showed as "📎 Attachment"
+            // and could never be unpinned, because pinning refuses deleted messages).
+            'pinned_at' => null, 'pinned_by' => null,
         ])->save();
 
         return response()->json(['ok' => true, 'mode' => 'everyone', 'id' => $message->id]);
@@ -1141,13 +1175,18 @@ class TeamMessageController extends Controller
             'mentions.*' => ['string', 'max:20'],
         ]);
 
-        $message->forceFill(['body' => trim($data['body']), 'edited_at' => now()])->save();
+        $body = trim($data['body']);
+        $message->forceFill(['body' => $body, 'edited_at' => now()])->save();
 
-        // Re-resolve mentions against the new text.
+        // Re-resolve mentions against the NEW text: anyone still written as "@Their Name" stays
+        // mentioned (with their @ badge and mention notification), anyone edited out is dropped.
+        // Reading the text — not just what the client sent — is what keeps an edit from quietly
+        // stripping every mention off the message.
         $message->mentionedAdmins()->detach();
         $message->forceFill(['mentions_all' => false])->save();
-        $message->load('conversation.participants');
-        $this->syncMentions($message, $message->conversation, $me, $request->input('mentions', []));
+        $message->load('conversation.participants.admin');
+        $this->syncMentions($message, $message->conversation, $me,
+            $this->mentionsInBody($message->conversation, $me, $body, $request->input('mentions', [])));
 
         $message->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins', 'deletedByAdmin');
 
@@ -1582,11 +1621,19 @@ class TeamMessageController extends Controller
 
     private function findConversation(Admin $me, int $id): Conversation
     {
-        return Conversation::where('id', $id)
+        $conv = Conversation::where('id', $id)
             ->where('data_owner_id', $me->dataOwnerId())
-            ->whereHas('participants', fn ($q) => $q->where('admin_id', $me->id))
             ->with('participants.admin')
-            ->firstOrFail();
+            ->first();
+
+        // Say which it is, in words the app can show: removed from a group I could see before,
+        // versus a chat that no longer exists at all. (It used to surface Laravel's raw
+        // "No query results for model [App\Models\Conversation]".)
+        abort_if(! $conv, 404, 'This chat is no longer available.');
+        abort_unless($conv->participants->contains('admin_id', $me->id), 403,
+            $conv->isGroup() ? 'You’re no longer a member of this group.' : 'This chat is no longer available to you.');
+
+        return $conv;
     }
 
     private function findOrCreateDm(Admin $me, Admin $peer): Conversation

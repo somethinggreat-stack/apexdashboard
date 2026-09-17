@@ -15,6 +15,28 @@ class Conversation extends Model
         return $this->hasMany(ConversationParticipant::class);
     }
 
+    /**
+     * Hand group-admin rights over before an admin account disappears. Deleting an account
+     * cascades its participant rows away, so a group whose ONLY admin was that account would
+     * be left with members but nobody who can add, remove or rename — this promotes the
+     * longest-standing remaining member first.
+     */
+    public static function handOverGroupAdminRoles(int $leavingAdminId): void
+    {
+        $groups = static::where('type', 'group')
+            ->whereHas('participants', fn ($q) => $q->where('admin_id', $leavingAdminId)->where('role', 'admin'))
+            ->with('participants')
+            ->get();
+
+        foreach ($groups as $group) {
+            $others = $group->participants->where('admin_id', '!=', $leavingAdminId);
+            if ($others->isEmpty() || $others->contains('role', 'admin')) {
+                continue;   // nobody left to promote, or another admin already holds it
+            }
+            $others->sortBy('id')->first()?->update(['role' => 'admin']);
+        }
+    }
+
     public function messages()
     {
         return $this->hasMany(TeamMessage::class);

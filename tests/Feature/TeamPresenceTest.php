@@ -108,6 +108,6 @@ class TeamPresenceTest extends TestCase
 
         $this->actingAs($outsider, 'admin')
             ->postJson('/admin/team-messages/typing', ['conversation_id' => $c->id])
-            ->assertNotFound();
+            ->assertStatus(403);
     }
 }

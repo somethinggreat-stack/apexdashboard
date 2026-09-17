@@ -149,9 +149,9 @@ class TeamOpenThreadTest extends TestCase
         $c = Conversation::create(['type' => 'dm', 'data_owner_id' => $this->super->id]);
         $c->participants()->create(['admin_id' => $other->id, 'role' => 'member']);
 
-        // findConversation() treats a conversation I'm not in as not-found (404),
-        // consistent with the thread/older endpoints.
+        // A chat in my org that I'm not part of answers 403 with a sentence the app can show
+        // ("You're no longer a member…"), instead of Laravel's raw model-not-found 404.
         $this->actingAs($this->super, 'admin')->getJson("/admin/team-messages/open?c={$c->id}")
-            ->assertStatus(404);
+            ->assertStatus(403)->assertJsonStructure(['message']);
     }
 }
