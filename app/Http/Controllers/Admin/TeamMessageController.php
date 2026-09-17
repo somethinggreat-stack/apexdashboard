@@ -167,14 +167,22 @@ class TeamMessageController extends Controller
             'attachments.*'   => ['file', 'max:' . self::MAX_KB],
             'mentions'        => ['nullable', 'array', 'max:50'],
             'mentions.*'      => ['string', 'max:20'],
+            'client_uuid'     => ['nullable', 'string', 'regex:/^[A-Za-z0-9-]{8,64}$/'],
         ]);
+        $uuid = $data['client_uuid'] ?? null;
 
-        // Resolve (or start) the conversation.
+        // A repeat of a send that already went through (double Enter, or a retry after a
+        // timeout whose first attempt actually reached us) → return that message, no duplicate.
+        if ($uuid && ($existing = $this->sentWithUuid($me, $uuid))) {
+            return $this->storedResponse($request, $existing, $me);
+        }
+
+        // Resolve the conversation. A brand-new DM is created inside the send transaction below.
+        $conv = $peer = null;
         if (! empty($data['conversation_id'])) {
             $conv = $this->findConversation($me, (int) $data['conversation_id']);
         } elseif (! empty($data['recipient_id'])) {
             $peer = $this->teammates($me)->findOrFail($data['recipient_id']);
-            $conv = $this->findOrCreateDm($me, $peer);
         } else {
             throw ValidationException::withMessages(['conversation_id' => 'No conversation.']);
         }
@@ -189,25 +197,52 @@ class TeamMessageController extends Controller
         // non-images are always force-downloaded as octet-stream from the private disk —
         // see attachment() — so nothing here is ever executed or rendered inline.
 
-        $replyToId = null;
-        if (! empty($data['reply_to_id'])) {
-            $quoted = $conv->messages()->find($data['reply_to_id']);
-            $replyToId = $quoted?->id;
+        // Files go to disk FIRST (the slow part), so the message, its attachments and its
+        // mentions can then be committed together: nobody ever sees a half-saved message.
+        $stored = $this->storeFiles($files, $me->dataOwnerId());
+
+        try {
+            $msg = $this->serializedSend($me, function () use ($me, $uuid, &$conv, $peer, $body, $data, $stored, $request) {
+                // Re-check under the lock: a concurrent duplicate may have just committed.
+                if ($uuid && ($dup = $this->sentWithUuid($me, $uuid))) {
+                    return $dup;
+                }
+                $conv ??= $this->findOrCreateDm($me, $peer);
+
+                $replyToId = null;
+                if (! empty($data['reply_to_id'])) {
+                    $replyToId = $conv->messages()->find($data['reply_to_id'])?->id;
+                }
+
+                $msg = TeamMessage::create([
+                    'conversation_id' => $conv->id,
+                    'type'            => 'text',
+                    'sender_id'       => $me->id,
+                    'client_uuid'     => $uuid,
+                    'reply_to_id'     => $replyToId,
+                    'body'            => $body,
+                ]);
+                if ($stored) {
+                    $msg->attachments()->createMany($stored);
+                }
+                $this->syncMentions($msg, $conv, $me, $request->input('mentions', []));
+                $this->touchConversation($conv, $msg);
+                $this->markReadTo($conv, $me->id, $msg->id);   // I've read my own message
+                $conv->participants()->where('admin_id', $me->id)->update(['typing_at' => null]);
+
+                return $msg;
+            });
+        } catch (\Throwable $e) {
+            $this->discardFiles($stored);
+            throw $e;
         }
 
-        $msg = TeamMessage::create([
-            'conversation_id' => $conv->id,
-            'type'            => 'text',
-            'sender_id'       => $me->id,
-            'reply_to_id'     => $replyToId,
-            'body'            => $body,
-        ]);
-        $this->storeAttachments($msg, $files, $conv->data_owner_id);
-        $this->syncMentions($msg, $conv, $me, $request->input('mentions', []));
-        $this->touchConversation($conv, $msg);
-        $this->markReadTo($conv, $me->id, $msg->id);   // I've read my own message
-        $conv->participants()->where('admin_id', $me->id)->update(['typing_at' => null]);
+        if ($uuid && $msg->wasRecentlyCreated === false) {
+            $this->discardFiles($stored);   // the duplicate's copies aren't needed
+            return $this->storedResponse($request, $msg, $me);
+        }
 
+        $conv ??= $msg->conversation;
         $msg->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins');
 
         $this->queuePush($conv, $msg, $me);
@@ -217,6 +252,42 @@ class TeamMessageController extends Controller
         }
 
         return redirect()->route('admin.team-messages.index', ['c' => $conv->id]);
+    }
+
+    /** A message I already sent with this client id, if I'm still in its conversation. */
+    private function sentWithUuid(Admin $me, string $uuid): ?TeamMessage
+    {
+        $m = TeamMessage::where('sender_id', $me->id)->where('client_uuid', $uuid)->first();
+
+        return $m && $this->isParticipant($me, $m->conversation_id) ? $m : null;
+    }
+
+    /** The normal send response, for a message that was saved by an earlier attempt. */
+    private function storedResponse(Request $request, TeamMessage $msg, Admin $me)
+    {
+        $msg->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins', 'deletedByAdmin');
+
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true, 'message' => $this->present($msg, $me->id), 'conversation_id' => $msg->conversation_id, 'duplicate' => true]);
+        }
+
+        return redirect()->route('admin.team-messages.index', ['c' => $msg->conversation_id]);
+    }
+
+    /**
+     * Run a message insert inside a transaction that first locks the org's owner row, so an
+     * org's messages are committed in the same order as their ids. The polls read "everything
+     * after id N"; if a lower id could commit after a higher one was already seen, that
+     * message would be skipped for good (the "missing message in a busy group" bug).
+     * Only the quick DB writes run under the lock — files are stored before it.
+     */
+    private function serializedSend(Admin $me, \Closure $work)
+    {
+        return DB::transaction(function () use ($me, $work) {
+            Admin::whereKey($me->dataOwnerId())->lockForUpdate()->value('id');
+
+            return $work();
+        });
     }
 
     /**
@@ -743,6 +814,10 @@ class TeamMessageController extends Controller
                 'title' => $this->convTitle($m->conversation, $me->id),
                 'sender' => $this->senderInfo($m->sender)['first'],
                 'sender_id' => $m->sender_id,   // lets the client match a not-yet-created DM's peer row
+                // Only a DM may be matched to a sender's "tap to message" row; an unknown group
+                // gets a row of its own (icon + name) instead.
+                'is_group'  => $m->conversation->isGroup(),
+                'icon'      => $m->conversation->isGroup() ? ($m->conversation->icon ?: '💬') : null,
                 'snippet' => $m->body !== '' ? Str::limit($m->body, 60) : 'Sent a file',
                 'mention' => $mention,
             ];
@@ -809,21 +884,24 @@ class TeamMessageController extends Controller
         $source = $this->participantMessage($me, $data['message_id']);
         abort_if($source->isSystem() || $source->deleted_at, 404);
 
+        $target = $peer = null;
         if (! empty($data['conversation_id'])) {
             $target = $this->findConversation($me, (int) $data['conversation_id']);
         } else {
             $peer = $this->teammates($me)->findOrFail($data['recipient_id']);
-            $target = $this->findOrCreateDm($me, $peer);
         }
 
-        $msg = TeamMessage::create([
-            'conversation_id' => $target->id,
-            'type'            => 'text',
-            'sender_id'       => $me->id,
-            'body'            => $source->body,
-            'forwarded'       => true,
-        ]);
-        $this->touchConversation($target, $msg);
+        $this->serializedSend($me, function () use ($me, $source, &$target, $peer) {
+            $target ??= $this->findOrCreateDm($me, $peer);
+            $msg = TeamMessage::create([
+                'conversation_id' => $target->id,
+                'type'            => 'text',
+                'sender_id'       => $me->id,
+                'body'            => $source->body,
+                'forwarded'       => true,
+            ]);
+            $this->touchConversation($target, $msg);
+        });
 
         return response()->json(['ok' => true, 'conversation_id' => $target->id]);
     }
@@ -1333,10 +1411,13 @@ class TeamMessageController extends Controller
             return $conv;
         }
 
-        // Create in a transaction; if a concurrent request beat us to it, fetch theirs instead of
-        // leaving two split DM threads for the same pair (M10).
+        // Create under the org lock (so two first messages sent at once can't create two DM
+        // threads for the same pair); if one slipped through anyway, fetch theirs (M10).
         try {
-            return DB::transaction(function () use ($me, $peer, $key) {
+            return $this->serializedSend($me, function () use ($me, $peer, $key, $find) {
+                if ($conv = $find()) {
+                    return $conv;
+                }
                 $conv = Conversation::create([
                     'type' => 'dm', 'data_owner_id' => $me->dataOwnerId(), 'created_by' => $me->id, 'dm_key' => $key,
                 ]);
@@ -1434,12 +1515,14 @@ class TeamMessageController extends Controller
 
     private function system(Conversation $conv, Admin $actor, string $text): TeamMessage
     {
-        $msg = TeamMessage::create([
-            'conversation_id' => $conv->id, 'type' => 'system', 'sender_id' => $actor->id, 'body' => $text,
-        ]);
-        $this->touchConversation($conv, $msg);
+        return $this->serializedSend($actor, function () use ($conv, $actor, $text) {
+            $msg = TeamMessage::create([
+                'conversation_id' => $conv->id, 'type' => 'system', 'sender_id' => $actor->id, 'body' => $text,
+            ]);
+            $this->touchConversation($conv, $msg);
 
-        return $msg;
+            return $msg;
+        });
     }
 
     private function touchConversation(Conversation $conv, TeamMessage $msg): void
@@ -1504,36 +1587,66 @@ class TeamMessageController extends Controller
         return $dt->format('M j');
     }
 
-    private function storeAttachments(TeamMessage $msg, array $files, int $ownerId): void
+    /**
+     * Write uploaded files to the private disk and return their attachment rows (not yet
+     * saved). Stored before the message is inserted, so the message, its attachments and
+     * its mentions can be committed together.
+     */
+    private function storeFiles(array $files, int $ownerId): array
     {
-        foreach ($files as $file) {
-            $ext = strtolower($file->getClientOriginalExtension());
-            // Any type is accepted. Keep the disk extension to a safe token so a file
-            // named "x.php" can't sit on disk as an executable path; the real name is
-            // preserved in original_name and used for the download filename.
-            $diskExt = preg_match('/^[a-z0-9]{1,10}$/', $ext) ? $ext : 'bin';
-
-            $w = $h = null;
-            if (in_array($ext, self::IMAGE_EXT, true)) {
-                $dims = @getimagesize($file->getRealPath());
-                if ($dims) { $w = $dims[0]; $h = $dims[1]; }
+        $rows = [];
+        try {
+            foreach ($files as $file) {
+                $rows[] = $this->storeFile($file, $ownerId);
             }
-
-            $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $diskExt, 'private');
-
-            // Cap the client-supplied display name so an overlong name can't error the insert.
-            $name = (string) $file->getClientOriginalName();
-            if ($name === '') {
-                $name = 'file.' . $diskExt;
-            } elseif (mb_strlen($name) > self::MAX_NAME) {
-                $name = mb_substr($name, 0, self::MAX_NAME - mb_strlen($diskExt) - 2) . '.' . $diskExt;
-            }
-
-            $msg->attachments()->create([
-                'disk_path' => $path, 'original_name' => $name,
-                'mime' => $file->getClientMimeType(), 'size' => $file->getSize(), 'width' => $w, 'height' => $h,
-            ]);
+        } catch (\Throwable $e) {
+            $this->discardFiles($rows);
+            throw $e;
         }
+
+        return $rows;
+    }
+
+    /** Remove files written by storeFiles() whose message was never saved. */
+    private function discardFiles(array $rows): void
+    {
+        $paths = array_values(array_filter(array_column($rows, 'disk_path')));
+        if ($paths) {
+            try { Storage::disk('private')->delete($paths); } catch (\Throwable $e) {}
+        }
+    }
+
+    private function storeFile($file, int $ownerId): array
+    {
+        $ext = strtolower($file->getClientOriginalExtension());
+        // Any type is accepted. Keep the disk extension to a safe token so a file
+        // named "x.php" can't sit on disk as an executable path; the real name is
+        // preserved in original_name and used for the download filename.
+        $diskExt = preg_match('/^[a-z0-9]{1,10}$/', $ext) ? $ext : 'bin';
+
+        $w = $h = null;
+        if (in_array($ext, self::IMAGE_EXT, true)) {
+            $dims = @getimagesize($file->getRealPath());
+            if ($dims) { $w = $dims[0]; $h = $dims[1]; }
+        }
+
+        $path = $file->storeAs('team-chat/' . $ownerId, Str::uuid() . '.' . $diskExt, 'private');
+        if (! $path) {
+            throw new \RuntimeException('Could not store the uploaded file.');
+        }
+
+        // Cap the client-supplied display name so an overlong name can't error the insert.
+        $name = (string) $file->getClientOriginalName();
+        if ($name === '') {
+            $name = 'file.' . $diskExt;
+        } elseif (mb_strlen($name) > self::MAX_NAME) {
+            $name = mb_substr($name, 0, self::MAX_NAME - mb_strlen($diskExt) - 2) . '.' . $diskExt;
+        }
+
+        return [
+            'disk_path' => $path, 'original_name' => $name,
+            'mime' => $file->getClientMimeType(), 'size' => $file->getSize(), 'width' => $w, 'height' => $h,
+        ];
     }
 
     /** The other admins in my org I can message (super + VAs; not leads, not me). */

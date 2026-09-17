@@ -715,3 +715,6 @@
     /* Refresh button spin feedback */
     #tcRefresh.spinning svg { animation:tcSpin .6s linear infinite; }
     @keyframes tcSpin { to { transform:rotate(360deg); } }
+    /* A message is on its way: the composer is read-only until the send finishes. */
+    .tc-composer.tc-sending textarea { opacity:.6; cursor:progress; }
+    .tc-composer.tc-sending .tc-send { cursor:progress; }

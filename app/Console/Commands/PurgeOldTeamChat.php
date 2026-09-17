@@ -50,7 +50,7 @@ class PurgeOldTeamChat extends Command
         $scope = $all ? 'ALL' : "older than {$days} day(s)";
 
         if ($dry) {
-            $orphans = $this->orphanFiles($disk);
+            $orphans = $this->orphanFiles($disk, $all);
             $this->info("[dry-run] Would delete {$oldMessages} message(s) and {$oldPaths->count()} attachment file(s) ({$scope}), plus {$orphans->count()} orphaned file(s).");
 
             return self::SUCCESS;
@@ -77,7 +77,7 @@ class PurgeOldTeamChat extends Command
 
         // 4. Sweep any file on the private disk that no message references any more
         //    (leftovers, interrupted uploads, or content removed by an earlier wipe).
-        $orphans = $this->orphanFiles($disk);
+        $orphans = $this->orphanFiles($disk, $all);
         foreach ($orphans as $path) {
             $disk->delete($path);
         }
@@ -88,8 +88,12 @@ class PurgeOldTeamChat extends Command
         return self::SUCCESS;
     }
 
-    /** Files under team-chat/ that no attachment row points to any more. */
-    private function orphanFiles(Filesystem $disk)
+    /**
+     * Files under team-chat/ that no attachment row points to any more. A send writes its
+     * files before saving the message, so files written in the last few minutes may still be
+     * about to get their row — they're left alone unless this is a full --all wipe.
+     */
+    private function orphanFiles(Filesystem $disk, bool $includeFresh = false)
     {
         $onDisk = collect($disk->allFiles('team-chat'));
         if ($onDisk->isEmpty()) {
@@ -97,7 +101,14 @@ class PurgeOldTeamChat extends Command
         }
 
         $known = DB::table('message_attachments')->pluck('disk_path')->filter()->flip();
+        $freshAfter = now()->subMinutes(10)->getTimestamp();
 
-        return $onDisk->reject(fn ($path) => $known->has($path))->values();
+        return $onDisk
+            ->reject(fn ($path) => $known->has($path))
+            ->reject(function ($path) use ($disk, $includeFresh, $freshAfter) {
+                if ($includeFresh) return false;
+                try { return $disk->lastModified($path) > $freshAfter; } catch (\Throwable $e) { return false; }
+            })
+            ->values();
     }
 }

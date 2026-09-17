@@ -151,7 +151,9 @@
 
             <div class="tc-messages" id="tcMessages"
                  @if ($active) data-conversation="{{ $active->id }}" @endif
-                 @if ($peer && ! $active) data-peer="{{ $peer->id }}" @endif
+                 {{-- The teammate of any 1:1 chat (same as the /open payload), so the chat has one
+                      identity whether it was loaded in full or swapped in place. --}}
+                 @if ($peer && ! $isGroup && ! $isSelf) data-peer="{{ $peer->id }}" @endif
                  data-group="{{ $isGroup ? 1 : 0 }}" data-last="{{ $messages->last()->id ?? 0 }}"
                  data-first="{{ $messages->first()->id ?? 0 }}" data-more="{{ $hasMoreOlder ? 1 : 0 }}">
                 @if ($hasMoreOlder)
@@ -471,6 +473,9 @@
     if (window.__tcReg) window.__tcReg.cleanup();
     var reg = { intervals: [], nodes: [], docs: [], wins: [] };
     window.__tcReg = reg;
+    // Each run of this script gets a number. A request started by an earlier run (before an
+    // SPA swap) checks it on return and drops its result instead of touching the new page.
+    window.__tcRun = (window.__tcRun || 0) + 1;
     window.TCI = function (fn, ms) { var id = setInterval(fn, ms); reg.intervals.push(id); return id; };
     window.TCB = function (node) { document.body.appendChild(node); reg.nodes.push(node); return node; };
     window.TCD = function (t, fn, o) { document.addEventListener(t, fn, o); reg.docs.push([t, fn, o]); };
@@ -483,6 +488,11 @@
         reg.docs.forEach(function (d) { document.removeEventListener(d[0], d[1], d[2]); });
         reg.wins.forEach(function (w) { window.removeEventListener(w[0], w[1], w[2]); });
         reg.nodes.forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
+        // The previous run's thread functions point at elements that are about to be replaced.
+        // Drop them, so a page with no open thread doesn't route clicks into dead code.
+        ['tcApplyOpen', 'tcSwapEligible', 'tcOpenUrl', 'tcGalleryDirty', 'tcDownload'].forEach(function (k) {
+            try { delete window[k]; } catch (e) { window[k] = undefined; }
+        });
     };
 })();
 
@@ -498,7 +508,10 @@
     // Tell the poller which conversation is open+focused (so it never notifies the chat you're
     // reading, and marks it read).
     function announceActive(){
-        if (!window.ApexRealtime || !CONV) return;
+        if (!window.ApexRealtime) return;
+        // No conversation open (e.g. a teammate you've never messaged): nothing is "being read",
+        // so every other chat's messages keep their badges and notifications.
+        if (!CONV){ window.ApexRealtime.setActive(null, false); return; }
         var looking = !document.hidden && document.hasFocus();
         window.ApexRealtime.setActive(CONV, looking);
         if (looking) window.ApexRealtime.markConversationRead(CONV);
@@ -523,15 +536,42 @@
 
     // Update a conversation's row preview/time/mention and float it to the top of its list.
     // The numeric UNREAD count comes authoritatively from applyRowUnread(), not from here.
+    var CHAT_INDEX = @js(route('admin.team-messages.index'));
+    var SA_QS = @js(request()->boolean('standalone')) ? '&standalone=1' : '';
+    function escS(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+    // A group created after this page loaded: add its row (after the favorites), the same shape
+    // as partials/team-chat-row, so its messages land in their own row.
+    function addGroupRow(m){
+        var list = document.getElementById('tcChatList'); if (!list) return null;
+        var empty = list.querySelector('.tc-empty'); if (empty) empty.remove();
+        var name = m.title || 'Group';
+        var a = document.createElement('a');
+        a.className = 'tc-contact';
+        a.href = CHAT_INDEX + '?c=' + encodeURIComponent(m.conversation_id) + SA_QS;
+        a.dataset.name = String(name).toLowerCase();
+        a.dataset.unread = '0'; a.dataset.fav = '0'; a.dataset.muted = '0'; a.dataset.group = '1';
+        a.dataset.conversation = String(m.conversation_id);
+        a.innerHTML = '<span class="tc-avatar tc-avatar--group">' + escS(m.icon || '💬') + '</span>'
+            + '<span class="tc-c-body"><span class="tc-c-top"><span class="tc-c-name">' + escS(name) + '</span>'
+            + '<span class="tc-c-time" data-time></span></span>'
+            + '<span class="tc-c-sub"><span class="tc-c-preview" data-preview><span data-preview-text></span></span></span></span>';
+        var firstNonFav = list.querySelector('.tc-contact:not([data-fav="1"])');
+        list.insertBefore(a, firstNonFav);
+        return a;
+    }
+
     function bumpSidebar(m){
         var row = document.querySelector('.tc-contact[data-conversation="' + m.conversation_id + '"]');
         // First-ever DM: the row exists only as a peer placeholder (data-peer, no data-conversation).
         // Adopt it — stamp the new conversation id so applyRowUnread + future updates find it.
-        if (!row && m.sender_id){
+        // Only for DMs: a new GROUP's message must never take over its sender's DM row.
+        if (!row && m.sender_id && m.is_group === false){
             row = document.querySelector('.tc-contact[data-peer="' + m.sender_id + '"]:not([data-conversation])');
             if (row) row.dataset.conversation = String(m.conversation_id);
         }
-        if (!row) return;   // truly not in this sidebar (e.g. a brand-new group) — next full load shows it
+        if (!row && m.is_group) row = addGroupRow(m);
+        if (!row) return;   // truly not in this sidebar — next full load shows it
         var isOpen = String(m.conversation_id) === String(CONV);
         var pv = ensurePreviewEl(row);
         // Match the server format: groups show "Name: text", DMs show just the text.
@@ -584,12 +624,16 @@
 
     // The thread just created a conversation (first message in a new DM). Adopt its id here too,
     // so replies are recognised as the OPEN chat (no self-notifications) and it's marked active.
+    // Also fired with conv '' when the open thread has no conversation yet (a teammate you've
+    // never messaged), so the previously open chat stops being treated as open.
     TCW('apex:conv-adopted', function (e) {
-        if (!e.detail || !e.detail.conv) return;
-        CONV = String(e.detail.conv);
-        var row = (e.detail.peer && document.querySelector('.tc-contact[data-peer="' + e.detail.peer + '"]'))
-            || document.querySelector('.tc-contact.active');
-        if (row) row.dataset.conversation = CONV;
+        if (!e.detail) return;
+        CONV = e.detail.conv ? String(e.detail.conv) : '';
+        if (CONV && (e.detail.peer || e.detail.self)){
+            var row = e.detail.self ? document.querySelector('.tc-self-row')
+                : document.querySelector('.tc-contact[data-peer="' + e.detail.peer + '"]');
+            if (row) row.dataset.conversation = CONV;
+        }
         announceActive();
     });
 })();
@@ -620,6 +664,25 @@
     var DL_SVG = '<svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
     var PEER_NAME = @js($active && $active->isGroup() ? '' : ($peer->full_name ?? ''));
+
+    // ---------- Which chat is on screen ----------
+    // Requests capture these when they start and check them when they return, so a slow reply
+    // for chat A is never applied to chat B after a quick switch.
+    //  - RUN: this script run (changes on an SPA re-run).
+    //  - VIEW_GEN: bumped on every in-place open, even a refresh of the same chat.
+    //  - chatKey(): the chat's identity (stable while the same chat stays open, including the
+    //    moment a first DM message creates its conversation).
+    var RUN = window.__tcRun;
+    var VIEW_GEN = 0;
+    var isSelf = @js($isSelf ?? false);
+    function chatKey(){
+        if (isSelf) return 'self';
+        if (!IS_GROUP && PEER_ID) return 'p' + PEER_ID;
+        return 'c' + (CONV || '');
+    }
+    function runAlive(){ return RUN === window.__tcRun; }
+    function viewAlive(gen){ return runAlive() && gen === VIEW_GEN; }
+    function chatAlive(key){ return runAlive() && key === chatKey(); }
 
     function activeRow(){
         if (CONV){ var r = document.querySelector('.tc-contact[data-conversation="' + CONV + '"]'); if (r) return r; }
@@ -716,8 +779,8 @@
     }
 
     // Keep the left contact row's preview line in sync, WhatsApp-style, and float it to the top.
-    function updatePreview(m){
-        var row = activeRow();
+    function updatePreview(m, rowArg){
+        var row = rowArg || activeRow();
         if (!row) return;
         var time = row.querySelector('[data-time]');
         if (time){ time.textContent = nowShort(); time.classList.remove('unread'); }
@@ -747,13 +810,25 @@
         return el;
     }
 
-    function append(m){
+    // `own` = my just-sent message from the send response. It is shown straight away but does
+    // NOT move the poll cursor: a teammate's message with a lower id may not have been polled
+    // yet, and jumping past it would skip it for good. The follow-up poll picks up both.
+    function append(m, own){
         // Dedupe: a message can arrive from both the 3s poll and a realtime-forced poll.
-        if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (m.id > lastId) lastId = m.id; return; }
+        if (m.id && box.querySelector('[data-id="' + m.id + '"]')){ if (!own && m.id > lastId) lastId = m.id; return; }
         var empty = box.querySelector('.tc-thread-empty'); if (empty) empty.remove();
         var el = buildRow(m);
-        box.appendChild(el);
-        if (m.id > lastId) lastId = m.id;
+        // Keep id order: a message that arrives after a newer one (my own send shown first)
+        // goes in front of the newer rows rather than at the bottom.
+        var mid = parseInt(m.id, 10) || 0, after = null;
+        if (mid){
+            var rowsNow = box.querySelectorAll('.tc-msg[data-id], .tc-sys[data-id]');
+            for (var i = rowsNow.length - 1; i >= 0; i--){
+                if ((parseInt(rowsNow[i].dataset.id, 10) || 0) > mid) after = rowsNow[i]; else break;
+            }
+        }
+        if (after) box.insertBefore(el, after); else box.appendChild(el);
+        if (!own && m.id > lastId) lastId = m.id;
         if (m.system) return;
         // A lazy-loaded image resolves its height AFTER we scroll — re-stick to the bottom when it
         // loads, but only if the reader was already at the bottom.
@@ -761,7 +836,7 @@
             var wasBottom = atBottom();
             img.addEventListener('load', function () { if (wasBottom) toBottom(); }, { once: true });
         });
-        updatePreview(m);
+        if (!after) updatePreview(m);   // the sidebar preview always shows the newest message
     }
 
     // ---------- Load-earlier pagination ----------
@@ -812,17 +887,22 @@
         if (loadingOlder || !hasOlder || !firstId) return;
         loadingOlder = true;
         if (olderPill) olderPill.classList.add('loading');
+        var gen = VIEW_GEN;
         var url = OLDER_URL + '?c=' + encodeURIComponent(CONV || '') + '&before=' + firstId;
         fetch(url, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (res) {
+                if (!viewAlive(gen)) return;   // another chat is open now — this page belongs to the old one
                 if (res) prependOlder(res.messages, function () {
                     hasOlder = !!res.hasMore;
                     if (!hasOlder && olderPill){ olderPill.remove(); olderPill = null; }
                 });
             })
             .catch(function () {})
-            .then(function () { loadingOlder = false; if (olderPill) olderPill.classList.remove('loading'); });
+            .then(function () {
+                if (!viewAlive(gen)) return;   // the new chat manages its own loading state
+                loadingOlder = false; if (olderPill) olderPill.classList.remove('loading');
+            });
     }
 
     if (olderPill){
@@ -940,7 +1020,8 @@
         }
     }
     function updateSeen(){
-        if (!seenEl || !IS_GROUP) return;
+        if (!seenEl) return;
+        if (!IS_GROUP){ seenEl.hidden = true; return; }   // never leave a group's "Seen by" on a DM
         var mine = box.querySelectorAll('.tc-msg.mine'); if (!mine.length){ seenEl.hidden = true; return; }
         var mid = parseInt(mine[mine.length - 1].dataset.id, 10) || 0;
         var readers = WATERMARKS.filter(function (w) { return w.upTo >= mid; });
@@ -956,7 +1037,21 @@
     toBottom();
     if (input) input.focus(); // ready to type the moment the chat opens
     // Restore a draft stashed during a reconnect, so nothing typed is ever lost.
-    try { var _d = sessionStorage.getItem('tc-draft'); if (_d && input) { input.value = _d; sessionStorage.removeItem('tc-draft'); grow(); } } catch (e) {}
+    var restoredDraft = null;
+    try {
+        var _raw = sessionStorage.getItem('tc-draft'), _d = null;
+        if (_raw){
+            try { _d = JSON.parse(_raw); } catch (e2) { _d = null; }
+            // A plain-text draft stashed by the previous app version (e.g. right after a deploy):
+            // that version reloaded the same chat, so it belongs here.
+            if (!_d || typeof _d !== 'object') _d = { key: chatKey(), body: _raw };
+        }
+        if (_d && _d.body && input && _d.key === chatKey()){
+            sessionStorage.removeItem('tc-draft');
+            input.value = _d.body; grow();
+            restoredDraft = _d;   // its client id is adopted once the composer helpers exist
+        }
+    } catch (e) {}
     updateSeen();
 
     // ---------- @mention autocomplete ----------
@@ -1142,15 +1237,71 @@
     var pasteTarget = thread || input;
     if (pasteTarget) pasteTarget.addEventListener('paste', handlePaste);
 
+    // ---------- Send ----------
+    // One send at a time per chat: while a message is on its way, a second Enter / click in
+    // that chat does nothing (the composer is read-only until the send finishes).
+    // Every compose attempt carries a client id; a retry of the SAME content (after a timeout
+    // or network error) re-uses it, so if the first attempt actually reached the server the
+    // retry gets that same message back instead of creating a duplicate.
+    var sendingKey = null;
+    var composeId = null, composeFp = null;
+    var unsent = {};   // chatKey -> a send that failed after the VA switched away (restored on return)
+    if (restoredDraft && restoredDraft.id){ composeId = restoredDraft.id; composeFp = composeFingerprint(chatKey(), input.value.trim()); }
+
+    // Put a failed send back in the composer (same client id, so the retry can't duplicate).
+    function restoreUnsent(key){
+        var s = unsent[key]; if (!s) return;
+        if (input.value.trim() || pending.length) return;   // don't overwrite something new
+        delete unsent[key];
+        input.value = s.body || ''; grow();
+        (s.files || []).forEach(function (f) {
+            var it = { file: f };
+            if (IMG_EXT.indexOf(extOf(f.name)) >= 0) it.url = URL.createObjectURL(f);
+            pending.push(it);
+        });
+        renderPending();
+        pendingMentions = (s.mentions || []).slice();
+        replyId = null;   // the quoted message's bar can't be rebuilt reliably; send without the quote
+        composeId = s.id; composeFp = composeFingerprint(key, input.value.trim());
+    }
+    function newUuid(){
+        try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        return 'c' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+    }
+    function composeFingerprint(key, body){
+        return [key, body, replyId || '', pending.map(function (it) { return it.file.name + ':' + it.file.size + ':' + (it.file.lastModified || 0); }).join('|')].join('');
+    }
+    function setComposerBusy(on){
+        var btn = form.querySelector('.tc-send'); if (btn) btn.disabled = !!on;
+        input.readOnly = !!on;
+        form.classList.toggle('tc-sending', !!on);
+        if (!on && progressBox) progressBox.hidden = true;
+    }
+    function chatTitle(){
+        var n = document.querySelector('.tc-thread-head .tc-th-name');
+        return n ? n.textContent.trim() : '';
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (editingId){ doEdit(); return; }   // editing an existing message, not sending a new one
+        var key = chatKey();
+        if (sendingKey === key) return;       // this chat already has a send on its way
         var body = input.value.trim();
         if (!body && !pending.length) return;
-        var btn = form.querySelector('.tc-send'); btn.disabled = true;
+
+        var fp = composeFingerprint(key, body);
+        if (fp !== composeFp || !composeId){ composeId = newUuid(); composeFp = fp; }
+        var uuid = composeId;
+        var sentConv = CONV, sentPeer = PEER_ID, sentSelf = isSelf, title = chatTitle();
+        var hadFiles = pending.length > 0;
+        var snapshot = { body: input.value, id: uuid, files: pending.map(function (it) { return it.file; }), replyId: replyId, mentions: pendingMentions.slice() };
+        sendingKey = key;
+        setComposerBusy(true);
 
         var fd = new FormData();
         fd.append('_token', csrf);
+        fd.append('client_uuid', uuid);
         if (CONV) fd.append('conversation_id', CONV); else if (PEER_ID) fd.append('recipient_id', PEER_ID);
         if (body) fd.append('body', body);
         if (replyId) fd.append('reply_to_id', replyId);
@@ -1161,32 +1312,77 @@
         xhr.open('POST', STORE);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.setRequestHeader('Accept', 'application/json');
-        if (pending.length && progressBox) { progressBox.hidden = false; progressBar.style.width = '0%'; }
-        xhr.upload.onprogress = function (ev) { if (ev.lengthComputable && progressBar) progressBar.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
+        if (hadFiles && progressBox) { progressBox.hidden = false; progressBar.style.width = '0%'; }
+        xhr.upload.onprogress = function (ev) {
+            if (!chatAlive(key) || !ev.lengthComputable || !progressBar) return;
+            if (progressBox) progressBox.hidden = false;   // e.g. the VA came back to this chat mid-upload
+            progressBar.style.width = Math.round(ev.loaded / ev.total * 100) + '%';
+        };
+
+        // Called once however the request ends. `here` = the same chat is still on screen.
+        function finish(){
+            if (!runAlive()) return false;
+            if (sendingKey === key) sendingKey = null;
+            var here = chatAlive(key);
+            if (here) setComposerBusy(false);
+            return here;
+        }
+        function notSent(msg){
+            var here = finish();
+            if (!runAlive()) return;
+            // The composer still holds the message (and the same client id) — pressing Enter
+            // again retries safely. If the VA already moved to another chat, the message is kept
+            // and put back in the box when they reopen that chat.
+            if (!here) unsent[key] = snapshot;
+            toast(here ? msg : ('Your message' + (title ? ' to ' + title : '') + ' was not sent — it is waiting in that chat, open it and press Enter'));
+            if (here) input.focus();
+        }
+
         xhr.onload = function () {
-            btn.disabled = false; if (progressBox) progressBox.hidden = true;
             var res = null; try { res = JSON.parse(xhr.responseText); } catch (err) {}
             if (xhr.status >= 200 && xhr.status < 300 && res && res.ok) {
-                // First message in a brand-new DM — adopt the conversation id it created.
-                if (!CONV && res.conversation_id) {
-                    CONV = String(res.conversation_id); box.dataset.conversation = CONV;
-                    var r = activeRow(); if (r) r.dataset.conversation = CONV;
-                    // Tell the always-on sidebar layer so replies count as the OPEN chat (M2).
-                    window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: res.conversation_id, peer: PEER_ID } }));
+                if (!runAlive()) return;
+                var here = finish();
+                var convId = res.conversation_id ? String(res.conversation_id) : '';
+                // First message in a brand-new DM: the conversation now exists. Stamp the row of
+                // the person it was SENT to (never "whatever row is active now").
+                if (!sentConv && convId){
+                    var sentRow = sentSelf ? document.querySelector('.tc-self-row')
+                        : (sentPeer ? document.querySelector('.tc-contact[data-peer="' + sentPeer + '"]') : null);
+                    if (sentRow) sentRow.dataset.conversation = convId;
+                    if (here && !CONV){
+                        CONV = convId; box.dataset.conversation = CONV;
+                        // Tell the always-on sidebar layer so replies count as the OPEN chat.
+                        window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: convId, peer: sentPeer, self: sentSelf } }));
+                    }
                 }
-                append(res.message); input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
-                // If the message carried files, refresh an open Files/Photos tab.
-                if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
+                if (here){
+                    composeId = null; composeFp = null;
+                    append(res.message, true);
+                    input.value = ''; grow(); cancelReply(); clearPending(); pendingMentions = []; updateSeen(); toBottom(); input.focus();
+                    // Fetch anything a teammate sent just before this message.
+                    poll(true);
+                    // If the message carried files, refresh an open Files/Photos tab.
+                    if (res.message && res.message.attachments && res.message.attachments.length && typeof window.tcGalleryDirty === 'function') window.tcGalleryDirty();
+                } else {
+                    // Sent from a chat that's no longer open: only refresh that chat's sidebar row.
+                    var row = convId ? document.querySelector('.tc-contact[data-conversation="' + convId + '"]') : null;
+                    if (row && res.message) updatePreview(res.message, row);
+                }
             } else if (xhr.status === 419 || xhr.status === 401 || xhr.status === 403 || xhr.status === 302 || xhr.status === 0) {
-                reconnect(body);   // session/token went stale (e.g. just after an update) — reconnect smoothly
+                var here2 = finish();
+                if (!runAlive()) return;
+                // Session/token went stale (e.g. just after an update) — reconnect smoothly,
+                // keeping this chat's text and its client id for a safe resend.
+                reconnect(here2 ? { key: key, body: body, id: uuid } : null);
             } else {
-                toast(res && res.message ? res.message : 'Could not send message');
+                notSent(res && res.message ? res.message : 'Could not send message');
             }
         };
-        xhr.onerror = function () { btn.disabled = false; if (progressBox) progressBox.hidden = true; toast('Network error — try again'); };
+        xhr.onerror = function () { notSent('Network error — press Enter to try again'); };
         // Never leave the composer permanently locked if the connection stalls.
-        xhr.timeout = pending.length ? 60000 : 20000;   // allow longer for uploads
-        xhr.ontimeout = function () { btn.disabled = false; if (progressBox) progressBox.hidden = true; toast('Send timed out — try again'); };
+        xhr.timeout = hadFiles ? 60000 : 20000;   // allow longer for uploads
+        xhr.ontimeout = function () { notSent('Send timed out — press Enter to try again'); };
         xhr.send(fd);
     });
 
@@ -1200,7 +1396,9 @@
     var reconnecting = false;
     function reconnect(draft){
         if (reconnecting) return; reconnecting = true;
-        try { if (draft) sessionStorage.setItem('tc-draft', draft); } catch (e) {}
+        // Stash the unsent text with the chat it belongs to (and its client id), so after the
+        // reload it goes back into THAT chat only, and a resend can't duplicate it.
+        try { if (draft && draft.body) sessionStorage.setItem('tc-draft', JSON.stringify(draft)); } catch (e) {}
         if (window.apexToast) apexToast('Reconnecting…');
         setTimeout(function () { location.reload(); }, 500);
     }
@@ -1218,12 +1416,15 @@
     function poll(force){
         if (!force && document.hidden) return;   // background tab: wait for a realtime wake instead
         if (!CONV) return;   // a brand-new DM with no conversation yet — nothing to poll
+        var gen = VIEW_GEN, conv = CONV;
         fetch(THREAD + '?c=' + encodeURIComponent(CONV) + '&after=' + lastId
                 + '&statesSince=' + encodeURIComponent(statesSince) + '&_=' + Date.now(),
             { cache:'no-store', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
-            .then(okJson)
+            .then(function (r) { return viewAlive(gen) ? okJson(r) : null; })
             .then(function (res) {
-                if (!res) return;
+                // Answer for a chat that's no longer on screen (or an older view of it): drop it,
+                // so its messages, cursor, ticks and typing never leak into the open chat.
+                if (!res || !viewAlive(gen) || conv !== CONV) return;
                 if (res.messages && res.messages.length) {
                     var stick = atBottom();
                     res.messages.forEach(append);
@@ -1671,13 +1872,17 @@
     function cancelEdit(){ editingId = null; if (editBar) editBar.hidden = true; input.value = ''; grow(); }
     function doEdit(){
         var body = input.value.trim(); if (!body){ cancelEdit(); return; }
-        var id = editingId;
+        var id = editingId, gen = VIEW_GEN;
         var fd = new FormData(); fd.append('_token', csrf); fd.append('_method', 'PUT'); fd.append('body', body);
         pendingMentions.forEach(function (pm) { if (body.indexOf('@' + pm.label) >= 0) fd.append('mentions[]', pm.key); });
         fetch(BASE + '/' + id, { method:'POST', cache:'no-store', body:fd, headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r) { return r.json(); })
             .then(function (res) {
+                if (!runAlive()) return;
                 if (!res || !res.ok){ toast('Could not edit'); return; }
+                // The edit is saved either way; only touch the composer if that chat is still open
+                // and still editing this message (the poll syncs the text for everyone else).
+                if (!viewAlive(gen)) return;
                 var el = box.querySelector('.tc-msg[data-id="' + id + '"]');
                 if (el){
                     var t = el.querySelector('.tc-bubble .tc-text');
@@ -1685,7 +1890,7 @@
                     var tl = el.querySelector('.tc-time');
                     if (tl && !tl.querySelector('.tc-edited')){ var ed = document.createElement('span'); ed.className = 'tc-edited'; ed.textContent = '(edited)'; tl.insertBefore(ed, tl.querySelector('.tc-btick')); }
                 }
-                cancelEdit(); pendingMentions = []; input.focus();
+                if (editingId === id){ cancelEdit(); pendingMentions = []; input.focus(); }
             })
             .catch(function () { toast('Could not edit'); });
     }
@@ -1835,10 +2040,11 @@
     }
     function loadGallery(after){
         if (!CONV){ galleryData = []; after(); return; }
+        var gen = VIEW_GEN;
         fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (res) { galleryData = (res && res.files) || []; after(); })
-            .catch(function () { galleryData = galleryData || []; after(); });
+            .then(function (res) { if (!viewAlive(gen)) return; galleryData = (res && res.files) || []; after(); })
+            .catch(function () { if (!viewAlive(gen)) return; galleryData = galleryData || []; after(); });
     }
     function switchTab(tab){
         currentTab = tab;
@@ -2343,7 +2549,6 @@
     // block is rebuilt for the target type and the group members panel is rendered
     // from the payload; only a fetch error falls back to the reload-free tcNav.
     // ============================================================
-    var isSelf = @js($isSelf ?? false);
     var OPEN_URL = @js(route('admin.team-messages.open'));
 
     // Every conversation (DM, self, group) can now be swapped in place.
@@ -2352,6 +2557,7 @@
     function renderThreadMessages(list, hasMore){
         box.innerHTML = '';
         olderPill = null;
+        loadingOlder = false;   // any in-flight "load earlier" belonged to the previous view
         if (hasMore){
             olderPill = document.createElement('div');
             olderPill.className = 'tc-load-older'; olderPill.id = 'tcLoadOlder';
@@ -2469,11 +2675,16 @@
 
     // Apply an open() payload to the open thread panel, in place (no reload).
     function applyOpen(data, url, push){
+        var prevKey = chatKey();
+        VIEW_GEN++;   // every request started for the previous view is now stale
         CONV = data.conversation_id ? String(data.conversation_id) : '';
         PEER_ID = data.peer_id ? String(data.peer_id) : '';
         IS_GROUP = !!data.isGroup;
         PEER_NAME = (data.isSelf || data.isGroup) ? '' : (data.title || '');
         isSelf = !!data.isSelf;
+        // Re-applying fresher data for the SAME chat (cached paint → network) must not wipe what
+        // the VA already typed/attached, nor add a second history entry.
+        var sameChat = prevKey === chatKey();
         WATERMARKS = data.watermarks || {};
         MENTIONABLES = data.mentionables || [];
         statesSince = '';
@@ -2486,9 +2697,18 @@
         if (IS_GROUP && data.group && typeof renderMembersModal === 'function') renderMembersModal(data.group);
         else if (typeof membersModal !== 'undefined' && membersModal) membersModal.hidden = true;
         updateComposerTarget(data);
-        cancelReply(); if (typeof cancelEdit === 'function') cancelEdit();
-        if (typeof clearPending === 'function') clearPending();
-        pendingMentions = [];
+        if (!sameChat){
+            cancelReply(); if (typeof cancelEdit === 'function') cancelEdit();
+            if (typeof clearPending === 'function') clearPending();
+            pendingMentions = [];
+            composeId = null; composeFp = null;
+            if (typeof closeMenu === 'function') closeMenu();   // a menu for the old chat's message must not act here
+            if (typeof hideMentions === 'function') hideMentions();
+            restoreUnsent(chatKey());
+        }
+        // Read-only only while THIS chat has a send on its way.
+        setComposerBusy(sendingKey === chatKey());
+        if (typingEl) typingEl.hidden = true;
 
         renderThreadMessages(data.messages || [], data.hasMore);
         renderPins(data.pinned || []);
@@ -2500,13 +2720,11 @@
         galleryData = null;   // per-conversation; re-fetched when Files/Photos is opened
 
         markActiveRow();
-        if (window.ApexRealtime && CONV){
-            var looking = !document.hidden && document.hasFocus();
-            window.ApexRealtime.setActive(CONV, looking);
-            if (looking) window.ApexRealtime.markConversationRead(CONV);
-        }
-        if (CONV) window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: CONV, peer: PEER_ID } }));
-        if (push && url && window.history && history.pushState){ try { history.pushState({ tcUrl: url }, '', url); } catch (e) {} }
+        // Always tell the sidebar layer (and through it the notifier) which chat is open — also
+        // when there's none yet (a teammate never messaged), so the previous chat stops being
+        // treated as open and keeps its badges/notifications.
+        window.dispatchEvent(new CustomEvent('apex:conv-adopted', { detail: { conv: CONV, peer: IS_GROUP ? '' : PEER_ID, self: isSelf } }));
+        if (push && !sameChat && url && window.history && history.pushState){ try { history.pushState({ tcUrl: url }, '', url); } catch (e) {} }
         input.focus();
     }
 
@@ -2523,6 +2741,14 @@
 (function () {
     var contacts = document.getElementById('tcContacts');
     if (!contacts) return;
+    var RUN = window.__tcRun;
+
+    // Only the LATEST open wins. Every open (this in-place path or the full tcNav swap) takes a
+    // new number from window.__tcNavSeq; a slower earlier open sees the number moved on and
+    // drops its result, so clicking A then B can never end on A.
+    function navTicket(){ window.__tcNavSeq = (window.__tcNavSeq || 0) + 1; return window.__tcNavSeq; }
+    function ticketLive(t){ return t === window.__tcNavSeq && RUN === window.__tcRun; }
+    var inflight = null;   // AbortController of the open request in progress
 
     function toTcNav(url){ if (window.tcNav) window.tcNav(url, true); else location.href = url; }
 
@@ -2592,32 +2818,47 @@
         window.dispatchEvent(new CustomEvent('apex:thread-poll'));
     }
 
-    function fetchFresh(q, url, onData){
+    function fetchFresh(q, url, ticket, onData){
+        if (inflight){ try { inflight.abort(); } catch (e) {} }
+        var ctl = window.AbortController ? new AbortController() : null;
+        inflight = ctl;
         return fetch(window.tcOpenUrl + '?' + q + '&_=' + Date.now(),
-            { cache:'no-store', credentials:'same-origin', headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
+            { cache:'no-store', credentials:'same-origin', signal: ctl ? ctl.signal : undefined,
+              headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' } })
             .then(function (r){ return r.ok ? r.json() : Promise.reject(r.status); })
-            .then(function (data){ persist(q, data); onData(data); });
+            .then(function (data){
+                if (inflight === ctl) inflight = null;
+                persist(q, data);                    // still a valid snapshot for next time
+                if (ticketLive(ticket)) onData(data); // …but only the latest click is shown
+            }, function (err){
+                if (inflight === ctl) inflight = null;
+                throw err;
+            });
     }
 
     function openInPlace(a){
         var q = rowQuery(a); if (!q) return false;
         var url = a.getAttribute('href');
+        var ticket = navTicket();
+        if (inflight){ try { inflight.abort(); } catch (e) {} inflight = null; }
+        var wrapEl = document.querySelector('.tc-wrap'); if (wrapEl) wrapEl.style.opacity = '';   // a superseded full swap dimmed it
 
         var warm = fresh(q);
         if (warm){ delete cache[q]; applyData(warm, url); persist(q, warm); return true; }   // in-memory (Tier 2)
 
         // Tier 3: paint from the on-disk snapshot immediately, then refresh in the background.
         idbGet(q).then(function (snap){
+            if (!ticketLive(ticket)) return;   // the VA already clicked something else
             if (snap && snap.data){
                 var before = sig(snap.data);
                 window.tcApplyOpen(snap.data, url, true);
                 // Real refresh: marks read + authoritative header/pins/messages; re-apply only if changed.
-                fetchFresh(q, url, function (fresh2){ if (sig(fresh2) !== before) window.tcApplyOpen(fresh2, url, true); })
-                    .catch(function (){ window.dispatchEvent(new CustomEvent('apex:thread-poll')); });
+                fetchFresh(q, url, ticket, function (fresh2){ if (sig(fresh2) !== before) window.tcApplyOpen(fresh2, url, true); })
+                    .catch(function (){ if (ticketLive(ticket)) window.dispatchEvent(new CustomEvent('apex:thread-poll')); });
             } else {
                 // No snapshot: straight network open (Tier 1).
-                fetchFresh(q, url, function (data){ window.tcApplyOpen(data, url, true); })
-                    .catch(function (){ toTcNav(url); });
+                fetchFresh(q, url, ticket, function (data){ window.tcApplyOpen(data, url, true); })
+                    .catch(function (){ if (ticketLive(ticket)) toTcNav(url); });
             }
         });
         return true;
@@ -2904,10 +3145,13 @@
 
     window.tcNav = function (url, push) {
         var wrap = document.querySelector('.tc-wrap'); if (!wrap) { location.href = url; return; }
+        // Latest navigation wins (shared with the in-place open): an older, slower swap is dropped.
+        var ticket = window.__tcNavSeq = (window.__tcNavSeq || 0) + 1;
         wrap.style.opacity = '0.55';
         fetch(url, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' })
             .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
             .then(function (html) {
+                if (ticket !== window.__tcNavSeq) return;
                 var doc = new DOMParser().parseFromString(html, 'text/html');
                 var nw = doc.querySelector('.tc-wrap'), cur = document.querySelector('.tc-wrap');
                 if (!nw || !cur) { location.href = url; return; }
@@ -2919,7 +3163,10 @@
                 if (s){ var el = document.createElement('script'); el.setAttribute('data-tc', ''); el.textContent = s.textContent; document.body.appendChild(el); }
                 var box = document.getElementById('tcMessages'); if (box){ box.scrollTop = box.scrollHeight; }
             })
-            .catch(function () { location.href = url; });
+            .catch(function () {
+                if (ticket !== window.__tcNavSeq) return;   // superseded — don't yank the VA elsewhere
+                location.href = url;
+            });
     };
 
     document.addEventListener('click', function (e) {

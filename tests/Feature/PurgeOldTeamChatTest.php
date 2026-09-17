@@ -72,8 +72,11 @@ class PurgeOldTeamChatTest extends TestCase
         Storage::disk('private')->put('team-chat/1/recent.zip', 'y');
         $recent->attachments()->create(['disk_path' => 'team-chat/1/recent.zip', 'original_name' => 'recent.zip', 'mime' => 'application/zip', 'size' => 1]);
 
-        // An orphan file no message references.
+        // An orphan file no message references (written a while ago).
         Storage::disk('private')->put('team-chat/1/orphan.zip', 'z');
+        touch(Storage::disk('private')->path('team-chat/1/orphan.zip'), time() - 3600);
+        // A file written moments ago may belong to a send still in progress — kept.
+        Storage::disk('private')->put('team-chat/1/uploading.zip', 'u');
 
         $c->update(['last_message_id' => $recent->id, 'last_message_at' => $recent->created_at]);
 
@@ -84,8 +87,9 @@ class PurgeOldTeamChatTest extends TestCase
         $this->assertNotNull(TeamMessage::find($recent->id));
         Storage::disk('private')->assertMissing('team-chat/1/old.zip');
         Storage::disk('private')->assertExists('team-chat/1/recent.zip');
-        // Orphan swept.
+        // Orphan swept; the in-progress upload left alone.
         Storage::disk('private')->assertMissing('team-chat/1/orphan.zip');
+        Storage::disk('private')->assertExists('team-chat/1/uploading.zip');
 
         // Conversation kept, still pointing at the surviving message.
         $this->assertDatabaseHas('conversations', ['id' => $c->id, 'last_message_id' => $recent->id]);
