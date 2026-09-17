@@ -6,18 +6,22 @@ deployment:
     # public_html. This lets the same repo deploy the dashboard and the chat app
     # independently, so deploying one never overwrites the other.
     - export DEPLOYPATH="$(cat .deploy-target 2>/dev/null || echo /home2/apexgrow/public_html/)"
-    - /bin/cp -R app $DEPLOYPATH
-    - /bin/cp -R bootstrap $DEPLOYPATH
-    - /bin/cp -R config $DEPLOYPATH
-    - /bin/cp -R database $DEPLOYPATH
-    - /bin/cp -R public $DEPLOYPATH
-    - /bin/cp -R resources $DEPLOYPATH
-    - /bin/cp -R routes $DEPLOYPATH
-    - /bin/cp -R tests $DEPLOYPATH
-    - /bin/cp .htaccess $DEPLOYPATH
-    - /bin/cp artisan $DEPLOYPATH
-    - /bin/cp composer.json $DEPLOYPATH
-    - /bin/cp composer.lock $DEPLOYPATH
+    # Anything that MUST work uses this: it stops the deploy loudly instead of carrying on
+    # and leaving a half-updated site that answers every request with a 500. Previously every
+    # step ended in "|| true", so a failed composer install or migration passed unnoticed.
+    - 'fail() { echo "=== DEPLOY FAILED: $1 ==="; date -u > "$DEPLOYPATH/storage/logs/deploy-failed.txt" 2>/dev/null; echo "$1" >> "$DEPLOYPATH/storage/logs/deploy-failed.txt" 2>/dev/null; exit 1; }'
+    - /bin/cp -R app $DEPLOYPATH || fail "copy app"
+    - /bin/cp -R bootstrap $DEPLOYPATH || fail "copy bootstrap"
+    - /bin/cp -R config $DEPLOYPATH || fail "copy config"
+    - /bin/cp -R database $DEPLOYPATH || fail "copy database"
+    - /bin/cp -R public $DEPLOYPATH || fail "copy public"
+    - /bin/cp -R resources $DEPLOYPATH || fail "copy resources"
+    - /bin/cp -R routes $DEPLOYPATH || fail "copy routes"
+    - /bin/cp -R tests $DEPLOYPATH || fail "copy tests"
+    - /bin/cp .htaccess $DEPLOYPATH || fail "copy .htaccess"
+    - /bin/cp artisan $DEPLOYPATH || fail "copy artisan"
+    - /bin/cp composer.json $DEPLOYPATH || fail "copy composer.json"
+    - /bin/cp composer.lock $DEPLOYPATH || fail "copy composer.lock"
     - /bin/cp package.json $DEPLOYPATH
     - /bin/cp package-lock.json $DEPLOYPATH
     - /bin/cp phpunit.xml $DEPLOYPATH
@@ -27,24 +31,33 @@ deployment:
     # copied (it's runtime data), so a fresh docroot — like the chat subdomain — has none and
     # Laravel 500s trying to write compiled views/logs. mkdir -p is a no-op where it already
     # exists, so the established main site is left untouched.
-    - mkdir -p "$DEPLOYPATH/storage/framework/cache/data" "$DEPLOYPATH/storage/framework/sessions" "$DEPLOYPATH/storage/framework/views" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/app/public" "$DEPLOYPATH/storage/app/private" "$DEPLOYPATH/bootstrap/cache"
+    - mkdir -p "$DEPLOYPATH/storage/framework/cache/data" "$DEPLOYPATH/storage/framework/sessions" "$DEPLOYPATH/storage/framework/views" "$DEPLOYPATH/storage/logs" "$DEPLOYPATH/storage/app/public" "$DEPLOYPATH/storage/app/private" "$DEPLOYPATH/bootstrap/cache" || fail "storage tree"
     - chmod -R 775 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache" 2>&1 || true
     # COMPOSER_MEMORY_LIMIT=-1 so a cold install on a fresh docroot can't die on the
     # default memory cap (that's what left the chat subdomain with no vendor/ the first time).
-    - cd $DEPLOYPATH && COMPOSER_MEMORY_LIMIT=-1 /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || true
-    - cd $DEPLOYPATH && php artisan config:clear 2>&1 || true
-    - cd $DEPLOYPATH && php artisan route:clear 2>&1 || true
-    - cd $DEPLOYPATH && php artisan view:clear 2>&1 || true
-    - cd $DEPLOYPATH && php artisan migrate --force 2>&1 || true
-    - cd $DEPLOYPATH && php artisan db:seed --class=TeamSeeder --force 2>&1 || true
+    - cd $DEPLOYPATH && COMPOSER_MEMORY_LIMIT=-1 /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader 2>&1 || fail "composer install"
+    - cd $DEPLOYPATH && php artisan config:clear 2>&1 || fail "config:clear"
+    - cd $DEPLOYPATH && php artisan route:clear 2>&1 || fail "route:clear"
+    - cd $DEPLOYPATH && php artisan view:clear 2>&1 || fail "view:clear"
+    # Both checkouts share ONE database, so both would otherwise run the same migrations at the
+    # same time when they are deployed together. --isolated takes a lock so only one actually
+    # runs and the other reports it and moves on; the lock lives in the shared database
+    # (CACHE_STORE=database) because each host has its own file cache.
+    - cd $DEPLOYPATH && CACHE_STORE=database php artisan migrate --force --isolated 2>&1 || fail "migrate"
+    - cd $DEPLOYPATH && php artisan db:seed --class=TeamSeeder --force 2>&1 || fail "seed team"
     - cd $DEPLOYPATH && php artisan storage:link 2>&1 || true
     - cd $DEPLOYPATH && php artisan images:optimize 2>&1 || true
     # Auto-provision Web Push VAPID keys into .env if missing (no terminal needed).
     # Runs BEFORE config:cache so the freshly written keys get cached.
     - cd $DEPLOYPATH && php artisan webpush:install 2>&1 || true
-    - cd $DEPLOYPATH && php artisan config:cache 2>&1 || true
-    - cd $DEPLOYPATH && php artisan route:cache 2>&1 || true
-    - cd $DEPLOYPATH && php artisan view:cache 2>&1 || true
+    - cd $DEPLOYPATH && php artisan config:cache 2>&1 || fail "config:cache"
+    - cd $DEPLOYPATH && php artisan route:cache 2>&1 || fail "route:cache"
+    - cd $DEPLOYPATH && php artisan view:cache 2>&1 || fail "view:cache"
+    # A quick proof the deployed app actually boots, rather than discovering it from a VA.
+    - cd $DEPLOYPATH && php artisan about --only=environment > /dev/null 2>&1 || fail "app does not boot"
+    # Leave a record of what is live: date + commit. If a deploy stopped early this stays old,
+    # and storage/logs/deploy-failed.txt says which step failed.
+    - 'cd $DEPLOYPATH && { date -u; git -C "$OLDPWD" rev-parse --short HEAD 2>/dev/null; } > storage/logs/deployed-at.txt 2>/dev/null; rm -f storage/logs/deploy-failed.txt; echo "=== DEPLOY OK ==="'
     # NOTE: we deliberately DO NOT flush sessions on deploy. Flushing wiped everyone's
     # session so the open app/browser held a dead CSRF token → "CSRF token mismatch" on
     # the next action. Sessions (and their CSRF tokens) now survive a deploy, so content

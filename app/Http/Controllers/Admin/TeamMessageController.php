@@ -942,8 +942,20 @@ class TeamMessageController extends Controller
             if ($id && $id !== $me->id && in_array($id, $memberIds, true)) $ids[] = $id;
         }
 
-        if ($all) $msg->forceFill(['mentions_all' => true])->save();
-        if ($ids) $msg->mentionedAdmins()->sync(array_unique($ids));
+        // mentions_all_at records when it FIRST said @everyone, and is left alone afterwards.
+        if ($all) $msg->forceFill(['mentions_all' => true, 'mentions_all_at' => $msg->mentions_all_at ?: now()])->save();
+
+        // sync() (not detach-then-attach) so an edit KEEPS the rows for people who were
+        // already mentioned — along with their created_at — and only adds/removes the
+        // difference. Detaching everything first made a typo fix look like a brand new
+        // mention for everybody in the message.
+        $msg->mentionedAdmins()->sync(array_unique($ids));
+
+        // Stamp when each mention appeared. The notification poll walks forward by message id,
+        // so a mention ADDED by editing an older message would never be reached; this is the
+        // timestamp it also checks. Only never-stamped rows are touched.
+        DB::table('message_mentions')->where('team_message_id', $msg->id)
+            ->whereNull('created_at')->update(['created_at' => now()]);
     }
 
     private function mentionLabels(TeamMessage $m): array
@@ -982,6 +994,8 @@ class TeamMessageController extends Controller
         $this->maybePurgeRetention();
         $after = (int) $request->query('after', 0);
         $convIds = DB::table('conversation_participants')->where('admin_id', $me->id)->pluck('conversation_id');
+        // Second watermark, by time rather than id: see newMentions().
+        $now = now();
 
         // First poll of a fresh client (new install, or right after the Refresh button wiped
         // its stored position) — it asks with prime=1 and gets back only where the history
@@ -992,6 +1006,7 @@ class TeamMessageController extends Controller
             return response()->json([
                 'messages' => [],
                 'lastId'   => (int) TeamMessage::whereIn('conversation_id', $convIds)->max('id'),
+                'mLast'    => $now->toDateTimeString(),
                 'more'     => false,
                 'unread'   => (int) collect($this->unreadForBadge($me))->sum(),
                 'perConv'  => (object) $this->unreadForBadge($me),
@@ -1029,17 +1044,78 @@ class TeamMessageController extends Controller
             ];
         }
 
+        // An @mention that arrived by EDITING an older message: its id is already behind the
+        // watermark above, so only the timestamp pass below can find it.
+        foreach ($this->newMentions($me, $convIds, $after, (string) $request->query('mAfter', '')) as $m) {
+            $out[] = [
+                'id' => $m->id, 'conversation_id' => $m->conversation_id,
+                'title' => $this->convTitle($m->conversation, $me->id),
+                'sender' => $this->senderInfo($m->sender)['first'],
+                'sender_id' => $m->sender_id,
+                'is_group' => $m->conversation->isGroup(),
+                'icon' => $m->conversation->isGroup() ? ($m->conversation->icon ?: '💬') : null,
+                'snippet' => $m->body !== '' ? Str::limit($m->body, 60) : 'Sent a file',
+                'mention' => true,
+                // Tells the client this one is deliberately BEHIND its id watermark, so its
+                // "never re-notify an old id" rule must not swallow it.
+                'editedMention' => true,
+            ];
+        }
+
         $perConv = $this->unreadForBadge($me);
 
         return response()->json([
             'messages' => $out,
             'lastId'   => $maxId,
+            'mLast'    => $now->toDateTimeString(),
             // There is at least one more batch to walk through (a long absence): the client
             // holds its toasts and shows one summary when it has caught up.
             'more'     => $rows->count() >= 30,
             'unread'   => (int) collect($perConv)->sum(),
             'perConv'  => (object) $perConv,
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    /**
+     * Messages I was @mentioned in since `$mAfter` whose id the poll has ALREADY passed —
+     * i.e. someone edited an older message to add my name. Without this the mention showed a
+     * silent badge that only appeared if I happened to scroll back to it.
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $convIds
+     * @return \Illuminate\Support\Collection<int, TeamMessage>
+     */
+    private function newMentions(Admin $me, $convIds, int $after, string $mAfter)
+    {
+        // No watermark yet (an older client, or the very first poll after priming): nothing is
+        // "new", and guessing would replay every old mention as a fresh notification.
+        if ($mAfter === '' || $after <= 0) {
+            return collect();
+        }
+
+        // This runs on every poll of every running app, so answer the common case ("nothing has
+        // changed") with two indexed lookups instead of the join below.
+        $any = DB::table('message_mentions')->where('admin_id', $me->id)->where('created_at', '>', $mAfter)->exists()
+            || DB::table('team_messages')->where('mentions_all_at', '>', $mAfter)
+                ->whereIn('conversation_id', $convIds)->exists();
+        if (! $any) {
+            return collect();
+        }
+
+        return TeamMessage::whereIn('conversation_id', $convIds)
+            ->where('type', 'text')->whereNull('deleted_at')->where('sender_id', '!=', $me->id)
+            ->where('id', '<=', $after)->visibleTo($me->id)
+            ->where(function ($q) use ($me, $mAfter) {
+                $q->whereExists(fn ($s) => $s->select(DB::raw(1))->from('message_mentions as mm')
+                        ->whereColumn('mm.team_message_id', 'team_messages.id')
+                        ->where('mm.admin_id', $me->id)->where('mm.created_at', '>', $mAfter))
+                  ->orWhere(fn ($w) => $w->where('mentions_all', true)->where('mentions_all_at', '>', $mAfter));
+            })
+            // A mention pierces mute, but "no notifications at all" still means none.
+            ->whereExists(fn ($s) => $s->select(DB::raw(1))->from('conversation_participants as cp')
+                ->whereColumn('cp.conversation_id', 'team_messages.conversation_id')
+                ->where('cp.admin_id', $me->id)->where('cp.notify_level', '!=', 'none'))
+            ->with('sender', 'conversation.participants.admin')
+            ->orderBy('id')->limit(10)->get();
     }
 
     /**
@@ -1223,21 +1299,76 @@ class TeamMessageController extends Controller
         ]);
 
         $body = trim($data['body']);
+        // Who the message mentioned BEFORE the edit, so anyone the edit newly @-mentions can be
+        // told about it. Without this, adding "@Name" by editing gave them a silent badge that
+        // only appeared if they happened to scroll back to the message.
+        $wereMentioned = $message->mentionedAdmins()->pluck('admins.id')->all();
+        $wasAll = (bool) $message->mentions_all;
+
         $message->forceFill(['body' => $body, 'edited_at' => now()])->save();
 
         // Re-resolve mentions against the NEW text: anyone still written as "@Their Name" stays
         // mentioned (with their @ badge and mention notification), anyone edited out is dropped.
         // Reading the text — not just what the client sent — is what keeps an edit from quietly
         // stripping every mention off the message.
-        $message->mentionedAdmins()->detach();
         $message->forceFill(['mentions_all' => false])->save();
         $message->load('conversation.participants.admin');
         $this->syncMentions($message, $message->conversation, $me,
             $this->mentionsInBody($message->conversation, $me, $body, $request->input('mentions', [])));
 
         $message->load('sender', 'replyTo.sender', 'attachments', 'mentionedAdmins', 'deletedByAdmin');
+        $this->queueEditMentionPush($message, $me, $wereMentioned, $wasAll);
 
         return response()->json(['ok' => true, 'message' => $this->present($message, $me->id)]);
+    }
+
+    /**
+     * Notify people an edit newly @-mentioned. Only the people who were NOT mentioned before,
+     * and only if they'd accept a mention (notify_level 'none' still means none) — so fixing a
+     * typo in a message that already mentions you never re-pings you.
+     */
+    private function queueEditMentionPush(TeamMessage $msg, Admin $me, array $wereMentioned, bool $wasAll): void
+    {
+        if (! WebPushSender::enabled()) {
+            return;
+        }
+
+        // It already said @everyone: everyone was pinged then, so nothing here is new.
+        if ($wasAll) {
+            return;
+        }
+
+        $conv = $msg->conversation;
+        $conv->load('participants');
+        $nowAll = (bool) $msg->mentions_all;
+        $nowIds = $msg->mentionedAdmins->pluck('id')->all();
+
+        $recipients = [];
+        foreach ($conv->participants as $p) {
+            if ($p->admin_id === $me->id || ($p->notify_level ?? 'all') === 'none') {
+                continue;
+            }
+            $isNew = ! in_array($p->admin_id, $wereMentioned, true)
+                && ($nowAll || in_array($p->admin_id, $nowIds, true));
+            if ($isNew) {
+                $recipients[] = $p->admin_id;
+            }
+        }
+        if (empty($recipients)) {
+            return;
+        }
+
+        $payload = [
+            'title' => $this->convTitle($conv, $recipients[0]),
+            'body'  => '@ ' . $this->senderInfo($msg->sender)['first'] . ' mentioned you: ' . Str::limit($msg->body, 80),
+            'url'   => route('admin.team-messages.index', ['c' => $conv->id, 'standalone' => 1]),
+            'tag'   => 'apex-team-' . $conv->id,
+            'conv'  => (string) $conv->id,
+        ];
+
+        app()->terminating(function () use ($recipients, $payload) {
+            app(WebPushSender::class)->sendToAdmins($recipients, $payload);
+        });
     }
 
     /** All files/images shared in a conversation (the "Shared files" gallery). */
@@ -1246,10 +1377,26 @@ class TeamMessageController extends Controller
         $me = Auth::guard('admin')->user();
         $conv = $this->findConversation($me, (int) $request->query('c'));
 
-        $atts = MessageAttachment::whereHas('message', fn ($q) => $q->where('conversation_id', $conv->id)->whereNull('deleted_at'))
-            ->with('message.sender')->latest('id')->limit(200)->get();
+        // Newest first, a page at a time. It used to return only the newest 200 with no hint
+        // that anything older existed — files past that were simply invisible in the Files and
+        // Photos tabs. `before` (an attachment id) pages back through the rest.
+        $perPage = 200;
+        $before = (int) $request->query('before');
+
+        $query = MessageAttachment::whereHas('message', fn ($q) => $q->where('conversation_id', $conv->id)
+                ->whereNull('deleted_at')->visibleTo($me->id))
+            ->with('message.sender')->latest('id');
+        if ($before > 0) {
+            $query->where('id', '<', $before);
+        }
+
+        $atts = $query->limit($perPage + 1)->get();
+        $hasMore = $atts->count() > $perPage;
+        $atts = $atts->take($perPage);
 
         return response()->json([
+            'hasMore' => $hasMore,
+            'oldest'  => (int) ($atts->last()->id ?? 0),   // pass back as ?before= for the next page
             'files' => $atts->map(function (MessageAttachment $a) {
                 $url = route('admin.team-messages.attachment', $a->id);
                 $when = $a->created_at->timezone(self::TZ);

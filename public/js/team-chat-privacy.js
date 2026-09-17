@@ -111,6 +111,9 @@
             opts = Object.assign({}, opts || {});
             opts.headers = new Headers(opts.headers || (url instanceof Request ? url.headers : undefined));
             opts.headers.set('X-Apex-Chat-Session', current.stamp);
+            // Whether the VA is actually at this window. Background polls keep the chat live
+            // but must not keep marking them "Online" while the app sits in the tray.
+            opts.headers.set('X-Apex-Active', (!document.hidden && document.hasFocus()) ? '1' : '0');
             var ctl = new AbortController(), signal = opts.signal || (url instanceof Request ? url.signal : null);
             if (signal) { if (signal.aborted) ctl.abort(); else signal.addEventListener('abort', function () { ctl.abort(); }, { once: true }); }
             opts.signal = ctl.signal; requests.add(ctl);
@@ -139,6 +142,7 @@
             if (this.__apexChat) {
                 if (!check()) { this.abort(); return; }
                 this.setRequestHeader('X-Apex-Chat-Session', current.stamp);
+                this.setRequestHeader('X-Apex-Active', '1');   // sending a message IS activity
                 var x = this; uploads.add(x);
                 x.addEventListener('loadend', function () {
                     uploads.delete(x);

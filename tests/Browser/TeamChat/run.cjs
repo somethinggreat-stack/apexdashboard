@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '../../..');
 const php = process.env.PHP_BINARY || 'php';
 const port = Number(process.env.TEST_PORT || 8932);
 const suites = process.argv.slice(2);
-if (!suites.length) suites.push('phase1', 'phase1b', 'phase2', 'phase3', 'phase5', 'phase6', 'phase7', 'phase8');
+if (!suites.length) suites.push('phase1', 'phase1b', 'phase2', 'phase3', 'phase5', 'phase6', 'phase7', 'phase8', 'phase9');
 const wait = ms => new Promise(r => setTimeout(r, ms));
 async function listening() {
     return new Promise(resolve => {
@@ -37,6 +37,10 @@ function command(args, env) {
         console.log('\nRUN ' + suite + ' (isolated SQLite: ' + db + ')');
         command(['artisan', 'migrate', '--force'], env);
         command(['artisan', 'tinker', '--execute', "require base_path('tests/Browser/TeamChat/seed.php');"], env);
+        // phase9 needs more shared files than fit in one gallery page; nothing else wants them.
+        if (suite === 'phase9') {
+            command(['artisan', 'tinker', '--execute', "require base_path('tests/Browser/TeamChat/seed-files.php');"], env);
+        }
         const log = fs.openSync(path.join(dir, 'server.log'), 'a');
         const server = spawn(php, ['-d', 'upload_max_filesize=20M', '-d', 'post_max_size=30M',
             '-S', '127.0.0.1:' + port, path.join(root, 'vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php')],

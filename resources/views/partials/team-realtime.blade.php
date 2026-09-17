@@ -114,6 +114,11 @@
     var LKEY = 'apex-team-last-msg' + U, NKEY = 'apex-team-notifs' + U, NLKEY = 'apex-team-last-notified' + U;
     function ls(k, v){ if (window.__tcPrivacyStopped) return null; try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
     var lastId = parseInt(ls(LKEY) || '0', 10) || 0;
+    // A second watermark, by TIME. The id watermark above only ever moves forward, so a
+    // mention someone added by editing an older message sits behind it for ever; the server
+    // answers "mentions of you recorded since this moment" against this one.
+    var MKEY = 'apex-team-last-mention' + U;
+    var lastMention = ls(MKEY) || '';
     var primed = lastId > 0;               // if we have a baseline, deliver new msgs (no backlog spam)
     var seen = {};                          // id -> 1, per-tab UI dedupe
     function lastNotified(){ return parseInt(ls(NLKEY) || '0', 10) || 0; }   // cross-tab: chime/notify each msg only ONCE
@@ -320,7 +325,9 @@
             if (!seen[m.id]){ seen[m.id] = 1; window.dispatchEvent(new CustomEvent('apex:team-message', { detail: m })); }
             if (m.id > maxId) maxId = m.id;
             // Chime / desktop / notification-center happen once GLOBALLY — never re-fire an old id.
-            if (m.id <= floor) return;
+            // The exception is a mention added by editing an older message: its id is behind the
+            // watermark by definition, and the server only sends it the once.
+            if (m.id <= floor && !m.editedMention) return;
             var muted = isActive(m.conversation_id);   // conversation open+focused somewhere → stay quiet
             addNotif(m);
             if (!muted){
@@ -364,7 +371,13 @@
         if (!amLeader()){ schedule(); return; }   // a peer is the poller — we update via BroadcastChannel
         // No stored position yet (new install / after Refresh): ask where history ends instead
         // of pulling the backlog in as "new".
-        fetch(POLL_URL + '?after=' + lastId + (primed ? '' : '&prime=1'), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+        // Read the mention watermark fresh: an edited-in mention deliberately bypasses the
+        // "never re-fire an old id" rule, so a tab that becomes leader mid-session must not
+        // fall back to where this page happened to be when it loaded and re-deliver it.
+        lastMention = ls(MKEY) || lastMention;
+        fetch(POLL_URL + '?after=' + lastId + (primed ? '' : '&prime=1')
+                + (lastMention ? '&mAfter=' + encodeURIComponent(lastMention) : ''),
+              { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (window.__tcPrivacyStopped) return;
@@ -373,6 +386,7 @@
                 applyUnread(data.unread, data.perConv);
                 post({ kind: 'unread', unread: data.unread, perConv: data.perConv });
                 // The priming answer carries no messages — just the current end of history.
+                if (data.mLast){ lastMention = data.mLast; ls(MKEY, lastMention); }
                 if (!primed){ lastId = data.lastId || 0; ls(LKEY, String(lastId)); primed = true; schedule(); return; }
                 if (data.lastId > lastId){ lastId = data.lastId; ls(LKEY, String(lastId)); }
                 if ((data.messages || []).length){ ingest(data, true); post({ kind: 'data', data: data }); }

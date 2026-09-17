@@ -131,4 +131,85 @@ class TeamMentionTest extends TestCase
         $this->actingAs($abid, 'admin')->getJson('/admin/team-messages/notifications?after=0')
             ->assertOk()->assertJsonCount(1, 'messages')->assertJsonPath('messages.0.mention', true);
     }
+
+    public function test_a_mention_added_by_editing_an_older_message_still_notifies(): void
+    {
+        $abid = $this->va('Abid');
+        $conv = $this->group([$abid]);
+
+        $sent = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'conversation_id' => $conv->id, 'body' => 'can someone look at this',
+        ])->json('message.id');
+
+        // Abid polls and is now caught up: his id watermark is past that message.
+        $poll = $this->actingAs($abid, 'admin')->getJson('/admin/team-messages/notifications?after=0')->assertOk();
+        $after = $poll->json('lastId');
+        $mLast = $poll->json('mLast');
+        $this->assertNotEmpty($mLast);
+
+        // Nothing new: the same poll must stay silent.
+        $this->actingAs($abid, 'admin')
+            ->getJson('/admin/team-messages/notifications?after=' . $after . '&mAfter=' . urlencode($mLast))
+            ->assertOk()->assertJsonCount(0, 'messages');
+
+        // Super edits that same (older) message to add "@Abid".
+        $this->travel(2)->seconds();
+        $this->actingAs($this->super, 'admin')->putJson('/admin/team-messages/' . $sent, [
+            'body' => 'can someone look at this @Abid', 'mentions' => [(string) $abid->id],
+        ])->assertOk();
+
+        // The message id has not moved, so only the time watermark can find it.
+        $this->actingAs($abid, 'admin')
+            ->getJson('/admin/team-messages/notifications?after=' . $after . '&mAfter=' . urlencode($mLast))
+            ->assertOk()
+            ->assertJsonCount(1, 'messages')
+            ->assertJsonPath('messages.0.id', $sent)
+            ->assertJsonPath('messages.0.mention', true)
+            ->assertJsonPath('messages.0.editedMention', true);
+    }
+
+    public function test_editing_a_message_does_not_re_notify_people_it_already_mentioned(): void
+    {
+        $abid = $this->va('Abid');
+        $conv = $this->group([$abid]);
+
+        $sent = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'conversation_id' => $conv->id, 'body' => 'urgant @Abid', 'mentions' => [(string) $abid->id],
+        ])->json('message.id');
+
+        $poll = $this->actingAs($abid, 'admin')->getJson('/admin/team-messages/notifications?after=0')->assertOk();
+        $after = $poll->json('lastId');
+        $mLast = $poll->json('mLast');
+
+        // Just a typo fix — Abid was already mentioned and must not be pinged again.
+        $this->travel(2)->seconds();
+        $this->actingAs($this->super, 'admin')->putJson('/admin/team-messages/' . $sent, [
+            'body' => 'urgent @Abid', 'mentions' => [(string) $abid->id],
+        ])->assertOk();
+
+        $this->actingAs($abid, 'admin')
+            ->getJson('/admin/team-messages/notifications?after=' . $after . '&mAfter=' . urlencode($mLast))
+            ->assertOk()->assertJsonCount(0, 'messages');
+    }
+
+    public function test_an_older_client_with_no_time_watermark_gets_no_replayed_mentions(): void
+    {
+        $abid = $this->va('Abid');
+        $conv = $this->group([$abid]);
+
+        $sent = $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
+            'conversation_id' => $conv->id, 'body' => 'hello',
+        ])->json('message.id');
+
+        $after = $this->actingAs($abid, 'admin')->getJson('/admin/team-messages/notifications?after=0')->json('lastId');
+
+        $this->travel(2)->seconds();
+        $this->actingAs($this->super, 'admin')->putJson('/admin/team-messages/' . $sent, [
+            'body' => 'hello @Abid', 'mentions' => [(string) $abid->id],
+        ])->assertOk();
+
+        // No mAfter (a client that hasn't reloaded yet): silence, never a replay of old mentions.
+        $this->actingAs($abid, 'admin')->getJson('/admin/team-messages/notifications?after=' . $after)
+            ->assertOk()->assertJsonCount(0, 'messages');
+    }
 }

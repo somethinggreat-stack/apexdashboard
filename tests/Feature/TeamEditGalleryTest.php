@@ -106,4 +106,32 @@ class TeamEditGalleryTest extends TestCase
 
         $this->actingAs($outsider, 'admin')->getJson('/admin/team-messages/gallery?c=' . $c->id)->assertStatus(403);   // told plainly, not a raw 404
     }
+
+    public function test_gallery_pages_back_through_older_files(): void
+    {
+        $va = $this->va();
+        $c  = $this->dm($va, $this->super);
+        $m  = TeamMessage::create(['conversation_id' => $c->id, 'type' => 'text', 'sender_id' => $this->super->id, 'body' => 'files']);
+
+        // One page is 200. 201 files is what proves the tabs no longer stop dead at 200.
+        $rows = [];
+        for ($i = 1; $i <= 201; $i++) {
+            $rows[] = ['team_message_id' => $m->id, 'disk_path' => 'x/' . $i . '.pdf',
+                'original_name' => 'file-' . $i . '.pdf', 'mime' => 'application/pdf', 'size' => 10,
+                'created_at' => now(), 'updated_at' => now()];
+        }
+        \App\Models\MessageAttachment::insert($rows);
+
+        $first = $this->actingAs($va, 'admin')->getJson('/admin/team-messages/gallery?c=' . $c->id)->assertOk();
+        $first->assertJsonCount(200, 'files')->assertJsonPath('hasMore', true);
+        $oldest = $first->json('oldest');
+        $this->assertGreaterThan(0, $oldest);
+        // Newest first, so the first page must NOT contain the oldest file.
+        $this->assertNotContains('file-1.pdf', array_column($first->json('files'), 'name'));
+
+        $second = $this->actingAs($va, 'admin')
+            ->getJson('/admin/team-messages/gallery?c=' . $c->id . '&before=' . $oldest)->assertOk();
+        $second->assertJsonCount(1, 'files')->assertJsonPath('hasMore', false)
+            ->assertJsonPath('files.0.name', 'file-1.pdf');
+    }
 }

@@ -2336,7 +2336,7 @@
     function renderFiles(){
         if (!filesScroll) return;
         var files = (galleryData || []).slice();
-        if (!files.length){ filesScroll.innerHTML = '<div class="tc-panel-empty">No files shared in this chat yet.<br>Use <b>Upload</b> to share one.</div>'; return; }
+        if (!files.length){ filesScroll.innerHTML = '<div class="tc-panel-empty">No files shared in this chat yet.<br>Use <b>Upload</b> to share one.</div>' + olderFilesButton(); return; }
         files.sort(function (a, b) {
             var r = 0;
             if (fSort.key === 'name') r = String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase());
@@ -2362,13 +2362,13 @@
             + '<th class="tc-fsort" data-sort="name">Name' + arrow('name') + '</th>'
             + '<th class="tc-fsort tc-fcol-when" data-sort="ts">Shared on' + arrow('ts') + '</th>'
             + '<th class="tc-fsort tc-fcol-by" data-sort="by">Sent by' + arrow('by') + '</th><th></th>'
-            + '</tr></thead><tbody>' + rows + '</tbody></table>';
+            + '</tr></thead><tbody>' + rows + '</tbody></table>' + olderFilesButton();
         updateSelBar();
     }
     function renderPhotos(){
         if (!photosScroll) return;
         var imgs = (galleryData || []).filter(function (f) { return f.image; });
-        if (!imgs.length){ photosScroll.innerHTML = '<div class="tc-panel-empty">No photos shared in this chat yet.</div>'; return; }
+        if (!imgs.length){ photosScroll.innerHTML = '<div class="tc-panel-empty">No photos shared in this chat yet.</div>' + olderFilesButton(); return; }
         imgs.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
         var now = new Date(), groups = [], gmap = {};
         function label(ts){
@@ -2389,15 +2389,40 @@
             return '<div class="tc-photos-group">' + esc(l) + '</div><div class="tc-photos-grid">' + gmap[l].map(function (f) {
                 return '<a class="tc-photo" href="' + esc(f.url) + '" data-lightbox><img src="' + esc(f.url) + '" loading="lazy"><span class="tc-photo-cap">' + esc(f.by) + '</span></a>';
             }).join('') + '</div>';
-        }).join('');
+        }).join('') + olderFilesButton();
     }
-    function loadGallery(after){
+    // Files/Photos load newest-first, a page at a time. `galleryMore` says whether older ones
+    // exist, so nothing is silently cut off at the newest 200 any more.
+    var galleryMore = false, galleryOldest = 0, galleryLoading = false;
+    function loadGallery(after, older){
         if (!CONV){ galleryData = []; after(); return; }
+        if (galleryLoading) return;
+        galleryLoading = true;
         var gen = VIEW_GEN;
-        fetch(BASE + '/gallery?c=' + CONV, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
+        var url = BASE + '/gallery?c=' + CONV + (older && galleryOldest ? '&before=' + galleryOldest : '');
+        fetch(url, { headers:{ 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }, cache:'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (res) { if (!viewAlive(gen)) return; galleryData = (res && res.files) || []; after(); })
-            .catch(function () { if (!viewAlive(gen)) return; galleryData = galleryData || []; after(); });
+            .then(function (res) {
+                galleryLoading = false;
+                if (!viewAlive(gen)) return;
+                var page = (res && res.files) || [];
+                galleryData = older ? (galleryData || []).concat(page) : page;
+                galleryMore = !!(res && res.hasMore);
+                galleryOldest = (res && res.oldest) || galleryOldest;
+                after();
+            })
+            .catch(function () { galleryLoading = false; if (!viewAlive(gen)) return; galleryData = galleryData || []; after(); });
+    }
+    // "Load older files" in either tab.
+    function olderFilesButton(){
+        if (!galleryMore) return '';
+        return '<div class="tc-files-more"><button type="button" class="tc-btn-mini" data-older-files>Load older files</button></div>';
+    }
+    function onOlderFilesClick(e){
+        if (!e.target.closest('[data-older-files]')) return;
+        e.preventDefault();
+        var btn = e.target.closest('[data-older-files]'); btn.disabled = true; btn.textContent = 'Loading…';
+        loadGallery(function () { renderFiles(); renderPhotos(); }, true);
     }
     function switchTab(tab){
         currentTab = tab;
@@ -2420,6 +2445,7 @@
     // Files panel interactions.
     if (filesScroll){
         filesScroll.addEventListener('click', function (e) {
+            if (e.target.closest('[data-older-files]')) { onOlderFilesClick(e); return; }
             var img = e.target.closest('a[data-lightbox]');
             if (img){ e.preventDefault(); openLightbox(filesScroll, img); return; }
             var nameLink = e.target.closest('a[data-dlname]');
@@ -2441,6 +2467,7 @@
     // Photos tab: open the viewer (arrows walk the whole grid). Without this the click
     // followed the link and navigated the app away from the chat to the raw image.
     if (photosScroll) photosScroll.addEventListener('click', function (e) {
+        if (e.target.closest('[data-older-files]')) { onOlderFilesClick(e); return; }
         var img = e.target.closest('a.tc-photo, a[data-lightbox]');
         if (img){ e.preventDefault(); openLightbox(photosScroll, img); }
     });
@@ -3153,6 +3180,9 @@
 
         if (typeof switchTab === 'function') switchTab('chat');
         galleryData = null;   // per-conversation; re-fetched when Files/Photos is opened
+        // Paging state belongs to the chat we just left: without this reset the new chat
+        // would ask for files "before" the previous chat's oldest and show none.
+        galleryMore = false; galleryOldest = 0; galleryLoading = false;
 
         markActiveRow();
         // Always tell the sidebar layer (and through it the notifier) which chat is open — also

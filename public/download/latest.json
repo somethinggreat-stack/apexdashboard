@@ -1,11 +1,11 @@
 {
-  "version": "0.1.4",
-  "notes": "Updates now install when you quit instead of closing the app mid-message, and are checked every few hours. Taskbar unread dot (0.1.3) and drag-and-drop (0.1.2) included.",
-  "pub_date": "2026-09-17T20:52:34Z",
+  "version": "0.1.5",
+  "notes": "Opens even when the internet is still coming up, instead of a dead error page. Only ever one copy runs, so notifications don't arrive twice. Starts quietly in the tray when Windows starts it. New summon shortcut: Ctrl+Alt+A.",
+  "pub_date": "2026-09-17T21:38:35Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTNlSzBWdmRrWWRmZDkvRG9FRFRIbFhSS2RGMi9NcFY4M0E3VWErZUx1UDV6dFFaa1UwaE1ZVVJ1ZXB5UTR1TWd2Qi93SkpaY0c1MStQUTVUcWNjRUE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5Njc4MjUzCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjRfeDY0LXNldHVwLmV4ZQpQNFkzRDg0Y0tUK2JSZUpKL2x6aVRGajNVa0UxTjFlZThFdWVhdERTdktUVkdEbnJKVnBDclc5TlE1dnFUMFBab3hwR25HSmU4QzdHS3l4MnJKTnVCUT09Cg==",
-      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.4"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTExQ1lhTEVPd1JLUEYzVWZhZ052ZFhENU40STJQK0hNWGRYZUpVMDVmb2dnenQ1RUI4M0pQQ1loVlNKQlRLM2huYzF4T2lwYWdGNEw0cU5EVXh5bUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjgwODk5CWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjVfeDY0LXNldHVwLmV4ZQp6d2FINzFuQTl3UmVZTHJlY2xOUFVaenNsdTRCRG90S2o2dGdBc0RSWDFZK3dzb09MTVQ2MWRydk5aMG9GKzBCM0Q0MFl5VEhqZFNnbDJ2OHEvZWVBZz09Cg==",
+      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.5"
     }
   }
 }

@@ -2,7 +2,7 @@
 
 > Read this first before touching Team Chat. It captures the architecture, deploy model,
 > features, key code decisions, gotchas, versions, and rules. Keep it updated when you change things.
-> Last major update: 2026-09-15.
+> Last major update: 2026-09-18.
 
 ---
 
@@ -23,7 +23,7 @@ Web Push is **disabled**; the desktop app fires **native OS notifications** whil
   - **apexdashboard** → `/home2/apexgrow/public_html/` (main dashboard host)
   - **apexchat** → `/home2/apexgrow/chat.apexgrowthsolution.com/` (chat subdomain host)
 - **Shared MySQL database** — both checkouts use the same DB. A DB migration run on one is visible to both; run migrations once.
-- **`.cpanel.yml`** on deploy: copies `app bootstrap config database public resources routes tests`, `.htaccess`, `artisan`, composer/package files; `mkdir -p` the `storage/` tree (incl. `storage/app/private`, `storage/app/public`) + `bootstrap/cache`; `chmod -R 775`; `composer install --no-dev --optimize-autoloader` (with `COMPOSER_MEMORY_LIMIT=-1`); `config:clear`/`route:clear`/`view:clear`; **`php artisan migrate --force`**; `db:seed --class=TeamSeeder --force`; `storage:link`; `images:optimize`.
+- **`.cpanel.yml`** on deploy: copies `app bootstrap config database public resources routes tests`, `.htaccess`, `artisan`, composer/package files; `mkdir -p` the `storage/` tree (incl. `storage/app/private`, `storage/app/public`) + `bootstrap/cache`; `chmod -R 775`; `composer install --no-dev --optimize-autoloader` (with `COMPOSER_MEMORY_LIMIT=-1`); `config:clear`/`route:clear`/`view:clear`; **`CACHE_STORE=database php artisan migrate --force --isolated`** (the lock lives in the shared DB so the two hosts can't migrate at once); `db:seed --class=TeamSeeder --force`; `storage:link`; `images:optimize`; caches; a `php artisan about` boot check. **Every critical step now ends in `|| fail "..."`, not `|| true`** — a failed composer install or migration stops the deploy and writes `storage/logs/deploy-failed.txt` instead of leaving a half-updated site. A success writes `storage/logs/deployed-at.txt` (date + commit).
 - **Do NOT add `sessions:flush` to deploy** — it wiped sessions and caused "CSRF token mismatch" for logged-in users. (Removed; the app also has a graceful 419 `reconnect(draft)` path that stashes the unsent draft and reloads.)
 - Deploying the chat host = "update from remote" (cPanel pulls the branch). `public/` is copied, so anything in `public/download/` ships to the chat host.
 
@@ -52,10 +52,11 @@ Web Push is **disabled**; the desktop app fires **native OS notifications** whil
 - Routes: `routes/web.php`, inside `Route::prefix('admin')` group. Names: `admin.team-messages.{index,open,thread,older,presence,notifications,store,search,typing,notify,attachment,avatar,avatar.update,avatar.remove,react,favorite,mute,pin,forward,group.store,group.members.add,group.members.remove,group.leave,group.rename,gallery,update,destroy}`. **Route order matters**: literal routes (`open`, `search`, `avatar`) are registered before the `team-messages/{message}` wildcard.
 
 ### Desktop repo: `Z:\Projects\apex-desktop` — **NOT a git repo** (changes live only in files)
-- `src-tauri/tauri.conf.json` — window url, `userAgent` (must contain `ApexDesktop/1.0`), `additionalBrowserArgs`, bundle targets `["nsis"]`, `createUpdaterArtifacts: true`, updater `endpoints`/`pubkey`, nsis `installerIcon`, `version`.
-- `src-tauri/src/lib.rs` — tray (Open/Reload/Sign out/Quit), close-to-tray, `set_unread` command (taskbar overlay badge), global shortcut Ctrl+Shift+A, autostart, updater check on startup, opener plugin (external links → real browser).
+- `src-tauri/tauri.conf.json` — window url (**`index.html`**, the bundled waiting room — see below), `userAgent` (must contain `ApexDesktop/1.0`), `additionalBrowserArgs`, `dragDropEnabled: false`, bundle targets `["nsis"]`, `createUpdaterArtifacts: true`, updater `endpoints`/`pubkey`, nsis `installerIcon`, `version`.
+- `src/index.html` — **the waiting room**. The window no longer opens straight onto the live chat URL: starting with no internet left WebView2's own grey "can't reach this page" error on screen with no retry. This page pings `/up`, goes through the moment it answers, and otherwise shows "No connection" and retries every 4s (plus a plain `<a>` in the HTML as a last resort if its script ever fails). Verified by `bootstrap.js` in the session scratchpad.
+- `src-tauri/src/lib.rs` — tray (Open/Reload/Install update/Sign out/Quit), close-to-tray, `set_unread` command (taskbar overlay badge), single-instance focus, summon hotkey (`SUMMON_KEYS`, first that registers), autostart-once + `--autostarted` → start in tray, updater check at startup and every 6h, opener plugin (external links → real browser).
 - `src-tauri/Cargo.toml` — `image-png` feature needed for the badge image.
-- Plugins: `tauri-plugin-notification`, `-autostart`, `-global-shortcut`, `-updater`, `-opener`.
+- Plugins: `tauri-plugin-notification`, `-autostart`, `-global-shortcut`, `-updater`, `-opener`, `-single-instance` (**must be registered first**).
 
 ---
 
@@ -64,7 +65,8 @@ Web Push is **disabled**; the desktop app fires **native OS notifications** whil
 - **`conversations`**: `type` (`dm`|`group`), `name`, `icon`, `data_owner_id`, `dm_key`, `last_message_id`, `last_message_at`, `created_by`.
   - `dm_key`: `self:<adminId>` for the "message yourself" notes thread; `dm:<minId>:<maxId>` for a DM.
 - **`conversation_participants`**: `conversation_id`, `admin_id`, `role` (`member`|`admin`), `muted`, `favorite`, `last_read_message_id`, `typing_at`, `notify_level` (`all`|`mentions`|`none`), `joined_at`.
-- **`team_messages`**: `conversation_id`, `type` (`text`|`system`), `sender_id`, `reply_to_id`, `body`, `forwarded`, `pinned_at`, `edited_at`, `deleted_at`, `deleted_by`, `reactions` (JSON map uid→emoji), `mentions_all`, mentioned admins via pivot.
+- **`team_messages`**: `conversation_id`, `type` (`text`|`system`), `sender_id`, `reply_to_id`, `body`, `forwarded`, `pinned_at`, `edited_at`, `deleted_at`, `deleted_by`, `reactions` (JSON map uid→emoji), `mentions_all`, `mentions_all_at` (when it first said @everyone), `client_uuid`, mentioned admins via pivot.
+- **`message_mentions`**: `team_message_id`, `admin_id`, `created_at` (when the mention appeared — what makes a mention added by editing notify).
 - **`message_attachments`**: `team_message_id`, `disk_path`, `original_name`, `mime`, `size`, `width`, `height`. Files live on the **private disk** at `storage/app/private/team-chat/<ownerId>/<uuid>.<ext>`.
 - **`admins.avatar`** (nullable string, added 2026-09-15): `team-avatars/<id>.jpg` (uploaded, on private disk, served via guarded route), a bundled filename, or `'-'` (removed → monogram). `avatarUrl()` streams uploaded ones via `admin.team-messages.avatar` and **falls back to a monogram if the file isn't present on this host** (chat & dashboard hosts share only the DB, not the private disk).
 
@@ -154,10 +156,12 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Signing key:** `C:\Users\DELL\.tauri\apex-updater.key` — **empty password**. Env for build/sign:
   - `TAURI_SIGNING_PRIVATE_KEY` = the **file CONTENTS** (base64 string), NOT the path. (`$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content <key> -Raw` in PowerShell, or `"$(cat <key>)"` in bash.) Passing the path fails with "Invalid symbol 58" (the `:` in `C:`).
   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` = `""` (empty).
-- **Build:** `cd Z:\Projects\apex-desktop; npm run tauri build` (~2–3 min incremental). Outputs:
+- **Build:** from `Z:\Projects\apex-desktop`, in bash:
+  `TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/apex-updater.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npx tauri build`
+  (~4 min from cold, less incrementally; `npm run tauri build` is the same thing). Outputs:
   - Installer: `src-tauri\target\release\bundle\nsis\Apex Team Chat_<version>_x64-setup.exe`
   - Signature: `...exe.sig`
-- **App version** comes from `tauri.conf.json` `version` (currently **0.1.4**; `Cargo.toml` + `package.json` now match).
+- **App version** comes from `tauri.conf.json` `version` (currently **0.1.5**; `Cargo.toml` + `package.json` kept in step).
 - **Publish for auto-update:** copy the installer to `public/download/apex-team-chat-setup.exe` (stable name — renaming does NOT break the signature, which is over the file bytes), and update `public/download/latest.json`:
   ```json
   { "version": "<new>", "notes": "...", "pub_date": "<ISO8601 Z>",
@@ -266,6 +270,15 @@ Every async request in the thread script checks, when it returns, that the chat 
 ### Attachment shown without its file (2026-09-18)
 Reported from production: a message arrived as text only, with the sender seeing the file. The cause was the pre-Phase-1 half-saved send, but a client that had already drawn it kept it text-only until a reload. `thread()`'s states now carry `atts` (attachment count) and the page redraws just that message when its bubble has no files. Covered by `phase8.js` A1.
 
+### Files/Photos paging, mention-by-edit, desktop 0.1.5 (2026-09-18)
+- **Files & Photos stopped dead at 200.** `gallery()` returned only the newest 200 attachments with no hint that anything older existed. It now pages (`?before=<attachment id>`, `hasMore`, `oldest`) and both tabs show a **"Load older files"** button. Paging state (`galleryMore`/`galleryOldest`) resets on every chat switch, or the new chat would ask for files older than the previous chat's oldest and show none.
+- **A mention added by EDITING an older message never notified.** The notification poll only walks forward by message id and an edit keeps its id, so the mention showed a silent badge. There is now a **second watermark, by time**: `message_mentions.created_at` (and `team_messages.mentions_all_at` for `@everyone`) record when each mention appeared, the client sends `?mAfter=<mLast>` alongside `?after=<id>`, and the server also returns mentions recorded since then, flagged `editedMention: true` so the client's "never re-fire an old id" rule doesn't swallow them. `syncMentions` now uses `sync()` instead of detach-then-attach, so a typo fix keeps the existing rows (and their timestamps) and does **not** re-ping people who were already mentioned. A client with no `mAfter` yet (or `after=0`) gets nothing — old mentions are never replayed.
+- **Desktop 0.1.5:**
+  - **Starts offline.** The window opens on the bundled waiting room (`src/index.html`) instead of the live URL, so no internet at launch means "No connection" + automatic retry, not WebView2's dead error page.
+  - **One copy only** (`tauri-plugin-single-instance`, registered first). A second launch — Start menu, the installer's "run now", clicking a notification — focuses the running window instead of starting a rival tray + poller that notified twice.
+  - **Summon hotkey** moved off `Ctrl+Shift+A` (taken by Photoshop/VS Code/Slack, so registration silently failed) to the first of `Ctrl+Alt+A`, `Ctrl+Alt+K`, `Ctrl+Shift+A` that Windows grants.
+  - **Autostart is enabled once**, recorded by a marker file in the app config dir, instead of being forced on at every launch behind a VA who turned it off. The registered command carries `--autostarted`, and a launch with that flag **starts in the tray** rather than throwing a window over their work.
+
 ---
 
 ## 11. Bugs & fixes worth remembering
@@ -284,11 +297,12 @@ Reported from production: a message arrived as text only, with the sender seeing
 
 ---
 
-## 12. Current production state (as of 2026-09-15)
+## 12. Current production state (as of 2026-09-18)
 
-- **Web:** all of the above **deployed** to the chat host (user confirmed). One chat-host deploy covers every web feature.
-- **Desktop:** version **0.1.1** built, signed, and published. `https://chat.apexgrowthsolution.com/download/latest.json` **verified live at 0.1.1** pointing at `apex-team-chat-setup.exe`. Installed 0.1.0 apps auto-update on next launch; new VAs install 0.1.1 from the download page.
-- Git: `main` on `somethinggreat-stack/apexdashboard`, all work committed + pushed. Commit attribution line used: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- **Web:** everything through the 2026-09-18 phases is committed on `main` and **needs a deploy on BOTH hosts** (dashboard `public_html` + the chat subdomain). One migration ships with it (`2026_09_25_000001_add_created_at_to_message_mentions`) — additive and nullable.
+- **Desktop:** version **0.1.5** built, signed, and published to `public/download/` (`apex-team-chat-setup.exe` + `latest.json`). It goes live with the chat-host deploy; installed 0.1.4 apps pick it up on their next update check (startup, then every 6h) and install when the VA quits or chooses "Install update & restart". **No VA has to uninstall or reinstall anything.**
+- Nothing here logs anyone out: sessions survive deploys (`.cpanel.yml` deliberately does not flush them), and chat sessions last `TEAM_CHAT_SESSION_DAYS` (30).
+- Git: `main` on `somethinggreat-stack/apexdashboard`, all work committed + pushed.
 
 ---
 
@@ -317,15 +331,18 @@ Reported from production: a message arrived as text only, with the sender seeing
 9. **Every async request in the chat script must check freshness on return** (`runAlive` / `viewAlive(gen)` / `chatAlive(key)` / nav ticket — see §6). Every message insert goes through `serializedSend` (see §10 Send integrity).
 10. **Never `location.reload()` from a chat action** — an upload may be in flight. Update in place, or go through `window.tcConfirmIfSending()` first.
 11. **Upload limits come from `uploadLimits()`**, never hard-coded in the page; keep the client and server checks in step.
-12. **Durable browser suites live in `tests/Browser/TeamChat/`** — `node tests/Browser/TeamChat/run.cjs` gives each suite its own throwaway SQLite database and PHP process (needs `PLAYWRIGHT_MODULE`/`CHROMIUM_PATH`). Keep them in step with the session scratchpad copies.
+12. **Durable browser suites live in `tests/Browser/TeamChat/`** — `node tests/Browser/TeamChat/run.cjs` gives each suite its own throwaway SQLite database and PHP process (needs `PHP_BINARY`/`PLAYWRIGHT_MODULE`/`CHROMIUM_PATH`). Suites are `phase1, 1b, 2, 3, 5, 6, 7, 8, 9`; phase9 also loads `seed-files.php`. Keep them in step with the session scratchpad copies. **Reset the scratchpad database before EVERY suite** (`reset.sh`) — running them back to back against a drifted database produces a wall of timeouts that look like regressions and are not.
 13. **Never call an app command from the chat page without granting it in `capabilities/remote.json` AND declaring it in `build.rs`** — a remote origin is refused otherwise (that is what broke the taskbar dot).
+14. **The desktop window must never point straight at a remote URL.** It opens on the bundled waiting room, which is the only thing standing between a VA with slow wifi and WebView2's dead error page. Keep a working plain `<a>` in that page's HTML so a scripting failure can never strand someone on a blank app.
+15. **Anything that can change who a message notifies AFTER it was sent needs a time watermark, not an id one.** The notification poll is id-ordered and only moves forward; `mAfter`/`mLast` is that second watermark (see §10). Never make it replay old state when the client sends no watermark.
+16. **Any list the chat renders from one request needs a page size AND a way to see past it.** The Files/Photos tabs silently hid everything past the newest 200 for months.
 
 ---
 
 ## 15. Open / watch items
 
-- Confirm in the field that the **0.1.1 no-throttle flags** actually keep background polling + OS notifications alive (couldn't fully test the built app here).
+- **Field-check after this deploy** (can't be tested from here — they need the real built app): drag-and-drop onto the window, the taskbar unread dot, `Ctrl+Alt+A` summoning the window, starting the PC with no internet, and `/admin/system/upload-limits` output.
+- Confirm in the field that the **no-throttle flags** actually keep background polling + OS notifications alive.
 - `apex-desktop` is **not under version control** — consider `git init` so config/version changes are tracked.
-- `Cargo.toml`/npm version (0.1.0) lags `tauri.conf.json` (0.1.1) — cosmetic; align on the next bump.
 - The 2.65MB installer binary is committed under `public/download/` — acceptable but bloats history over time.
 - Related memory notes: `team-chat-roadmap.md`, `chat-open-speed-request.md` in the project memory dir.
