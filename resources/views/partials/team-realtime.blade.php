@@ -106,7 +106,11 @@
     }
 
     // ---------- shared state ----------
-    var LKEY = 'apex-team-last-msg', NKEY = 'apex-team-notifs', NLKEY = 'apex-team-last-notified';
+    // Everything stored locally is per SIGNED-IN USER. On a shared PC the next VA must never
+    // inherit the previous one's notification list, read watermarks or poll position.
+    var ME_ID = @json((string) (Auth::guard('admin')->id() ?? ''));
+    var U = ':u' + ME_ID;
+    var LKEY = 'apex-team-last-msg' + U, NKEY = 'apex-team-notifs' + U, NLKEY = 'apex-team-last-notified' + U;
     function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
     var lastId = parseInt(ls(LKEY) || '0', 10) || 0;
     var primed = lastId > 0;               // if we have a baseline, deliver new msgs (no backlog spam)
@@ -122,7 +126,7 @@
     // A VISIBLE tab is preferred as leader so a backgrounded tab (throttled to 15s) never starves
     // the tab you're actually looking at (M4). A visible tab preempts a hidden leader.
     var TAB = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
-    var LEAD = 'apex-team-leader';
+    var LEAD = 'apex-team-leader' + U;   // per user: two accounts on one PC never share a poller
     function leader(){ try { return JSON.parse(ls(LEAD) || 'null'); } catch (e) { return null; } }
     function leaderFresh(){ var l = leader(); return l && (Date.now() - l.ts < 8000); }
     function amLeader(){ var l = leader(); return l && l.id === TAB; }
@@ -137,7 +141,7 @@
     window.addEventListener('beforeunload', function () { if (amLeader()) { try { localStorage.removeItem(LEAD); } catch (e) {} } });
 
     // ---------- cross-tab bus ----------
-    var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('apex-team') : null;
+    var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('apex-team' + U) : null;
     if (bc) bc.onmessage = function (e) {
         var d = e.data || {};
         if (d.kind === 'active'){ if (d.conv) activeByTab[d.tab] = String(d.conv); else delete activeByTab[d.tab]; return; }

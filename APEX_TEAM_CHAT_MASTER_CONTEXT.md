@@ -233,6 +233,12 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **A group can't be left without an admin.** `Conversation::handOverGroupAdminRoles()` runs from `Admin::deleting`, so deleting the only admin's account promotes the longest-standing remaining member (the same rule as leaving a group).
 - Leave Group keeping `standalone=1` was fixed in Phase 2.
 
+### Shared-PC privacy & local state (2026-09-18)
+- **Everything stored locally is per signed-in user.** IndexedDB records are keyed `u<adminId>|<query>` and stamped `{uid, ts}`; a snapshot is only painted when `uid` matches the current user AND it is under **24h** old (`SNAP_TTL`), so nothing cached can outlive the 7-day retention. A sweep on every page load deletes foreign, expired and unstamped (pre-update) records. `localStorage` notification keys (`apex-team-last-msg`, `-notifs`, `-last-notified`, `-leader`) and the BroadcastChannel name all carry `:u<id>`; drafts use `tc-drafts:u<id>` and `tc-draft:u<id>`.
+- **Sign-out wipes this browser's chat data.** The logout response sends `Clear-Site-Data: "storage"` (covers the desktop app's tray sign-out, HTTPS only), and the chat page's Sign out also clears localStorage, sessionStorage, Cache Storage and every IndexedDB database itself before navigating (works on http too, and asks first if a send is in flight).
+- Per-chat drafts (the other half of that list) shipped in Phase 2 — see the Uploads section.
+- **Deploy note:** the reconnect-draft key changed, so a draft stashed by the previous version at the exact moment of this deploy is not restored. One-off, affects only a send that hit a 419 mid-deploy.
+
 ---
 
 ## 11. Bugs & fixes worth remembering

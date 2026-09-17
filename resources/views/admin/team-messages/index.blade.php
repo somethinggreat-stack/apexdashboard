@@ -687,6 +687,8 @@
     var RUN = window.__tcRun;
     var VIEW_GEN = 0;
     var isSelf = @js($isSelf ?? false);
+    // Per signed-in user (shared PC): never restore another VA’s unsent text.
+    var RECONNECT_DRAFT_KEY = 'tc-draft:u' + @json((string) $me->id);
     function chatKey(){
         if (isSelf) return 'self';
         if (!IS_GROUP && PEER_ID) return 'p' + PEER_ID;
@@ -1059,7 +1061,7 @@
     // Restore a draft stashed during a reconnect, so nothing typed is ever lost.
     var restoredDraft = null;
     try {
-        var _raw = sessionStorage.getItem('tc-draft'), _d = null;
+        var _raw = sessionStorage.getItem(RECONNECT_DRAFT_KEY), _d = null;
         if (_raw){
             try { _d = JSON.parse(_raw); } catch (e2) { _d = null; }
             // A plain-text draft stashed by the previous app version (e.g. right after a deploy):
@@ -1067,7 +1069,7 @@
             if (!_d || typeof _d !== 'object') _d = { key: chatKey(), body: _raw };
         }
         if (_d && _d.body && input && _d.key === chatKey()){
-            sessionStorage.removeItem('tc-draft');
+            sessionStorage.removeItem(RECONNECT_DRAFT_KEY);
             input.value = _d.body; grow();
             restoredDraft = _d;   // its client id is adopted once the composer helpers exist
         }
@@ -1290,7 +1292,8 @@
     // when they return (text also survives a reload; files survive an in-app swap). A send
     // that fails after the VA left its chat is stored here too, with its client id.
     var DRAFTS = window.__tcDrafts = window.__tcDrafts || {};
-    var DRAFT_TEXT_KEY = 'tc-drafts';
+    // Per signed-in user: a draft must never reappear in the next VA's session on a shared PC.
+    var DRAFT_TEXT_KEY = 'tc-drafts:u' + @json((string) $me->id);
     function readDraftTexts(){ try { return JSON.parse(sessionStorage.getItem(DRAFT_TEXT_KEY) || '{}') || {}; } catch (e) { return {}; } }
     // After a reload the in-memory store is empty: bring back the saved texts first, so saving
     // one chat's draft never drops another's.
@@ -1568,7 +1571,7 @@
         if (reconnecting) return; reconnecting = true;
         // Stash the unsent text with the chat it belongs to (and its client id), so after the
         // reload it goes back into THAT chat only, and a resend can't duplicate it.
-        try { if (draft && draft.body) sessionStorage.setItem('tc-draft', JSON.stringify(draft)); } catch (e) {}
+        try { if (draft && draft.body) sessionStorage.setItem(RECONNECT_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
         if (window.apexToast) apexToast('Reconnecting…');
         setTimeout(function () { location.reload(); }, 500);
     }
@@ -3094,6 +3097,16 @@
     // ---- Tier 3: persistent on-disk cache (IndexedDB) so opens are instant even on
     // app restart / for chats the idle-warm didn't reach. Best-effort: any failure just
     // falls back to the network path. ----
+    // Saved chats are per SIGNED-IN USER and short-lived. On a shared PC the next VA must never
+    // see a trace of the previous one's chats or private notes, and nothing cached may outlive
+    // the 7-day retention (snapshots expire in a day; they're refreshed on every open anyway).
+    var ME_ID = @json((string) $me->id);
+    var SNAP_TTL = 24 * 60 * 60 * 1000;
+    function idbKey(q){ return 'u' + ME_ID + '|' + q; }
+    function usable(rec){
+        return !!(rec && rec.data && String(rec.uid || '') === ME_ID && rec.ts && (Date.now() - rec.ts) < SNAP_TTL);
+    }
+
     var idbP = null;
     function idb(){
         if (idbP) return idbP;
@@ -3101,7 +3114,11 @@
             try {
                 var rq = indexedDB.open('apexChat', 1);
                 rq.onupgradeneeded = function (){ try { rq.result.createObjectStore('threads'); } catch (e) {} };
-                rq.onsuccess = function (){ resolve(rq.result); };
+                rq.onsuccess = function (){
+                    var db = rq.result;
+                    try { db.onversionchange = function (){ try { db.close(); } catch (e) {} idbP = null; }; } catch (e) {}
+                    resolve(db);
+                };
                 rq.onerror = function (){ resolve(null); };
             } catch (e){ resolve(null); }
         });
@@ -3109,18 +3126,36 @@
     }
     function idbGet(key){
         return idb().then(function (db){ if (!db) return null; return new Promise(function (res){
-            try { var t = db.transaction('threads','readonly').objectStore('threads').get(key);
-                t.onsuccess = function (){ res(t.result || null); }; t.onerror = function (){ res(null); };
+            try { var t = db.transaction('threads','readonly').objectStore('threads').get(idbKey(key));
+                t.onsuccess = function (){ res(usable(t.result) ? t.result : null); }; t.onerror = function (){ res(null); };
             } catch (e){ res(null); } }); });
     }
+    // Drop everything that belongs to someone else or is past its day — including snapshots
+    // written by the previous version, which had no owner stamp.
+    function idbSweep(){
+        idb().then(function (db){
+            if (!db) return;
+            try {
+                var st = db.transaction('threads','readwrite').objectStore('threads');
+                var cur = st.openCursor();
+                cur.onsuccess = function (){
+                    var c = cur.result; if (!c) return;
+                    var rec = c.value, mine = rec && String(rec.uid || '') === ME_ID;
+                    if (!mine || !usable(rec)) { try { c.delete(); } catch (e) {} }
+                    c.continue();
+                };
+            } catch (e) {}
+        });
+    }
+    idbSweep();
     function idbSet(key, val){
         idb().then(function (db){ if (!db) return; try {
-            db.transaction('threads','readwrite').objectStore('threads').put(val, key);
+            db.transaction('threads','readwrite').objectStore('threads').put(val, idbKey(key));
         } catch (e){} });
     }
     function idbDel(key){
         idb().then(function (db){ if (!db) return; try {
-            db.transaction('threads','readwrite').objectStore('threads').delete(key);
+            db.transaction('threads','readwrite').objectStore('threads').delete(idbKey(key));
         } catch (e){} });
     }
     // Forget a chat we can no longer open (e.g. removed from the group), so nothing stale is
@@ -3131,7 +3166,9 @@
     // updates it anyway — so opening a chat doesn't re-render it a moment later.
     function sig(d){ if (!d) return ''; var ms = d.messages || []; return [d.conversation_id, ms.length, ms.length?ms[ms.length-1].id:0, d.readUpTo, (d.pinned||[]).map(function (p){ return p.id; }).join(','), d.title].join('|'); }
 
-    function persist(q, data){ cache[q] = { data: data, ts: Date.now() }; idbSet(q, { data: data, ts: Date.now() }); }
+    // Every saved chat is stamped with its owner and the time, so it can only ever be painted
+    // back for that same VA, and only for a day.
+    function persist(q, data){ var now = Date.now(); cache[q] = { data: data, ts: now }; idbSet(q, { data: data, ts: now, uid: ME_ID }); }
 
     function applyData(data, url){
         window.tcApplyOpen(data, url, true);
@@ -3263,12 +3300,24 @@
         return Promise.all(jobs);
     }
 
-    // Sign out would cancel an upload too — ask first.
+    // Sign out: ask first if something is still sending, then wipe this browser's chat data
+    // (saved chats, drafts, notification list) so the next VA on a shared PC starts clean.
     var outLink = document.querySelector('.tc-logout');
     if (outLink) outLink.addEventListener('click', function (e) {
-        if (!window.tcSendInFlight || !window.tcSendInFlight() || window.__tcAllowLeave) return;
         e.preventDefault();
-        window.tcConfirmIfSending('Signing out').then(function (ok) { if (ok) location.href = outLink.href; });
+        function go(){
+            var done = false;
+            var leave = function () { if (done) return; done = true; location.href = outLink.href; };
+            try { localStorage.clear(); } catch (e2) {}
+            try { sessionStorage.clear(); } catch (e2) {}
+            clearAll().then(leave, leave);
+            setTimeout(leave, 1500);   // never hang on a blocked clear
+        }
+        if (window.tcSendInFlight && window.tcSendInFlight() && !window.__tcAllowLeave){
+            window.tcConfirmIfSending('Signing out').then(function (ok) { if (ok) go(); });   // cancel → stay put
+            return;
+        }
+        go();
     });
 
     btn.addEventListener('click', function () {

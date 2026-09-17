@@ -140,12 +140,16 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         // The desktop app / chat subdomain sign back in on the chat login, not the dashboard.
-        if (str_contains((string) $request->userAgent(), 'ApexDesktop')
-            || $request->getHost() === config('app.chat_host')) {
-            return redirect()->route('admin.chat-login');
-        }
+        $to = (str_contains((string) $request->userAgent(), 'ApexDesktop')
+            || $request->getHost() === config('app.chat_host'))
+            ? route('admin.chat-login')
+            : route('admin.login');
 
-        return redirect()->route('admin.login');
+        // Wipe this browser's stored chat data (saved chats, drafts, notification list) on the
+        // way out, so the next VA on a shared PC starts clean — this also covers sign-outs that
+        // never touch the chat page, like the desktop app's tray menu. Browsers only honour it
+        // over HTTPS, so the chat page clears the same things itself as well.
+        return redirect()->to($to)->header('Clear-Site-Data', '"storage"');
     }
 
     private function throttleKey(Request $request): string
