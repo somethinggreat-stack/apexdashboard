@@ -25,7 +25,9 @@ return [
     | of all of these (see TeamMessageController::uploadLimits()).
     */
     'chat' => [
-        'max_request_mb' => (int) env('TEAM_CHAT_MAX_REQUEST_MB', 95),
+        // 100 = the measured Cloudflare ceiling. uploadLimits() subtracts 256 KB of headroom for
+        // the multipart framing and form fields, so the request itself always stays under it.
+        'max_request_mb' => (int) env('TEAM_CHAT_MAX_REQUEST_MB', 100),
 
         /*
         | How long a Team Chat sign-in stays valid. The desktop app lives in the tray all

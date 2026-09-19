@@ -2,7 +2,7 @@
 
 > Read this first before touching Team Chat. It captures the architecture, deploy model,
 > features, key code decisions, gotchas, versions, and rules. Keep it updated when you change things.
-> Last major update: 2026-09-19.
+> Last major update: 2026-09-20.
 
 ---
 
@@ -212,7 +212,7 @@ Every async request in the thread script checks, when it returns, that the chat 
 - **Purge:** the orphan sweep skips files modified in the last 10 minutes (an in-progress send), except with `--all`.
 
 ### Uploads & attachments (Phase 2, 2026-09-17)
-- **One set of limits, measured, not guessed.** `TeamMessageController::uploadLimits()` = the smallest of our caps (50 MB/file, 10 files), PHP's `upload_max_filesize` / `post_max_size` / `max_file_uploads`, and the edge cap `config('team.chat.max_request_mb')` (default **95 MiB**). **Cloudflare's real limit was measured on 2026-09-17: 104,857,600 bytes (100 MiB) accepted, 106,000,000 rejected with Cloudflare's own 413.** The page gets the same numbers (`$uploadLimits`), refuses files before uploading, and names the file + limit. Server-side `checkAttachments()` repeats every check. Super-admin diagnostic: **`/admin/system/upload-limits`** (dashboard host, browser) prints the live PHP values.
+- **One set of limits, measured, not guessed.** `TeamMessageController::uploadLimits()` = the smallest of our caps (**100 MiB**/file since 2026-09-20, 10 files), PHP's `upload_max_filesize` / `post_max_size` / `max_file_uploads`, and the edge cap `config('team.chat.max_request_mb')` (default **100 MiB**). **Cloudflare's real limit was measured on 2026-09-17: 104,857,600 bytes (100 MiB) accepted, 106,000,000 rejected with Cloudflare's own 413.** The page gets the same numbers (`$uploadLimits`), refuses files before uploading, and names the file + limit. Server-side `checkAttachments()` repeats every check. Super-admin diagnostic: **`/admin/system/upload-limits`** (dashboard host, browser) prints the live PHP values.
 - **No fixed upload timeout.** A stall watchdog replaces it: 45s without upload progress, 180s after the last byte (server processing), 20s for a text-only send. Progress shows "Uploading… 42% (8 MB of 19 MB)" then "Processing…" (`#tcProgressLabel`).
 - **Clear failures, no surprise reloads.** 413 → "Too large for the server — one message can carry up to X"; 422 → the server's own message; 404 → "you may have been removed"; 403 → security-filter wording; 429/5xx/network → "press Enter to try again". Only a real sign-out reloads. A **419 refreshes the token** (`admin/team-messages/csrf`) and resends once — same `client_uuid`, files kept.
 - **Per-chat drafts.** Text + staged files + the quoted message are kept per `chatKey()` in `window.__tcDrafts` (text also in sessionStorage `tc-drafts`, so it survives a reload) and restored on return; a send that fails after switching away becomes that chat's draft. Re-applying the same chat (cached paint → network) no longer clears the composer, and `sig()` ignores presence text so it rarely re-renders at all.
@@ -318,6 +318,13 @@ The owner runs every group in their own org and can remove any message. The line
   - `team-messages/overview/export/{conversation}` — a CSV (time in Pakistan, from, message, files; UTF-8 BOM so Excel behaves) of a conversation **the owner is a participant in**. Optional `from`/`to`. Exporting a chat the owner is not in is refused — that would be reading it through the back door. To export a group they aren't in, they join first, which the group is told about.
 - **The rule that shaped both:** metadata and files are visible org-wide; *what people said* is not, unless the owner is in the conversation. `TeamChatAnnounceExportTest` pins it (9 tests), including `test_the_owner_cannot_export_a_chat_they_are_not_in` and `test_after_joining_the_owner_can_export_that_group`.
 - **Trap fixed here:** the owner's confirm dialogs started life as inline `onsubmit="return confirm('… person's …')"`. A raw apostrophe broke the page's JS outright (caught by `phase11`'s page-error check), and any **group or person named with an apostrophe** would have broken it in production. They now use `data-confirm="…"` plus one delegated `submit` listener, so Blade's escaping makes the text safe and no JS string can be broken by a name. **Don't put user-supplied text inside an inline JS handler.**
+
+### Upload limit raised to 100 MB (2026-09-20)
+Asked for after a 52 MB zip was refused. Three numbers have to move together or nothing changes, because `uploadLimits()` takes the **smallest** of them: `TeamMessageController::MAX_KB` (51200 → **102400**), `public/.user.ini`'s `upload_max_filesize` (55M → **105M**, or PHP kills the upload before Laravel ever validates it), and `config('team.chat.max_request_mb')` (95 → **100**). `post_max_size` was already 230M. The page needs no change — it reads the same numbers through `$uploadLimits`.
+
+**The real ceiling is ~99.75 MB per file, and it cannot be 100.** Cloudflare rejects a request body over 100 MiB, and the file travels inside multipart framing, so `uploadLimits()` subtracts 256 KB of headroom: effective limit **104,595,456 bytes (99.75 MB)**, verified by running `uploadLimits()` rather than reasoning about it. A genuinely full 100 MiB file can never fit through Cloudflare on this plan — raising `MAX_KB` further would only produce 413s from the edge instead of a clean in-app message.
+
+**Watch out:** if production's `.env` sets `TEAM_CHAT_MAX_REQUEST_MB`, that wins over the new default and the limit stays wherever that says.
 
 ---
 

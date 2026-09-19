@@ -39,7 +39,10 @@ class TeamMessageController extends Controller
     // everything else is force-downloaded as octet-stream (see attachment()).
     private const IMAGE_MIME = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
     private const MAX_NAME = 200;
-    private const MAX_KB = 51200;   // 50 MB per file
+    // 100 MiB per file — but the edge caps a whole REQUEST at 100 MiB and the file travels with
+    // multipart framing around it, so uploadLimits() lands the real per-file limit just under
+    // this (~99.8 MB). A genuinely full 100 MiB file cannot fit through Cloudflare at all.
+    private const MAX_KB = 102400;
     private const MAX_FILES = 10;
     private const PAGE = 50;   // messages loaded per page (initial + each "load earlier")
     private const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];

@@ -110,7 +110,7 @@ class TeamAttachmentTest extends TestCase
 
         $this->actingAs($this->super, 'admin')->postJson('/admin/team-messages', [
             'recipient_id' => $va->id,
-            'attachments'  => [UploadedFile::fake()->create('big.pdf', 60000)],   // ~60 MB > 50 MB cap
+            'attachments'  => [UploadedFile::fake()->create('big.pdf', 150000)],   // ~146 MB, past any cap
         ])->assertStatus(422)->assertJsonValidationErrors('attachments')
           ->assertJsonPath('errors.attachments.0', fn ($m) => str_contains($m, 'big.pdf') && str_contains($m, 'MB'));
 
