@@ -24,7 +24,14 @@ use Illuminate\Validation\ValidationException;
  */
 class TeamMessageController extends Controller
 {
-    private const TZ = 'America/New_York';
+    /**
+     * Team Chat runs on Pakistan time, always — the team is in Pakistan, and a chat where the
+     * timestamp depends on who is reading it is worse than useless for "when did that land?".
+     * This is the ONLY place the chat's timezone is written: every server-rendered stamp goes
+     * through it, and it is handed to the page as `tz` so the browser formats the same way
+     * instead of following whatever the PC's clock happens to be set to.
+     */
+    private const TZ = 'Asia/Karachi';
 
     private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 

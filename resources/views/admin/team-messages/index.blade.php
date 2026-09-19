@@ -687,6 +687,18 @@
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
     var PEER_NAME = @js($active && $active->isGroup() ? '' : ($peer->full_name ?? ''));
 
+    // ---------- Time ----------
+    // Team Chat is on Pakistan time, always. Every stamp the SERVER renders is already in it
+    // (TeamMessageController::TZ, handed down here); these helpers are for the two places the
+    // browser formats a time itself, so a PC whose clock is set to another zone — or just set
+    // wrong — can't make one message look hours away from the one above it.
+    var TZ = @js($tz);
+    function tzTime(d){ return d.toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }); }
+    // 'en-CA' formats as YYYY-MM-DD, so these compare as plain strings.
+    function tzDayKey(d){ return d.toLocaleDateString('en-CA', { timeZone: TZ }); }
+    function tzMonthKey(d){ return tzDayKey(d).slice(0, 7); }
+    function tzMonthLabel(d){ return d.toLocaleDateString('en-US', { timeZone: TZ, month: 'long', year: 'numeric' }); }
+
     // ---------- Which chat is on screen ----------
     // Requests capture these when they start and check them when they return, so a slow reply
     // for chat A is never applied to chat B after a quick switch.
@@ -729,11 +741,9 @@
     function toBottom(){ box.scrollTop = box.scrollHeight; }
     function toast(t){ if (window.apexToast) window.apexToast(t); }
 
-    function nowShort(){
-        var d = new Date(), h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? 'PM' : 'AM';
-        h = h % 12; if (h === 0) h = 12;
-        return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
-    }
+    // The sidebar time stamped on a message the moment you send it, before the server's own
+    // stamp arrives on the next poll. Pakistan time, so it can't disagree with what replaces it.
+    function nowShort(){ return tzTime(new Date()); }
 
     function reactsHtml(list){
         if (!list || !list.length) return '';
@@ -2370,15 +2380,19 @@
         var imgs = (galleryData || []).filter(function (f) { return f.image; });
         if (!imgs.length){ photosScroll.innerHTML = '<div class="tc-panel-empty">No photos shared in this chat yet.</div>' + olderFilesButton(); return; }
         imgs.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        // "Today" means today in PAKISTAN, not on this PC. Read off the machine's own calendar,
+        // these headings drifted a day for anyone whose clock sat in another zone.
         var now = new Date(), groups = [], gmap = {};
+        var todayKey = tzDayKey(now);
+        var yesterKey = tzDayKey(new Date(now.getTime() - 86400000));
+        var thisMonth = tzMonthKey(now);
         function label(ts){
-            var d = new Date(ts * 1000), diff = (now - d) / 86400000;
-            if (d.toDateString() === now.toDateString()) return 'Today';
-            var y = new Date(now); y.setDate(y.getDate() - 1);
-            if (d.toDateString() === y.toDateString()) return 'Yesterday';
+            var d = new Date(ts * 1000), key = tzDayKey(d), diff = (now - d) / 86400000;
+            if (key === todayKey) return 'Today';
+            if (key === yesterKey) return 'Yesterday';
             if (diff < 7) return 'Earlier this week';
-            if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) return 'Earlier this month';
-            return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            if (tzMonthKey(d) === thisMonth) return 'Earlier this month';
+            return tzMonthLabel(d);
         }
         imgs.forEach(function (f) {
             var l = label(f.ts || 0);

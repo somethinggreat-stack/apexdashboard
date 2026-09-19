@@ -17,3 +17,5 @@ The runner refuses an occupied port (default 8932; override `TEST_PORT`), create
 Phase 1b checks that plain-string draft format remains supported under the authenticated user's key. An unowned global draft is deliberately planted and must not be restored. Phase 6 requires chat storage cleanup while permitting unrelated application data to survive logout; the additional privacy suite checks preservation explicitly.
 
 Phase 9 covers the Files/Photos tabs paging past one page of shared files, and an @mention added by *editing* an older message still reaching the person (which the id-ordered notification poll can never find on its own). It is the one suite that needs extra seeding — the runner loads `seed-files.php` for it, so it has more shared files than fit in a page.
+
+Phase 10 checks that Team Chat shows Pakistan time whatever the PC's clock says. It runs Chromium in a timezone that is on a different calendar *date* from Pakistan at that moment (Kiritimati or Midway, whichever differs), then asserts the message stamp, the sidebar row time, the day separator and the Photos tab's date headings all still read Pakistan.

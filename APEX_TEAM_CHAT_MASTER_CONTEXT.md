@@ -2,7 +2,7 @@
 
 > Read this first before touching Team Chat. It captures the architecture, deploy model,
 > features, key code decisions, gotchas, versions, and rules. Keep it updated when you change things.
-> Last major update: 2026-09-18.
+> Last major update: 2026-09-19.
 
 ---
 
@@ -279,6 +279,15 @@ Reported from production: a message arrived as text only, with the sender seeing
   - **Summon hotkey** moved off `Ctrl+Shift+A` (taken by Photoshop/VS Code/Slack, so registration silently failed) to the first of `Ctrl+Alt+A`, `Ctrl+Alt+K`, `Ctrl+Shift+A` that Windows grants.
   - **Autostart is enabled once**, recorded by a marker file in the app config dir, instead of being forced on at every launch behind a VA who turned it off. The registered command carries `--autostarted`, and a launch with that flag **starts in the tray** rather than throwing a window over their work.
 
+### Pakistan time, strictly (2026-09-19)
+Team Chat ran on `America/New_York` server-side while the browser formatted its own few stamps off the PC's clock — so a VA in Pakistan saw the sidebar say `10:03 PM` and the message right below it say `1:02 PM`, nine hours apart, for the same moment.
+
+- **One source of truth:** `TeamMessageController::TZ = 'Asia/Karachi'`. Every server-rendered stamp already went through it (bubbles, day separators, sidebar rows, search results, gallery, forward), so the constant is the whole server-side fix.
+- **The browser is told, not trusted.** That constant is handed to the page as `tz`, and the chat script declares `var TZ` from it. The only two things the browser formats itself — the just-sent sidebar time (`nowShort`) and the Photos tab's date headings — go through `tzTime` / `tzDayKey` / `tzMonthKey` / `tzMonthLabel`, which all pass `timeZone: TZ`. Nothing reads `getHours()`/`toDateString()` any more; those grouped by the machine's calendar and drifted a day for anyone in another zone.
+- `lastSeenHuman()` and the notification centre's `timeAgo` are **relative** ("5 minutes ago"), so they were never affected.
+- Covered by `TeamChatTimezoneTest` (5 tests, all pinned to an instant where Pakistan and New York are on different days, so a revert fails loudly) and browser suite `phase10`, which runs Chromium in a timezone that is on a different **date** from Pakistan and asserts the stamps, the day separator and the Photos headings all still say Pakistan.
+- **Not changed:** `Admin\TaskController` and `Client\TaskController` still use `America/New_York` (Daily Task / EOD surfaces). The user scoped this to Team Chat.
+
 ---
 
 ## 11. Bugs & fixes worth remembering
@@ -337,6 +346,7 @@ Reported from production: a message arrived as text only, with the sender seeing
 14. **The desktop window must never point straight at a remote URL.** It opens on the bundled waiting room, which is the only thing standing between a VA with slow wifi and WebView2's dead error page. Keep a working plain `<a>` in that page's HTML so a scripting failure can never strand someone on a blank app.
 15. **Anything that can change who a message notifies AFTER it was sent needs a time watermark, not an id one.** The notification poll is id-ordered and only moves forward; `mAfter`/`mLast` is that second watermark (see §10). Never make it replay old state when the client sends no watermark.
 16. **Any list the chat renders from one request needs a page size AND a way to see past it.** The Files/Photos tabs silently hid everything past the newest 200 for months.
+17. **Every time Team Chat shows is Pakistan time.** Server-side that means going through `TeamMessageController::TZ` — never `format()` on a raw UTC timestamp. Client-side it means passing `timeZone: TZ` (from the page's `tz`) to every `toLocale*` call — never `getHours()`, `toDateString()` or a bare `toLocaleTimeString()`, which silently follow the PC's clock. A timestamp that changes with who is reading it is worse than none.
 
 ---
 
