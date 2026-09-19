@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '../../..');
 const php = process.env.PHP_BINARY || 'php';
 const port = Number(process.env.TEST_PORT || 8932);
 const suites = process.argv.slice(2);
-if (!suites.length) suites.push('phase1', 'phase1b', 'phase2', 'phase3', 'phase5', 'phase6', 'phase7', 'phase8', 'phase9', 'phase10');
+if (!suites.length) suites.push('phase1', 'phase1b', 'phase2', 'phase3', 'phase5', 'phase6', 'phase7', 'phase8', 'phase9', 'phase10', 'phase11');
 const wait = ms => new Promise(r => setTimeout(r, ms));
 async function listening() {
     return new Promise(resolve => {

@@ -724,3 +724,38 @@
     .tc-progress-label { margin:4px 18px 0; font-size:11.5px; color:var(--pro-muted,#64748b); position:relative; z-index:1; font-variant-numeric:tabular-nums; }
     .tc-progress-label[hidden] { display:none; }
     .tcv-files .tc-progress-label, .tcv-photos .tc-progress-label { display:none !important; }
+
+/* ---------- Owner's chat overview (super admin only, read-only page) ---------- */
+.tc-ov { height:100%; overflow-y:auto; background:var(--pro-surface,#fff); border:1px solid var(--pro-line,#e6ebf2);
+    border-radius:16px; padding:26px 30px 40px; }
+.tc-ov-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.tc-ov h1 { margin:0; font-size:22px; font-weight:800; color:var(--pro-ink,#0f172a); }
+.tc-ov-head p { margin:5px 0 0; color:#64748b; font-size:13.5px; }
+.tc-ov-back { flex:none; text-decoration:none; font:600 13px system-ui,sans-serif; color:#4f46e5;
+    background:#eef2ff; padding:9px 14px; border-radius:9px; }
+.tc-ov-back:hover { background:#e0e7ff; }
+.tc-ov-note { margin:18px 0 22px; background:#f8fafc; border:1px solid var(--pro-line,#e6ebf2);
+    border-left:3px solid #6366f1; border-radius:10px; padding:12px 15px; font-size:13px; color:#475569; line-height:1.6; }
+.tc-ov-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px; }
+.tc-ov-tile { background:var(--pro-soft,#f7f9fc); border:1px solid var(--pro-line,#e6ebf2); border-radius:12px;
+    padding:14px 16px; font-size:12.5px; font-weight:600; color:#64748b; }
+.tc-ov-tile span { display:block; font-size:24px; font-weight:800; color:var(--pro-ink,#0f172a); margin-bottom:2px; }
+.tc-ov h2 { margin:26px 0 10px; font-size:15px; font-weight:800; color:var(--pro-ink,#0f172a); }
+.tc-ov-empty { color:#94a3b8; font-size:13.5px; margin:0 0 8px; }
+.tc-ov-table { width:100%; border-collapse:collapse; }
+.tc-ov-table th { text-align:left; font:700 11.5px system-ui,sans-serif; color:#94a3b8; text-transform:uppercase;
+    letter-spacing:.04em; padding:8px 10px; border-bottom:1px solid var(--pro-line,#e6ebf2); white-space:nowrap; }
+.tc-ov-table td { padding:10px; border-bottom:1px solid var(--pro-line,#eef2f7); font-size:13.5px;
+    color:var(--pro-ink,#1e293b); vertical-align:top; }
+.tc-ov-table th.n, .tc-ov-table td.n { text-align:right; white-space:nowrap; }
+.tc-ov-table tbody tr:hover { background:var(--pro-soft,#f8fafc); }
+.tc-ov-icon { display:inline-block; width:22px; }
+.tc-ov-sub { color:#94a3b8; font-size:12px; margin-top:2px; }
+.tc-ov-members { color:#475569; font-size:12.5px; max-width:340px; }
+.tc-ov-quiet td { color:#94a3b8; }
+.tc-ov-role { font:700 11px system-ui,sans-serif; color:#64748b; background:var(--pro-soft,#f1f5f9);
+    padding:3px 8px; border-radius:999px; }
+.tc-ov-on { font-weight:700; color:#16a34a; }
+.tc-ov-flag { display:inline-block; font:700 11px system-ui,sans-serif; color:#b45309; background:#fef3c7;
+    padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.tc-ov-flag.soft { color:#64748b; background:var(--pro-soft,#f1f5f9); }

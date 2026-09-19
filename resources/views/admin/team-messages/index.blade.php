@@ -37,6 +37,13 @@
                 <button type="button" class="tc-newgroup" id="tcNewGroup" title="New group" aria-label="New group">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 </button>
+                {{-- Owner's overview. Rendered ONLY for the super admin — a VA's page never
+                     contains this markup at all, so it can't be found by poking around. --}}
+                @if ($me->role === 'super')
+                    <a href="{{ route('admin.team-messages.overview') }}" class="tc-newgroup" title="Chat overview" aria-label="Chat overview">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </a>
+                @endif
                 <a href="{{ route('admin.logout') }}" class="tc-newgroup tc-logout" title="Sign out" aria-label="Sign out">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </a>

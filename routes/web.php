@@ -182,6 +182,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('team-messages/presence', [Admin\TeamMessageController::class, 'presence'])->name('team-messages.presence');
             Route::get('team-messages/notifications', [Admin\TeamMessageController::class, 'notifications'])->name('team-messages.notifications');
         });
+        // The owner's read-only view of the whole chat (who talks to whom, how much, which
+        // groups exist) — super admin ONLY, and it never shows message content. Registered
+        // before the team-messages/{message} wildcard, like the other literal routes.
+        Route::get('team-messages/overview', [Admin\TeamChatOverviewController::class, 'index'])
+            ->middleware('admin.super')->name('team-messages.overview');
         Route::get('team-messages/csrf', [Admin\TeamMessageController::class, 'csrf'])->name('team-messages.csrf');
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
         Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');

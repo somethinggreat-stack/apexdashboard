@@ -35,6 +35,14 @@ class LogActivity
         'admin.prospects.mark-interested' => 'Marked a lead interested',
         'admin.prospects.mark-lost'    => 'Marked a lead lost',
         'admin.prospects.reactivate'   => 'Reactivated a lead',
+        // Team Chat — group lifecycle only. Deliberately NOT every message sent: that would
+        // be hundreds of rows a day and would bury the client/document actions this log is for.
+        // Who talked to whom lives on the chat overview page instead.
+        'admin.team-messages.group.store'          => 'Created a chat group',
+        'admin.team-messages.group.rename'         => 'Renamed a chat group',
+        'admin.team-messages.group.members.add'    => 'Added someone to a chat group',
+        'admin.team-messages.group.members.remove' => 'Removed someone from a chat group',
+        'admin.team-messages.group.leave'          => 'Left a chat group',
         // Extra projects (funnels / customer support / ads)
         'admin.extra.store'            => 'Added an extra project',
         'admin.extra.update'           => 'Updated an extra project',

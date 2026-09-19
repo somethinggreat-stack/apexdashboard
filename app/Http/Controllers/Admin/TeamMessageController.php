@@ -31,7 +31,7 @@ class TeamMessageController extends Controller
      * through it, and it is handed to the page as `tz` so the browser formats the same way
      * instead of following whatever the PC's clock happens to be set to.
      */
-    private const TZ = 'Asia/Karachi';
+    public const TZ = 'Asia/Karachi';
 
     private const GROUP_ICONS = ['💬', '🚀', '🔥', '⭐', '📁', '🎯', '💼', '📣'];
 

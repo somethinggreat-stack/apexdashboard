@@ -288,6 +288,18 @@ Team Chat ran on `America/New_York` server-side while the browser formatted its 
 - Covered by `TeamChatTimezoneTest` (5 tests, all pinned to an instant where Pakistan and New York are on different days, so a revert fails loudly) and browser suite `phase10`, which runs Chromium in a timezone that is on a different **date** from Pakistan and asserts the stamps, the day separator and the Photos headings all still say Pakistan.
 - **Not changed:** `Admin\TaskController` and `Client\TaskController` still use `America/New_York` (Daily Task / EOD surfaces). The user scoped this to Team Chat.
 
+### Owner controls — Step 1 of 4: the chat overview (2026-09-19)
+The super admin had **no elevated powers in Team Chat at all** — not one chat route checked the role, so inside the chat the owner was just another participant: unable to see a group they weren't added to, unable to delete anyone else's message, with no picture of who talks to whom. (On the dashboard, `admin.super` guards a dozen route groups; the chat had none.) The owner asked for four steps: **1. see everything · 2. act · 3. announce · 4. keep records.** Step 1 is built.
+
+- `GET admin/team-messages/overview` → `Admin\TeamChatOverviewController`, `->middleware('admin.super')`. It sits under `admin/team-messages`, so `ChatHostGuard` serves it on the chat host and `ChatAppOnly` keeps it inside the desktop app, with no change to either guard. Registered before the `team-messages/{message}` wildcard.
+- **Two promises, both tested** (`TeamChatOverviewTest`, 9 tests + browser suite `phase11`):
+  1. **Metadata only.** Groups (including ones the owner isn't in, flagged "You're not in this group"), DM pairs, per-person activity, counts, sizes and times. **No message bodies, no previews, no file names.** Notes-to-self threads are skipped entirely (`dm_key` starting `self:`).
+  2. **Invisible to the team.** The owner explicitly asked that no VA can tell what they see. The page is read-only: `test_opening_it_changes_nothing_a_va_could_notice` snapshots every participant row, message row and conversation row and asserts they are byte-identical after the request. Nothing joins a conversation, marks anything read, writes a system message or touches a watermark. The entry button is inside `@if ($me->role === 'super')`, so a VA's HTML never contains it — not hidden with CSS.
+- **The owner chose NOT to read message content between VAs.** Step 1 was designed to that decision; don't quietly widen it later.
+- Group lifecycle (create/rename/add/remove/leave) now writes to the existing activity log, which lives inside the `admin.super` route group and so is invisible to VAs. **Message sends are deliberately NOT logged** — hundreds of rows a day would bury the client/document actions the log exists for; who-talked-to-whom belongs on the overview instead.
+- `TeamMessageController::TZ` became `public` so the overview shares the one timezone source (rule 17).
+- Still to build: Step 2 (act — delete any message, manage any group, remove a leaver from everything), Step 3 (announce to everyone + who has read it), Step 4 (export before the 7-day purge + files view). **Retention caps all of it at 7 days.**
+
 ---
 
 ## 11. Bugs & fixes worth remembering
@@ -346,7 +358,8 @@ Team Chat ran on `America/New_York` server-side while the browser formatted its 
 14. **The desktop window must never point straight at a remote URL.** It opens on the bundled waiting room, which is the only thing standing between a VA with slow wifi and WebView2's dead error page. Keep a working plain `<a>` in that page's HTML so a scripting failure can never strand someone on a blank app.
 15. **Anything that can change who a message notifies AFTER it was sent needs a time watermark, not an id one.** The notification poll is id-ordered and only moves forward; `mAfter`/`mLast` is that second watermark (see §10). Never make it replay old state when the client sends no watermark.
 16. **Any list the chat renders from one request needs a page size AND a way to see past it.** The Files/Photos tabs silently hid everything past the newest 200 for months.
-17. **Every time Team Chat shows is Pakistan time.** Server-side that means going through `TeamMessageController::TZ` — never `format()` on a raw UTC timestamp. Client-side it means passing `timeZone: TZ` (from the page's `tz`) to every `toLocale*` call — never `getHours()`, `toDateString()` or a bare `toLocaleTimeString()`, which silently follow the PC's clock. A timestamp that changes with who is reading it is worse than none.
+17. **The owner's surfaces must leave no trace.** Anything built for the super admin's oversight is read-only unless the owner is deliberately acting (Step 2). It must never join a conversation, mark something read, move a watermark or post a system message as a side effect of *looking* — the team would see the oversight from their own screens. Snapshot-compare the VA-visible tables in the test, as `TeamChatOverviewTest` does.
+18. **Every time Team Chat shows is Pakistan time.** Server-side that means going through `TeamMessageController::TZ` — never `format()` on a raw UTC timestamp. Client-side it means passing `timeZone: TZ` (from the page's `tz`) to every `toLocale*` call — never `getHours()`, `toDateString()` or a bare `toLocaleTimeString()`, which silently follow the PC's clock. A timestamp that changes with who is reading it is worse than none.
 
 ---
 
