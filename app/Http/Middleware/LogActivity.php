@@ -43,6 +43,12 @@ class LogActivity
         'admin.team-messages.group.members.add'    => 'Added someone to a chat group',
         'admin.team-messages.group.members.remove' => 'Removed someone from a chat group',
         'admin.team-messages.group.leave'          => 'Left a chat group',
+        // Owner-only actions — rare, and exactly the ones worth a permanent record.
+        'admin.team-messages.group.join'           => 'Joined a chat group as the owner',
+        'admin.team-messages.people.remove-everywhere' => 'Removed someone from every chat group',
+        // NOTE: message deletion is not listed here on purpose — that would also record every
+        // VA hiding a message for themselves. The owner removing someone else's message is
+        // logged explicitly in TeamMessageController::destroy(), with who and where.
         // Extra projects (funnels / customer support / ads)
         'admin.extra.store'            => 'Added an extra project',
         'admin.extra.update'           => 'Updated an extra project',

@@ -759,3 +759,24 @@
 .tc-ov-flag { display:inline-block; font:700 11px system-ui,sans-serif; color:#b45309; background:#fef3c7;
     padding:3px 9px; border-radius:999px; white-space:nowrap; }
 .tc-ov-flag.soft { color:#64748b; background:var(--pro-soft,#f1f5f9); }
+/* Owner actions on the overview (step 2) — deliberate, visible acts, styled as such. */
+.tc-ov-act { white-space:nowrap; }
+.tc-ov-act form { display:inline; margin-left:6px; }
+.tc-ov-btn { display:inline-block; border:0; cursor:pointer; font:600 12px system-ui,sans-serif;
+    padding:6px 12px; border-radius:8px; text-decoration:none; color:#fff;
+    background:linear-gradient(135deg,#6366f1,#7c3aed); }
+.tc-ov-btn:hover { filter:brightness(1.06); }
+.tc-ov-btn.ghost { background:var(--pro-soft,#f1f5f9); color:#475569; }
+.tc-ov-btn.danger { background:#fee2e2; color:#b91c1c; }
+.tc-ov-btn.danger:hover { background:#fecaca; }
+.tc-ov-done { margin:16px 0 0; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46;
+    border-radius:10px; padding:11px 15px; font-size:13.5px; font-weight:600; }
+/* Announcements + files view (steps 3 and 4). */
+.tc-ov-headacts { display:flex; gap:8px; align-items:center; flex:none; }
+.tc-ov-announce { display:flex; gap:10px; align-items:flex-end; margin-bottom:14px; }
+.tc-ov-announce textarea { flex:1; resize:vertical; min-height:62px; padding:11px 13px; font:14px/1.5 system-ui,sans-serif;
+    color:var(--pro-ink,#0f172a); background:var(--pro-surface,#fff);
+    border:1px solid var(--pro-line,#e6ebf2); border-radius:10px; }
+.tc-ov-announce textarea:focus { outline:none; border-color:#a5b4fc; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+.tc-ov-announce button { flex:none; padding:11px 18px; font-size:13px; }
+.tc-ov-anns .tc-ov-anntext { max-width:420px; color:#475569; }

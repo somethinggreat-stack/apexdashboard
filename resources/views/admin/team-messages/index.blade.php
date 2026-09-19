@@ -693,6 +693,9 @@
     var DL_SVG = '<svg class="tc-att-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
     var BASE = STORE, REACT = BASE + '/react', FORWARD = BASE + '/forward';
     var PEER_NAME = @js($active && $active->isGroup() ? '' : ($peer->full_name ?? ''));
+    // The owner may remove anyone's message, not just their own. The server enforces this; the
+    // flag only decides whether the option is offered. It is never rendered for a VA.
+    var IS_OWNER = @js($me->role === 'super');
 
     // ---------- Time ----------
     // Team Chat is on Pakistan time, always. Every stamp the SERVER renders is already in it
@@ -2165,7 +2168,8 @@
         var nameEl = el.querySelector('.tc-sender-name');
         menuMsg = { id: parseInt(el.dataset.id, 10), mine: el.classList.contains('mine'),
                     text: txtEl ? txtEl.textContent : '', author: nameEl ? nameEl.textContent : '' };
-        menu.querySelector('[data-act="delete"]').hidden = !menuMsg.mine;
+        // The owner can remove anyone's message; everyone else only their own.
+        menu.querySelector('[data-act="delete"]').hidden = !(menuMsg.mine || IS_OWNER);
         var editItem = menu.querySelector('[data-act="edit"]');
         if (editItem) editItem.hidden = !(menuMsg.mine && menuMsg.text && menuMsg.text.trim());
         var pinLbl = menu.querySelector('[data-pin-label]');
@@ -2568,7 +2572,7 @@
     function delMsg(){
         if (!menuMsg) return;
         var id = menuMsg.id, mine = menuMsg.mine;
-        window.tcDelete(mine).then(function (mode) {
+        window.tcDelete(mine || IS_OWNER).then(function (mode) {
             if (!mode) return;
             postJson(BASE + '/' + id, { mode: mode }, 'DELETE').then(function (res) {
                 if (!res || !res.ok) return;

@@ -20,4 +20,4 @@ Phase 9 covers the Files/Photos tabs paging past one page of shared files, and a
 
 Phase 10 checks that Team Chat shows Pakistan time whatever the PC's clock says. It runs Chromium in a timezone that is on a different calendar *date* from Pakistan at that moment (Kiritimati or Midway, whichever differs), then asserts the message stamp, the sidebar row time, the day separator and the Photos tab's date headings all still read Pakistan.
 
-Phase 11 covers the owner's chat overview: a VA is offered no button and is refused the address outright, while the super admin reaches it from the chat and sees groups they were never added to — with no message text on the page.
+Phase 11 covers all four owner-control steps: a VA is offered no button and is refused the address outright, while the super admin reaches it from the chat and sees groups they were never added to — with no message text on the page. It also sends a real announcement and checks the read count appears, opens the files page, and has the owner remove a VA's message and confirms the sender is told who removed it.

@@ -635,7 +635,9 @@ class TeamMessageController extends Controller
         // Permissions are still enforced server-side on every add/remove/rename call.
         $groupData = null;
         if ($isGroup) {
-            $iAmAdmin = optional($members->firstWhere('admin_id', $me->id))->role === 'admin';
+            // The owner manages every group in their org, whether or not anyone made them admin.
+            $iAmAdmin = optional($members->firstWhere('admin_id', $me->id))->role === 'admin'
+                || $this->ownsOrg($me, $active);
             $groupData = [
                 'id'      => $active->id,
                 'name'    => $active->name,
@@ -1261,17 +1263,25 @@ class TeamMessageController extends Controller
     public function destroy(Request $request, TeamMessage $message)
     {
         $me = Auth::guard('admin')->user();
-        abort_unless($this->isParticipant($me, $message->conversation_id), 403);
+        $conv = $message->conversation;
+        // The owner can reach a message anywhere in their own org — that is the whole point of
+        // being able to pull a client's details out of the wrong chat without asking the person
+        // who posted it. Everyone else must be in the conversation.
+        $owner = $conv && $this->ownsOrg($me, $conv);
+        abort_unless($owner || $this->isParticipant($me, $message->conversation_id), 403);
 
-        // "Delete for me" — hide it for just this person; anyone can do it.
+        // "Delete for me" — hide it for just this person; anyone in the conversation can do it.
         if ($request->input('mode') === 'me') {
+            abort_unless($this->isParticipant($me, $message->conversation_id), 403);
             $message->hiddenFor()->syncWithoutDetaching([$me->id]);
 
             return response()->json(['ok' => true, 'mode' => 'me', 'id' => $message->id]);
         }
 
-        // "Delete for everyone" — only the sender, and never a system message.
-        abort_unless($message->sender_id === $me->id && ! $message->isSystem(), 403);
+        // "Delete for everyone" — the sender, or the owner of the org. Never a system message.
+        // `deleted_by` is stamped below, so the bubble reads "deleted by <name>" rather than
+        // quietly vanishing: silent removals by the boss are what make a team tool feel unsafe.
+        abort_unless(($owner || $message->sender_id === $me->id) && ! $message->isSystem(), 403);
 
         foreach ($message->attachments as $att) {
             Storage::disk('private')->delete($att->disk_path);
@@ -1284,6 +1294,22 @@ class TeamMessageController extends Controller
             // and could never be unpinned, because pinning refuses deleted messages).
             'pinned_at' => null, 'pinned_by' => null,
         ])->save();
+
+        // The owner removing somebody else's message is exactly the kind of thing that should
+        // leave a permanent record — of who, and where. (A person deleting their own message
+        // is not logged; that would just be noise.)
+        if ($owner && $message->sender_id !== $me->id) {
+            \App\Models\ActivityLog::create([
+                'admin_id'    => $me->id,
+                'action'      => 'admin.team-messages.destroy',
+                'description' => 'Removed a chat message from ' . (optional($message->sender)->full_name ?? 'someone')
+                    . ' in ' . ($conv->isGroup() ? '“' . $conv->name . '”' : 'a direct chat'),
+                'method'      => $request->method(),
+                'path'        => '/' . ltrim($request->path(), '/'),
+                'subject'     => null,
+                'ip'          => $request->ip(),
+            ]);
+        }
 
         return response()->json(['ok' => true, 'mode' => 'everyone', 'id' => $message->id]);
     }
@@ -1629,6 +1655,104 @@ class TeamMessageController extends Controller
         return $request->wantsJson() ? response()->json(['ok' => true]) : back();
     }
 
+    /**
+     * Say one thing to the whole team at once (super admin only).
+     *
+     * A copy goes into each person's direct chat with the owner rather than into some new
+     * "announcements" channel: that is where they already look, and it means unread badges,
+     * desktop notifications and read watermarks all work with no new machinery. Every copy
+     * carries the same `announcement_id`, which is how the overview can later say who has read
+     * it — see TeamChatOverviewController.
+     */
+    public function announce(Request $request)
+    {
+        $me = Auth::guard('admin')->user();
+        abort_unless($me->role === 'super', 403);
+
+        $data = $request->validate(['body' => ['required', 'string', 'max:5000']]);
+        $body = trim($data['body']);
+        abort_if($body === '', 422);
+
+        $announcementId = (string) Str::uuid();
+        $sentTo = [];
+
+        foreach ($this->teammates($me)->get() as $mate) {
+            $conv = $this->findOrCreateDm($me, $mate);
+            $this->serializedSend($me, function () use ($conv, $me, $body, $announcementId) {
+                $msg = TeamMessage::create([
+                    'conversation_id' => $conv->id,
+                    'type'            => 'text',
+                    'sender_id'       => $me->id,
+                    'body'            => $body,
+                    'announcement_id' => $announcementId,
+                ]);
+                $this->touchConversation($conv, $msg);
+
+                return $msg;
+            });
+            $sentTo[] = $mate->full_name;
+        }
+
+        return $request->wantsJson()
+            ? response()->json(['ok' => true, 'sent' => count($sentTo), 'announcement_id' => $announcementId])
+            : back()->with('status', 'Announcement sent to ' . count($sentTo) . ' teammate(s).');
+    }
+
+    /**
+     * The owner joins a group they were never added to (super admin only).
+     *
+     * This is deliberately a visible, deliberate act — the group sees "X joined the group",
+     * exactly as it would for anyone else. Looking at the overview is invisible; stepping INTO
+     * a conversation is not, and shouldn't be.
+     */
+    public function joinGroup(Request $request, Conversation $conversation)
+    {
+        $me = Auth::guard('admin')->user();
+        abort_unless($conversation->isGroup(), 404);
+        abort_unless($this->ownsOrg($me, $conversation), 403);
+
+        if (! $this->isParticipant($me, $conversation->id)) {
+            $conversation->participants()->create(['admin_id' => $me->id, 'role' => 'admin', 'joined_at' => now()]);
+            $this->system($conversation, $me, $me->full_name . ' joined the group');
+        }
+
+        return $request->wantsJson()
+            ? response()->json(['ok' => true, 'conversation_id' => $conversation->id])
+            : redirect()->route('admin.team-messages.index', ['c' => $conversation->id, 'standalone' => 1]);
+    }
+
+    /**
+     * Take someone out of every group in the org at once — the offboarding button. Their direct
+     * chats are left alone: a DM is a pair, there is nothing to remove them from, and deleting
+     * one would destroy the other person's history too.
+     */
+    public function removeEverywhere(Request $request, Admin $admin)
+    {
+        $me = Auth::guard('admin')->user();
+        abort_unless($me->role === 'super' && $admin->dataOwnerId() === $me->dataOwnerId(), 403);
+        abort_if($admin->id === $me->id, 422);
+
+        $groups = Conversation::where('data_owner_id', $me->dataOwnerId())
+            ->where('type', 'group')
+            ->whereHas('participants', fn ($q) => $q->where('admin_id', $admin->id))
+            ->get();
+
+        foreach ($groups as $conv) {
+            $conv->participants()->where('admin_id', $admin->id)->delete();
+            $this->system($conv, $me, $me->full_name . ' removed ' . $admin->full_name);
+
+            // Never leave a group with members but no admin.
+            $conv->load('participants');
+            if ($conv->participants->isNotEmpty() && ! $conv->participants->contains('role', 'admin')) {
+                $conv->participants()->orderBy('id')->first()?->update(['role' => 'admin']);
+            }
+        }
+
+        return $request->wantsJson()
+            ? response()->json(['ok' => true, 'groups' => $groups->count()])
+            : back()->with('status', $admin->full_name . ' was removed from ' . $groups->count() . ' group(s).');
+    }
+
     public function leaveGroup(Request $request, Conversation $conversation)
     {
         $me = Auth::guard('admin')->user();
@@ -1962,9 +2086,25 @@ class TeamMessageController extends Controller
         abort_unless($conv->data_owner_id === $me->dataOwnerId() && $this->isParticipant($me, $conv->id), 403);
     }
 
+    /**
+     * The owner of this org's data — the super admin. They run every group in their own org,
+     * including ones they were never added to, so a group can't end up with nobody able to fix
+     * it. Deliberately NOT used for reading: the owner still can't open a thread they aren't in.
+     */
+    private function ownsOrg(Admin $me, Conversation $conv): bool
+    {
+        return $me->role === 'super' && $conv->data_owner_id === $me->dataOwnerId();
+    }
+
     private function authorizeGroupAdmin(Admin $me, Conversation $conv): void
     {
         abort_unless($conv->isGroup(), 404);
+        abort_unless($conv->data_owner_id === $me->dataOwnerId(), 403);
+
+        if ($this->ownsOrg($me, $conv)) {
+            return;
+        }
+
         $this->authorizeParticipant($me, $conv);
         $part = $conv->participants()->where('admin_id', $me->id)->first();
         abort_unless($part && $part->role === 'admin', 403);

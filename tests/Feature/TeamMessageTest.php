@@ -294,8 +294,9 @@ class TeamMessageTest extends TestCase
             ->postJson('/admin/team-messages/react', ['message_id' => $theirs->id, 'emoji' => '👍'])
             ->assertOk()->assertJsonPath('reactions.0.emoji', '👍');
 
-        // Only the sender may delete their message.
-        $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $theirs->id)->assertForbidden();
+        // Only the sender may delete their own message — and, since the owner controls step 2,
+        // the super admin may remove anyone's (see TeamChatOwnerControlsTest).
+        $this->actingAs($va, 'admin')->deleteJson('/admin/team-messages/' . $mine->id)->assertForbidden();
         $this->actingAs($this->super, 'admin')->deleteJson('/admin/team-messages/' . $mine->id)->assertOk();
         $this->assertNotNull($mine->fresh()->deleted_at);
     }
@@ -382,13 +383,15 @@ class TeamMessageTest extends TestCase
         $this->assertSame($this->super->id, $m->fresh()->deleted_by);
     }
 
-    public function test_cannot_delete_someone_elses_message_for_everyone(): void
+    public function test_a_va_cannot_delete_someone_elses_message_for_everyone(): void
     {
         $va = $this->va();
         $c  = $this->dm($va, $this->super);
-        $m  = $this->msg($c, $va, ['body' => 'theirs']);
+        $m  = $this->msg($c, $this->super, ['body' => 'the owner wrote this']);
 
-        $this->actingAs($this->super, 'admin')
+        // The owner IS allowed to (that is step 2, covered in TeamChatOwnerControlsTest);
+        // nobody else is, not even in a conversation they are part of.
+        $this->actingAs($va, 'admin')
             ->deleteJson('/admin/team-messages/' . $m->id, ['mode' => 'everyone'])->assertForbidden();
     }
 

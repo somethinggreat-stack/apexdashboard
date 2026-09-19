@@ -185,8 +185,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // The owner's read-only view of the whole chat (who talks to whom, how much, which
         // groups exist) — super admin ONLY, and it never shows message content. Registered
         // before the team-messages/{message} wildcard, like the other literal routes.
-        Route::get('team-messages/overview', [Admin\TeamChatOverviewController::class, 'index'])
-            ->middleware('admin.super')->name('team-messages.overview');
+        Route::middleware('admin.super')->group(function () {
+            Route::get('team-messages/overview', [Admin\TeamChatOverviewController::class, 'index'])->name('team-messages.overview');
+            // Step 4 — the compliance surfaces: every file that has gone out, and a saved copy
+            // of a conversation before the 7-day purge takes it.
+            Route::get('team-messages/overview/files', [Admin\TeamChatOverviewController::class, 'files'])->name('team-messages.overview.files');
+            Route::get('team-messages/overview/export/{conversation}', [Admin\TeamChatOverviewController::class, 'export'])->name('team-messages.overview.export');
+            // Step 3 — one message to the whole team.
+            Route::post('team-messages/announce', [Admin\TeamMessageController::class, 'announce'])->name('team-messages.announce');
+        });
         Route::get('team-messages/csrf', [Admin\TeamMessageController::class, 'csrf'])->name('team-messages.csrf');
         Route::post('team-messages/typing', [Admin\TeamMessageController::class, 'typing'])->name('team-messages.typing');
         Route::post('team-messages/notify', [Admin\TeamMessageController::class, 'notify'])->name('team-messages.notify');
@@ -206,6 +213,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('team-messages/group/{conversation}/members/{admin}', [Admin\TeamMessageController::class, 'removeMember'])->name('team-messages.group.members.remove');
         Route::post('team-messages/group/{conversation}/leave', [Admin\TeamMessageController::class, 'leaveGroup'])->name('team-messages.group.leave');
         Route::post('team-messages/group/{conversation}/rename', [Admin\TeamMessageController::class, 'renameGroup'])->name('team-messages.group.rename');
+        // Owner-only actions (step 2). Joining is a visible act — the group is told — so these
+        // are separate from the read-only overview above.
+        Route::post('team-messages/group/{conversation}/join', [Admin\TeamMessageController::class, 'joinGroup'])
+            ->middleware('admin.super')->name('team-messages.group.join');
+        Route::post('team-messages/people/{admin}/remove-everywhere', [Admin\TeamMessageController::class, 'removeEverywhere'])
+            ->middleware('admin.super')->name('team-messages.people.remove-everywhere');
         Route::get('team-messages/gallery', [Admin\TeamMessageController::class, 'gallery'])->name('team-messages.gallery');
         Route::put('team-messages/{message}', [Admin\TeamMessageController::class, 'update'])->name('team-messages.update');
         Route::delete('team-messages/{message}', [Admin\TeamMessageController::class, 'destroy'])->name('team-messages.destroy');

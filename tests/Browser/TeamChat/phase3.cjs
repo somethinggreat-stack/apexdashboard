@@ -106,7 +106,16 @@ const ticksBlue = p => p.evaluate(() => [...document.querySelectorAll('#tcMessag
     const focusState = await sup.evaluate(() => ({ hidden: document.hidden, focus: document.hasFocus() }));
 
     const sent = (await sendApi(abid, { recipient_id: SUPER_ID, body: 'sent-while-you-were-away' })).message.id;
-    await sleep(9000);
+    // Wait for the badge to actually arrive rather than guessing. While the window is not
+    // focused the unread poll deliberately slows to every 10s (one of the server-load fixes),
+    // so a fixed 9s sleep raced it and failed roughly every run for a behaviour that was fine.
+    await sup.waitForFunction(n => {
+      const shown = [...document.querySelectorAll('#tcMessages .tc-text')]
+        .some(e => e.textContent.trim() === 'sent-while-you-were-away');
+      const row = [...document.querySelectorAll('a.tc-contact')]
+        .find(a => a.querySelector('.tc-c-name')?.textContent.trim() === n);
+      return shown && (window.__notifs || []).length > 0 && !!(row && row.querySelector('[data-badge]'));
+    }, 'Abid Hussain', { timeout: 40000 }).catch(() => {});   // a timeout still runs the checks below, with detail
 
     const away = {
       readUpTo: await readUpTo(abid, ABID_CONV),          // what the SENDER sees (blue ticks)

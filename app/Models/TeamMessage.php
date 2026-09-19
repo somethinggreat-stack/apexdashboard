@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TeamMessage extends Model
 {
-    protected $fillable = ['conversation_id', 'type', 'sender_id', 'client_uuid', 'recipient_id', 'reply_to_id', 'body', 'reactions', 'forwarded', 'read_at'];
+    protected $fillable = ['conversation_id', 'type', 'sender_id', 'client_uuid', 'recipient_id', 'reply_to_id', 'body', 'reactions', 'forwarded', 'read_at', 'announcement_id'];
 
     protected $casts = [
         'read_at'    => 'datetime',
