@@ -26,6 +26,8 @@ Route::middleware(['jarvis.token', 'throttle:jarvis'])
         Route::get('health', [JarvisController::class, 'health'])->name('health');
         Route::get('summary', [JarvisController::class, 'summary'])->name('summary');
         Route::get('alerts', [JarvisController::class, 'alerts'])->name('alerts');
+        // The screen Umair actually works from, mirrored exactly.
+        Route::get('needs-attention', [JarvisController::class, 'needsAttention'])->name('needs-attention');
 
         // --- the work ---
         Route::get('end-users', [JarvisController::class, 'endUsers'])->name('end-users');

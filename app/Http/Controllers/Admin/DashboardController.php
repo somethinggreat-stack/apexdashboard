@@ -15,64 +15,24 @@ class DashboardController extends Controller
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
 
-        // Active owners only — inactive business owners are excluded from every
-        // dashboard figure (Needs Attention, balances, payment totals, stats).
-        $clients = Client::forAdmin($ownerId)
-            ->active()
-            ->withCount('endUsers')
-            ->orderBy('business_name')
-            ->get();
+        // Needs Attention and Business Owner Balances both come from ONE place now:
+        // App\Services\OwnerSnapshot. They used to be computed here, and the JARVIS
+        // API computed them again slightly differently — $20 outstanding against this
+        // screen's $5,414, 112 overdue against 195. A figure with one implementation
+        // cannot drift from itself, so the API calls exactly this.
+        $snapshot = \App\Services\OwnerSnapshot::forAdmin(Auth::guard('admin')->user());
 
-        // Load every client of every business owner in ONE query (with the four
-        // week-step counts) and group them in memory, instead of firing a heavy
-        // 4-subquery SELECT per business owner. Same numbers, far fewer round
-        // trips — the old loop was the dashboard's main slowdown.
-        $eusByClient = EndUser::whereIn('client_id', $clients->pluck('id'))
-            ->with('processSteps:id,end_user_id,round,week,step_type,step_date')
-            ->withCount([
-                'processSteps as week1_count' => fn ($q) => $q->where('week', 1),
-                'processSteps as week2_count' => fn ($q) => $q->where('week', 2),
-                'processSteps as week3_count' => fn ($q) => $q->where('week', 3),
-                'processSteps as week4_count' => fn ($q) => $q->where('week', 4),
-            ])
-            ->get()
-            ->groupBy('client_id');
+        $clients   = $snapshot->clients();
+        $attention = $snapshot->attentionRows();
 
-        $attention   = [];
-        $sumPending  = 0;   // new intake awaiting review
-        $sumIncomplete = 0; // incomplete weekly logs
-        $sumOverdue  = 0;   // overdue rounds
-        $payDone     = 0.0;
-        $payPending  = 0.0;
+        $totals        = $snapshot->attentionTotals();
+        $sumPending    = $totals['new'];
+        $sumIncomplete = $totals['incomplete'];
+        $sumOverdue    = $totals['overdue'];
 
-        foreach ($clients as $client) {
-            $eus = $eusByClient->get($client->id, collect());
-
-            $pending    = $eus->where('intake_status', 'pending_review')->count();
-            $active     = $eus->filter(fn ($e) => $e->intake_status !== 'pending_review');
-            $incomplete = $active->filter(fn ($e) => $e->is_incomplete)->count();
-            $overdue    = $active->filter(fn ($e) => $e->days_left_in_round !== null && $e->days_left_in_round < 0)->count();
-
-            $sumPending    += $pending;
-            $sumIncomplete += $incomplete;
-            $sumOverdue    += $overdue;
-
-            if ($pending || $incomplete || $overdue) {
-                $attention[] = [
-                    'client'     => $client,
-                    'pending'    => $pending,
-                    'incomplete' => $incomplete,
-                    'overdue'    => $overdue,
-                    'score'      => $pending + $incomplete + $overdue,
-                ];
-            }
-
-            $totals     = $client->paymentTotals();
-            $payDone    += $totals['done'];
-            $payPending += $totals['pending'];
-        }
-
-        usort($attention, fn ($a, $b) => $b['score'] <=> $a['score']);
+        $balances   = $snapshot->balanceTotals();
+        $payDone    = $balances['collected'];
+        $payPending = $balances['outstanding'];
 
         $totalClients = (int) $clients->sum('end_users_count');
         $activeOwners = $clients->count();

@@ -206,6 +206,19 @@ class JarvisApiTest extends TestCase
         $this->assertStringContainsString('Dominique', $body);
     }
 
+    public function test_a_blank_middle_name_does_not_become_the_word_none(): void
+    {
+        // Intake writes the literal string "None" when the field is left blank; it
+        // reached JARVIS as "Dominique None Johnson" on 104 clients.
+        $e = $this->endUser(['middle_name' => 'None', 'suffix' => 'None']);
+
+        $row = $this->ask('end-users/' . $e->id)->assertOk()->json('data');
+
+        $this->assertSame('Dominique Johnson', $row['name']);
+        // The stored value is left alone — this is a display fix, not a data edit.
+        $this->assertSame('None', $e->fresh()->middle_name);
+    }
+
     public function test_the_client_list_response_carries_no_personal_information(): void
     {
         $this->endUser();

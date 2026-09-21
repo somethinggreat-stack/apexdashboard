@@ -32,6 +32,9 @@ class ClientSelectorController extends Controller
             if ($isSuper) {
                 // Super admin sees per-BO balances instead of Needs Attention
                 // (Needs Attention lives on their Dashboard).
+                // Same figures as the dashboard's Balances panel and the JARVIS API —
+                // all three read Client::paymentTotals() on a FULL model. Handing it a
+                // partially selected model silently zeroes the per-round fees.
                 $totals = $client->paymentTotals();
                 $owes[] = [
                     'client'  => $client,

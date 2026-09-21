@@ -11,10 +11,13 @@
         $naCntNew  = count(array_filter($attention, fn ($a) => $a['pending'] > 0));
         $naCntInc  = count(array_filter($attention, fn ($a) => $a['incomplete'] > 0));
         $naCntOver = count(array_filter($attention, fn ($a) => $a['overdue'] > 0));
-        $naPriority = function ($a) {
-            $w = $a['overdue'] * 3 + $a['pending'] * 2 + $a['incomplete'];
-            return $w >= 45 ? ['Critical', 4] : ($w >= 20 ? ['High', 3] : ($w >= 8 ? ['Medium', 2] : ['Low', 1]));
-        };
+        // The banding lives in App\Services\OwnerSnapshot so this screen and the
+        // JARVIS API show the same word for the same owner. Rows built by that
+        // service already carry it; the closure is the fallback for any caller
+        // that still passes plain rows.
+        $naPriority = fn ($a) => isset($a['priority'])
+            ? [$a['priority'], $a['priority_level']]
+            : \App\Services\OwnerSnapshot::priority($a['pending'], $a['incomplete'], $a['overdue']);
         $nxAccents = ['#4f46e5','#ec4899','#0ea5e9','#10b981','#f59e0b','#8b5cf6','#f97316','#14b8a6','#f43f5e','#3b82f6'];
         $nxAccent = fn ($name) => $nxAccents[abs(crc32($name)) % count($nxAccents)];
     @endphp

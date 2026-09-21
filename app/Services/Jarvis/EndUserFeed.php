@@ -123,10 +123,26 @@ class EndUserFeed
         ];
     }
 
-    /** Names only — never the address, never the contact details. */
+    /**
+     * Names only — never the address, never the contact details.
+     *
+     * Intake stores the literal string "None" in middle_name/suffix when a client
+     * leaves it blank, which reached JARVIS as "Dominique None Johnson" on 104
+     * clients. Stripped for the label only: the stored value is untouched, and
+     * first/last names are never filtered in case someone really is surnamed None.
+     */
     public function name(EndUser $e): string
     {
-        return trim(implode(' ', array_filter([$e->first_name, $e->middle_name, $e->last_name, $e->suffix])));
+        $placeholder = fn ($v) => $v !== null && strcasecmp(trim((string) $v), 'none') !== 0;
+
+        $parts = array_filter([
+            $e->first_name,
+            $placeholder($e->middle_name) ? $e->middle_name : null,
+            $e->last_name,
+            $placeholder($e->suffix) ? $e->suffix : null,
+        ]);
+
+        return trim(implode(' ', $parts));
     }
 
     /**

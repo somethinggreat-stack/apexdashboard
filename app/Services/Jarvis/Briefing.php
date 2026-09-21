@@ -17,30 +17,46 @@ use Illuminate\Support\Carbon;
  */
 class Briefing
 {
-    public function __construct(private EndUserFeed $feed)
-    {
+    public function __construct(
+        private EndUserFeed $feed,
+        private \App\Services\OwnerSnapshot $snapshot,
+    ) {
     }
 
     /** One call, the whole picture. */
     public function summary(): array
     {
-        $rounds = $this->roundsDueCounts();
-        $invoices = $this->outstandingInvoices();
+        // New / Incomplete / Overdue come from the Needs Attention panel itself, not
+        // from a second definition here. They used to be recomputed with a narrower
+        // client set and disagreed with the screen (112 overdue against 195, 4 new
+        // against 1). The panel wins, always.
+        $panel = $this->snapshot->attentionTotals();
+        $balances = $this->snapshot->balanceTotals();
+        $owners = $this->snapshot->balanceRows()->filter(fn ($r) => $r['outstanding'] > 0);
 
         return [
             'as_of'                 => now()->utc()->toIso8601String(),
-            'new_clients'           => EndUser::query()->where('intake_status', 'pending_review')->count(),
+            'new_clients'           => $panel['new'],
+            'incomplete'            => $panel['incomplete'],
+            'owners_requiring_action' => $panel['owners'],
             'new_client_errors'     => EndUser::query()->where('intake_status', 'error')->count(),
             'round_errors'          => EndUser::query()->roundError()->count(),
             'in_progress'           => EndUser::query()->inProgress()->notHeld()->count(),
             'done'                  => EndUser::query()->done()->count(),
             'on_hold'               => EndUser::query()->onHold()->count(),
-            'rounds_due'            => $rounds,
+            'rounds_due'            => [
+                // overdue is the panel's; the other two have no panel equivalent and
+                // are the API's own, off the model's per-owner round clock.
+                'overdue'       => $panel['overdue'],
+                'due_today'     => $this->roundsDueCounts()['due_today'],
+                'due_in_3_days' => $this->roundsDueCounts()['due_in_3_days'],
+            ],
             'no_movement_14d'       => $this->noMovementCount(14),
             'outstanding_invoices'  => [
-                'count'           => $invoices['count'],
-                'total'           => round($invoices['total'], 2),
-                'owners_affected' => $invoices['owners_affected'],
+                'count'           => $owners->count(),
+                'total'           => $balances['outstanding'],
+                'collected_total' => $balances['collected'],
+                'owners_affected' => $owners->count(),
             ],
             'new_leads_7d'          => $this->newLeadsCount(7),
         ];
@@ -128,25 +144,27 @@ class Briefing
         ];
     }
 
-    /** Per-owner outstanding balances. Active owners only — a churned owner isn't chased. */
+    /**
+     * Per-owner balances — delegated straight to the Business Owner Balances panel.
+     *
+     * This used to select only the API's allow-listed columns and then call
+     * paymentTotals() on the result. That method reads compensation_model and the
+     * per-round fee fields, which weren't selected, so it returned 0 for nearly every
+     * owner: $20 total against the panel's $5,414. Calling the right method with a
+     * starved model is indistinguishable from calling the wrong one.
+     */
     public function outstandingByOwner()
     {
-        return Client::query()
-            ->select(Columns::BUSINESS_OWNER)
-            ->where('status', 'active')
-            ->get()
-            ->map(function (Client $c) {
-                $pending = (float) ($c->paymentTotals()['pending'] ?? 0);
-
-                return [
-                    'business_owner_id'   => $c->id,
-                    'business_owner_name' => $c->business_name,
-                    'amount'              => round($pending, 2),
-                    'currency'            => 'USD',
-                    'compensation_model'  => $c->compensation_model ?: 'per_round',
-                ];
-            })
-            ->filter(fn ($r) => $r['amount'] > 0)
+        return $this->snapshot->balanceRows()
+            ->filter(fn ($r) => $r['outstanding'] > 0)
+            ->map(fn ($r) => [
+                'business_owner_id'   => $r['business_owner_id'],
+                'business_owner_name' => $r['business_owner_name'],
+                'amount'              => $r['outstanding'],
+                'collected_total'     => $r['collected'],
+                'currency'            => 'USD',
+                'compensation_model'  => $r['compensation_model'],
+            ])
             ->sortByDesc('amount')
             ->values();
     }

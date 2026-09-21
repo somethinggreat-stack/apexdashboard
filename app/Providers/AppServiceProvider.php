@@ -34,6 +34,17 @@ class AppServiceProvider extends ServiceProvider
         )->by($request->ip()));
 
         /**
+         * OwnerSnapshot needs to know whose console it is describing. The dashboard
+         * passes the signed-in admin; the JARVIS API has no session at all, so an
+         * injected one resolves to the owner (the super admin). Controllers that
+         * mean a specific admin must keep calling OwnerSnapshot::forAdmin($admin).
+         */
+        $this->app->bind(
+            \App\Services\OwnerSnapshot::class,
+            fn () => \App\Services\OwnerSnapshot::forSuperAdmin()
+        );
+
+        /**
          * The pro console is used by the super admin AND VAs, so their pages
          * look identical. Leads agents (sales pipeline only) keep the original
          * layout. Pages without a dedicated pro template still pick up the pro

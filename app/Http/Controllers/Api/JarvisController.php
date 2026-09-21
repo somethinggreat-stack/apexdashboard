@@ -17,8 +17,11 @@ use Illuminate\Support\Facades\DB;
  */
 class JarvisController extends Controller
 {
-    public function __construct(private EndUserFeed $feed, private Briefing $briefing)
-    {
+    public function __construct(
+        private EndUserFeed $feed,
+        private Briefing $briefing,
+        private \App\Services\OwnerSnapshot $snapshot,
+    ) {
     }
 
     /** Is the API up, is the database reachable, and roughly how much is in it. */
@@ -51,9 +54,42 @@ class JarvisController extends Controller
     }
 
     /** What should be noticed without being asked, worst first. */
-    public function alerts()
+    public function alerts(Request $request)
     {
-        return response()->json(['data' => $this->briefing->alerts()]);
+        [$page, $perPage] = $this->paging($request);
+
+        return $this->paginated($this->briefing->alerts(), $page, $perPage);
+    }
+
+    /**
+     * The Needs Attention panel, exactly as the owner's dashboard shows it.
+     *
+     * Every figure here is produced by App\Services\OwnerSnapshot — the same object
+     * the dashboard renders from — including the priority label, which is the literal
+     * string on the screen rather than a second banding that agrees today.
+     */
+    public function needsAttention()
+    {
+        $rows = $this->snapshot->attentionRows();
+
+        return response()->json([
+            'totals' => $this->snapshot->attentionTotals(),
+            'owners' => collect($rows)->map(fn ($r) => [
+                'business_owner_id' => $r['client']->id,
+                'name'              => $r['client']->business_name,
+                'new'               => $r['pending'],
+                'incomplete'        => $r['incomplete'],
+                'overdue'           => $r['overdue'],
+                'priority'          => $r['priority'],
+                // 20- or 30-day owner: "9 days overdue" means different things.
+                'round_cycle_days'  => $r['client']->roundCycleDays(),
+            ])->values(),
+            'meta' => [
+                // Computed live on every call — nothing here is cached.
+                'as_of'  => now()->utc()->toIso8601String(),
+                'source' => 'App\\Services\\OwnerSnapshot — the dashboard Needs Attention panel',
+            ],
+        ]);
     }
 
     /** The client list, filtered. */
@@ -174,7 +210,13 @@ class JarvisController extends Controller
     {
         [$page, $perPage] = $this->paging($request);
 
-        $q = Client::query()->select(Columns::BUSINESS_OWNER);
+        // FULL models, deliberately. paymentTotals() reads compensation_model and the
+        // per-round fee fields; a model selected down to the PII allow-list returns a
+        // confident 0 instead of an error. The balances come from the same panel the
+        // dashboard renders, so the two cannot disagree.
+        $balances = $this->snapshot->balanceRows()->keyBy('business_owner_id');
+
+        $q = Client::query();
 
         if ($status = $request->query('status')) {
             $q->where('status', $status);
@@ -183,10 +225,11 @@ class JarvisController extends Controller
             $q->where('business_name', 'like', '%' . $term . '%');
         }
 
-        $rows = $q->orderBy('business_name')->get()->map(function (Client $c) {
+        $rows = $q->orderBy('business_name')->get()->map(function (Client $c) use ($balances) {
             $counts = EndUser::query()->where('client_id', $c->id)
                 ->selectRaw('status, COUNT(*) as n')->groupBy('status')
                 ->pluck('n', 'status');
+            $bal = $balances->get($c->id);
 
             return [
                 'id'                        => $c->id,
@@ -200,7 +243,8 @@ class JarvisController extends Controller
                     'graduated'  => (int) ($counts['graduated'] ?? 0),
                     'cancelled'  => (int) ($counts['cancelled'] ?? 0),
                 ],
-                'outstanding_invoice_total' => round((float) ($c->paymentTotals()['pending'] ?? 0), 2),
+                'outstanding_invoice_total' => $bal['outstanding'] ?? 0.0,
+                'collected_total'           => $bal['collected'] ?? 0.0,
                 'last_activity_at'          => $this->feed->iso(
                     DB::table('process_steps as ps')
                         ->join('end_users as e', 'e.id', '=', 'ps.end_user_id')
