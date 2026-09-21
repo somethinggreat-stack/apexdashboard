@@ -13,6 +13,10 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // JARVIS — the owner's read-only assistant API. The file registers nothing
+        // at all unless JARVIS_API_TOKEN is set, so an un-configured deploy has no
+        // JARVIS surface to probe.
+        api: __DIR__.'/../routes/api-jarvis.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -24,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.leads'     => \App\Http\Middleware\RoleLeads::class,
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,
             'admin.credentials' => \App\Http\Middleware\RoleCredentials::class,
+            'jarvis.token'    => \App\Http\Middleware\JarvisToken::class,
         ]);
 
         // Defense-in-depth security response headers on every request.

@@ -24,6 +24,10 @@
         <env name="CACHE_STORE" value="array"/>
         <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
         <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <!-- The JARVIS API registers no routes at all without a token, so the suite
+             needs one at boot to have anything to test. JarvisApiTest asserts the
+             no-token case separately. -->
+        <env name="JARVIS_API_TOKEN" value="test-jarvis-token-do-not-use-in-production"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

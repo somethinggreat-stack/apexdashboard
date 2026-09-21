@@ -61,6 +61,19 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        /*
+        | Every JARVIS request lands here and nowhere else — route, filters, when
+        | and from where. The token is NEVER written: see JarvisToken. Its own
+        | file so a read-only assistant's traffic can't drown the app log.
+        */
+        'jarvis' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/jarvis.log'),
+            'level' => 'info',
+            'days' => (int) env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
