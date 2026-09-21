@@ -33,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
             (int) config('jarvis.rate_limit', 60)
         )->by($request->ip()));
 
+        // Mutations get their own, much lower ceiling than reads.
+        RateLimiter::for('jarvis-write', fn (Request $request) => Limit::perMinute(
+            (int) config('jarvis.write_rate_limit', 10)
+        )->by($request->ip()));
+
         /**
          * OwnerSnapshot needs to know whose console it is describing. The dashboard
          * passes the signed-in admin; the JARVIS API has no session at all, so an

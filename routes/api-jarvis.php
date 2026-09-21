@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\JarvisController;
+use App\Http\Controllers\Api\JarvisWriteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,4 +42,29 @@ Route::middleware(['jarvis.token', 'throttle:jarvis'])
         Route::get('team/workload', [JarvisController::class, 'teamWorkload'])->name('team.workload');
         Route::get('leads/recent', [JarvisController::class, 'recentLeads'])->name('leads.recent');
         Route::get('activity', [JarvisController::class, 'activity'])->name('activity');
+    });
+
+/*
+| WRITES — slice 1: buckets and holds. Every one is a proxy to a single-purpose
+| dashboard action that cannot touch a personal field.
+|
+| Off unless JARVIS_WRITES_ENABLED=true: the routes exist, but Mutation::run()
+| refuses with 503, so the kill switch works without a deploy. Their own, much
+| lower rate limit — a stuck loop shouldn't get 60 mutations a minute.
+*/
+Route::middleware(['jarvis.token', 'throttle:jarvis-write'])
+    ->prefix('jarvis/clients')
+    ->name('jarvis.write.')
+    ->group(function () {
+        Route::post('{id}/to-done', [JarvisWriteController::class, 'toDone'])->whereNumber('id')->name('to-done');
+        Route::post('{id}/to-errors', [JarvisWriteController::class, 'toErrors'])->whereNumber('id')->name('to-errors');
+        Route::post('{id}/to-round-error', [JarvisWriteController::class, 'toRoundError'])->whereNumber('id')->name('to-round-error');
+        Route::post('{id}/resolve-round-error', [JarvisWriteController::class, 'resolveRoundError'])->whereNumber('id')->name('resolve-round-error');
+        Route::post('{id}/to-new-clients', [JarvisWriteController::class, 'toNewClients'])->whereNumber('id')->name('to-new-clients');
+        Route::post('{id}/hold', [JarvisWriteController::class, 'hold'])->whereNumber('id')->name('hold');
+        Route::post('{id}/resume', [JarvisWriteController::class, 'resume'])->whereNumber('id')->name('resume');
+        // Clinecea only — results_tracking. Refused plainly for any other owner.
+        Route::post('{id}/request-approval', [JarvisWriteController::class, 'requestApproval'])->whereNumber('id')->name('request-approval');
+        Route::post('{id}/approve-round', [JarvisWriteController::class, 'approveRound'])->whereNumber('id')->name('approve-round');
+        Route::post('{id}/clear-approval', [JarvisWriteController::class, 'clearApproval'])->whereNumber('id')->name('clear-approval');
     });

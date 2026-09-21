@@ -114,24 +114,49 @@ class JarvisApiTest extends TestCase
 
     // ---- rule 1: read-only ---------------------------------------------------------------
 
-    public function test_every_jarvis_route_is_read_only(): void
+    public function test_every_jarvis_read_route_is_read_only(): void
     {
+        // Writes now exist, under api/jarvis/clients/* only. Everything else in the
+        // group must still be GET|HEAD — this is what catches a read endpoint
+        // quietly gaining a write method.
         $offenders = [];
+        $reads = 0;
 
         foreach (Route::getRoutes() as $route) {
             if (! str_starts_with($route->uri(), 'api/jarvis')) {
                 continue;
             }
+            if (str_starts_with($route->uri(), 'api/jarvis/clients/')) {
+                continue;   // the write surface, asserted separately below
+            }
+            $reads++;
             $methods = array_values(array_diff($route->methods(), ['GET', 'HEAD']));
             if ($methods) {
                 $offenders[$route->uri()] = $methods;
             }
         }
 
-        $this->assertSame([], $offenders, 'JARVIS routes must be GET only: ' . json_encode($offenders));
-        $this->assertGreaterThan(0, collect(Route::getRoutes())->filter(
-            fn ($r) => str_starts_with($r->uri(), 'api/jarvis')
-        )->count(), 'no jarvis routes registered — the assertion above would pass vacuously');
+        $this->assertSame([], $offenders, 'JARVIS read routes must be GET only: ' . json_encode($offenders));
+        $this->assertGreaterThan(0, $reads, 'no jarvis read routes registered — the assertion above would pass vacuously');
+    }
+
+    public function test_every_jarvis_write_route_is_a_post_to_a_single_record(): void
+    {
+        $writes = 0;
+
+        foreach (Route::getRoutes() as $route) {
+            if (! str_starts_with($route->uri(), 'api/jarvis/clients/')) {
+                continue;
+            }
+            $writes++;
+
+            // POST only: never a GET a link could trigger, never a DELETE.
+            $this->assertSame(['POST'], array_values(array_diff($route->methods(), ['HEAD'])), $route->uri());
+            // One record per call, so a loop can't hide as a single bulk request.
+            $this->assertStringContainsString('{id}', $route->uri());
+        }
+
+        $this->assertGreaterThan(0, $writes, 'no jarvis write routes registered');
     }
 
     public function test_writing_to_a_jarvis_route_is_refused(): void

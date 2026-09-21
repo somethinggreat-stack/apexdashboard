@@ -1,6 +1,6 @@
 # JARVIS write manifest — v1
 
-**Status: proposal. No write endpoint exists yet.** This document is written first, on purpose:
+**Status: slice 1 SHIPPED (buckets and holds). Everything else still proposal.** This document is written first, on purpose:
 JARVIS classifies each mutation's permission level from this file, and the approval card it shows
 Umair is built from these descriptions. A mutation that cannot be described precisely here is one
 that should not be built.
@@ -106,7 +106,24 @@ returns the before/after diff without committing).
 ⚠ These two read alike and are not alike. Advancing changes which round a client is on and
 credits work; correcting a date changes only a date. The approval cards must not sound the same.
 
-### Buckets and holds — all clean proxies
+### Buckets and holds — all clean proxies — ✅ SHIPPED
+
+`POST /api/jarvis/clients/{id}/...` — all live behind `JARVIS_WRITES_ENABLED` (default off).
+
+Two things learned building them, both now handled:
+
+- **These actions scope through the session**, not the client id. `EndUserController`
+  resolves them with `EndUser::forClient(session('selected_client_id'))`, and that helper checks
+  **only the session value — not whose owner it is**. On the dashboard that's safe because the
+  selector never offers an owner outside your org. The API has no selector, so it sets the
+  session from the target client *and verifies the owner belongs to the assistant's org first*.
+  Without that check, an arbitrary id would reach into another organisation. Covered by
+  `test_a_write_cannot_reach_another_organisations_client`.
+- **`approve-round` does not advance.** Verified in code: it sets `round_approval_status` and a
+  timestamp, nothing else. The `rounds` array is untouched, so no `round_selections` row is
+  written and nobody is credited. `test_approving_a_round_does_not_advance_it` is the alarm if
+  that ever changes.
+
 
 | Endpoint | Class | Changes | Reversibility | Mirrors |
 |---|---|---|---|---|
@@ -118,11 +135,17 @@ credits work; correcting a date changes only a date. The approval cards must not
 | `clients/{id}/hold` | PROXY | Sets `held_at` | `undo-endpoint` (`resume`) | `hold` |
 | `clients/{id}/resume` | PROXY | Clears `held_at` | `undo-endpoint` (`hold`) | `resume` |
 | `clients/{id}/request-approval` | PROXY | `round_approval_status = awaiting` | `undo-endpoint` (`clear-approval`) | `requestRoundApproval` |
-| `clients/{id}/approve-round` | PROXY | Approves the next round | `dashboard-one-action` | `approveRound` |
+| `clients/{id}/approve-round` | PROXY | Sets `round_approval_status = approved`. **Does not advance.** | `undo-endpoint` (`clear-approval`) | `approveRound` |
 | `clients/{id}/clear-approval` | PROXY | Clears the approval park | `dashboard-one-action` | `clearRoundApproval` |
 
-Hold/resume and request/clear-approval are genuine undo pairs — the only true `undo-endpoint`
-states in v1.
+Hold/resume, request-approval and approve-round are all undone by an endpoint —
+`clear-approval` unwinds **either** the awaiting or the approved state, so it is the undo for
+both. Three genuine `undo-endpoint` states in v1.
+
+⚠ **The three approval actions are Clinecea-only.** They go through `resultsScopedEndUser()`,
+which requires `clients.results_tracking`. For any other owner the API returns **409 with a plain
+explanation** rather than a bare 404. `/business-owners` rows now carry `results_tracking` so the
+caller can avoid offering an action that cannot succeed.
 
 ### Process steps, scores
 
@@ -189,10 +212,26 @@ only in the sense that a new link can be issued — the old one is gone for good
 
 ---
 
+## The assistant's account
+
+Umair chose a dedicated account (2026-09-22) so assistant work is visibly separate from human
+work. Created by migration, and three things about it are deliberate:
+
+- **`role = 'system'`, not `super`.** The column *defaults* to `'super'`, and this row is created
+  by code rather than a human filling a form — exactly the case that inherits the default
+  silently, which is the bug that made the read API return `0/0/0/0` with a healthy 200.
+- **Unusable password.** `admins` has no enabled flag, so the only way to make it
+  unauthenticatable is a stored value that is not a hash of anything.
+- **Excluded from Team Chat.** With `parent_admin_id` set to the owner it would otherwise appear
+  in every VA's sidebar as a person to message. `teammates()` now excludes `system`.
+
+Tested: cannot be logged into, is not `super`, never appears as a teammate, and can never be
+resolved as the owner the read API reports on.
+
 ## Build order
 
-1. Infrastructure: kill switch, idempotency, audit actor, preview. Nothing callable yet.
-2. Buckets and holds — all clean proxies, all reversible. The safest possible first slice.
+1. ✅ Infrastructure: kill switch, idempotency, audit actor, preview.
+2. ✅ Buckets and holds — all clean proxies, all reversible. The safest possible first slice.
 3. Process steps and scores.
 4. Money (single payments only).
 5. Owners, documents, notes.

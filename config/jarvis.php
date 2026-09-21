@@ -26,6 +26,21 @@ return [
     */
     'owner_admin_id' => env('JARVIS_OWNER_ADMIN_ID'),
 
+    /*
+    | WRITES ARE OFF BY DEFAULT. Reads keep working when this is false, so the
+    | morning briefing survives switching the assistant's hands off.
+    */
+    'writes_enabled' => (bool) env('JARVIS_WRITES_ENABLED', false),
+
+    // Mutations get their own, much lower limit than reads.
+    'write_rate_limit' => (int) env('JARVIS_WRITE_RATE_LIMIT', 10),
+
+    /*
+    | The account every JARVIS write is attributed to. It owns rows (a round
+    | advance credits an admin); it is not an identity anyone can log in as.
+    */
+    'actor_email' => env('JARVIS_ACTOR_EMAIL', 'jarvis@apexgrowthsolution.local'),
+
     // Requests per minute, per token. Generous for one assistant, useless for a scraper.
     'rate_limit' => (int) env('JARVIS_RATE_LIMIT', 60),
 

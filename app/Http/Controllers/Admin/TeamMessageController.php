@@ -2254,8 +2254,11 @@ class TeamMessageController extends Controller
     {
         $ownerId = $me->dataOwnerId();
 
+        // 'system' is the JARVIS account: it owns rows so the assistant's writes are
+        // credited separately, and it must never appear in anyone's sidebar as a
+        // person to message. 'leads' (sales pipeline) is excluded as before.
         return Admin::where(fn ($q) => $q->where('id', $ownerId)->orWhere('parent_admin_id', $ownerId))
             ->where('id', '!=', $me->id)
-            ->where(fn ($q) => $q->whereNull('role')->orWhere('role', '!=', 'leads'));
+            ->where(fn ($q) => $q->whereNull('role')->orWhereNotIn('role', ['leads', 'system']));
     }
 }

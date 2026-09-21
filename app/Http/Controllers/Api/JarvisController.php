@@ -236,6 +236,10 @@ class JarvisController extends Controller
                 'name'                      => $c->business_name,
                 'status'                    => $c->status,
                 'round_cycle_days'          => $c->roundCycleDays(),
+                // Whether the round-approval workflow is on for this owner. The three
+                // approval endpoints only work where it is, so the consumer can avoid
+                // offering an action that cannot succeed.
+                'results_tracking'          => (bool) $c->results_tracking,
                 'created_at'                => $this->feed->iso($c->created_at),
                 'end_user_counts'           => [
                     'active'     => (int) ($counts['active'] ?? 0),
