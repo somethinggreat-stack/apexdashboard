@@ -50,7 +50,10 @@
                 @endif
                 @if ($appStatus === 'awaiting')
                     <form method="POST" action="{{ route('admin.end-users.approve-round', $endUser->id) }}">@csrf
-                        <button class="btn btn-sm btn-primary">Clinecea approved ✓</button>
+                        {{-- The owner's own name, not a hardcoded one: this panel used to say
+                             "Clinecea approved" for every owner, which was invisible while
+                             Clinecea was the only one with results tracking on. --}}
+                        <button class="btn btn-sm btn-primary">{{ $endUser->client?->business_name ?? 'Owner' }} approved ✓</button>
                     </form>
                 @endif
                 @if ($appStatus)
