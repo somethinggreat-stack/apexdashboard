@@ -54,9 +54,6 @@ class MailboxController extends Controller
             'domain'      => config('cpanel.mail_domain'),
             'quotaMb'     => (int) config('cpanel.quota_mb', 100),
             'webmailUrl'  => $this->webmailUrl(),
-            'remaining'   => $this->remainingToday($me->id),
-            'dailyLimit'  => (int) config('cpanel.daily_limit', 25),
-            'clients'     => $this->clientChoices($ownerId),
             'totalUsedMb' => $this->totalUsedMb($usage),
         ]);
     }
@@ -79,10 +76,6 @@ class MailboxController extends Controller
             'local_part'  => 'nullable|string|max:60',
         ]);
 
-        if ($this->remainingToday($me->id) <= 0) {
-            return back()->withErrors(['mailbox' => 'You have reached today\'s limit of '
-                . config('cpanel.daily_limit') . ' new mailboxes. It resets at midnight.']);
-        }
 
         // A client id is only accepted when it genuinely belongs to this org.
         $endUser = null;
@@ -118,12 +111,10 @@ class MailboxController extends Controller
             'quota_mb'            => $quota,
         ]);
 
-        // Keep the client record in step: this address IS the client's CFPB login
-        // from now on, and nobody should have to retype it. An existing value is
-        // left alone — overwriting it would strand a CFPB account already in use.
-        if ($endUser && blank($endUser->cfpb_email)) {
-            $endUser->forceFill(['cfpb_email' => $mailbox->address])->save();
-        }
+        // NOTHING is written back to the client. A mailbox is attached to a client
+        // only so the list reads sensibly; the client's own record — cfpb_email
+        // included — is left exactly as it was found. Deliberate: this page must
+        // never be able to change client data as a side effect.
 
         return back()->with('status', "Mailbox {$mailbox->address} created.");
     }
@@ -162,7 +153,7 @@ class MailboxController extends Controller
     {
         $base = $requested !== null && trim($requested) !== ''
             ? $this->slug($requested)
-            : $this->slug($endUser?->full_name ?? 'client');
+            : $this->slug(trim(($endUser?->first_name ?? '') . ' ' . ($endUser?->last_name ?? '')));
 
         if ($base === '') {
             $base = 'client';
@@ -217,17 +208,6 @@ class MailboxController extends Controller
         return $out;
     }
 
-    /** How many more this VA may create today. */
-    private function remainingToday(int $adminId): int
-    {
-        $limit = (int) config('cpanel.daily_limit', 25);
-
-        $used = Mailbox::where('created_by_admin_id', $adminId)
-            ->where('created_at', '>=', now()->startOfDay())
-            ->count();
-
-        return max(0, $limit - $used);
-    }
 
     /** Where "Open Webmail" points — the configured URL, else cPanel's own. */
     private function webmailUrl(): string
@@ -248,17 +228,35 @@ class MailboxController extends Controller
     }
 
     /**
-     * Clients this org can attach a mailbox to, newest first. Kept to a sensible
-     * number: the form is a picker, not a directory.
+     * Type-ahead for the create dialog: every client in this organisation, across
+     * ALL business owners, found by first name, last name, middle name, email or
+     * phone in any word order (EndUser::scopeSearch, the same one the universal
+     * search uses). Read-only — it answers a question, it never changes anything.
      */
-    private function clientChoices(int $ownerId)
+    public function searchClients(Request $request)
     {
-        return EndUser::query()
-            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
-            ->select('id', 'first_name', 'last_name', 'cfpb_email', 'client_id')
+        $term = trim((string) $request->query('q', ''));
+
+        if ($term === '') {
+            return response()->json(['results' => []]);
+        }
+
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+
+        $rows = EndUser::whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
+            ->search($term)
             ->with('client:id,business_name')
-            ->orderByDesc('id')
-            ->limit(500)
+            ->orderBy('first_name')
+            ->limit(25)
             ->get();
+
+        return response()->json([
+            'results' => $rows->map(fn (EndUser $e) => [
+                'id'      => $e->id,
+                'name'    => trim($e->first_name . ' ' . $e->last_name),
+                'email'   => $e->email,
+                'bo_name' => $e->client?->business_name,
+            ])->values(),
+        ]);
     }
 }

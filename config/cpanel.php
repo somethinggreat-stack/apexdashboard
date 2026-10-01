@@ -42,12 +42,6 @@ return [
         'accounts', 'accounting', 'care', 'help', 'team', 'mail', 'email',
     ],
 
-    /*
-    | Mailboxes one VA may create per day. Not a restriction on their work —
-    | a stuck loop at 3am should not be able to fill the hosting account's disk.
-    */
-    'daily_limit' => (int) env('CPANEL_MAILBOX_DAILY_LIMIT', 25),
-
     // Where "Open Webmail" points. cPanel serves webmail on 2096 over TLS.
     'webmail_url' => env('CPANEL_WEBMAIL_URL'),
 

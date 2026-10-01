@@ -31,11 +31,8 @@
             </span>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span class="muted" style="font-size:12.5px;">
-                {{ $remaining }} of {{ $dailyLimit }} left today
-            </span>
             <a class="btn btn-sm" href="{{ $webmailUrl }}" target="_blank" rel="noopener">Open Webmail ↗</a>
-            @if ($configured && $remaining > 0)
+            @if ($configured)
                 <button type="button" class="btn btn-primary btn-sm" data-mb-open>+ Create Mailbox</button>
             @endif
         </div>
@@ -151,14 +148,26 @@
                 </p>
 
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Client</label>
-                <select name="end_user_id" style="width:100%; padding:9px 10px; border:1px solid #d7dbe7; border-radius:8px; margin-bottom:14px;">
-                    <option value="">— none (a spare mailbox) —</option>
-                    @foreach ($clients as $c)
-                        <option value="{{ $c->id }}">
-                            {{ $c->full_name }}@if ($c->client) · {{ $c->client->business_name }}@endif @if ($c->cfpb_email) (has {{ $c->cfpb_email }})@endif
-                        </option>
-                    @endforeach
-                </select>
+
+                {{-- Searched, not listed: every client across every business owner, by
+                     name, email or phone. The chosen id rides in the hidden input. --}}
+                <input type="hidden" name="end_user_id" id="mbClientId" value="">
+
+                <div id="mbPicked" style="display:none; align-items:center; gap:8px; padding:8px 10px; border:1px solid #c7d2fe; background:#eef2ff; border-radius:8px; margin-bottom:6px;">
+                    <span id="mbPickedName" style="font-size:13.5px; font-weight:600;"></span>
+                    <span id="mbPickedBo" class="muted" style="font-size:12px;"></span>
+                    <button type="button" id="mbClear" class="btn btn-sm" style="margin-left:auto;">Change</button>
+                </div>
+
+                <div id="mbSearchWrap" style="position:relative; margin-bottom:14px;">
+                    <input type="text" id="mbSearch" autocomplete="off"
+                           placeholder="Search by name, email or phone — leave empty for a spare mailbox"
+                           style="width:100%; padding:9px 10px; border:1px solid #d7dbe7; border-radius:8px;">
+                    <div id="mbResults"
+                         style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:5;
+                                max-height:230px; overflow:auto; background:#fff; border:1px solid #d7dbe7;
+                                border-radius:8px; box-shadow:0 10px 30px rgba(15,23,42,.14);"></div>
+                </div>
 
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">
                     Mailbox name <span class="muted" style="font-weight:400;">— optional</span>
@@ -245,6 +254,98 @@
         modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
     }
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+    // ---------- client type-ahead ----------
+    var SEARCH_URL = @json(route('admin.mailboxes.clients'));
+
+    var input   = document.getElementById('mbSearch');
+    var results = document.getElementById('mbResults');
+    var hidden  = document.getElementById('mbClientId');
+    var picked  = document.getElementById('mbPicked');
+    var pName   = document.getElementById('mbPickedName');
+    var pBo     = document.getElementById('mbPickedBo');
+    var wrap    = document.getElementById('mbSearchWrap');
+    var clear   = document.getElementById('mbClear');
+
+    if (input) {
+        var timer = null, seq = 0;
+
+        function hideResults() { results.style.display = 'none'; results.innerHTML = ''; }
+
+        function choose(row) {
+            hidden.value   = row.id;
+            pName.textContent = row.name;
+            pBo.textContent   = row.bo_name ? '· ' + row.bo_name : '';
+            picked.style.display = 'flex';
+            wrap.style.display   = 'none';
+            hideResults();
+        }
+
+        function unchoose() {
+            hidden.value = '';
+            picked.style.display = 'none';
+            wrap.style.display   = 'block';
+            input.value = '';
+            input.focus();
+        }
+
+        function render(rows) {
+            if (!rows.length) {
+                results.innerHTML = '<div style="padding:10px 12px; font-size:13px; color:#64748b;">No client found.</div>';
+                results.style.display = 'block';
+                return;
+            }
+            results.innerHTML = '';
+            rows.forEach(function (row) {
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.style.cssText = 'display:block; width:100%; text-align:left; padding:9px 12px; border:0; background:none; cursor:pointer; font-size:13px; border-bottom:1px solid #f1f5f9;';
+                // textContent throughout: a client's own name must never be able
+                // to inject markup into this list.
+                var strong = document.createElement('strong');
+                strong.textContent = row.name;
+                var sub = document.createElement('div');
+                sub.style.cssText = 'color:#64748b; font-size:12px; margin-top:1px;';
+                sub.textContent = [row.bo_name, row.email].filter(Boolean).join(' · ');
+                item.appendChild(strong);
+                item.appendChild(sub);
+                item.addEventListener('mouseenter', function () { item.style.background = '#f8fafc'; });
+                item.addEventListener('mouseleave', function () { item.style.background = 'none'; });
+                item.addEventListener('click', function () { choose(row); });
+                results.appendChild(item);
+            });
+            results.style.display = 'block';
+        }
+
+        function search() {
+            var q = input.value.trim();
+            if (q.length < 2) { hideResults(); return; }
+
+            // Only the newest reply is allowed to paint: typing fast otherwise
+            // lets a slower earlier request overwrite a later one.
+            var mine = ++seq;
+
+            fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                })
+                .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+                .then(function (d) { if (mine === seq) render(d.results || []); })
+                .catch(function () { if (mine === seq) hideResults(); });
+        }
+
+        input.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(search, 220);
+        });
+
+        if (clear) clear.addEventListener('click', unchoose);
+
+        // Clicking away closes the list without clearing what was typed.
+        document.addEventListener('click', function (e) {
+            if (wrap && !wrap.contains(e.target)) hideResults();
+        });
+    }
 })();
 </script>
 @endsection

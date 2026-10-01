@@ -172,6 +172,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // business owner needs to be selected: a VA opens this mid-task.
         Route::middleware('admin.mailboxes')->group(function () {
             Route::get('mailboxes', [Admin\MailboxController::class, 'index'])->name('mailboxes.index');
+            // Type-ahead for the create dialog. Literal path, so it is matched before
+            // nothing else claims it; read-only.
+            Route::get('mailboxes/clients', [Admin\MailboxController::class, 'searchClients'])->name('mailboxes.clients');
             Route::post('mailboxes', [Admin\MailboxController::class, 'store'])->name('mailboxes.store');
             Route::delete('mailboxes/{id}', [Admin\MailboxController::class, 'destroy'])
                 ->whereNumber('id')->name('mailboxes.destroy');

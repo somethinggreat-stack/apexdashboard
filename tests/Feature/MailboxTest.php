@@ -38,7 +38,6 @@ class MailboxTest extends TestCase
             'cpanel.token'       => 'test-token',
             'cpanel.mail_domain' => 'apexgrowthsolution.com',
             'cpanel.quota_mb'    => 100,
-            'cpanel.daily_limit' => 25,
         ]);
 
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret-pass', 'full_name' => 'Umair Arshad']);
@@ -133,29 +132,62 @@ class MailboxTest extends TestCase
         });
     }
 
-    public function test_the_new_address_becomes_the_clients_cfpb_login(): void
+    /**
+     * THE guarantee of this page: creating a mailbox must not change one byte of
+     * the client's own record. Asserted over the whole row rather than over
+     * cfpb_email alone, so a future convenience ("while we're here, also set…")
+     * cannot slip in unnoticed.
+     */
+    public function test_creating_a_mailbox_changes_nothing_on_the_client(): void
     {
         $this->fakeOk();
         $endUser = $this->endUser();
-        $this->assertNull($endUser->cfpb_email);
+        $endUser->forceFill(['cfpb_email' => 'untouched@example.com'])->save();
+
+        $before = DB::table('end_users')->where('id', $endUser->id)->first();
 
         $this->actingAs($this->grantMailboxes($this->va), 'admin')
-            ->post('/admin/mailboxes', ['end_user_id' => $endUser->id]);
+            ->post('/admin/mailboxes', ['end_user_id' => $endUser->id])
+            ->assertRedirect();
 
-        $this->assertSame(Mailbox::firstOrFail()->address, $endUser->fresh()->cfpb_email);
+        $after = DB::table('end_users')->where('id', $endUser->id)->first();
+
+        $this->assertEquals((array) $before, (array) $after, 'the client record was modified');
+        $this->assertSame('untouched@example.com', $endUser->fresh()->cfpb_email);
+        $this->assertSame(1, Mailbox::count());
     }
 
-    public function test_a_cfpb_login_already_in_use_is_never_overwritten(): void
+    public function test_deleting_a_mailbox_changes_nothing_on_the_client(): void
     {
-        // Overwriting would strand a CFPB account that already exists under the old address.
         $this->fakeOk();
         $endUser = $this->endUser();
-        $endUser->forceFill(['cfpb_email' => 'already.in.use@apexgrowthsolution.com'])->save();
+        $va      = $this->grantMailboxes($this->va);
+
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', ['end_user_id' => $endUser->id]);
+        $before = DB::table('end_users')->where('id', $endUser->id)->first();
+
+        $this->actingAs($va, 'admin')->delete('/admin/mailboxes/' . Mailbox::firstOrFail()->id);
+
+        $this->assertEquals(
+            (array) $before,
+            (array) DB::table('end_users')->where('id', $endUser->id)->first(),
+            'the client record was modified'
+        );
+    }
+
+    public function test_the_mailbox_name_comes_from_the_clients_first_and_last_name(): void
+    {
+        $this->fakeOk();
+        $endUser = $this->endUser();
+        // A middle name and suffix exist on the model but must not reach the address.
+        $endUser->forceFill(['middle_name' => 'Abdul', 'suffix' => 'Jr'])->save();
 
         $this->actingAs($this->grantMailboxes($this->va), 'admin')
             ->post('/admin/mailboxes', ['end_user_id' => $endUser->id]);
 
-        $this->assertSame('already.in.use@apexgrowthsolution.com', $endUser->fresh()->cfpb_email);
+        $local = Mailbox::firstOrFail()->local_part;
+
+        $this->assertMatchesRegularExpression('/^nazeer\.mohamed\d{4}$/', $local, "got '{$local}'");
     }
 
     public function test_the_password_is_not_readable_in_the_database(): void
@@ -217,17 +249,18 @@ class MailboxTest extends TestCase
         $this->assertSame(0, Mailbox::count());
     }
 
-    public function test_the_daily_limit_stops_a_runaway_loop(): void
+    public function test_there_is_no_limit_on_how_many_mailboxes_can_be_created(): void
     {
+        // Asked for explicitly: VAs create as many as the work needs. The only
+        // ceiling left is the hosting account's disk.
         $this->fakeOk();
-        config(['cpanel.daily_limit' => 2]);
         $va = $this->grantMailboxes($this->va);
 
-        $this->actingAs($va, 'admin')->post('/admin/mailboxes', []);
-        $this->actingAs($va, 'admin')->post('/admin/mailboxes', []);
-        $this->actingAs($va, 'admin')->post('/admin/mailboxes', [])->assertSessionHasErrors('mailbox');
+        for ($i = 0; $i < 30; $i++) {
+            $this->actingAs($va, 'admin')->post('/admin/mailboxes', [])->assertSessionHasNoErrors();
+        }
 
-        $this->assertSame(2, Mailbox::count());
+        $this->assertSame(30, Mailbox::count());
     }
 
     public function test_two_clients_with_the_same_name_get_different_addresses(): void
@@ -387,6 +420,71 @@ class MailboxTest extends TestCase
             ->assertOk()
             ->assertDontSee('test-token', false)
             ->assertDontSee('apexgrow:', false);
+    }
+
+    // ---------------------------------------------------------- the client search
+
+    public function test_the_search_finds_a_client_by_first_name_last_name_or_email(): void
+    {
+        $endUser = $this->endUser();                       // Nazeer Mohamed
+        $va      = $this->grantMailboxes($this->va);
+
+        foreach (['Nazeer', 'Mohamed', 'nazeer mohamed', 'mohamed nazeer'] as $term) {
+            $this->actingAs($va, 'admin')->getJson('/admin/mailboxes/clients?q=' . urlencode($term))
+                ->assertOk()
+                ->assertJsonPath('results.0.id', $endUser->id);
+        }
+
+        // and by the address on the record
+        $this->actingAs($va, 'admin')
+            ->getJson('/admin/mailboxes/clients?q=' . urlencode($endUser->email))
+            ->assertOk()->assertJsonPath('results.0.id', $endUser->id);
+    }
+
+    public function test_the_search_reaches_across_every_business_owner(): void
+    {
+        // Two owners under the same super admin; neither is "selected" in session.
+        $a = $this->endUser();
+        $b = $this->endUser();
+        $b->forceFill(['first_name' => 'Jeremie', 'last_name' => 'Mufundu'])->save();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->getJson('/admin/mailboxes/clients?q=Jeremie')
+            ->assertOk()
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.id', $b->id);
+
+        $this->assertNotSame($a->client_id, $b->client_id, 'the two clients should sit under different owners');
+    }
+
+    public function test_the_search_never_reaches_another_organisations_clients(): void
+    {
+        $otherSuper = new Admin(['email' => 'other@test.com', 'password' => 'secret-pass', 'full_name' => 'Someone Else']);
+        $otherSuper->role = 'super';
+        $otherSuper->save();
+
+        $theirs = $this->endUser($otherSuper);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->getJson('/admin/mailboxes/clients?q=Nazeer')
+            ->assertOk()
+            ->assertJsonCount(0, 'results');
+
+        $this->assertNotNull($theirs->id);
+    }
+
+    public function test_the_search_is_closed_to_a_va_without_mailbox_access(): void
+    {
+        $this->actingAs($this->va, 'admin')->get('/admin/mailboxes/clients?q=Nazeer')->assertForbidden();
+    }
+
+    public function test_an_empty_search_returns_nothing_rather_than_the_whole_client_list(): void
+    {
+        $this->endUser();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->getJson('/admin/mailboxes/clients?q=')
+            ->assertOk()->assertJsonCount(0, 'results');
     }
 
     // ------------------------------------------------------------------ the page
