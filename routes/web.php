@@ -56,6 +56,12 @@ Route::post('/api/intake', [IntakeController::class, 'apiStore'])->middleware('t
 // controller, identical key auth — only the path differs.
 Route::post('/partner-intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('partner.intake');
 
+// Inbound SMS from Plivo. Public because Plivo has no login here, so the
+// controller verifies the V3 signature and drops anything that does not check
+// out. Rate-capped: a pool of ten numbers cannot legitimately produce more.
+Route::post('/sms/plivo/inbound', [App\Http\Controllers\SmsWebhookController::class, 'plivo'])
+    ->middleware('throttle:120,1')->name('sms.plivo.inbound');
+
 /*
 |--------------------------------------------------------------------------
 | VA Admin (admin guard)

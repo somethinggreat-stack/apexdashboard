@@ -70,7 +70,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // form without carrying the session cookie for CSRF — the token is the
         // secret, same as the partner API. It's also a multipart POST this host
         // sometimes strips the cookie from, so this hardens the form either way.
-        $middleware->validateCsrfTokens(except: ['api/intake', 'partner-intake', 'intake/*']);
+        $middleware->validateCsrfTokens(except: ['api/intake', 'partner-intake', 'intake/*', 'sms/plivo/inbound']);
 
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('business-owner') || $request->is('business-owner/*')) {

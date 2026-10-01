@@ -3,47 +3,45 @@
 namespace Tests\Feature;
 
 use App\Models\Admin;
-use App\Models\GhlNumber;
-use App\Models\GhlOtp;
-use App\Services\Ghl\GhlNumbers;
+use App\Models\SmsCode;
+use App\Models\SmsNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Plivo\Util\v3SignatureValidation;
 use Tests\TestCase;
 
 /**
  * Phone Numbers — the shared pool a VA claims to collect a one-time code.
  *
- * GoHighLevel is never really called: Http::fake() stands in, answering in the
- * shapes measured against the live sub-account (search is a GET; an inbound
- * message carries `to` = our number and `from` = the sender).
- *
- * The two things that must never be wrong: two VAs can never hold one number,
- * and the delete can never reach a thread that is not purely a code thread.
+ * Plivo pushes inbound SMS to the webhook; nothing here polls. The two things
+ * that must never be wrong: two VAs can never hold one number, and a forged
+ * webhook can never put a code on anyone's screen.
  */
 class PhoneNumberTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const POOL  = '+12622610439';
+    private const OTHER = '+15559990000';   // a number we do not run
+    private const TOKEN = 'test-auth-token';
+    private const HOOK  = 'https://apexgrowthsolution.com/sms/plivo/inbound';
+
     private Admin $super;
     private Admin $dogar;
     private Admin $raja;
-
-    private const POOL  = '+12622610439';   // Alvina's number 6
-    private const BJ    = '+12058392700';   // Bj's number — live customer line
 
     protected function setUp(): void
     {
         parent::setUp();
 
         config([
-            'ghl_numbers.token'             => 'test-token',
-            'ghl_numbers.location_id'       => 'LOC123',
-            'ghl_numbers.base_url'          => 'https://ghl.test',
-            'ghl_numbers.api_version'       => '2021-07-28',
-            'ghl_numbers.excluded'          => [self::BJ],
-            'ghl_numbers.name_pattern'      => '/^Alvina/i',
-            'ghl_numbers.claim_minutes'     => 10,
-            'ghl_numbers.delete_after_copy' => true,
+            'sms.plivo.auth_id'    => 'MA123',
+            'sms.plivo.auth_token' => self::TOKEN,
+            'sms.plivo.base_url'   => 'https://plivo.test/v1',
+            'sms.webhook_url'      => self::HOOK,
+            'sms.verify_signature' => true,
+            'sms.claim_minutes'    => 10,
+            'sms.excluded'         => [],
         ]);
 
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret-pass', 'full_name' => 'Umair Arshad']);
@@ -60,34 +58,57 @@ class PhoneNumberTest extends TestCase
         }
     }
 
-    private function number(string $phone = self::POOL, string $label = "Alvina's number 6"): GhlNumber
+    private function number(string $phone = self::POOL, string $label = 'Pool 1'): SmsNumber
     {
-        return GhlNumber::create(['phone' => $phone, 'label' => $label, 'ghl_sid' => 'PN1', 'active' => true]);
+        return SmsNumber::create(['phone' => $phone, 'label' => $label, 'active' => true]);
     }
 
-    /** GHL answering with one inbound SMS to $to. */
-    private function fakeInbound(string $to, string $body = 'Your CFPB code is 448213', ?int $whenMs = null): void
+    /** A webhook signed the way Plivo signs one. */
+    private function deliver(array $params, ?string $signature = null, ?string $nonce = null)
     {
-        $whenMs ??= now()->getTimestampMs();
+        $nonce ??= 'nonce-' . uniqid();
 
-        Http::fake([
-            'ghl.test/phone-system/numbers*' => Http::response(['phoneNumbers' => [
-                ['sid' => 'PN1', 'value' => self::POOL, 'title' => "Alvina's number 6"],
-                ['sid' => 'PN0', 'value' => self::BJ,   'title' => "Bj's number"],
-            ]], 200),
+        if ($signature === null) {
+            // Produced by Plivo's own signer, so the test cannot agree with a
+            // mistake in our verification by making the same mistake twice.
+            $signature = $this->signLikePlivo($params, $nonce);
+        }
 
-            'ghl.test/conversations/search*' => Http::response(['conversations' => [
-                ['id' => 'CONV1', 'lastMessageDate' => $whenMs, 'contactId' => 'C1'],
-            ]], 200),
-
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => [
-                ['id' => 'MSG1', 'direction' => 'inbound', 'messageType' => 'TYPE_SMS',
-                 'to' => $to, 'from' => '+15550001111', 'body' => $body,
-                 'dateAdded' => now()->toIso8601String()],
-            ]]], 200),
-
-            'ghl.test/*' => Http::response(['ok' => true], 200),
+        return $this->post('/sms/plivo/inbound', $params, [
+            'X-Plivo-Signature-V3'       => $signature,
+            'X-Plivo-Signature-V3-Nonce' => $nonce,
         ]);
+    }
+
+    private function signLikePlivo(array $params, string $nonce): string
+    {
+        // Mirrors Plivo's documented V3 scheme: URL, then params sorted by name
+        // and concatenated, then a period and the nonce.
+        $keys = array_keys($params);
+        sort($keys, SORT_NATURAL);
+
+        $joined = '';
+        foreach ($keys as $key) {
+            $joined .= $key . $params[$key];
+        }
+
+        // Plivo's own constructPostUrl appends '?' to the URL when there are POST
+        // params (even with no query string), then the sorted pairs, then '.' and
+        // the nonce. Confirmed against their library in the test below.
+        $base = self::HOOK . (count($params) ? '?' : '') . $joined . '.' . $nonce;
+
+        return base64_encode(hash_hmac('SHA256', $base, self::TOKEN, true));
+    }
+
+    private function payload(array $over = []): array
+    {
+        return array_merge([
+            'From'        => '+15550001111',
+            'To'          => self::POOL,
+            'Text'        => 'Your CFPB code is 448213',
+            'Type'        => 'sms',
+            'MessageUUID' => 'uuid-' . uniqid(),
+        ], $over);
     }
 
     // ------------------------------------------------------------------ access
@@ -95,8 +116,8 @@ class PhoneNumberTest extends TestCase
     public function test_a_va_without_the_flag_cannot_reach_the_page(): void
     {
         $this->dogar->forceFill(['can_manage_numbers' => false])->save();
-
         Http::fake();
+
         $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')->assertForbidden();
         $this->actingAs($this->dogar, 'admin')->get('/admin/numbers/poll')->assertForbidden();
     }
@@ -113,34 +134,7 @@ class PhoneNumberTest extends TestCase
             ->assertOk()->assertSee('Phone Numbers');
     }
 
-    // -------------------------------------------------------------- THE POOL
-
-    /**
-     * Bj's number is the sub-account's Default Number and carries live customer
-     * conversations. It must never enter the pool, whatever GHL returns.
-     */
-    public function test_the_live_customer_number_never_enters_the_pool(): void
-    {
-        $this->fakeInbound(self::POOL);
-
-        $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')->assertOk();
-
-        $this->assertSame(1, GhlNumber::count());
-        $this->assertSame(self::POOL, GhlNumber::first()->phone);
-        $this->assertNull(GhlNumber::where('phone', self::BJ)->first(), 'Bj\'s number was synced into the pool');
-    }
-
-    public function test_a_number_must_pass_both_gates_to_be_in_the_pool(): void
-    {
-        $ghl = new GhlNumbers();
-
-        $this->assertTrue($ghl->inPool(self::POOL, "Alvina's number 6"));
-        $this->assertFalse($ghl->inPool(self::BJ, "Bj's number"),            'excluded number allowed');
-        $this->assertFalse($ghl->inPool(self::BJ, "Alvina's number 99"),     'exclude list beaten by a name');
-        $this->assertFalse($ghl->inPool('+15550009999', 'Support line'),     'name pattern ignored');
-    }
-
-    // ----------------------------------------------------------- THE LOCK
+    // --------------------------------------------------------------- THE LOCK
 
     public function test_two_vas_can_never_hold_the_same_number(): void
     {
@@ -150,7 +144,6 @@ class PhoneNumberTest extends TestCase
         $this->actingAs($this->dogar, 'admin')->post('/admin/numbers/' . $number->id . '/claim');
         $this->assertSame($this->dogar->id, $number->fresh()->claimed_by_admin_id);
 
-        // Raja tries for the same one.
         $this->actingAs($this->raja, 'admin')->post('/admin/numbers/' . $number->id . '/claim')
             ->assertSessionHasErrors('number');
 
@@ -158,32 +151,28 @@ class PhoneNumberTest extends TestCase
     }
 
     /**
-     * The claim is decided by the database, not by read-then-write. Proved by
-     * calling claim() twice on two model instances loaded BEFORE either wrote —
-     * which is what two simultaneous requests actually look like.
+     * The claim is decided by the database, not by read-then-write. Two model
+     * instances loaded BEFORE either wrote is what two simultaneous requests
+     * actually look like.
      */
     public function test_the_claim_is_decided_by_the_database_not_by_a_read(): void
     {
-        $number = $this->number();
-
-        $asDogar = GhlNumber::find($number->id);
-        $asRaja  = GhlNumber::find($number->id);
+        $number  = $this->number();
+        $asDogar = SmsNumber::find($number->id);
+        $asRaja  = SmsNumber::find($number->id);
 
         $this->assertTrue($asDogar->claim($this->dogar->id));
         $this->assertFalse($asRaja->claim($this->raja->id), 'both instances saw a free number and both took it');
-
-        $this->assertSame($this->dogar->id, $number->fresh()->claimed_by_admin_id);
     }
 
     public function test_an_abandoned_claim_times_out_and_returns_to_the_pool(): void
     {
-        // Without this, one VA closing their laptop retires a number for good.
         $number = $this->number();
         $number->claim($this->dogar->id);
         $number->forceFill(['claimed_at' => now()->subMinutes(11)])->save();
 
         $this->assertTrue($number->fresh()->isAvailable());
-        $this->assertTrue(GhlNumber::find($number->id)->claim($this->raja->id));
+        $this->assertTrue(SmsNumber::find($number->id)->claim($this->raja->id));
     }
 
     public function test_a_va_cannot_release_a_number_someone_else_is_holding(): void
@@ -194,10 +183,8 @@ class PhoneNumberTest extends TestCase
 
         $this->actingAs($this->raja, 'admin')->post('/admin/numbers/' . $number->id . '/release')
             ->assertSessionHasErrors('number');
-
         $this->assertSame($this->dogar->id, $number->fresh()->claimed_by_admin_id);
 
-        // The super admin can, for when a VA has gone home holding one.
         $this->actingAs($this->super, 'admin')->post('/admin/numbers/' . $number->id . '/release');
         $this->assertNull($number->fresh()->claimed_by_admin_id);
     }
@@ -206,238 +193,223 @@ class PhoneNumberTest extends TestCase
     {
         $number = $this->number();
         $number->claim($this->raja->id);
-        $this->fakeInbound(self::POOL);
+        Http::fake(['plivo.test/*' => Http::response(['objects' => []], 200)]);
 
         $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')
-            ->assertOk()
-            ->assertSee('Raja Khuram')
-            ->assertSee('In use', false);
+            ->assertOk()->assertSee('Raja Khuram')->assertSee('In use', false);
     }
 
-    // ----------------------------------------------------------- THE CODE
+    // ------------------------------------------------------------ THE WEBHOOK
+
+    public function test_an_inbound_sms_is_recorded_against_the_right_number(): void
+    {
+        $number = $this->number();
+
+        $this->deliver($this->payload())->assertOk();
+
+        $code = SmsCode::firstOrFail();
+        $this->assertSame($number->id, $code->sms_number_id);
+        $this->assertSame('448213', $code->code);
+        $this->assertSame('Your CFPB code is 448213', $code->body, 'the whole message must be kept');
+    }
+
+    /**
+     * The endpoint is public, so this is the one that matters most: without it,
+     * anyone who learns the URL can put any code on a VA's screen.
+     */
+    public function test_a_forged_webhook_is_dropped(): void
+    {
+        $this->number();
+
+        $this->deliver($this->payload(), 'not-a-real-signature')->assertOk();
+        $this->assertSame(0, SmsCode::count(), 'a forged webhook was recorded');
+
+        // ...and a real signature for DIFFERENT content is no good either.
+        $params = $this->payload();
+        $nonce  = 'n1';
+        $signed = $this->signLikePlivo($params, $nonce);
+
+        $tampered = array_merge($params, ['Text' => 'Your CFPB code is 000000']);
+        $this->deliver($tampered, $signed, $nonce)->assertOk();
+
+        $this->assertSame(0, SmsCode::count(), 'a tampered webhook was recorded');
+    }
+
+    public function test_our_verification_agrees_with_plivos_own_signer(): void
+    {
+        // Guards against the test and the code sharing one misunderstanding of
+        // the V3 scheme: the signature is checked against Plivo's own library.
+        $params = $this->payload();
+        $nonce  = 'nonce-xyz';
+
+        $this->assertTrue(v3SignatureValidation::validateV3Signature(
+            'POST', self::HOOK, $nonce, self::TOKEN, $this->signLikePlivo($params, $nonce), $params
+        ), 'the test signs differently from Plivo');
+    }
+
+    public function test_a_message_to_a_number_we_do_not_run_is_ignored(): void
+    {
+        $this->number();
+
+        $this->deliver($this->payload(['To' => self::OTHER]))->assertOk();
+
+        $this->assertSame(0, SmsCode::count());
+    }
+
+    public function test_the_same_message_delivered_twice_records_one_code(): void
+    {
+        // Plivo retries a webhook it did not get a 200 for.
+        $this->number();
+        $payload = $this->payload();
+
+        $this->deliver($payload)->assertOk();
+        $this->deliver($payload)->assertOk();
+
+        $this->assertSame(1, SmsCode::count());
+    }
+
+    public function test_the_webhook_always_answers_200(): void
+    {
+        // An error would only make Plivo send it again; a message we chose to
+        // ignore is not something to retry.
+        $this->number();
+
+        $this->deliver($this->payload(), 'bad-signature')->assertOk();
+        $this->deliver($this->payload(['To' => self::OTHER]))->assertOk();
+        $this->deliver($this->payload(['Type' => 'mms']))->assertOk();
+    }
+
+    // --------------------------------------------------------------- THE CODE
 
     public function test_the_code_reaches_the_va_holding_that_number(): void
     {
         $number = $this->number();
         $number->claim($this->dogar->id);
 
-        $this->fakeInbound(self::POOL);
+        $this->deliver($this->payload());
 
         $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll')
             ->assertOk()
             ->assertJsonPath('codes.0.code', '448213')
             ->assertJsonPath('codes.0.phone', self::POOL);
-
-        // Recorded, with the whole message kept beside the digits.
-        $otp = GhlOtp::firstOrFail();
-        $this->assertSame('448213', $otp->code);
-        $this->assertSame('Your CFPB code is 448213', $otp->body);
-        $this->assertSame($this->dogar->id, $otp->claimed_by_admin_id);
     }
 
     public function test_a_code_never_reaches_a_va_who_is_not_holding_that_number(): void
     {
-        // The whole point of the lock: Raja must not see Dogar's code.
         $number = $this->number();
         $number->claim($this->dogar->id);
-        $this->fakeInbound(self::POOL);
+        $this->deliver($this->payload());
 
         $this->actingAs($this->raja, 'admin')->getJson('/admin/numbers/poll')
             ->assertOk()->assertJsonCount(0, 'codes');
     }
 
-    public function test_a_message_older_than_the_claim_is_not_treated_as_this_vas_code(): void
+    public function test_a_code_that_arrived_before_the_claim_is_not_handed_over(): void
     {
-        // Otherwise the previous VA's code is handed to whoever claims next.
+        // Otherwise the previous VA's code goes to whoever claims next.
         $number = $this->number();
-        $number->claim($this->dogar->id);
-        $number->forceFill(['claimed_at' => now()])->save();
+        $this->deliver($this->payload());
+        SmsCode::query()->update(['received_at' => now()->subMinutes(30)]);
 
-        Http::fake([
-            'ghl.test/phone-system/numbers*' => Http::response(['phoneNumbers' => [
-                ['sid' => 'PN1', 'value' => self::POOL, 'title' => "Alvina's number 6"],
-            ]], 200),
-            'ghl.test/conversations/search*' => Http::response(['conversations' => [
-                ['id' => 'CONV1', 'lastMessageDate' => now()->getTimestampMs(), 'contactId' => 'C1'],
-            ]], 200),
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => [
-                ['id' => 'OLD1', 'direction' => 'inbound', 'messageType' => 'TYPE_SMS',
-                 'to' => self::POOL, 'from' => '+15550001111', 'body' => 'code 111111',
-                 'dateAdded' => now()->subMinutes(30)->toIso8601String()],
-            ]]], 200),
-            'ghl.test/*' => Http::response(['ok' => true], 200),
-        ]);
+        $number->claim($this->dogar->id);
 
         $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll')
             ->assertOk()->assertJsonCount(0, 'codes');
     }
 
-    public function test_holding_nothing_never_calls_gohighlevel(): void
+    public function test_holding_nothing_returns_nothing(): void
     {
-        Http::fake();
+        $this->number();
+        $this->deliver($this->payload());
 
         $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll')
             ->assertOk()->assertJsonCount(0, 'codes');
-
-        Http::assertNothingSent();
     }
 
-    // --------------------------------------------------------- COPY + DELETE
-
-    public function test_copying_records_it_frees_the_number_and_deletes_the_thread(): void
+    public function test_copying_records_it_and_frees_the_number(): void
     {
         $number = $this->number();
         $number->claim($this->dogar->id);
-        $this->fakeInbound(self::POOL);
+        $this->deliver($this->payload());
 
-        $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll');
-        $otp = GhlOtp::firstOrFail();
+        $code = SmsCode::firstOrFail();
 
         $this->actingAs($this->dogar, 'admin')
-            ->postJson('/admin/numbers/otp/' . $otp->id . '/copied')
+            ->postJson('/admin/numbers/otp/' . $code->id . '/copied')
             ->assertOk()->assertJsonPath('ok', true);
 
-        $otp->refresh();
-        $this->assertNotNull($otp->copied_at);
-        $this->assertTrue($otp->deleted_from_ghl);
+        $this->assertNotNull($code->fresh()->copied_at);
         $this->assertNull($number->fresh()->claimed_by_admin_id, 'the number was not released');
 
-        Http::assertSent(fn ($r) => $r->method() === 'DELETE' && str_contains($r->url(), '/conversations/CONV1'));
-    }
-
-    /**
-     * The fence. These threads sit beside real customer conversations — payment
-     * promises, dispute questions, actual people — and GHL deletes the WHOLE
-     * thread. A thread with any reply in it is not a code thread.
-     */
-    public function test_a_thread_with_replies_is_never_deleted(): void
-    {
-        $messages = [
-            ['id' => 'M1', 'direction' => 'inbound',  'to' => self::POOL, 'from' => '+1555', 'body' => 'code 1234'],
-            ['id' => 'M2', 'direction' => 'outbound', 'to' => '+1555', 'from' => self::POOL, 'body' => 'Hi Jermecia!'],
-        ];
-
-        Http::fake([
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => $messages]], 200),
-            'ghl.test/*' => Http::response(['ok' => true], 200),
-        ]);
-
-        $note = (new GhlNumbers())->deleteConversationSafely('CONV1', [self::POOL]);
-
-        $this->assertNotNull($note, 'a thread with a reply in it was deleted');
-        $this->assertStringContainsString('replies', $note);
-        Http::assertNotSent(fn ($r) => $r->method() === 'DELETE');
-    }
-
-    public function test_a_thread_touching_a_number_outside_the_pool_is_never_deleted(): void
-    {
-        Http::fake([
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => [
-                ['id' => 'M1', 'direction' => 'inbound', 'to' => self::BJ, 'from' => '+1555', 'body' => 'Thank you'],
-            ]]], 200),
-            'ghl.test/*' => Http::response(['ok' => true], 200),
-        ]);
-
-        $note = (new GhlNumbers())->deleteConversationSafely('CONV1', [self::POOL]);
-
-        $this->assertNotNull($note, 'a thread on the live customer line was deleted');
-        Http::assertNotSent(fn ($r) => $r->method() === 'DELETE');
-    }
-
-    public function test_an_unreadable_thread_is_left_alone(): void
-    {
-        Http::fake([
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => []]], 200),
-            'ghl.test/*' => Http::response(['ok' => true], 200),
-        ]);
-
-        $this->assertNotNull((new GhlNumbers())->deleteConversationSafely('CONV1', [self::POOL]));
-        Http::assertNotSent(fn ($r) => $r->method() === 'DELETE');
-    }
-
-    /**
-     * Once the thread is gone from GHL this row is the only evidence the code
-     * ever existed, so it is written BEFORE the delete is attempted and kept
-     * even when the delete is refused.
-     */
-    public function test_the_audit_row_survives_a_refused_delete(): void
-    {
-        $number = $this->number();
+        // ...and it is not offered a second time.
         $number->claim($this->dogar->id);
-
-        // The row is made directly rather than through the poll: Http::fake()
-        // MERGES stubs rather than replacing them, so a "poll then refuse"
-        // pair in one test quietly gets the first stub twice and proves nothing.
-        $otp = GhlOtp::create([
-            'ghl_number_id' => $number->id, 'claimed_by_admin_id' => $this->dogar->id,
-            'from_number' => '+15550001111', 'code' => '448213',
-            'body' => 'Your CFPB code is 448213', 'received_at' => now(),
-            'conversation_id' => 'CONV1', 'message_id' => 'MSG1',
-        ]);
-
-        // A thread that is NOT a code thread.
-        Http::fake([
-            'ghl.test/conversations/CONV1/messages*' => Http::response(['messages' => ['messages' => [
-                ['id' => 'M1', 'direction' => 'outbound', 'to' => '+1555', 'from' => self::POOL, 'body' => 'Hi'],
-            ]]], 200),
-            'ghl.test/*' => Http::response(['ok' => true], 200),
-        ]);
-
-        $this->actingAs($this->dogar, 'admin')
-            ->postJson('/admin/numbers/otp/' . $otp->id . '/copied')->assertOk();
-
-        $otp->refresh();
-        $this->assertNotNull($otp->copied_at, 'the audit row lost its copied_at');
-        $this->assertFalse($otp->deleted_from_ghl);
-        $this->assertStringContainsString('left alone', (string) $otp->delete_note);
-        $this->assertNull($number->fresh()->claimed_by_admin_id, 'the number stayed locked after a refused delete');
+        $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll')
+            ->assertOk()->assertJsonCount(0, 'codes');
     }
 
     public function test_a_va_cannot_consume_someone_elses_code(): void
     {
         $number = $this->number();
         $number->claim($this->dogar->id);
-        $this->fakeInbound(self::POOL);
+        $this->deliver($this->payload());
 
-        $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll');
-        $otp = GhlOtp::firstOrFail();
+        $code = SmsCode::firstOrFail();
 
         $this->actingAs($this->raja, 'admin')
-            ->postJson('/admin/numbers/otp/' . $otp->id . '/copied')
+            ->postJson('/admin/numbers/otp/' . $code->id . '/copied')
             ->assertForbidden();
 
-        $this->assertNull($otp->fresh()->copied_at);
+        $this->assertNull($code->fresh()->copied_at);
     }
 
-    public function test_deleting_can_be_switched_off_without_a_deploy(): void
+    // ------------------------------------------------------------- the pool
+
+    public function test_the_pool_is_read_from_plivo_and_excluded_numbers_stay_out(): void
     {
-        config(['ghl_numbers.delete_after_copy' => false]);
+        config(['sms.excluded' => ['+15551234567']]);
 
-        $number = $this->number();
-        $number->claim($this->dogar->id);
-        $this->fakeInbound(self::POOL);
+        Http::fake(['plivo.test/*' => Http::response(['objects' => [
+            ['number' => '12622610439', 'alias' => 'Pool 1'],      // no leading +
+            ['number' => '+15551234567', 'alias' => 'Keep out'],
+        ]], 200)]);
 
-        $this->actingAs($this->dogar, 'admin')->getJson('/admin/numbers/poll');
-        $otp = GhlOtp::firstOrFail();
+        $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')->assertOk();
 
-        $this->actingAs($this->dogar, 'admin')
-            ->postJson('/admin/numbers/otp/' . $otp->id . '/copied')->assertOk();
-
-        Http::assertNotSent(fn ($r) => $r->method() === 'DELETE');
-        $this->assertFalse($otp->fresh()->deleted_from_ghl);
+        $this->assertSame(1, SmsNumber::count());
+        $this->assertSame(self::POOL, SmsNumber::first()->phone, 'the number was not normalised to E.164');
     }
 
-    // ------------------------------------------------------- code extraction
+    public function test_the_page_still_renders_when_plivo_is_unreachable(): void
+    {
+        $this->number();
+        Http::fake(['plivo.test/*' => Http::response('', 500)]);
+
+        $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')
+            ->assertOk()->assertSee('Pool 1');
+    }
+
+    public function test_the_credentials_never_reach_the_page(): void
+    {
+        $this->number();
+        Http::fake(['plivo.test/*' => Http::response(['objects' => []], 200)]);
+
+        $this->actingAs($this->dogar, 'admin')->get('/admin/numbers')
+            ->assertOk()
+            ->assertDontSee(self::TOKEN, false)
+            ->assertDontSee('MA123', false);
+    }
+
+    // ---------------------------------------------------- code extraction
 
     public function test_the_code_is_read_out_of_the_message_conservatively(): void
     {
-        $this->assertSame('448213', GhlOtp::extractCode('Your CFPB code is 448213'));
-        $this->assertSame('90210',  GhlOtp::extractCode('OTP: 90210 expires in 10 minutes'));
-        $this->assertSame('1234',   GhlOtp::extractCode('Use 1234 to verify'));
+        $this->assertSame('448213', SmsCode::extractCode('Your CFPB code is 448213'));
+        $this->assertSame('90210',  SmsCode::extractCode('OTP: 90210 expires in 10 minutes'));
+        $this->assertSame('1234',   SmsCode::extractCode('Use 1234 to verify'));
 
-        // Nothing that looks like a code: null, and the page shows the message.
-        $this->assertNull(GhlOtp::extractCode('Thanks, talk soon'));
-        $this->assertNull(GhlOtp::extractCode(''));
+        // Nothing code-shaped: null, and the page shows the message instead.
+        $this->assertNull(SmsCode::extractCode('Thanks, talk soon'));
+        $this->assertNull(SmsCode::extractCode(''));
     }
 
     // -------------------------------------------------------------- the toggle

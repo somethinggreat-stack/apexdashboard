@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * claim(), which is a conditional update so two VAs pressing the button at the
  * same moment cannot both end up holding the same number.
  */
-class GhlNumber extends Model
+class SmsNumber extends Model
 {
     protected $fillable = ['phone', 'ghl_sid', 'label', 'active'];
 
@@ -30,7 +30,7 @@ class GhlNumber extends Model
 
     public function otps(): HasMany
     {
-        return $this->hasMany(GhlOtp::class);
+        return $this->hasMany(SmsCode::class);
     }
 
     public function scopeActive(Builder $q): Builder
@@ -41,7 +41,7 @@ class GhlNumber extends Model
     /** How long a claim may stand before it is treated as abandoned. */
     public static function claimMinutes(): int
     {
-        return max(1, (int) config('ghl_numbers.claim_minutes', 10));
+        return max(1, (int) config('sms.claim_minutes', 10));
     }
 
     /** A claim nobody released — the VA closed the laptop, or simply forgot. */

@@ -8,31 +8,30 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A one-time code that arrived on a pool number.
  *
- * This row OUTLIVES the message. Once the conversation is deleted from
- * GoHighLevel it is the only evidence the code ever existed — which number it
- * came to, who was holding that number, and who copied it. Nothing in the app
- * deletes these.
+ * Written by the provider's webhook, never by a poll: the message is delivered
+ * here and nowhere else, so this row is the only copy there has ever been —
+ * which number it came to, who was holding it, and who copied it. Nothing in
+ * the app deletes these.
  *
  * `body` is always kept alongside `code`, because a code is something we read
  * out of the text with a pattern, and a pattern can be wrong. The VA must
  * always be able to see what actually arrived.
  */
-class GhlOtp extends Model
+class SmsCode extends Model
 {
     protected $fillable = [
-        'ghl_number_id', 'claimed_by_admin_id', 'from_number', 'code', 'body',
-        'received_at', 'conversation_id', 'message_id',
+        'sms_number_id', 'claimed_by_admin_id', 'from_number', 'code', 'body',
+        'received_at', 'provider_message_id',
     ];
 
     protected $casts = [
-        'received_at'      => 'datetime',
-        'copied_at'        => 'datetime',
-        'deleted_from_ghl' => 'boolean',
+        'received_at' => 'datetime',
+        'copied_at'   => 'datetime',
     ];
 
     public function number(): BelongsTo
     {
-        return $this->belongsTo(GhlNumber::class, 'ghl_number_id');
+        return $this->belongsTo(SmsNumber::class, 'sms_number_id');
     }
 
     public function claimedBy(): BelongsTo
