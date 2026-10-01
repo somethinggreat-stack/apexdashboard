@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,
             'admin.credentials' => \App\Http\Middleware\RoleCredentials::class,
             'admin.mailboxes' => \App\Http\Middleware\RoleMailboxes::class,
+            'admin.numbers' => \App\Http\Middleware\RoleNumbers::class,
             'jarvis.token'    => \App\Http\Middleware\JarvisToken::class,
         ]);
 

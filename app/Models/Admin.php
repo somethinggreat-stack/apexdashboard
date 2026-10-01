@@ -80,6 +80,16 @@ class Admin extends Authenticatable
     }
 
     /**
+     * May this account open the Numbers page — claiming a pooled phone number
+     * and reading the one-time codes that arrive on it? Same shape as the other
+     * two grants: super admins always, a VA only when granted, leads never.
+     */
+    public function canManageNumbers(): bool
+    {
+        return $this->isSuper() || ($this->isVa() && (bool) $this->can_manage_numbers);
+    }
+
+    /**
      * The admin whose data (business owners, clients) this user operates on.
      * VAs share their parent super admin's data; a super admin owns their own.
      */
