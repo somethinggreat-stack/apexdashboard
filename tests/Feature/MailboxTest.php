@@ -512,11 +512,25 @@ class MailboxTest extends TestCase
             }
         }
 
-        $this->assertStringContainsString('id="mbModal"', $html);
+        // The dialog starts closed through its class, and nothing inline may
+        // override that back to visible.
         $this->assertMatchesRegularExpression(
-            '/id="mbModal"[^>]*style="[^"]*display:\s*none/s',
+            '/id="mbModal"[^>]*class="[^"]*mb-scrim/s',
             $html,
-            'the create dialog does not start closed'
+            'the create dialog is not using the closed-by-default scrim'
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.mb-scrim\s*\{[^}]*display\s*:\s*none/s',
+            $html,
+            'the scrim does not start at display:none'
+        );
+
+        preg_match('/<div id="mbModal"[^>]*>/', $html, $tag);
+        $this->assertNotEmpty($tag, 'the dialog element was not found');
+        $this->assertDoesNotMatchRegularExpression(
+            '/style="[^"]*display\s*:\s*(?!none)/i',
+            $tag[0],
+            'an inline display on the dialog overrides its closed state'
         );
     }
 
