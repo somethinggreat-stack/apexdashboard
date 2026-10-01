@@ -1,11 +1,11 @@
 {
-  "version": "0.1.5",
-  "notes": "Opens even when the internet is still coming up, instead of a dead error page. Only ever one copy runs, so notifications don't arrive twice. Starts quietly in the tray when Windows starts it. New summon shortcut: Ctrl+Alt+A.",
-  "pub_date": "2026-09-17T21:38:35Z",
+  "version": "0.1.6",
+  "notes": "Downloads are saved for real. The app said \"Downloaded\" but never wrote the file to disk; now it does, it never overwrites an earlier file of the same name, and the card shows the folder it actually went to.",
+  "pub_date": "2026-10-01T03:08:59Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTExQ1lhTEVPd1JLUEYzVWZhZ052ZFhENU40STJQK0hNWGRYZUpVMDVmb2dnenQ1RUI4M0pQQ1loVlNKQlRLM2huYzF4T2lwYWdGNEw0cU5EVXh5bUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NjgwODk5CWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjVfeDY0LXNldHVwLmV4ZQp6d2FINzFuQTl3UmVZTHJlY2xOUFVaenNsdTRCRG90S2o2dGdBc0RSWDFZK3dzb09MTVQ2MWRydk5aMG9GKzBCM0Q0MFl5VEhqZFNnbDJ2OHEvZWVBZz09Cg==",
-      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.5"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZ1BLcjdJOHhGSTRyMndqTHdTWkk2dHZWSmpENzM4VmptMzR1MzJmZVl4S1dKb2Ewdi96M25QRHVxYTUzY1oxdElHVVd5SXEyUCtNdjRoSStTeUhHRmRqZzZkREtMaUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwODEzNjIxCWZpbGU6QXBleCBUZWFtIENoYXRfMC4xLjZfeDY0LXNldHVwLmV4ZQpTZXp1WTI1VmxJWGZsSHRlazdBWnBiZFN6N2FDenFaR1VqVFdMWnhDOXFYMTlIeDh5UDZQZU10NTN6bTU4ZTRzSDF0M0pwcEI5QVVpNVYyVGhUQk5CQT09Cg==",
+      "url": "https://chat.apexgrowthsolution.com/download/apex-team-chat-setup.exe?v=0.1.6"
     }
   }
 }

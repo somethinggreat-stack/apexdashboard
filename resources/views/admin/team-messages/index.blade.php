@@ -1846,6 +1846,10 @@
     // download streams through here so the user sees it start, progress, and finish.
     var dlDock = document.getElementById('tcDlDock');
     if (dlDock) TCB(dlDock);
+    // Inside the desktop shell a finished fetch does NOT mean a file on disk: the shell saves
+    // it, and only the shell knows where (or whether) it landed. See attach_downloads in
+    // apex-desktop/src-tauri/src/lib.rs. In a plain browser this stays false and nothing changes.
+    var IS_DESKTOP = !!window.__TAURI__;
     var DL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
     var DONE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     var FAIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -1878,6 +1882,7 @@
         dlDock.appendChild(el); dlDock.hidden = false;
         requestAnimationFrame(function () { el.classList.add('in'); });
         var bar = el.querySelector('.tc-dl-track i'), sub = el.querySelector('.tc-dl-sub');
+        var timer = null;
         var api = {
             el: el,
             setName: function (n) { el.querySelector('.tc-dl-name').textContent = n; },
@@ -1894,15 +1899,28 @@
                 // rather than claiming it is already sitting in the Downloads folder.
                 sub.textContent = 'Downloaded — check your Downloads folder';
                 el.querySelector('.tc-dl-ic').innerHTML = DONE_ICON;
-                dismiss(4500);
+                dismiss(IS_DESKTOP ? 9000 : 4500);   // desktop: leave room for the native result
+            },
+            // The desktop shell knows the real path the bytes were written to. Until it
+            // reports back, "Downloaded" is a guess — this replaces it with the fact.
+            saved: function (path) {
+                if (!path) return;
+                el.classList.remove('indet', 'fail'); el.classList.add('done');
+                bar.style.width = '100%';
+                el.querySelector('.tc-dl-ic').innerHTML = DONE_ICON;
+                var cut = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'));
+                sub.textContent = 'Saved to ' + (cut > 0 ? path.slice(0, cut) : path);
+                sub.title = path;
+                dismiss(6000);
             },
             fail: function (msg) {
-                el.classList.remove('indet'); el.classList.add('fail');
+                clearTimeout(timer);
+                el.classList.remove('indet', 'done'); el.classList.add('fail');
                 sub.textContent = msg || 'Download failed'; el.querySelector('.tc-dl-ic').innerHTML = FAIL_ICON;
             }
         };
         function remove(){ el.classList.add('out'); setTimeout(function () { el.remove(); if (!dlDock.children.length) dlDock.hidden = true; }, 220); }
-        function dismiss(after){ setTimeout(remove, after); }
+        function dismiss(after){ clearTimeout(timer); timer = setTimeout(remove, after); }
         el.querySelector('.tc-dl-x').addEventListener('click', remove);
         return api;
     }
@@ -1926,6 +1944,7 @@
             // Old fallback: let the browser handle it.
             var a0 = document.createElement('a'); a0.href = url; a0.rel = 'noopener'; TCB(a0); a0.click(); a0.remove();
             card.el.classList.remove('indet'); card.done();
+            if (IS_DESKTOP) dlPendingSave.push(card);
             return Promise.resolve();
         }
         // Accept anything + the ajax header: if the session has expired the server answers
@@ -1950,7 +1969,11 @@
                     });
                 })();
             })
-            .then(function (out){ saveBlob(out.blob, out.name); card.done(); })
+            .then(function (out){
+                saveBlob(out.blob, out.name);
+                card.done();
+                if (IS_DESKTOP) dlPendingSave.push(card);
+            })
             .catch(function (err){
                 var signedOut = err && err.message === 'signed-out';
                 card.fail(signedOut ? 'Your session ended — sign in again, then download it'
@@ -1965,6 +1988,15 @@
         if (dlBusy) card.waiting(dlQueue.length);
         dlNext();
     };
+    // Called BY THE DESKTOP SHELL once the bytes are on disk (or failed to get there).
+    // Downloads are serialised, so the oldest card still waiting is the one it means.
+    var dlPendingSave = [];
+    window.apexDownloadSaved = function (path, ok) {
+        var card = dlPendingSave.shift(); if (!card) return;
+        if (ok) card.saved(path);
+        else card.fail('Couldn’t save the file — check the Downloads folder permissions');
+    };
+
     function saveBlob(blob, name){
         var u = URL.createObjectURL(blob);
         var a = document.createElement('a'); a.href = u; a.download = name || 'download';
