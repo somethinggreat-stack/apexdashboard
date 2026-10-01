@@ -627,6 +627,50 @@ class MailboxTest extends TestCase
             ->assertOk()->assertDontSee('supersecrettoken', false);
     }
 
+    /**
+     * The failure this exists for: the Login to Webmail button opened a BLANK
+     * PAGE with the URL unchanged, and nothing anywhere said why.
+     *
+     * The app sends `form-action 'self'`, and browsers enforce form-action
+     * THROUGH REDIRECTS — so the form posted fine, our 302 to cPanel was
+     * blocked at the hop, and the tab was left empty. Silent, and invisible to
+     * every test that only checked the redirect we returned.
+     */
+    public function test_the_page_lets_its_own_webmail_form_reach_cpanel(): void
+    {
+        $csp = $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->get('/admin/mailboxes')->assertOk()
+            ->headers->get('Content-Security-Policy');
+
+        $this->assertNotNull($csp, 'the page sends no CSP at all');
+        $this->assertMatchesRegularExpression(
+            '/form-action [^;]*https:\/\/cpanel\.test:2096/',
+            $csp,
+            'form-action does not allow the webmail hop, so the button opens a blank page'
+        );
+    }
+
+    public function test_widening_form_action_does_not_loosen_anything_else(): void
+    {
+        $page = $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->get('/admin/mailboxes')->assertOk()
+            ->headers->get('Content-Security-Policy');
+
+        // Everything except form-action stays exactly as it is everywhere else.
+        foreach (["default-src 'self'", "frame-ancestors 'none'", "object-src 'none'",
+                  "base-uri 'self'", "connect-src 'self'"] as $directive) {
+            $this->assertStringContainsString($directive, $page);
+        }
+
+        // And no other page gained the exception.
+        $other = $this->actingAs($this->va, 'admin')
+            ->get('/admin/select-business-owner')->assertOk()
+            ->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString("form-action 'self';", $other . ';');
+        $this->assertStringNotContainsString('2096', (string) $other);
+    }
+
     // ---------------------------------------------------------- the client search
 
     public function test_the_search_finds_a_client_by_first_name_last_name_or_email(): void

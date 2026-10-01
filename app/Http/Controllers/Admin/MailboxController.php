@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\SecurityHeaders;
 use App\Models\EndUser;
 use App\Models\Mailbox;
 use App\Services\Cpanel\CpanelMail;
@@ -47,7 +48,7 @@ class MailboxController extends Controller
         // this page down with it.
         $usage = $this->cpanel->isConfigured() ? $this->cpanel->usage() : [];
 
-        return view('admin.mailboxes.index', [
+        return response()->view('admin.mailboxes.index', [
             'mailboxes'   => $mailboxes,
             'usage'       => $usage,
             'configured'  => $this->cpanel->isConfigured(),
@@ -55,7 +56,13 @@ class MailboxController extends Controller
             'quotaMb'     => (int) config('cpanel.quota_mb', 100),
             'webmailUrl'  => $this->webmailUrl(),
             'totalUsedMb' => $this->totalUsedMb($usage),
-        ]);
+        ])
+            // The Login to Webmail buttons post here and we answer with a 302 to
+            // cPanel. Browsers enforce form-action THROUGH that redirect, so
+            // without naming the webmail origin the hop is blocked and the VA
+            // gets a blank page with the URL unchanged. Widened on this page
+            // only, and only to the host we are configured to talk to.
+            ->header('Content-Security-Policy', SecurityHeaders::csp([$this->webmailOrigin()]));
     }
 
     /**
@@ -237,6 +244,12 @@ class MailboxController extends Controller
         return $out;
     }
 
+
+    /** The origin the Login to Webmail buttons end up posting to. */
+    private function webmailOrigin(): string
+    {
+        return 'https://' . config('cpanel.host') . ':2096';
+    }
 
     /** Where "Open Webmail" points — the configured URL, else cPanel's own. */
     private function webmailUrl(): string

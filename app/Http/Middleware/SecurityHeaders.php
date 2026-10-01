@@ -21,11 +21,24 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SecurityHeaders
 {
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * The policy, in one place, so a page that has to widen a single directive
+     * cannot quietly drift from the rest of it.
+     *
+     * `form-action` is the one worth knowing about: browsers enforce it THROUGH
+     * REDIRECTS. A same-origin form POST that answers with a 302 to another host
+     * is blocked at the redirect, and what the user sees is a blank page with
+     * the URL unchanged — no error, nothing in the page. The Mailboxes page
+     * passes cPanel's webmail origin here, because signing a VA into webmail is
+     * exactly that shape: a form post that finishes on another host.
+     *
+     * @param  string[]  $extraFormAction  extra origins this page may post to
+     */
+    public static function csp(array $extraFormAction = []): string
     {
-        $response = $next($request);
+        $formAction = implode(' ', array_merge(["'self'"], $extraFormAction));
 
-        $csp = implode('; ', [
+        return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -37,12 +50,17 @@ class SecurityHeaders
             "connect-src 'self'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
-            "form-action 'self'",
+            "form-action {$formAction}",
             "object-src 'none'",
         ]);
+    }
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $response = $next($request);
 
         $headers = [
-            'Content-Security-Policy'    => $csp,
+            'Content-Security-Policy'    => self::csp(),
             'X-Content-Type-Options'     => 'nosniff',
             'X-Frame-Options'            => 'DENY',
             'Referrer-Policy'            => 'strict-origin-when-cross-origin',
