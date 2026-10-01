@@ -176,6 +176,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // nothing else claims it; read-only.
             Route::get('mailboxes/clients', [Admin\MailboxController::class, 'searchClients'])->name('mailboxes.clients');
             Route::post('mailboxes', [Admin\MailboxController::class, 'store'])->name('mailboxes.store');
+            Route::post('mailboxes/{id}/webmail', [Admin\MailboxController::class, 'webmail'])
+                ->whereNumber('id')->name('mailboxes.webmail');
             Route::delete('mailboxes/{id}', [Admin\MailboxController::class, 'destroy'])
                 ->whereNumber('id')->name('mailboxes.destroy');
         });

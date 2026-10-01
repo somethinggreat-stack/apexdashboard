@@ -422,6 +422,166 @@ class MailboxTest extends TestCase
             ->assertDontSee('apexgrow:', false);
     }
 
+    // ------------------------------------------------------ one-click webmail
+
+    /** A mailbox row, made directly so Http::fake() stubs stay unambiguous. */
+    private function row(?Admin $org = null, ?Admin $by = null): Mailbox
+    {
+        $org ??= $this->super;
+
+        return Mailbox::create([
+            'admin_id' => $org->id, 'created_by_admin_id' => ($by ?? $this->va)->id,
+            'local_part' => 'affe.hunte1317', 'domain' => 'apexgrowthsolution.com',
+            'address' => 'affe.hunte1317@apexgrowthsolution.com',
+            'password' => 'Str0ngPassw0rd!x', 'quota_mb' => 100,
+        ]);
+    }
+
+    public function test_the_webmail_button_signs_the_va_in_without_a_password(): void
+    {
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1,
+            'data'   => ['session' => 'affe.hunte1317@apexgrowthsolution.com:abc123def', 'expires' => 9999999999],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertRedirect('https://cpanel.test:2096/login/?session='
+                . rawurlencode('affe.hunte1317@apexgrowthsolution.com:abc123def'));
+
+        // The session must be minted for THIS mailbox, not for the cPanel account.
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/execute/Session/create_webmail_session_for_mail_user')
+                && $request['login'] === 'affe.hunte1317@apexgrowthsolution.com'
+                && $request['service'] === 'webmaild';
+        });
+    }
+
+    public function test_a_url_handed_back_by_cpanel_is_used_as_given(): void
+    {
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1,
+            'data'   => ['url' => 'https://cpanel.test:2096/cpsess999/webmail/jupiter/index.html'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertRedirect('https://cpanel.test:2096/cpsess999/webmail/jupiter/index.html');
+    }
+
+    /**
+     * The response says WHICH SESSION, never which server. A redirect is only as
+     * safe as the host it points at, so a url on any other host is refused —
+     * otherwise a compromised or spoofed response becomes an open redirect that
+     * sends a VA, mid-task, to someone else's login form.
+     */
+    public function test_a_webmail_url_on_another_host_is_refused(): void
+    {
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1,
+            'data'   => ['url' => 'https://evil.example.com/login/?session=abc'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertRedirect()                      // back, not away
+            ->assertSessionHasErrors('mailbox');
+    }
+
+    public function test_one_organisation_cannot_open_anothers_webmail(): void
+    {
+        $otherSuper = new Admin(['email' => 'other2@test.com', 'password' => 'secret-pass', 'full_name' => 'Someone Else']);
+        $otherSuper->role = 'super';
+        $otherSuper->save();
+
+        $theirs = $this->row($otherSuper, $otherSuper);
+        Http::fake();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $theirs->id . '/webmail')
+            ->assertNotFound();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_a_deleted_mailbox_cannot_be_signed_into(): void
+    {
+        $mailbox = $this->row();
+        $mailbox->forceFill(['deleted_at' => now()])->save();
+        Http::fake();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertNotFound();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_a_va_without_mailbox_access_cannot_sign_into_webmail(): void
+    {
+        $mailbox = $this->row();
+
+        $this->actingAs($this->va, 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertForbidden();
+    }
+
+    public function test_a_refused_session_explains_itself_instead_of_breaking(): void
+    {
+        // Some hosts disable this API. The VA still has the address and password
+        // on the row, so the page must say so rather than dead-end.
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 0,
+            'errors' => ['Session creation is not permitted.'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+            ->assertSessionHasErrors('mailbox');
+    }
+
+    public function test_signing_into_webmail_changes_nothing(): void
+    {
+        $mailbox = $this->row();
+        $before  = DB::table('mailboxes')->where('id', $mailbox->id)->first();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1, 'data' => ['session' => 'a@b.com:tok'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail');
+
+        $this->assertEquals(
+            (array) $before,
+            (array) DB::table('mailboxes')->where('id', $mailbox->id)->first(),
+            'opening webmail modified the mailbox row'
+        );
+    }
+
+    public function test_the_webmail_session_is_never_written_to_the_page(): void
+    {
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1, 'data' => ['session' => 'a@b.com:supersecrettoken'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail');
+
+        $this->actingAs($this->va, 'admin')->get('/admin/mailboxes')
+            ->assertOk()->assertDontSee('supersecrettoken', false);
+    }
+
     // ---------------------------------------------------------- the client search
 
     public function test_the_search_finds_a_client_by_first_name_last_name_or_email(): void

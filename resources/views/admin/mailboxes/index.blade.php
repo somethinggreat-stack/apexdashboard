@@ -290,7 +290,16 @@
 
                 <td class="no-link" style="text-align:right;">
                     <div class="mb-cell" style="justify-content:flex-end;">
-                        <a class="mb-btn mb-btn-tiny" href="{{ $webmailUrl }}" target="_blank" rel="noopener">Webmail</a>
+                        {{-- Signs in on the way: the server mints a cPanel webmail
+                             session for this one mailbox, so nobody retypes anything.
+                             POST because it creates that session. --}}
+                        <form method="POST" action="{{ route('admin.mailboxes.webmail', $mb->id) }}" target="_blank">
+                            @csrf
+                            <button class="mb-btn mb-btn-tiny">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                                Login to Webmail
+                            </button>
+                        </form>
                         @if ($configured)
                             <form method="POST" action="{{ route('admin.mailboxes.destroy', $mb->id) }}"
                                   data-confirm-delete

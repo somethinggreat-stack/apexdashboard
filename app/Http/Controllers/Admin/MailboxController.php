@@ -119,6 +119,30 @@ class MailboxController extends Controller
         return back()->with('status', "Mailbox {$mailbox->address} created.");
     }
 
+    /**
+     * Open webmail for this mailbox, already signed in.
+     *
+     * POST rather than GET: it mints a live session on the mail server, and a
+     * link that does that should not be something a page can trigger just by
+     * being loaded. The session is handed straight to the browser and never
+     * stored on our side.
+     */
+    public function webmail(int $id)
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+
+        $mailbox = Mailbox::forOrg($ownerId)->live()->findOrFail($id);
+
+        try {
+            return redirect()->away($this->cpanel->webmailLoginUrl($mailbox->address));
+        } catch (RuntimeException $e) {
+            // Falling back to the plain login page beats a dead end: the VA still
+            // has the address and password on the row in front of them.
+            return back()->withErrors(['mailbox' =>
+                $e->getMessage() . ' Open webmail from the button at the top and sign in with the address and password instead.']);
+        }
+    }
+
     /** Delete the mailbox on cPanel, then mark our row as gone (never remove it). */
     public function destroy(int $id)
     {

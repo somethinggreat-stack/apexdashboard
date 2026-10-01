@@ -11,8 +11,9 @@ use RuntimeException;
  * The only thing in this application that talks to cPanel.
  *
  * A cPanel API token is NOT an email-only credential — it carries every
- * permission the cPanel user has. So this class exposes three operations and
- * nothing else: create a mailbox, delete a mailbox, read mailbox sizes. There
+ * permission the cPanel user has. So this class exposes four operations and
+ * nothing else: create a mailbox, delete a mailbox, read mailbox sizes, and
+ * mint a one-click webmail session for a single mailbox. There
  * is no "call any UAPI function" method, and `call()` is private, because the
  * moment a generic proxy exists the blast radius of one bad request becomes
  * the whole hosting account.
@@ -67,6 +68,51 @@ class CpanelMail
             'email'  => $localPart,
             'domain' => $domain ?: $this->domain(),
         ]);
+    }
+
+    /**
+     * A one-click sign-in URL for this mailbox's webmail.
+     *
+     * cPanel mints a short-lived session for a mail user, so the VA lands in
+     * Roundcube already signed in instead of copying an address and password
+     * into a login form. The session belongs to that ONE mailbox and expires on
+     * its own; it is never stored and never logged.
+     *
+     * @throws RuntimeException with a message safe to show a VA.
+     */
+    public function webmailLoginUrl(string $address): string
+    {
+        $data = $this->call('Session/create_webmail_session_for_mail_user', [
+            'login'   => $address,
+            'service' => 'webmaild',
+            // Straight into the inbox rather than cPanel's app chooser.
+            'app'     => 'Roundcube',
+        ]);
+
+        // Newer cPanel hands back a ready-made URL; older versions only give the
+        // session, which is appended to the webmail login endpoint instead.
+        $url = is_array($data) ? ($data['url'] ?? null) : null;
+
+        if (! $url) {
+            $session = is_array($data) ? ($data['session'] ?? null) : null;
+
+            if (! $session) {
+                throw new RuntimeException('The mail server did not return a webmail session.');
+            }
+
+            $url = sprintf('https://%s:2096/login/?session=%s', $this->host(), rawurlencode($session));
+        }
+
+        // Never follow a host cPanel did not have to give us. The response is
+        // trusted only as far as "which session", never "which server" — a
+        // redirect is only as safe as the host it points at.
+        $host = parse_url((string) $url, PHP_URL_HOST);
+
+        if (! $host || strcasecmp($host, (string) $this->host()) !== 0) {
+            throw new RuntimeException('The mail server returned an unexpected webmail address.');
+        }
+
+        return $url;
     }
 
     /**
