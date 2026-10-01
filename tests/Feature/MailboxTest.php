@@ -389,6 +389,39 @@ class MailboxTest extends TestCase
             ->assertDontSee('apexgrow:', false);
     }
 
+    // ------------------------------------------------------------------ the page
+
+    /**
+     * The create dialog must start CLOSED.
+     *
+     * It shipped with `hidden` plus an inline `display:flex`. An inline style
+     * outranks the [hidden] rule, so the dialog sat on top of the page from the
+     * moment it loaded and Cancel appeared to do nothing — there was nothing to
+     * hide, it had never been hidden. Asserted as the general rule, because the
+     * next modal added to this page would hit it too.
+     */
+    public function test_no_element_on_the_page_is_hidden_while_also_being_displayed(): void
+    {
+        $html = $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->get('/admin/mailboxes')->assertOk()->getContent();
+
+        // Every tag carrying the `hidden` attribute, in either attribute order.
+        preg_match_all('/<[a-z][^>]*\shidden[\s>][^>]*>|<[a-z][^>]*\shidden$/im', $html, $m);
+
+        foreach ($m[0] as $tag) {
+            if (preg_match('/style="[^"]*display\s*:\s*(?!none)([a-z-]+)/i', $tag, $hit)) {
+                $this->fail("A hidden element is forced visible by display:{$hit[1]} — " . trim($tag));
+            }
+        }
+
+        $this->assertStringContainsString('id="mbModal"', $html);
+        $this->assertMatchesRegularExpression(
+            '/id="mbModal"[^>]*style="[^"]*display:\s*none/s',
+            $html,
+            'the create dialog does not start closed'
+        );
+    }
+
     // -------------------------------------------------------------- the toggle
 
     public function test_the_super_admin_grants_and_revokes_mailbox_access(): void

@@ -135,8 +135,11 @@
 </div>
 
 {{-- ---------------- Create ---------------- --}}
-<div id="mbModal" hidden
-     style="position:fixed; inset:0; z-index:1000; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; padding:20px;">
+{{-- display:none is the closed state, NOT the hidden attribute: an inline
+     display:flex outranks the [hidden] rule, so the dialog would sit on screen
+     permanently and Cancel would appear to do nothing. --}}
+<div id="mbModal"
+     style="position:fixed; inset:0; z-index:1000; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:20px;">
     <div style="background:#fff; border-radius:14px; width:100%; max-width:480px; box-shadow:0 24px 60px rgba(0,0,0,.28);">
         <form method="POST" action="{{ route('admin.mailboxes.store') }}">
             @csrf
@@ -178,8 +181,8 @@
 (function () {
     var modal = document.getElementById('mbModal');
 
-    function open()  { if (modal) modal.hidden = false; }
-    function close() { if (modal) modal.hidden = true; }
+    function open()  { if (modal) modal.style.display = 'flex'; }
+    function close() { if (modal) modal.style.display = 'none'; }
 
     // A flash that does not depend on the clipboard permission dialog landing.
     function flash(btn, word) {
