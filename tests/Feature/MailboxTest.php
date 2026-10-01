@@ -437,61 +437,106 @@ class MailboxTest extends TestCase
         ]);
     }
 
+    /**
+     * Every argument and every piece of the URL below was measured against the
+     * live cPanel, because each wrong shape fails in a way that still looks
+     * plausible: the full address sends cPanel looking for "name@domain@domain",
+     * a missing domain is refused outright, and a URL without the /cpsess…/
+     * token answers 401 with a password form -- signed in to nothing.
+     */
     public function test_the_webmail_button_signs_the_va_in_without_a_password(): void
     {
         $mailbox = $this->row();
 
         Http::fake(['cpanel.test:2083/*' => Http::response([
             'status' => 1,
-            'data'   => ['session' => 'affe.hunte1317@apexgrowthsolution.com:abc123def', 'expires' => 9999999999],
+            'data'   => ['session' => 'affe.hunte1317@apexgrowthsolution.com:e3IdLh0:CREATE_WEBMAIL_SESSION',
+                         'token'   => '/cpsess1234567890'],
         ], 200)]);
 
         $this->actingAs($this->grantMailboxes($this->va), 'admin')
             ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
-            ->assertRedirect('https://cpanel.test:2096/login/?session='
-                . rawurlencode('affe.hunte1317@apexgrowthsolution.com:abc123def'));
+            ->assertRedirect(
+                'https://cpanel.test:2096/cpsess1234567890/login/?session='
+                . rawurlencode('affe.hunte1317@apexgrowthsolution.com:e3IdLh0:CREATE_WEBMAIL_SESSION')
+                . '&goto_uri=' . rawurlencode('/3rdparty/roundcube/index.php')
+            );
 
-        // The session must be minted for THIS mailbox, not for the cPanel account.
         Http::assertSent(function ($request) {
             return str_contains($request->url(), '/execute/Session/create_webmail_session_for_mail_user')
-                && $request['login'] === 'affe.hunte1317@apexgrowthsolution.com'
+                && $request['login']   === 'affe.hunte1317'          // local part, NOT the address
+                && $request['domain']  === 'apexgrowthsolution.com'  // separately, or cPanel refuses
                 && $request['service'] === 'webmaild';
         });
     }
 
-    public function test_a_url_handed_back_by_cpanel_is_used_as_given(): void
+    public function test_the_security_token_is_required_not_assumed(): void
     {
+        // Without /cpsess…/ in the path, webmail answers 401 and shows a password
+        // form. Redirecting there anyway would look like the feature was broken.
         $mailbox = $this->row();
 
         Http::fake(['cpanel.test:2083/*' => Http::response([
-            'status' => 1,
-            'data'   => ['url' => 'https://cpanel.test:2096/cpsess999/webmail/jupiter/index.html'],
+            'status' => 1, 'data' => ['session' => 'a:b:c'],   // no token
         ], 200)]);
 
         $this->actingAs($this->grantMailboxes($this->va), 'admin')
             ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
-            ->assertRedirect('https://cpanel.test:2096/cpsess999/webmail/jupiter/index.html');
+            ->assertSessionHasErrors('mailbox');
     }
 
     /**
-     * The response says WHICH SESSION, never which server. A redirect is only as
-     * safe as the host it points at, so a url on any other host is refused —
-     * otherwise a compromised or spoofed response becomes an open redirect that
-     * sends a VA, mid-task, to someone else's login form.
+     * The token lands in the URL PATH, so it is checked rather than trusted.
+     * A reply that smuggled something else in there would be writing part of
+     * the address a VA is about to be sent to.
      */
-    public function test_a_webmail_url_on_another_host_is_refused(): void
+    public function test_a_token_that_is_not_a_cpsess_segment_is_refused(): void
+    {
+        $mailbox = $this->row();
+
+        foreach (['//evil.example.com', '/cpsess1/../..', 'cpsess123', '/nope123'] as $bad) {
+            Http::fake(['cpanel.test:2083/*' => Http::response([
+                'status' => 1, 'data' => ['session' => 'a:b:c', 'token' => $bad],
+            ], 200)]);
+
+            $this->actingAs($this->grantMailboxes($this->va), 'admin')
+                ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
+                ->assertSessionHasErrors('mailbox');
+        }
+    }
+
+    public function test_the_host_is_always_ours_whatever_cpanel_replies(): void
     {
         $mailbox = $this->row();
 
         Http::fake(['cpanel.test:2083/*' => Http::response([
             'status' => 1,
-            'data'   => ['url' => 'https://evil.example.com/login/?session=abc'],
+            'data'   => ['session' => 'a:b:c', 'token' => '/cpsess9', 'hostname' => 'evil.example.com',
+                         'url' => 'https://evil.example.com/login/?session=a'],
         ], 200)]);
 
-        $this->actingAs($this->grantMailboxes($this->va), 'admin')
-            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail')
-            ->assertRedirect()                      // back, not away
-            ->assertSessionHasErrors('mailbox');
+        $res = $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail');
+
+        $this->assertStringStartsWith('https://cpanel.test:2096/cpsess9/', $res->headers->get('Location'));
+        $this->assertStringNotContainsString('evil.example.com', (string) $res->headers->get('Location'));
+    }
+
+    public function test_the_webmail_redirect_is_never_cached(): void
+    {
+        // It carries a live session; a cached copy in a shared browser is a
+        // signed-in mailbox for whoever presses Back.
+        $mailbox = $this->row();
+
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 1, 'data' => ['session' => 'a:b:c', 'token' => '/cpsess9'],
+        ], 200)]);
+
+        $res = $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes/' . $mailbox->id . '/webmail');
+
+        $this->assertStringContainsString('no-store', (string) $res->headers->get('Cache-Control'));
+        $this->assertSame('no-referrer', $res->headers->get('Referrer-Policy'));
     }
 
     public function test_one_organisation_cannot_open_anothers_webmail(): void
@@ -567,7 +612,7 @@ class MailboxTest extends TestCase
         );
     }
 
-    public function test_the_webmail_session_is_never_written_to_the_page(): void
+    public function test_the_webmail_session_never_reaches_the_mailbox_list(): void
     {
         $mailbox = $this->row();
 

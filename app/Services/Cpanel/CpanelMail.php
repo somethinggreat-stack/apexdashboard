@@ -71,48 +71,54 @@ class CpanelMail
     }
 
     /**
-     * A one-click sign-in URL for this mailbox's webmail.
+     * A one-click sign-in URL that lands in this mailbox's Roundcube inbox.
      *
-     * cPanel mints a short-lived session for a mail user, so the VA lands in
-     * Roundcube already signed in instead of copying an address and password
-     * into a login form. The session belongs to that ONE mailbox and expires on
-     * its own; it is never stored and never logged.
+     * Every part of this was measured against the live server, because the
+     * obvious shapes all fail silently-ish:
+     *
+     *   - `login` must be the LOCAL PART with `domain` passed separately.
+     *     The full address makes cPanel look for "name@domain@domain"; omitting
+     *     the domain is refused with "Provide the domain argument".
+     *   - The URL must carry the session's own /cpsess…/ security token in the
+     *     PATH. Without it webmail answers 401 "Invalid Security Token" and
+     *     shows a password form — signed in to nothing.
+     *   - goto_uri lands in Roundcube itself rather than cPanel's app chooser.
+     *
+     * The session is single-use and short-lived. It is never stored or logged.
      *
      * @throws RuntimeException with a message safe to show a VA.
      */
-    public function webmailLoginUrl(string $address): string
+    public function webmailLoginUrl(string $localPart, ?string $domain = null): string
     {
+        $localPart = $this->guardLocalPart($localPart);
+
         $data = $this->call('Session/create_webmail_session_for_mail_user', [
-            'login'   => $address,
+            'login'   => $localPart,
+            'domain'  => $domain ?: $this->domain(),
             'service' => 'webmaild',
-            // Straight into the inbox rather than cPanel's app chooser.
-            'app'     => 'Roundcube',
         ]);
 
-        // Newer cPanel hands back a ready-made URL; older versions only give the
-        // session, which is appended to the webmail login endpoint instead.
-        $url = is_array($data) ? ($data['url'] ?? null) : null;
+        $session = is_array($data) ? ($data['session'] ?? null) : null;
+        $token   = is_array($data) ? ($data['token'] ?? null)   : null;
 
-        if (! $url) {
-            $session = is_array($data) ? ($data['session'] ?? null) : null;
-
-            if (! $session) {
-                throw new RuntimeException('The mail server did not return a webmail session.');
-            }
-
-            $url = sprintf('https://%s:2096/login/?session=%s', $this->host(), rawurlencode($session));
+        if (! $session || ! $token) {
+            throw new RuntimeException('The mail server did not return a webmail session.');
         }
 
-        // Never follow a host cPanel did not have to give us. The response is
-        // trusted only as far as "which session", never "which server" — a
-        // redirect is only as safe as the host it points at.
-        $host = parse_url((string) $url, PHP_URL_HOST);
-
-        if (! $host || strcasecmp($host, (string) $this->host()) !== 0) {
-            throw new RuntimeException('The mail server returned an unexpected webmail address.');
+        // The token goes into the path, so it is checked rather than trusted: it
+        // may only be a /cpsess… segment. The host always comes from our own
+        // config — the reply says which session, never which server.
+        if (! preg_match('#^/cpsess\d+$#', $token)) {
+            throw new RuntimeException('The mail server returned an unexpected session token.');
         }
 
-        return $url;
+        return sprintf(
+            'https://%s:2096%s/login/?session=%s&goto_uri=%s',
+            $this->host(),
+            $token,
+            rawurlencode($session),
+            rawurlencode('/3rdparty/roundcube/index.php')
+        );
     }
 
     /**

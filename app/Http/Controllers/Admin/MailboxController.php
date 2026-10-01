@@ -120,12 +120,11 @@ class MailboxController extends Controller
     }
 
     /**
-     * Open webmail for this mailbox, already signed in.
+     * Open webmail for this mailbox, already signed in and in the inbox.
      *
-     * POST rather than GET: it mints a live session on the mail server, and a
-     * link that does that should not be something a page can trigger just by
-     * being loaded. The session is handed straight to the browser and never
-     * stored on our side.
+     * POST rather than GET, because it mints a live session on the mail server,
+     * and a link that does that should not be something a page can trigger just
+     * by being loaded. The session is handed to the browser and never stored.
      */
     public function webmail(int $id)
     {
@@ -134,13 +133,19 @@ class MailboxController extends Controller
         $mailbox = Mailbox::forOrg($ownerId)->live()->findOrFail($id);
 
         try {
-            return redirect()->away($this->cpanel->webmailLoginUrl($mailbox->address));
+            $url = $this->cpanel->webmailLoginUrl($mailbox->local_part, $mailbox->domain);
         } catch (RuntimeException $e) {
-            // Falling back to the plain login page beats a dead end: the VA still
-            // has the address and password on the row in front of them.
+            // Falling back beats a dead end: the VA still has the address and
+            // password on the row in front of them.
             return back()->withErrors(['mailbox' =>
-                $e->getMessage() . ' Open webmail from the button at the top and sign in with the address and password instead.']);
+                $e->getMessage() . ' Use Open Webmail at the top and sign in with the address and password instead.']);
         }
+
+        // The URL carries a live session, so it must not be cached or handed on
+        // in a Referer when webmail loads its own assets.
+        return redirect()->away($url)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 
     /** Delete the mailbox on cPanel, then mark our row as gone (never remove it). */
