@@ -107,6 +107,25 @@ class UserController extends Controller
         return back()->with('status', "Credentials access {$state} for {$user->full_name}.");
     }
 
+    /** Grant or revoke a VA's access to the Mailboxes page (CFPB throwaway addresses). */
+    public function toggleMailboxes(string $id)
+    {
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $user    = $this->orgScope($ownerId)->findOrFail($id);
+
+        // Only VAs carry this flag — super admins always have access, leads never.
+        if (! $user->isVa()) {
+            return back()->withErrors(['user' => 'Mailbox access applies to VAs only.']);
+        }
+
+        $user->can_manage_mailboxes = ! $user->can_manage_mailboxes;
+        $user->save();
+
+        $state = $user->can_manage_mailboxes ? 'granted' : 'revoked';
+
+        return back()->with('status', "Mailbox access {$state} for {$user->full_name}.");
+    }
+
     public function destroy(string $id)
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();

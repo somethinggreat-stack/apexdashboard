@@ -1,0 +1,411 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Admin;
+use App\Models\Client;
+use App\Models\EndUser;
+use App\Models\Mailbox;
+use App\Services\Cpanel\CpanelMail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
+use Tests\TestCase;
+
+/**
+ * Mailboxes — the throwaway cPanel addresses VAs create for CFPB one-time codes.
+ *
+ * cPanel is never really called: Http::fake() stands in for it, and the fakes
+ * answer in cPanel's own shape (HTTP 200 with status:0 for a refusal), because
+ * mistaking that for success is the specific way this integration would break.
+ */
+class MailboxTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Admin $super;
+    private Admin $va;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'cpanel.host'        => 'cpanel.test',
+            'cpanel.port'        => 2083,
+            'cpanel.user'        => 'apexgrow',
+            'cpanel.token'       => 'test-token',
+            'cpanel.mail_domain' => 'apexgrowthsolution.com',
+            'cpanel.quota_mb'    => 100,
+            'cpanel.daily_limit' => 25,
+        ]);
+
+        $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret-pass', 'full_name' => 'Umair Arshad']);
+        $this->super->role = 'super';
+        $this->super->save();
+
+        $this->va = new Admin(['email' => 'dogar@test.com', 'password' => 'secret-pass', 'full_name' => 'Ubaid Dogar']);
+        $this->va->role = 'va';
+        $this->va->parent_admin_id = $this->super->id;
+        $this->va->save();
+    }
+
+    private function grantMailboxes(Admin $admin): Admin
+    {
+        $admin->can_manage_mailboxes = true;
+        $admin->save();
+
+        return $admin;
+    }
+
+    /** cPanel answering "yes" to everything. */
+    private function fakeOk(): void
+    {
+        Http::fake(['cpanel.test:2083/*' => Http::response(['status' => 1, 'errors' => null, 'data' => []], 200)]);
+    }
+
+    private function endUser(?Admin $owner = null): EndUser
+    {
+        $client = Client::create([
+            'admin_id' => ($owner ?? $this->super)->id,
+            'business_name' => 'Genius Credit Boutique ' . uniqid(),
+            'email' => uniqid() . '@test.com', 'password' => 'secret-pass',
+            'status' => 'active', 'monthly_fee' => 0, 'round_cycle_days' => 30,
+        ]);
+
+        return EndUser::create([
+            'client_id' => $client->id, 'first_name' => 'Nazeer', 'last_name' => 'Mohamed',
+            'email' => uniqid() . '@example.com', 'status' => 'active', 'intake_status' => 'done',
+            'start_date' => now()->subDays(10)->toDateString(),
+        ]);
+    }
+
+    // ------------------------------------------------------------------ access
+
+    public function test_a_va_without_the_flag_cannot_reach_the_page_at_all(): void
+    {
+        $this->actingAs($this->va, 'admin')->get('/admin/mailboxes')->assertForbidden();
+        $this->actingAs($this->va, 'admin')->post('/admin/mailboxes')->assertForbidden();
+    }
+
+    public function test_a_granted_va_can_reach_it_and_the_super_admin_never_needs_the_flag(): void
+    {
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')->get('/admin/mailboxes')->assertOk();
+
+        $this->assertFalse((bool) $this->super->can_manage_mailboxes);
+        $this->actingAs($this->super, 'admin')->get('/admin/mailboxes')->assertOk();
+    }
+
+    public function test_the_sidebar_link_is_invisible_until_access_is_granted(): void
+    {
+        // Another VA page, so the sidebar renders either way.
+        $this->actingAs($this->va, 'admin')->get('/admin/select-business-owner')
+            ->assertOk()->assertDontSee('Mailboxes');
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')->get('/admin/select-business-owner')
+            ->assertOk()->assertSee('Mailboxes');
+    }
+
+    // ------------------------------------------------------------------ create
+
+    public function test_creating_a_mailbox_calls_cpanel_and_records_it(): void
+    {
+        $this->fakeOk();
+        $endUser = $this->endUser();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', ['end_user_id' => $endUser->id])
+            ->assertRedirect();
+
+        $mailbox = Mailbox::firstOrFail();
+
+        $this->assertSame('apexgrowthsolution.com', $mailbox->domain);
+        $this->assertSame($mailbox->local_part . '@apexgrowthsolution.com', $mailbox->address);
+        $this->assertSame(100, $mailbox->quota_mb);
+        $this->assertSame($this->va->id, $mailbox->created_by_admin_id);
+        $this->assertSame($this->super->id, $mailbox->admin_id, 'the VA\'s org owns it, not the VA');
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/execute/Email/add_pop')
+                && $request['quota'] === 100
+                && $request['domain'] === 'apexgrowthsolution.com';
+        });
+    }
+
+    public function test_the_new_address_becomes_the_clients_cfpb_login(): void
+    {
+        $this->fakeOk();
+        $endUser = $this->endUser();
+        $this->assertNull($endUser->cfpb_email);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', ['end_user_id' => $endUser->id]);
+
+        $this->assertSame(Mailbox::firstOrFail()->address, $endUser->fresh()->cfpb_email);
+    }
+
+    public function test_a_cfpb_login_already_in_use_is_never_overwritten(): void
+    {
+        // Overwriting would strand a CFPB account that already exists under the old address.
+        $this->fakeOk();
+        $endUser = $this->endUser();
+        $endUser->forceFill(['cfpb_email' => 'already.in.use@apexgrowthsolution.com'])->save();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', ['end_user_id' => $endUser->id]);
+
+        $this->assertSame('already.in.use@apexgrowthsolution.com', $endUser->fresh()->cfpb_email);
+    }
+
+    public function test_the_password_is_not_readable_in_the_database(): void
+    {
+        $this->fakeOk();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')->post('/admin/mailboxes', []);
+
+        $mailbox = Mailbox::firstOrFail();
+        $raw     = DB::table('mailboxes')->where('id', $mailbox->id)->value('password');
+
+        $this->assertNotSame($mailbox->password, $raw, 'the password was stored in plain text');
+        $this->assertNotEmpty($mailbox->password);
+    }
+
+    public function test_a_client_from_another_organisation_is_refused(): void
+    {
+        $this->fakeOk();
+
+        $otherSuper = new Admin(['email' => 'other@test.com', 'password' => 'secret-pass', 'full_name' => 'Someone Else']);
+        $otherSuper->role = 'super';
+        $otherSuper->save();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', ['end_user_id' => $this->endUser($otherSuper)->id])
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(0, Mailbox::count());
+        Http::assertNothingSent();
+    }
+
+    /**
+     * THE failure mode of this integration: UAPI refuses with HTTP 200 and
+     * status:0. Reading that as success records a mailbox that does not exist,
+     * and the VA gets a login that silently never works.
+     */
+    public function test_a_cpanel_refusal_is_not_recorded_as_a_mailbox(): void
+    {
+        Http::fake(['cpanel.test:2083/*' => Http::response([
+            'status' => 0,
+            'errors' => ['The email account already exists.'],
+        ], 200)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', [])
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(0, Mailbox::count(), 'a refused mailbox was recorded anyway');
+    }
+
+    public function test_cpanel_being_unreachable_does_not_record_a_mailbox(): void
+    {
+        Http::fake(['cpanel.test:2083/*' => Http::response('', 500)]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', [])
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(0, Mailbox::count());
+    }
+
+    public function test_the_daily_limit_stops_a_runaway_loop(): void
+    {
+        $this->fakeOk();
+        config(['cpanel.daily_limit' => 2]);
+        $va = $this->grantMailboxes($this->va);
+
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', []);
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', []);
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', [])->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(2, Mailbox::count());
+    }
+
+    public function test_two_clients_with_the_same_name_get_different_addresses(): void
+    {
+        $this->fakeOk();
+        $va = $this->grantMailboxes($this->va);
+
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', ['local_part' => 'nazeer.mohamed']);
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', ['local_part' => 'nazeer.mohamed']);
+
+        $this->assertSame(2, Mailbox::distinct('address')->count('address'));
+    }
+
+    // ------------------------------------------------------------------ delete
+
+    public function test_deleting_removes_it_from_cpanel_and_keeps_the_audit_row(): void
+    {
+        $this->fakeOk();
+        $va = $this->grantMailboxes($this->va);
+
+        $this->actingAs($va, 'admin')->post('/admin/mailboxes', []);
+        $mailbox = Mailbox::firstOrFail();
+
+        $this->actingAs($va, 'admin')->delete('/admin/mailboxes/' . $mailbox->id)->assertRedirect();
+
+        $mailbox->refresh();
+        $this->assertNotNull($mailbox->deleted_at, 'the row was not marked deleted');
+        $this->assertSame($va->id, $mailbox->deleted_by_admin_id);
+        $this->assertSame(1, Mailbox::count(), 'the audit row was thrown away');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/execute/Email/delete_pop'));
+    }
+
+    public function test_a_failed_delete_leaves_the_mailbox_alive_in_our_records(): void
+    {
+        // Marking it deleted when cPanel still has it would hide a live mailbox
+        // nobody can find again — and it keeps consuming disk.
+        //
+        // The row is made directly rather than through the create route: Http::fake()
+        // MERGES stubs rather than replacing them, so a "create ok, delete refused"
+        // pair in one test silently gets the ok response twice and proves nothing.
+        $va = $this->grantMailboxes($this->va);
+
+        $mailbox = Mailbox::create([
+            'admin_id' => $this->super->id, 'created_by_admin_id' => $va->id,
+            'local_part' => 'stubborn1234', 'domain' => 'apexgrowthsolution.com',
+            'address' => 'stubborn1234@apexgrowthsolution.com', 'password' => 'x', 'quota_mb' => 100,
+        ]);
+
+        Http::fake(['cpanel.test:2083/*' => Http::response(['status' => 0, 'errors' => ['Nope.']], 200)]);
+
+        $this->actingAs($va, 'admin')->delete('/admin/mailboxes/' . $mailbox->id)
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertNull($mailbox->fresh()->deleted_at);
+    }
+
+    public function test_one_organisation_cannot_delete_anothers_mailbox(): void
+    {
+        $otherSuper = new Admin(['email' => 'other@test.com', 'password' => 'secret-pass', 'full_name' => 'Someone Else']);
+        $otherSuper->role = 'super';
+        $otherSuper->save();
+
+        $theirs = Mailbox::create([
+            'admin_id' => $otherSuper->id, 'created_by_admin_id' => $otherSuper->id,
+            'local_part' => 'theirs1234', 'domain' => 'apexgrowthsolution.com',
+            'address' => 'theirs1234@apexgrowthsolution.com', 'password' => 'x', 'quota_mb' => 100,
+        ]);
+
+        $this->fakeOk();
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->delete('/admin/mailboxes/' . $theirs->id)
+            ->assertNotFound();
+
+        $this->assertNull($theirs->fresh()->deleted_at);
+        Http::assertNothingSent();
+    }
+
+    // ------------------------------------------------------- the service itself
+
+    public function test_the_service_refuses_the_real_business_addresses(): void
+    {
+        $this->fakeOk();
+        $cpanel = new CpanelMail();
+
+        foreach (['hello', 'billing', 'support', 'HELLO'] as $protected) {
+            try {
+                $cpanel->deleteMailbox($protected);
+                $this->fail("deleteMailbox('{$protected}') was allowed through");
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('protected', $e->getMessage());
+            }
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_the_service_refuses_an_unlimited_quota(): void
+    {
+        // cPanel reads 0 as unlimited — the one value that defeats the point.
+        $this->fakeOk();
+
+        $this->expectException(RuntimeException::class);
+        (new CpanelMail())->createMailbox('somebody1234', 'pw', null, 0);
+    }
+
+    public function test_the_service_refuses_a_malformed_mailbox_name(): void
+    {
+        $this->fakeOk();
+        $cpanel = new CpanelMail();
+
+        foreach (['has space', 'semi;colon', 'quote"mark', '../escape', ''] as $bad) {
+            try {
+                $cpanel->createMailbox($bad, 'pw');
+                $this->fail("createMailbox('{$bad}') was allowed through");
+            } catch (RuntimeException $e) {
+                $this->assertTrue(true);
+            }
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_usage_survives_cpanel_being_down(): void
+    {
+        // Sizes are a nicety; the page must still render for a VA mid-shift.
+        Http::fake(['cpanel.test:2083/*' => Http::response('', 503)]);
+
+        $this->assertSame([], (new CpanelMail())->usage());
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')->get('/admin/mailboxes')->assertOk();
+    }
+
+    public function test_nothing_is_attempted_when_cpanel_is_not_configured(): void
+    {
+        config(['cpanel.token' => null]);
+        Http::fake();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', [])
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(0, Mailbox::count());
+        Http::assertNothingSent();
+
+        // The page still loads and says why.
+        $this->actingAs($this->va, 'admin')->get('/admin/mailboxes')
+            ->assertOk()->assertSee('not switched on', false);
+    }
+
+    public function test_the_api_token_never_reaches_the_page(): void
+    {
+        $this->fakeOk();
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')->post('/admin/mailboxes', []);
+
+        $this->actingAs($this->va, 'admin')->get('/admin/mailboxes')
+            ->assertOk()
+            ->assertDontSee('test-token', false)
+            ->assertDontSee('apexgrow:', false);
+    }
+
+    // -------------------------------------------------------------- the toggle
+
+    public function test_the_super_admin_grants_and_revokes_mailbox_access(): void
+    {
+        $this->actingAs($this->super, 'admin')
+            ->put('/admin/users/' . $this->va->id . '/mailbox-access')->assertRedirect();
+        $this->assertTrue((bool) $this->va->fresh()->can_manage_mailboxes);
+
+        $this->actingAs($this->super, 'admin')
+            ->put('/admin/users/' . $this->va->id . '/mailbox-access')->assertRedirect();
+        $this->assertFalse((bool) $this->va->fresh()->can_manage_mailboxes);
+    }
+
+    public function test_a_va_cannot_grant_themselves_mailbox_access(): void
+    {
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->put('/admin/users/' . $this->va->id . '/mailbox-access')
+            ->assertForbidden();
+    }
+}

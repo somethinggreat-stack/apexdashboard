@@ -10,6 +10,7 @@
             <p class="muted" style="margin:4px 0 0; font-size:13px;">
                 VAs can work on all business owners (New Clients, Errors, Clients, Messages, Today's Queue) but can't see payments or leads.
                 Grant <strong>Credentials Access</strong> to let a VA open a business owner's saved CRM / software logins.
+                Grant <strong>Mailbox Access</strong> to let a VA create and delete the throwaway email addresses used for CFPB one-time codes.
             </p>
         </div>
         <button class="btn btn-primary" onclick="openModal('addUserModal')">+ Add User</button>
@@ -34,6 +35,9 @@
                             @if ($u->can_manage_credentials)
                                 <span class="role-badge role-cred">Credentials</span>
                             @endif
+                            @if ($u->can_manage_mailboxes)
+                                <span class="role-badge role-cred">Mailboxes</span>
+                            @endif
                         @endif
                     </td>
                     <td class="no-link">
@@ -47,6 +51,10 @@
                                 <form method="POST" action="{{ route('admin.users.credentials-access', $u->id) }}">
                                     @csrf @method('PUT')
                                     <button class="btn btn-sm">{{ $u->can_manage_credentials ? 'Revoke Credentials Access' : 'Grant Credentials Access' }}</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.users.mailbox-access', $u->id) }}">
+                                    @csrf @method('PUT')
+                                    <button class="btn btn-sm">{{ $u->can_manage_mailboxes ? 'Revoke Mailbox Access' : 'Grant Mailbox Access' }}</button>
                                 </form>
                             @endif
                             @if (!$u->isSuper() && $u->id !== Auth::guard('admin')->id())

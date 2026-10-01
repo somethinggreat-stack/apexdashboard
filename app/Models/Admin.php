@@ -69,6 +69,17 @@ class Admin extends Authenticatable
     }
 
     /**
+     * May this account open the Mailboxes page — creating and deleting the
+     * throwaway cPanel mailboxes used for CFPB signups? Same shape as
+     * canManageCredentials(): super admins always, a VA only when granted,
+     * leads agents never.
+     */
+    public function canManageMailboxes(): bool
+    {
+        return $this->isSuper() || ($this->isVa() && (bool) $this->can_manage_mailboxes);
+    }
+
+    /**
      * The admin whose data (business owners, clients) this user operates on.
      * VAs share their parent super admin's data; a super admin owns their own.
      */

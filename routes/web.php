@@ -98,6 +98,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::put('users/{id}/credentials-access', [Admin\UserController::class, 'toggleCredentials'])->name('users.credentials-access');
+            Route::put('users/{id}/mailbox-access', [Admin\UserController::class, 'toggleMailboxes'])->name('users.mailbox-access');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
             // Diagnostic: the upload limits this server really enforces (PHP + chat caps).
@@ -164,6 +165,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('daily-task', [Admin\DailyTaskController::class, 'index'])->name('daily-task');
         // CFPB Logins — last-12h CFPB logins entered per business owner
         Route::get('cfpb-logins', [Admin\CfpbLoginController::class, 'index'])->name('cfpb-logins');
+
+        // Mailboxes — the throwaway cPanel addresses used to collect CFPB one-time
+        // codes. Sits beside CFPB Logins because it is the step before it. Super
+        // admin always; a VA only when granted (admin.mailboxes middleware). No
+        // business owner needs to be selected: a VA opens this mid-task.
+        Route::middleware('admin.mailboxes')->group(function () {
+            Route::get('mailboxes', [Admin\MailboxController::class, 'index'])->name('mailboxes.index');
+            Route::post('mailboxes', [Admin\MailboxController::class, 'store'])->name('mailboxes.store');
+            Route::delete('mailboxes/{id}', [Admin\MailboxController::class, 'destroy'])
+                ->whereNumber('id')->name('mailboxes.destroy');
+        });
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
         // One-click CSV of every owner's Secure Intake Link (name + branded link).

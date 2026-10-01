@@ -1,0 +1,213 @@
+<?php
+
+namespace App\Services\Cpanel;
+
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+
+/**
+ * The only thing in this application that talks to cPanel.
+ *
+ * A cPanel API token is NOT an email-only credential — it carries every
+ * permission the cPanel user has. So this class exposes three operations and
+ * nothing else: create a mailbox, delete a mailbox, read mailbox sizes. There
+ * is no "call any UAPI function" method, and `call()` is private, because the
+ * moment a generic proxy exists the blast radius of one bad request becomes
+ * the whole hosting account.
+ *
+ * Addresses in config('cpanel.protected') are refused here as well as in the
+ * controller: the deepest layer should not depend on a caller remembering.
+ */
+class CpanelMail
+{
+    public function __construct(
+        private readonly ?string $host = null,
+        private readonly ?string $user = null,
+        private readonly ?string $token = null,
+    ) {
+    }
+
+    /** Configured well enough to try? Pages check this before offering the buttons. */
+    public function isConfigured(): bool
+    {
+        return (bool) ($this->host() && $this->user() && $this->token());
+    }
+
+    /**
+     * Create a mailbox. Returns nothing on success and throws on failure, so a
+     * caller can never mistake a refusal for a mailbox.
+     */
+    public function createMailbox(string $localPart, string $password, ?string $domain = null, ?int $quotaMb = null): void
+    {
+        $localPart = $this->guardLocalPart($localPart);
+        $quotaMb ??= (int) config('cpanel.quota_mb', 100);
+
+        // cPanel reads 0 as "unlimited". A mailbox with no ceiling is exactly what
+        // the quota is here to prevent, so refuse rather than quietly send it.
+        if ($quotaMb < 1) {
+            throw new RuntimeException('A mailbox quota must be at least 1 MB.');
+        }
+
+        $this->call('Email/add_pop', [
+            'email'    => $localPart,
+            'password' => $password,
+            'quota'    => $quotaMb,
+            'domain'   => $domain ?: $this->domain(),
+        ]);
+    }
+
+    /** Delete a mailbox and everything in it. There is no undo on cPanel's side. */
+    public function deleteMailbox(string $localPart, ?string $domain = null): void
+    {
+        $localPart = $this->guardLocalPart($localPart);
+
+        $this->call('Email/delete_pop', [
+            'email'  => $localPart,
+            'domain' => $domain ?: $this->domain(),
+        ]);
+    }
+
+    /**
+     * Disk used per mailbox, keyed by full address: ['x@y.com' => ['used_mb' => 3.1, 'quota_mb' => 100]].
+     *
+     * Returns an empty array when cPanel cannot be reached. Sizes are a nicety;
+     * the page must still render when the host is having a bad morning.
+     */
+    public function usage(): array
+    {
+        try {
+            $rows = $this->call('Email/list_pops_with_disk', ['domain' => $this->domain()]);
+        } catch (RuntimeException $e) {
+            Log::warning('cPanel mailbox usage unavailable: ' . $e->getMessage());
+
+            return [];
+        }
+
+        $out = [];
+
+        foreach ((array) $rows as $row) {
+            $address = $row['email'] ?? null;
+            if (! $address) {
+                continue;
+            }
+            // cPanel reports megabytes as strings, and an unlimited quota as 0 or "unlimited".
+            $quota = $row['diskquota'] ?? null;
+            $out[strtolower($address)] = [
+                'used_mb'  => is_numeric($row['diskused'] ?? null) ? (float) $row['diskused'] : null,
+                'quota_mb' => is_numeric($quota) && (float) $quota > 0 ? (float) $quota : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /** True when cPanel already has this address. */
+    public function exists(string $localPart, ?string $domain = null): bool
+    {
+        $address = strtolower($localPart . '@' . ($domain ?: $this->domain()));
+
+        return array_key_exists($address, $this->usage());
+    }
+
+    // ---------------------------------------------------------------- internals
+
+    /**
+     * One UAPI call. PRIVATE on purpose — see the class docblock. Every public
+     * method above names the exact cPanel function it needs.
+     *
+     * @throws RuntimeException with a message safe to show a VA (never the token).
+     */
+    private function call(string $function, array $params): mixed
+    {
+        if (! $this->isConfigured()) {
+            throw new RuntimeException('Mailbox creation is not configured on this server yet.');
+        }
+
+        $url = sprintf('https://%s:%d/execute/%s', $this->host(), (int) config('cpanel.port', 2083), $function);
+
+        try {
+            $response = Http::withHeaders([
+                    // cPanel's own scheme: "cpanel <user>:<token>".
+                    'Authorization' => 'cpanel ' . $this->user() . ':' . $this->token(),
+                ])
+                ->timeout((int) config('cpanel.timeout', 20))
+                ->asForm()
+                ->get($url, $params);
+        } catch (ConnectionException $e) {
+            // The message can carry the URL but never the Authorization header.
+            throw new RuntimeException('Could not reach the mail server. Try again in a moment.');
+        }
+
+        if (! $response->successful()) {
+            Log::warning('cPanel ' . $function . ' failed', ['status' => $response->status()]);
+
+            throw new RuntimeException('The mail server refused the request (HTTP ' . $response->status() . ').');
+        }
+
+        $body = $response->json();
+
+        // UAPI answers 200 with status:0 for an application-level refusal — a
+        // duplicate address, a weak password, a full disk. Treating that as
+        // success is how you end up recording a mailbox that does not exist.
+        if (! is_array($body) || ($body['status'] ?? 0) != 1) {
+            throw new RuntimeException($this->errorFrom($body));
+        }
+
+        return $body['data'] ?? null;
+    }
+
+    /** cPanel's own words where it gives any, so a VA sees the real reason. */
+    private function errorFrom(mixed $body): string
+    {
+        $errors = is_array($body) ? ($body['errors'] ?? null) : null;
+
+        if (is_array($errors) && $errors !== []) {
+            return (string) reset($errors);
+        }
+
+        return is_string($errors) && $errors !== ''
+            ? $errors
+            : 'The mail server rejected the request.';
+    }
+
+    /**
+     * A local part this class is willing to act on. Rejects anything that is not
+     * a plain mailbox name, and refuses the protected business addresses outright.
+     */
+    private function guardLocalPart(string $localPart): string
+    {
+        $localPart = strtolower(trim($localPart));
+
+        if (! preg_match('/^[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?$/', $localPart)) {
+            throw new RuntimeException('That mailbox name contains characters the mail server will not accept.');
+        }
+
+        if (in_array($localPart, array_map('strtolower', (array) config('cpanel.protected', [])), true)) {
+            throw new RuntimeException("'{$localPart}' is a protected business address and cannot be touched from here.");
+        }
+
+        return $localPart;
+    }
+
+    private function host(): ?string
+    {
+        return $this->host ?: config('cpanel.host');
+    }
+
+    private function user(): ?string
+    {
+        return $this->user ?: config('cpanel.user');
+    }
+
+    private function token(): ?string
+    {
+        return $this->token ?: config('cpanel.token');
+    }
+
+    private function domain(): string
+    {
+        return (string) config('cpanel.mail_domain');
+    }
+}
