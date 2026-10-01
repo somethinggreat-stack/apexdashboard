@@ -29,7 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.clients'   => \App\Http\Middleware\RoleClients::class,
             'admin.credentials' => \App\Http\Middleware\RoleCredentials::class,
             'admin.mailboxes' => \App\Http\Middleware\RoleMailboxes::class,
-            'admin.numbers' => \App\Http\Middleware\RoleNumbers::class,
             'jarvis.token'    => \App\Http\Middleware\JarvisToken::class,
         ]);
 
@@ -70,7 +69,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // form without carrying the session cookie for CSRF — the token is the
         // secret, same as the partner API. It's also a multipart POST this host
         // sometimes strips the cookie from, so this hardens the form either way.
-        $middleware->validateCsrfTokens(except: ['api/intake', 'partner-intake', 'intake/*', 'sms/plivo/inbound']);
+        $middleware->validateCsrfTokens(except: ['api/intake', 'partner-intake', 'intake/*']);
 
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('business-owner') || $request->is('business-owner/*')) {

@@ -11,7 +11,6 @@
                 VAs can work on all business owners (New Clients, Errors, Clients, Messages, Today's Queue) but can't see payments or leads.
                 Grant <strong>Credentials Access</strong> to let a VA open a business owner's saved CRM / software logins.
                 Grant <strong>Mailbox Access</strong> to let a VA create and delete the throwaway email addresses used for CFPB one-time codes.
-                Grant <strong>Phone Number Access</strong> to let a VA claim a pooled phone number and read the one-time codes that arrive on it.
             </p>
         </div>
         <button class="btn btn-primary" onclick="openModal('addUserModal')">+ Add User</button>
@@ -39,9 +38,6 @@
                             @if ($u->can_manage_mailboxes)
                                 <span class="role-badge role-cred">Mailboxes</span>
                             @endif
-                            @if ($u->can_manage_numbers)
-                                <span class="role-badge role-cred">Phone Numbers</span>
-                            @endif
                         @endif
                     </td>
                     <td class="no-link">
@@ -59,10 +55,6 @@
                                 <form method="POST" action="{{ route('admin.users.mailbox-access', $u->id) }}">
                                     @csrf @method('PUT')
                                     <button class="btn btn-sm">{{ $u->can_manage_mailboxes ? 'Revoke Mailbox Access' : 'Grant Mailbox Access' }}</button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.users.number-access', $u->id) }}">
-                                    @csrf @method('PUT')
-                                    <button class="btn btn-sm">{{ $u->can_manage_numbers ? 'Revoke Phone Number Access' : 'Grant Phone Number Access' }}</button>
                                 </form>
                             @endif
                             @if (!$u->isSuper() && $u->id !== Auth::guard('admin')->id())

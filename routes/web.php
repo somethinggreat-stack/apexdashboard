@@ -56,12 +56,6 @@ Route::post('/api/intake', [IntakeController::class, 'apiStore'])->middleware('t
 // controller, identical key auth — only the path differs.
 Route::post('/partner-intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('partner.intake');
 
-// Inbound SMS from Plivo. Public because Plivo has no login here, so the
-// controller verifies the V3 signature and drops anything that does not check
-// out. Rate-capped: a pool of ten numbers cannot legitimately produce more.
-Route::post('/sms/plivo/inbound', [App\Http\Controllers\SmsWebhookController::class, 'plivo'])
-    ->middleware('throttle:120,1')->name('sms.plivo.inbound');
-
 /*
 |--------------------------------------------------------------------------
 | VA Admin (admin guard)
@@ -105,7 +99,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
             Route::put('users/{id}/credentials-access', [Admin\UserController::class, 'toggleCredentials'])->name('users.credentials-access');
             Route::put('users/{id}/mailbox-access', [Admin\UserController::class, 'toggleMailboxes'])->name('users.mailbox-access');
-            Route::put('users/{id}/number-access', [Admin\UserController::class, 'toggleNumbers'])->name('users.number-access');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
             // Diagnostic: the upload limits this server really enforces (PHP + chat caps).
@@ -187,24 +180,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->whereNumber('id')->name('mailboxes.webmail');
             Route::delete('mailboxes/{id}', [Admin\MailboxController::class, 'destroy'])
                 ->whereNumber('id')->name('mailboxes.destroy');
-        });
-
-        // Numbers — the shared pool of GHL phone numbers VAs claim to collect
-        // one-time codes. Sits beside Mailboxes: same job, other channel. No
-        // business owner needs to be selected.
-        Route::middleware('admin.numbers')->group(function () {
-            Route::get('numbers', [Admin\NumberController::class, 'index'])->name('numbers.index');
-            // The poll runs while a VA holds a number, so it gets its own cap:
-            // busy enough for a 5s refresh, useless to a runaway loop.
-            Route::middleware('throttle:240,1')->group(function () {
-                Route::get('numbers/poll', [Admin\NumberController::class, 'poll'])->name('numbers.poll');
-            });
-            Route::post('numbers/{id}/claim', [Admin\NumberController::class, 'claim'])
-                ->whereNumber('id')->name('numbers.claim');
-            Route::post('numbers/{id}/release', [Admin\NumberController::class, 'release'])
-                ->whereNumber('id')->name('numbers.release');
-            Route::post('numbers/otp/{id}/copied', [Admin\NumberController::class, 'copied'])
-                ->whereNumber('id')->name('numbers.copied');
         });
         Route::get('select-business-owner/search', [Admin\ClientSelectorController::class, 'search'])
             ->name('client-selector.search');
