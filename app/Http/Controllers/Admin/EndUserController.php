@@ -32,15 +32,13 @@ class EndUserController extends Controller
     }
 
     /**
-     * "Sent for Approval" (Clinecea only) — done clients parked awaiting the owner's
+     * "Sent for Approval" (every owner) — done clients parked awaiting the owner's
      * sign-off (round_approval_status = 'awaiting'). Same table as the Clients list,
      * only the row action differs (Move back to Clients). They also surface in the
      * EOD's "Waiting for approval" list.
      */
     public function sentForApproval(Request $request)
     {
-        abort_unless(Client::find(session('selected_client_id'))?->resultsTrackingEnabled(), 403);
-
         return $this->listView($request, 'sent_for_approval');
     }
 
@@ -419,7 +417,7 @@ class EndUserController extends Controller
     /** Mark a client as awaiting the owner's approval for their next round (SOP §2). */
     public function requestRoundApproval(Request $request, string $id)
     {
-        $endUser = $this->resultsScopedEndUser($id);
+        $endUser = $this->orgScopedEndUser($id);
         $round   = min(8, max(1, $endUser->current_round + 1));
 
         $endUser->update([
@@ -435,7 +433,7 @@ class EndUserController extends Controller
     /** Record that the owner approved the next round. */
     public function approveRound(string $id)
     {
-        $endUser = $this->resultsScopedEndUser($id);
+        $endUser = $this->orgScopedEndUser($id);
         $endUser->update([
             'round_approval_status' => 'approved',
             'round_approval_at'     => now(),
@@ -447,7 +445,7 @@ class EndUserController extends Controller
     /** Clear an approval request/state. */
     public function clearRoundApproval(string $id)
     {
-        $endUser = $this->resultsScopedEndUser($id);
+        $endUser = $this->orgScopedEndUser($id);
         $wasAwaiting = $endUser->round_approval_status === 'awaiting';
         $endUser->update([
             'round_approval_status' => null,
@@ -461,13 +459,16 @@ class EndUserController extends Controller
         return $this->inPlace('Moved back to Clients.', null, 'confirm');
     }
 
-    /** An end user in this org whose owner has results tracking on, or 404. */
-    private function resultsScopedEndUser(string $id): EndUser
+    /**
+     * An end user in this org, or 404. The approval flow is on for every owner, so
+     * unlike the negative-items routes this does not require results tracking.
+     */
+    private function orgScopedEndUser(string $id): EndUser
     {
         $ownerId = Auth::guard('admin')->user()->dataOwnerId();
 
         return EndUser::whereKey($id)
-            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId)->where('results_tracking', true))
+            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
             ->firstOrFail();
     }
 

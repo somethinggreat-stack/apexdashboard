@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Results tracking (and with it "Sent for Approval") was enabled for one owner —
+ * Results tracking was enabled for one owner —
  * Clinecea — for over a month. Genius Credit Boutique is the second.
  *
  * These tests exist because "works for the first owner" and "works for any owner"
@@ -90,13 +90,35 @@ class ResultsTrackingSecondOwnerTest extends TestCase
         $this->assertNull($e->fresh()->round_approval_status);
     }
 
-    public function test_an_owner_without_the_flag_still_cannot_reach_the_approval_flow(): void
+    public function test_an_owner_without_the_flag_gets_the_approval_flow_too(): void
     {
-        // Enabling a second owner must not quietly open it for everyone.
+        // Sent for Approval is on for every owner; only the negative-items/results
+        // features stay behind the results_tracking flag.
         $other = $this->owner('Someone Else Ltd', false);
         $e = $this->client($other);
 
-        $this->asOwner($other)->post('/admin/end-users/' . $e->id . '/request-approval')->assertNotFound();
+        $this->asOwner($other)->post('/admin/end-users/' . $e->id . '/request-approval')->assertRedirect();
+        $this->assertSame('awaiting', $e->fresh()->round_approval_status);
+
+        $this->asOwner($other)->get('/admin/sent-for-approval')->assertOk()->assertSee('Dominique');
+        $this->asOwner($other)->post('/admin/end-users/' . $e->id . '/clear-approval')->assertRedirect();
+        $this->assertNull($e->fresh()->round_approval_status);
+    }
+
+    public function test_the_approval_flow_cannot_reach_another_organisations_client(): void
+    {
+        $otherAdmin = new Admin(['email' => 'other@test.com', 'password' => 'secret-pass', 'full_name' => 'Other Org']);
+        $otherAdmin->role = 'super';
+        $otherAdmin->save();
+        $theirs = Client::create([
+            'admin_id' => $otherAdmin->id, 'business_name' => 'Their Owner',
+            'email' => 'their@test.com', 'password' => 'secret-pass',
+            'status' => 'active', 'monthly_fee' => 0, 'round_cycle_days' => 30,
+        ]);
+        $e = $this->client($theirs);
+
+        $this->asOwner($this->owner('Ours Ltd', false))
+            ->post('/admin/end-users/' . $e->id . '/request-approval')->assertNotFound();
         $this->assertNull($e->fresh()->round_approval_status);
     }
 

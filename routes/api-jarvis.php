@@ -63,7 +63,7 @@ Route::middleware(['jarvis.token', 'throttle:jarvis-write'])
         Route::post('{id}/to-new-clients', [JarvisWriteController::class, 'toNewClients'])->whereNumber('id')->name('to-new-clients');
         Route::post('{id}/hold', [JarvisWriteController::class, 'hold'])->whereNumber('id')->name('hold');
         Route::post('{id}/resume', [JarvisWriteController::class, 'resume'])->whereNumber('id')->name('resume');
-        // Clinecea only — results_tracking. Refused plainly for any other owner.
+        // Round approval — on for every owner.
         Route::post('{id}/request-approval', [JarvisWriteController::class, 'requestApproval'])->whereNumber('id')->name('request-approval');
         Route::post('{id}/approve-round', [JarvisWriteController::class, 'approveRound'])->whereNumber('id')->name('approve-round');
         Route::post('{id}/clear-approval', [JarvisWriteController::class, 'clearApproval'])->whereNumber('id')->name('clear-approval');

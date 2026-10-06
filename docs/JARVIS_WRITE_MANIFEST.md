@@ -142,10 +142,9 @@ Hold/resume, request-approval and approve-round are all undone by an endpoint �
 `clear-approval` unwinds **either** the awaiting or the approved state, so it is the undo for
 both. Three genuine `undo-endpoint` states in v1.
 
-⚠ **The three approval actions are Clinecea-only.** They go through `resultsScopedEndUser()`,
-which requires `clients.results_tracking`. For any other owner the API returns **409 with a plain
-explanation** rather than a bare 404. `/business-owners` rows now carry `results_tracking` so the
-caller can avoid offering an action that cannot succeed.
+The three approval actions work for **every owner**. They go through `orgScopedEndUser()`,
+which only checks the client belongs to this organisation — they no longer need
+`clients.results_tracking` (that flag still gates negative items and the results reports).
 
 ### Process steps, scores
 

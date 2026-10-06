@@ -117,11 +117,11 @@ class JarvisWriteTest extends TestCase
     {
         // A preview that succeeds where the real call fails is worse than no preview:
         // it would be approved on the strength of something that cannot happen.
-        $e = $this->client();
-        Client::where('id', $this->owner->id)->update(['results_tracking' => false]);
+        // A client id that doesn't exist fails the real call, so it must fail the preview too.
+        $missing = 999999;
 
-        $this->fire($e->id . '/approve-round?preview=true', [], null)->assertStatus(409);
-        $this->fire($e->id . '/approve-round')->assertStatus(409);
+        $this->fire($missing . '/approve-round?preview=true', [], null)->assertNotFound();
+        $this->fire($missing . '/approve-round')->assertNotFound();
     }
 
     public function test_preview_needs_no_idempotency_key(): void
@@ -251,13 +251,14 @@ class JarvisWriteTest extends TestCase
         $this->assertNull($e->fresh()->held_at, 'resume did not undo the hold');
     }
 
-    public function test_the_approval_flow_is_refused_for_an_owner_without_results_tracking(): void
+    public function test_the_approval_flow_works_for_an_owner_without_results_tracking(): void
     {
+        // Sent for Approval is on for every owner, not just the results-tracking ones.
         Client::where('id', $this->owner->id)->update(['results_tracking' => false]);
         $e = $this->client();
 
-        // A plain refusal, not a bare 404 — the feature simply isn't on for them.
-        $this->fire($e->id . '/request-approval', [], 'a1')->assertStatus(409);
+        $this->fire($e->id . '/request-approval', [], 'a1')->assertOk();
+        $this->assertSame('awaiting', $e->fresh()->round_approval_status);
     }
 
     public function test_clear_approval_undoes_either_state(): void

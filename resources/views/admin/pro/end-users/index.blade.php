@@ -3,8 +3,8 @@
 @php
     $isDone = ($bucket ?? 'in_progress') === 'clients';
     $isSentForApproval = ($bucket ?? '') === 'sent_for_approval';
-    // "Sent for Approval" action shows only on the Clients list for a results-tracking owner (Clinecea).
-    $canApprove = $isDone && ($selectedClient?->resultsTrackingEnabled() ?? false);
+    // "Sent for Approval" action shows on the Clients list, for every owner.
+    $canApprove = $isDone;
     $isSuper = Auth::guard('admin')->user()?->isSuper();
     $statusOptions = ['active','paused','graduated','cancelled'];
 
@@ -295,7 +295,7 @@
                                 @endunless
 
                                 @if ($canApprove)
-                                    {{-- Clinecea only: park the client awaiting the owner's sign-off. No dates change. --}}
+                                    {{-- Park the client awaiting the owner's sign-off. No dates change. --}}
                                     <form method="POST" data-inplace action="{{ route('admin.end-users.request-approval', $eu->id) }}"
                                           data-confirm-action
                                           data-confirm-title="Send for approval?"

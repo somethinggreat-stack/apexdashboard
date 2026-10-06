@@ -335,12 +335,12 @@ class ResultsTrackingTest extends TestCase
         $as()->get('/admin/sent-for-approval')->assertOk()->assertDontSee('Jane');
     }
 
-    public function test_sent_for_approval_list_is_clinecea_only(): void
+    public function test_sent_for_approval_list_is_open_to_every_owner(): void
     {
         $this->seedWorld();
-        // A non-results-tracking owner cannot reach the list.
+        // A non-results-tracking owner gets the list and the sidebar link too.
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->other->id])
-            ->get('/admin/sent-for-approval')->assertForbidden();
+            ->get('/admin/sent-for-approval')->assertOk()->assertSee('Sent for Approval');
     }
 
     public function test_business_owner_gets_view_only_results_tab_and_eod_when_enabled(): void

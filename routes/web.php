@@ -320,7 +320,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('errors-resolved-new-clients', [Admin\EndUserController::class, 'errorsResolvedNewClients'])->name('errors-resolved-new');
             // The main Clients list (1st round done; remaining rounds worked here)
             Route::get('client-list', [Admin\EndUserController::class, 'activeClients'])->name('client-list');
-            // Sent for Approval (Clinecea only) — done clients parked awaiting owner sign-off
+            // Sent for Approval (every owner) — done clients parked awaiting owner sign-off
             Route::get('sent-for-approval', [Admin\EndUserController::class, 'sentForApproval'])->name('sent-for-approval');
             // Bulk credential exports (CSV) — super admin only, never VAs
             Route::get('client-list/cfpb-export', [Admin\EndUserController::class, 'exportCfpb'])
@@ -356,7 +356,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('end-users/{id}', [Admin\EndUserController::class, 'update'])->name('end-users.update');
             Route::delete('end-users/{id}', [Admin\EndUserController::class, 'destroy'])->name('end-users.destroy');
 
-            // Negative items (results tracking) + round approval — enabled owners only
+            // Negative items (results-tracking owners only) + round approval (every owner)
             Route::post('negative-items', [Admin\NegativeItemController::class, 'store'])->name('negative-items.store');
             Route::put('negative-items/{id}', [Admin\NegativeItemController::class, 'update'])->whereNumber('id')->name('negative-items.update');
             Route::post('negative-items/{id}/resolve', [Admin\NegativeItemController::class, 'resolve'])->whereNumber('id')->name('negative-items.resolve');

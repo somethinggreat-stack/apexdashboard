@@ -62,30 +62,19 @@ class JarvisWriteController extends Controller
         return $this->proxy($r, 'clients.resume', $id, fn ($c) => $c->resume((string) $id));
     }
 
-    /**
-     * The approval flow is Clinecea-only: these three go through
-     * resultsScopedEndUser(), which requires clients.results_tracking. For any other
-     * owner the lookup simply finds nothing, so the caller is told plainly rather
-     * than handed a bare 404.
-     */
+    /** The approval flow — on for every owner, same as the dashboard. */
     public function requestApproval(Request $r, int $id)
     {
-        $this->assertResultsTracking($id);
-
         return $this->proxy($r, 'clients.request-approval', $id, fn ($c) => $c->requestRoundApproval($r, (string) $id));
     }
 
     public function approveRound(Request $r, int $id)
     {
-        $this->assertResultsTracking($id);
-
         return $this->proxy($r, 'clients.approve-round', $id, fn ($c) => $c->approveRound((string) $id));
     }
 
     public function clearApproval(Request $r, int $id)
     {
-        $this->assertResultsTracking($id);
-
         return $this->proxy($r, 'clients.clear-approval', $id, fn ($c) => $c->clearRoundApproval((string) $id));
     }
 
@@ -147,15 +136,5 @@ class JarvisWriteController extends Controller
             'round_approval_status' => $e->round_approval_status,
             'round_approval_round'  => $e->round_approval_round,
         ];
-    }
-
-    /** A plain refusal beats a bare 404 when the feature simply isn't on for that owner. */
-    private function assertResultsTracking(int $id): void
-    {
-        $on = EndUser::whereKey($id)
-            ->whereHas('client', fn ($q) => $q->where('results_tracking', true))
-            ->exists();
-
-        abort_unless($on, 409, 'The approval workflow is not enabled for this client\'s business owner.');
     }
 }
