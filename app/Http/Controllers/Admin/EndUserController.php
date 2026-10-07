@@ -886,7 +886,29 @@ class EndUserController extends Controller
                 : back()->with('status', $message);
         }
 
-        $result = $sync->run();
+        // Per-submission failures are caught inside run(); this catches the fetch
+        // itself (expired token, rate limit, timeout), which used to surface as a
+        // bare "Server Error" with nothing to act on.
+        try {
+            $result = $sync->run();
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $status = $e->response->status();
+            $detail = $e->response->json('message') ?? $e->response->json('error') ?? '';
+            $detail = is_array($detail) ? implode(' ', $detail) : (string) $detail;
+            $message = "GoHighLevel refused the request ({$status}"
+                . ($detail !== '' ? ': ' . mb_substr($detail, 0, 200) : '') . ').'
+                . (in_array($status, [401, 403], true) ? ' The GHL_API_KEY on the server is probably expired or revoked.' : '');
+            \Illuminate\Support\Facades\Log::error('GHL intake sync: fetch refused', ['status' => $status, 'body' => mb_substr($e->response->body(), 0, 500)]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            $message = 'Could not reach GoHighLevel (' . mb_substr($e->getMessage(), 0, 200) . '). Try again in a minute.';
+            \Illuminate\Support\Facades\Log::error('GHL intake sync: connection failed', ['exception' => $e->getMessage()]);
+        }
+
+        if (isset($message)) {
+            return request()->wantsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 502)
+                : back()->with('status', $message);
+        }
 
         $message = "Sync finished — imported {$result['imported']}, linked {$result['linked']}, already had {$result['skipped']}."
             . ($result['removed'] ? " {$result['removed']} previously deleted and left alone." : '');
