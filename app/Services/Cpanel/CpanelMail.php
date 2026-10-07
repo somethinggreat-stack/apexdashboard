@@ -200,6 +200,15 @@ class CpanelMail
 
         $body = $response->json();
 
+        // When the server's cPanel license lapses, cPanel answers every API call
+        // with a 200 HTML "License is expired" page instead of JSON. Say so, rather
+        // than the generic refusal that reads like a problem with one mailbox.
+        if (! is_array($body) && str_contains($response->body(), 'License is expired')) {
+            Log::warning('cPanel ' . $function . ' failed: server cPanel license expired');
+
+            throw new RuntimeException('The hosting server\'s cPanel license has expired, so mailboxes cannot be changed. Ask the hosting provider to renew it.');
+        }
+
         // UAPI answers 200 with status:0 for an application-level refusal — a
         // duplicate address, a weak password, a full disk. Treating that as
         // success is how you end up recording a mailbox that does not exist.

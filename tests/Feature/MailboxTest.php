@@ -238,6 +238,20 @@ class MailboxTest extends TestCase
         $this->assertSame(0, Mailbox::count(), 'a refused mailbox was recorded anyway');
     }
 
+    public function test_an_expired_cpanel_license_is_named_not_reported_as_a_refusal(): void
+    {
+        // What the live server sent on 2026-10-07: a 200 HTML page, not JSON.
+        Http::fake(['cpanel.test:2083/*' => Http::response(
+            "Content-type: text/html\n\n<html><title>cPanel License Activation</title><p>License is expired</p></html>", 200
+        )]);
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', [])
+            ->assertSessionHasErrors(['mailbox' => 'The hosting server\'s cPanel license has expired, so mailboxes cannot be changed. Ask the hosting provider to renew it.']);
+
+        $this->assertSame(0, Mailbox::count());
+    }
+
     public function test_cpanel_being_unreachable_does_not_record_a_mailbox(): void
     {
         Http::fake(['cpanel.test:2083/*' => Http::response('', 500)]);
