@@ -38,7 +38,7 @@
     </div>
 
     <div class="pay-period-current">
-        A round counts in the month it was first selected for a client, and only while it is still on their round strip.
+        A round counts in the month it was first marked for a client, and stays counted whatever happens to the client after that.
         Up to <strong>{{ $incl }}</strong> rounds are covered by the <strong>${{ number_format($data['fee'], 2) }}</strong> package;
         each round after that is <strong>${{ number_format($data['overageFee'], 2) }}</strong>. A month with no rounds owes nothing.
     </div>
@@ -55,7 +55,13 @@
         </thead>
         <tbody>
             @foreach ($data['periods'] as $p)
-                @php $pr = $p['price']; @endphp
+                @php
+                    $pr = $p['price'];
+                    // How many different clients those rounds were for, and which
+                    // clients had more than one round selected in the same period.
+                    $perClient = $p['rounds']->countBy('end_user_id');
+                    $repeats   = $perClient->filter(fn ($c) => $c > 1);
+                @endphp
                 <tr>
                     <td>
                         <strong>{{ $p['start']->format('M j, Y') }} – {{ $p['end']->format('M j, Y') }}</strong>
@@ -67,6 +73,7 @@
                                     @foreach ($p['rounds'] as $i => $r)
                                         <li class="{{ $i >= $incl ? 'extra' : '' }}">
                                             {{ $r['name'] }} — Round {{ $r['round'] }}
+                                            @if ($repeats->has($r['end_user_id']))<b class="pkg-repeat" title="More than one round selected for this client in this period">×{{ $repeats[$r['end_user_id']] }}</b>@endif
                                             <span>{{ $r['processed_at']->copy()->timezone(\App\Services\RoundPackageBilling::TZ)->format('M j') }}</span>
                                             @if ($i >= $incl)<em>extra</em>@endif
                                         </li>
@@ -77,6 +84,12 @@
                     </td>
                     <td class="hours-col">
                         {{ $pr['rounds'] }}
+                        @if ($pr['rounds'] > 0)
+                            <div style="font-size:11px; color:var(--muted);">{{ $perClient->count() }} {{ $perClient->count() === 1 ? 'client' : 'clients' }}</div>
+                        @endif
+                        @if ($repeats->isNotEmpty())
+                            <div style="font-size:11px; color:#b45309;" title="These clients had more than one round selected in this period">{{ $repeats->count() }} with 2+ rounds</div>
+                        @endif
                         @if ($pr['extra'] > 0)
                             <div style="font-size:11px; color:#ea580c;">{{ $pr['included'] }} + {{ $pr['extra'] }} extra</div>
                         @endif
@@ -164,6 +177,7 @@
     .pkg-rounds li { padding:1px 0; }
     .pkg-rounds li span { color:var(--muted, #64748b); margin-left:4px; }
     .pkg-rounds li.extra { color:#c2410c; }
+    .pkg-rounds li .pkg-repeat { color:#b45309; font-size:10px; margin-left:4px; }
     .pkg-rounds li em { font-style:normal; font-size:10px; font-weight:700; text-transform:uppercase; margin-left:4px; }
 </style>
 @endpush

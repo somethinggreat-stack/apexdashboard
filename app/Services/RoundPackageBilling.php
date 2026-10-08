@@ -15,10 +15,10 @@ use Illuminate\Support\Collection;
  * round past N costs the overage rate. A period with no rounds owes nothing.
  *
  * A round counts in the period it was FIRST selected for a client (the
- * round_selections signal the Tasks View uses), and only while that round is
- * still on the client's round strip — a round picked by mistake and taken off
- * again is not billed. The clients counted are the same ones per-round billing
- * bills (billableList: everyone except New Clients and New Client Errors).
+ * round_selections signal the Tasks View uses) — and once marked, it stays
+ * billed for that period whatever happens to the client afterwards: moved to
+ * Hold, Round Errors, Sent for Approval, back to New Clients or New Client
+ * Errors, or the round taken back off the strip. Only deleted clients drop out.
  *
  * Periods are calendar-month windows from the owner's pay_cycle_anchor, read in
  * Eastern time like the Tasks View.
@@ -78,8 +78,8 @@ class RoundPackageBilling
         $from = Carbon::parse($start->toDateString(), self::TZ)->startOfDay()->utc();
         $to   = Carbon::parse($end->toDateString(), self::TZ)->endOfDay()->utc();
 
-        $clients = EndUser::forClient($this->client->id)->billableList()
-            ->get(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'rounds'])
+        $clients = EndUser::forClient($this->client->id)
+            ->get(['id', 'first_name', 'middle_name', 'last_name', 'suffix'])
             ->keyBy('id');
 
         if ($clients->isEmpty()) {
@@ -92,10 +92,8 @@ class RoundPackageBilling
             ->get()
             ->map(function ($row) use ($clients) {
                 $eu = $clients->get($row->end_user_id);
-                $label = EndUser::ROUND_OPTIONS[$row->round - 1] ?? null;
 
-                // Still on the strip? A round removed again was a mistake, not work.
-                if (! $eu || $label === null || ! in_array($label, $eu->rounds ?? [], true)) {
+                if (! $eu) {
                     return null;
                 }
 

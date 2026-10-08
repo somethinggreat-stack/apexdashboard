@@ -104,23 +104,29 @@ class RoundPackageBillingTest extends TestCase
         $this->assertSame(2, $this->billing()->roundsIn($start, $end)->count());
     }
 
-    public function test_a_round_taken_back_off_the_strip_is_not_billed(): void
+    public function test_a_marked_round_stays_billed_whatever_happens_to_the_client_after(): void
     {
-        $eu = $this->clientWithRounds([1 => '2026-09-10 10:00', 2 => '2026-10-10 10:00']);
-        $eu->update(['rounds' => ['1st Round']]);   // round 2 was picked by mistake
+        $removed = $this->clientWithRounds([1 => '2026-09-10 10:00', 2 => '2026-10-10 10:00']);
+        $removed->update(['rounds' => ['1st Round']]);                          // round taken back off the strip
+
+        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'round_error');
+        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'pending_review');  // moved back to New Clients
+        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'error');           // moved to New Client Errors
+        $held = $this->clientWithRounds([1 => '2026-10-10 10:00']);
+        $held->update(['held_at' => now()]);
+        $approval = $this->clientWithRounds([1 => '2026-10-10 10:00']);
+        $approval->update(['round_approval_status' => 'awaiting']);
+
+        [$start, $end] = $this->billing()->periodContaining(now());
+        $this->assertSame(6, $this->billing()->roundsIn($start, $end)->count());
+    }
+
+    public function test_a_deleted_client_is_not_billed(): void
+    {
+        $this->clientWithRounds([1 => '2026-10-10 10:00'])->delete();
 
         [$start, $end] = $this->billing()->periodContaining(now());
         $this->assertSame(0, $this->billing()->roundsIn($start, $end)->count());
-    }
-
-    public function test_new_clients_and_new_client_errors_are_not_billed(): void
-    {
-        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'pending_review');
-        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'error');
-        $this->clientWithRounds([1 => '2026-10-10 10:00'], 'in_progress');
-
-        [$start, $end] = $this->billing()->periodContaining(now());
-        $this->assertSame(1, $this->billing()->roundsIn($start, $end)->count());
     }
 
     public function test_a_reselected_round_counts_once_in_the_month_it_was_first_selected(): void
@@ -216,6 +222,13 @@ class RoundPackageBillingTest extends TestCase
 
         $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $other->id])
             ->get('/admin/payments')->assertOk()->assertDontSee('Monthly Package');
+
+        // And it can't be forced on them by posting the form by hand.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $other->id])
+            ->put('/admin/payments/config', ['compensation_model' => 'package', 'package_fee' => 1])
+            ->assertSessionHasErrors('compensation_model');
+        $this->assertSame('per_round', $other->fresh()->compensation_model);
+        $this->assertSame('15.00', (string) $other->fresh()->per_round_fee);
     }
 
     public function test_don_sees_his_package_on_his_own_billing_page(): void
@@ -250,5 +263,17 @@ class RoundPackageBillingTest extends TestCase
         $this->assertNull($don->hourly_rate);
 
         $this->assertSame('hourly', $other->fresh()->compensation_model);
+    }
+
+    public function test_the_page_says_how_many_clients_the_rounds_cover(): void
+    {
+        $this->clientWithRounds([1 => '2026-10-08 10:00', 2 => '2026-10-15 10:00']);   // 2 rounds, same client
+        $this->clientWithRounds([1 => '2026-10-10 10:00']);
+
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->don->id])
+            ->get('/admin/payments')
+            ->assertOk()
+            ->assertSee('2 clients')
+            ->assertSee('1 with 2+ rounds');
     }
 }

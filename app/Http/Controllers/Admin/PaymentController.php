@@ -50,7 +50,8 @@ class PaymentController extends Controller
         $client = $this->scopedBO();
 
         $data = $request->validate([
-            'compensation_model'  => 'required|in:per_round,hourly,package',
+            // The package is Don Cadet's alone: only an owner already on it may keep it.
+            'compensation_model'  => ['required', Rule::in($client->isPackage() ? ['per_round', 'hourly', 'package'] : ['per_round', 'hourly'])],
             'per_round_fee'       => 'nullable|numeric|min:0',
             'hourly_rate'         => 'nullable|numeric|min:0',
             'package_fee'         => 'nullable|numeric|min:0',
