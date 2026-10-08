@@ -30,7 +30,7 @@ class RoundPackageBillingTest extends TestCase
         parent::setUp();
 
         // Mid-period: Don's months run from the 7th, so this is Oct 7 – Nov 6.
-        Carbon::setTestNow(Carbon::parse('2026-10-20 12:00:00', 'America/New_York'));
+        Carbon::setTestNow(Carbon::parse('2026-10-20 12:00:00', 'Asia/Karachi'));
 
         $this->super = new Admin(['email' => 'super@test.com', 'password' => 'secret-pass', 'full_name' => 'Umair']);
         $this->super->role = 'super';
@@ -50,7 +50,7 @@ class RoundPackageBillingTest extends TestCase
         parent::tearDown();
     }
 
-    /** A client whose given rounds were each first selected at the given ET time. */
+    /** A client whose given rounds were each first selected at the given Pakistan time. */
     private function clientWithRounds(array $roundsAt, string $status = 'done'): EndUser
     {
         $n = ++$this->made;
@@ -65,7 +65,7 @@ class RoundPackageBillingTest extends TestCase
         foreach ($roundsAt as $round => $at) {
             RoundSelection::create([
                 'end_user_id' => $eu->id, 'round' => $round,
-                'created_at'  => Carbon::parse($at, 'America/New_York')->utc(),
+                'created_at'  => Carbon::parse($at, 'Asia/Karachi')->utc(),
             ]);
         }
 
@@ -93,7 +93,7 @@ class RoundPackageBillingTest extends TestCase
     {
         // Round 1 last period, round 2 this period: only round 2 counts now.
         $this->clientWithRounds([1 => '2026-09-20 10:00', 2 => '2026-10-08 10:00']);
-        // Boundaries in Eastern time: Oct 6 11pm is last period, Oct 7 00:30 is this one.
+        // Boundaries in Pakistan time: Oct 6 11pm is last period, Oct 7 00:30 is this one.
         $this->clientWithRounds([1 => '2026-10-06 23:00']);
         $this->clientWithRounds([1 => '2026-10-07 00:30']);
 
@@ -132,7 +132,7 @@ class RoundPackageBillingTest extends TestCase
     public function test_a_reselected_round_counts_once_in_the_month_it_was_first_selected(): void
     {
         $eu = $this->clientWithRounds([1 => '2026-09-15 10:00']);
-        RoundSelection::create(['end_user_id' => $eu->id, 'round' => 1, 'created_at' => Carbon::parse('2026-10-12 10:00', 'America/New_York')->utc()]);
+        RoundSelection::create(['end_user_id' => $eu->id, 'round' => 1, 'created_at' => Carbon::parse('2026-10-12 10:00', 'Asia/Karachi')->utc()]);
 
         [$start, $end] = $this->billing()->periodContaining(now());
         $this->assertSame(0, $this->billing()->roundsIn($start, $end)->count());
@@ -275,5 +275,24 @@ class RoundPackageBillingTest extends TestCase
             ->assertOk()
             ->assertSee('2 clients')
             ->assertSee('1 with 2+ rounds');
+    }
+
+    public function test_dons_first_month_of_night_shift_work_lands_in_one_period(): void
+    {
+        // Don's real first batch: the earliest round was marked 17:10 Sep 8 Eastern
+        // (02:10 Sep 9 in Pakistan) and the last ten on Oct 7 Eastern. With months
+        // from the 9th, all of it is one period.
+        $this->don->update(['pay_cycle_anchor' => '2026-09-09']);
+        $et = fn (string $t) => Carbon::parse($t, 'America/New_York')->timezone('Asia/Karachi')->format('Y-m-d H:i:s');
+
+        $this->clientWithRounds([1 => $et('2026-09-08 17:10:20')]);
+        $this->clientWithRounds([1 => $et('2026-10-07 23:30:00')]);
+
+        $periods = $this->billing()->periods();
+        $this->assertSame('2026-10-09', $periods[0]['start']->toDateString());
+        $this->assertSame(0, $periods[0]['price']['rounds']);
+        $this->assertSame('2026-09-09', $periods[1]['start']->toDateString());
+        $this->assertSame('2026-10-08', $periods[1]['end']->toDateString());
+        $this->assertSame(2, $periods[1]['price']['rounds']);
     }
 }

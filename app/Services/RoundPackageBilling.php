@@ -21,11 +21,13 @@ use Illuminate\Support\Collection;
  * Errors, or the round taken back off the strip. Only deleted clients drop out.
  *
  * Periods are calendar-month windows from the owner's pay_cycle_anchor, read in
- * Eastern time like the Tasks View.
+ * Pakistan time — the team's working day. The VAs work the PKT night shift, so
+ * in Eastern time one night's work straddles two dates and a month's batch
+ * spills a day into the next period.
  */
 class RoundPackageBilling
 {
-    public const TZ = 'America/New_York';
+    public const TZ = 'Asia/Karachi';
 
     public function __construct(private readonly Client $client)
     {
@@ -69,7 +71,7 @@ class RoundPackageBilling
     }
 
     /**
-     * The rounds processed in [$start, $end] (whole days, Eastern), oldest first.
+     * The rounds processed in [$start, $end] (whole days, Pakistan time), oldest first.
      *
      * @return Collection<int, array{end_user_id:int, name:string, round:int, processed_at:Carbon}>
      */
