@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $endUserIds = EndUser::forClient($clientId)->pluck('id');
 
         // Real billing figures (matches the Billing page), by comp model.
-        if (($client->compensation_model ?? 'per_round') === 'hourly') {
+        if ($client->paysByPeriod()) {
             $totalPaid     = (float) TimePayout::where('client_id', $clientId)->sum('amount_paid');
             $paidThisMonth = (float) TimePayout::where('client_id', $clientId)->where('paid_at', '>=', $monthStart)->sum('amount_paid');
         } else {

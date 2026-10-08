@@ -22,6 +22,14 @@ class PaymentController extends Controller
         $client = $this->scopedBO();
         $model  = $client->compensation_model ?: 'per_round';
 
+        if ($model === 'package') {
+            return view('admin.payments.index', [
+                'client' => $client,
+                'model'  => 'package',
+                'data'   => $this->buildPackageData($client),
+            ]);
+        }
+
         if ($model === 'hourly') {
             return view('admin.payments.index', [
                 'client' => $client,
@@ -42,19 +50,36 @@ class PaymentController extends Controller
         $client = $this->scopedBO();
 
         $data = $request->validate([
-            'compensation_model'  => 'required|in:per_round,hourly',
+            'compensation_model'  => 'required|in:per_round,hourly,package',
             'per_round_fee'       => 'nullable|numeric|min:0',
             'hourly_rate'         => 'nullable|numeric|min:0',
+            'package_fee'         => 'nullable|numeric|min:0',
+            'package_rounds'      => 'nullable|integer|min:0|max:100000',
+            'package_overage_fee' => 'nullable|numeric|min:0',
             'weekly_hours_target' => 'nullable|integer|min:0|max:168',
             'pay_cycle'           => 'nullable|in:biweekly,monthly',
             'pay_cycle_anchor'    => 'nullable|date',
         ]);
+
+        // The package fields only mean something on the package model.
+        if ($data['compensation_model'] !== 'package') {
+            $data['package_fee']         = null;
+            $data['package_rounds']      = null;
+            $data['package_overage_fee'] = null;
+        }
 
         if ($data['compensation_model'] === 'per_round') {
             $data['hourly_rate']         = null;
             $data['weekly_hours_target'] = null;
             $data['pay_cycle']           = null;
             $data['pay_cycle_anchor']    = null;
+        } elseif ($data['compensation_model'] === 'package') {
+            // Billed per calendar-month window from the anchor.
+            $data['per_round_fee']       = null;
+            $data['hourly_rate']         = null;
+            $data['weekly_hours_target'] = null;
+            $data['pay_cycle']           = 'monthly';
+            $data['pay_cycle_anchor']  ??= now()->startOfMonth()->toDateString();
         } else {
             $data['per_round_fee'] = null;
             if (empty($data['pay_cycle_anchor'])) {
@@ -117,9 +142,13 @@ class PaymentController extends Controller
      * Create a saved Invoice record from the BO's current unpaid items,
      * then redirect to the printable invoice page (which auto-prints).
      */
-    public function generateInvoice()
+    public function generateInvoice(Request $request)
     {
         $client = $this->scopedBO();
+
+        if ($client->isPackage()) {
+            return $this->generatePackageInvoice($client, $request->input('period_start'));
+        }
 
         if (($client->compensation_model ?? 'per_round') === 'hourly') {
             return $this->generateHourlyInvoice($client);
@@ -181,6 +210,54 @@ class PaymentController extends Controller
             'invoice_date'        => now()->toDateString(),
             'items'               => $items,
             'total'               => $total,
+            'created_by_admin_id' => Auth::guard('admin')->id(),
+        ]);
+
+        return redirect()->route('admin.payments.invoice.show', $invoice);
+    }
+
+    /**
+     * Invoice one monthly-package period (the current one unless a period start
+     * is given): the package fee, any extra rounds at the overage rate, and the
+     * processed rounds listed underneath so the owner can see what was covered.
+     */
+    private function generatePackageInvoice(Client $client, ?string $periodStart)
+    {
+        $billing = new \App\Services\RoundPackageBilling($client);
+        $day     = $periodStart ? Carbon::parse($periodStart) : now();
+        [$start, $end] = $billing->periodContaining($day);
+
+        $rounds = $billing->roundsIn($start, $end);
+        $price  = $billing->price($rounds->count());
+
+        if ($rounds->isEmpty()) {
+            return back()->with('status', 'No rounds processed in that period — nothing to invoice.');
+        }
+
+        $label = $start->format('M j, Y') . ' – ' . $end->format('M j, Y');
+        $items = [[
+            'type'         => 'package',
+            'label'        => $label,
+            'rounds'       => $price['rounds'],
+            'included'     => $billing->includedRounds(),
+            'fee'          => $price['fee'],
+            'extra'        => $price['extra'],
+            'overage_rate' => $price['overage_rate'],
+            'extra_amount' => $price['extra_amount'],
+            'amount'       => $price['total'],
+            'detail'       => $rounds->map(fn ($r) => [
+                'name'         => $r['name'],
+                'round'        => $r['round'],
+                'processed_at' => $r['processed_at']->copy()->timezone(\App\Services\RoundPackageBilling::TZ)->toDateString(),
+            ])->all(),
+        ]];
+
+        $invoice = Invoice::create([
+            'client_id'           => $client->id,
+            'invoice_number'      => $this->nextInvoiceNumber($client, now()),
+            'invoice_date'        => now()->toDateString(),
+            'items'               => $items,
+            'total'               => $price['total'],
             'created_by_admin_id' => Auth::guard('admin')->id(),
         ]);
 
@@ -455,6 +532,7 @@ class PaymentController extends Controller
             'period_start'    => 'required|date',
             'period_end'      => 'required|date|after_or_equal:period_start',
             'hours_in_period' => 'required|numeric|min:0',
+            'rounds_in_period'=> 'nullable|integer|min:0',
             'amount_paid'     => 'required|numeric|min:0',
             'paid_at'         => 'required|date',
             'method'          => 'nullable|string|max:50',
@@ -649,6 +727,26 @@ class PaymentController extends Controller
             'earnedTotal'      => $earnedTotal,
             'earnedThisMonth'  => $earnedThisMonth,
             'weeklyHoursTarget'=> (int) ($client->weekly_hours_target ?? 0),
+        ];
+    }
+
+    private function buildPackageData(Client $client): array
+    {
+        $billing = new \App\Services\RoundPackageBilling($client);
+        $periods = $billing->periods();
+        $current = $periods[0] ?? null;
+
+        $allPayouts = TimePayout::where('client_id', $client->id)->get();
+
+        return [
+            'fee'             => $billing->fee(),
+            'includedRounds'  => $billing->includedRounds(),
+            'overageFee'      => $billing->overageFee(),
+            'periods'         => $periods,
+            'current'         => $current,
+            'outstanding'     => $billing->outstanding(),
+            'earnedTotal'     => (float) $allPayouts->sum('amount_paid'),
+            'earnedThisMonth' => (float) $allPayouts->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount_paid'),
         ];
     }
 

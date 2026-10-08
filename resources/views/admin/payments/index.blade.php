@@ -9,6 +9,8 @@
 
 @if ($model === 'per_round')
     @include('admin.payments._per_round', ['data' => $data, 'client' => $client])
+@elseif ($model === 'package')
+    @include('admin.payments._package', ['data' => $data, 'client' => $client])
 @elseif ($model === 'hourly')
     @include('admin.payments._hourly', ['data' => $data, 'client' => $client])
 @else

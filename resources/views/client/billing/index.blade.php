@@ -23,16 +23,16 @@
 <div class="card">
     <div class="card-header">
         <h2>Outstanding</h2>
-        @php $oTotal = $model === 'hourly' ? $outstanding : $outstanding['total']; @endphp
+        @php $byPeriod = in_array($model, ['hourly', 'package'], true); $oTotal = $byPeriod ? $outstanding : $outstanding['total']; @endphp
         <span class="badge" style="background:{{ $oTotal > 0 ? '#ffedd5' : '#dcfce7' }}; color:{{ $oTotal > 0 ? '#9a3412' : '#166534' }};">
             ${{ number_format($oTotal, 2) }} unpaid
         </span>
     </div>
 
-    @if ($model === 'hourly')
+    @if ($byPeriod)
         @if ($outstanding > 0)
             <p class="muted" style="font-size:13px;">
-                You have <strong>${{ number_format($outstanding, 2) }}</strong> in logged hours that has not yet been paid out.
+                You have <strong>${{ number_format($outstanding, 2) }}</strong> {{ $model === 'package' ? 'in monthly rounds' : 'in logged hours' }} that has not yet been paid out.
                 See the period breakdown in Payment History below.
             </p>
         @else
@@ -79,14 +79,14 @@
     <div class="card-header">
         <h2>Payment History</h2>
     </div>
-    @if ($model === 'hourly')
+    @if ($byPeriod)
         <div class="table-scroll"><table class="data-table">
-            <thead><tr><th>Period</th><th>Hours</th><th>Amount Paid</th><th>Date Paid</th><th>Method</th></tr></thead>
+            <thead><tr><th>Period</th><th>{{ $model === 'package' ? 'Rounds' : 'Hours' }}</th><th>Amount Paid</th><th>Date Paid</th><th>Method</th></tr></thead>
             <tbody>
                 @forelse ($payouts as $p)
                     <tr>
                         <td>{{ $p->period_start?->format('M d, Y') }} – {{ $p->period_end?->format('M d, Y') }}</td>
-                        <td>{{ number_format($p->hours_in_period, 2) }} hrs</td>
+                        <td>{{ $model === 'package' ? ($p->rounds_in_period ?? '—') : number_format($p->hours_in_period, 2) . ' hrs' }}</td>
                         <td>${{ number_format($p->amount_paid, 2) }}</td>
                         <td>{{ $p->paid_at?->format('M d, Y') }}</td>
                         <td>{{ $p->method ?? '—' }}</td>

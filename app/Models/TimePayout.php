@@ -11,7 +11,7 @@ class TimePayout extends Model
 
     protected $fillable = [
         'client_id', 'period_start', 'period_end',
-        'hours_in_period', 'amount_paid', 'paid_at',
+        'hours_in_period', 'rounds_in_period', 'amount_paid', 'paid_at',
         'method', 'notes', 'created_by_admin_id',
     ];
 

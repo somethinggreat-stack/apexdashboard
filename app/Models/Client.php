@@ -23,6 +23,7 @@ class Client extends Authenticatable
         'intake_monitoring_provider', 'intake_monitoring_enroll_url',
         'intake_api_key', 'intake_external_url', 'intake_security_extra',
         'compensation_model', 'per_round_fee', 'hourly_rate',
+        'package_fee', 'package_rounds', 'package_overage_fee',
         'weekly_hours_target', 'pay_cycle', 'pay_cycle_anchor',
         'round_cycle_days',
         'deleted_by_admin_id',
@@ -40,6 +41,9 @@ class Client extends Authenticatable
         'access_revoked'       => 'boolean',
         'per_round_fee'        => 'decimal:2',
         'hourly_rate'          => 'decimal:2',
+        'package_fee'          => 'decimal:2',
+        'package_rounds'       => 'integer',
+        'package_overage_fee'  => 'decimal:2',
         'pay_cycle_anchor'     => 'date',
         'weekly_hours_target'  => 'integer',
         'round_cycle_days'     => 'integer',
@@ -52,6 +56,18 @@ class Client extends Authenticatable
     public function resultsTrackingEnabled(): bool
     {
         return (bool) $this->results_tracking;
+    }
+
+    /** Paid a fixed monthly fee for a block of rounds, plus a rate per extra round. */
+    public function isPackage(): bool
+    {
+        return $this->compensation_model === 'package';
+    }
+
+    /** Paid per period (hourly or monthly package), so payments live in time_payouts. */
+    public function paysByPeriod(): bool
+    {
+        return in_array($this->compensation_model, ['hourly', 'package'], true);
     }
 
     /** This owner's round-cycle length in days (20 or 30); defaults to 30. */
@@ -167,10 +183,18 @@ class Client extends Authenticatable
      * Payment roll-up for this business owner: money already collected ('done')
      * and money still owed ('pending'). Uses the same rules as the Payments
      * page. For hourly BOs, 'done' is the sum of recorded payouts (round-based
-     * pending doesn't apply to them).
+     * pending doesn't apply to them). Monthly-package BOs are paid per period
+     * too; their pending is every period with rounds and no recorded payment.
      */
     public function paymentTotals(): array
     {
+        if ($this->isPackage()) {
+            return [
+                'done'    => (float) TimePayout::where('client_id', $this->id)->sum('amount_paid'),
+                'pending' => (new \App\Services\RoundPackageBilling($this))->outstanding(),
+            ];
+        }
+
         if (($this->compensation_model ?: 'per_round') === 'hourly') {
             $done = (float) TimePayout::where('client_id', $this->id)->sum('amount_paid');
 

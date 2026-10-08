@@ -170,10 +170,74 @@
     {{-- ===== TABLE ===== --}}
     @php
         $allItems = collect($invoice->items);
-        $isHourly = $allItems->first() && ($allItems->first()['type'] ?? null) === 'hourly';
+        $isHourly  = $allItems->first() && ($allItems->first()['type'] ?? null) === 'hourly';
+        $isPackage = $allItems->first() && ($allItems->first()['type'] ?? null) === 'package';
     @endphp
 
-    @if ($isHourly)
+    @if ($isPackage)
+        @php $pk = $allItems->first(); $rowNum = 0; @endphp
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th colspan="2">DESCRIPTION</th>
+                    <th class="center">QTY</th>
+                    <th class="right">UNIT PRICE</th>
+                    <th class="right">AMOUNT (USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="inv-desc-head" colspan="5">Credit Repair Rounds — {{ $pk['label'] }} ({{ $pk['rounds'] }} {{ $pk['rounds'] === 1 ? 'round' : 'rounds' }} processed)</td>
+                </tr>
+                <tr>
+                    <td class="inv-line-num">1.</td>
+                    <td>Monthly package — up to {{ $pk['included'] }} rounds</td>
+                    <td class="center">1</td>
+                    <td class="right">${{ number_format($pk['fee'], 2) }}</td>
+                    <td class="right">${{ number_format($pk['fee'], 2) }}</td>
+                </tr>
+                @if ($pk['extra'] > 0)
+                    <tr>
+                        <td class="inv-line-num">2.</td>
+                        <td>Additional rounds beyond the package</td>
+                        <td class="center">{{ $pk['extra'] }}</td>
+                        <td class="right">${{ number_format($pk['overage_rate'], 2) }}</td>
+                        <td class="right">${{ number_format($pk['extra_amount'], 2) }}</td>
+                    </tr>
+                @endif
+                <tr>
+                    <td class="inv-desc-head" colspan="5">Rounds processed this period:</td>
+                </tr>
+                @foreach ($pk['detail'] ?? [] as $d)
+                    @php $rowNum++; $isExtra = $rowNum > $pk['included']; @endphp
+                    <tr>
+                        <td class="inv-line-num">{{ $rowNum }}.</td>
+                        <td>
+                            {{ $d['name'] }} — Round {{ $d['round'] }}
+                            <span class="inv-round-started">processed {{ \Carbon\Carbon::parse($d['processed_at'])->format('M j, Y') }}</span>
+                        </td>
+                        <td class="center" colspan="2">{{ $isExtra ? 'Additional' : 'In package' }}</td>
+                        <td class="right">{{ $isExtra ? '$' . number_format($pk['overage_rate'], 2) : '—' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <table class="inv-totals">
+            <tr class="subtotal">
+                <td class="label">Subtotal ({{ $pk['rounds'] }} rounds: package{{ $pk['extra'] > 0 ? ' + ' . $pk['extra'] . ' additional' : '' }})</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tax (0%)</td>
+                <td class="amount">$0.00</td>
+            </tr>
+            <tr class="total">
+                <td class="label">TOTAL AMOUNT DUE</td>
+                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+            </tr>
+        </table>
+    @elseif ($isHourly)
         @php
             $rowNum    = 0;
             $totalHrs  = $allItems->sum('hours');

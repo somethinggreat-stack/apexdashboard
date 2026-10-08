@@ -28,6 +28,30 @@ class BillingController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        if ($model === 'package') {
+            $billing = new \App\Services\RoundPackageBilling($client);
+            $payouts = TimePayout::where('client_id', $client->id)
+                ->orderByDesc('period_start')
+                ->get();
+
+            $totalPaid     = (float) $payouts->sum('amount_paid');
+            $paidThisMonth = (float) $payouts->where('paid_at', '>=', $monthStart)->sum('amount_paid');
+            $outstanding   = $billing->outstanding();
+            $current       = $billing->periods(1)[0] ?? null;
+
+            $stats = [
+                ['label' => 'Total Paid',          'value' => '$' . number_format($totalPaid, 2),     'tone' => 'green'],
+                ['label' => 'Outstanding',         'value' => '$' . number_format($outstanding, 2),   'tone' => 'orange'],
+                ['label' => 'Paid This Month',     'value' => '$' . number_format($paidThisMonth, 2), 'tone' => ''],
+                ['label' => 'Package',             'value' => '$' . number_format($billing->fee(), 2) . ' / ' . $billing->includedRounds() . ' rounds', 'tone' => ''],
+                ['label' => 'Rounds This Period',  'value' => ($current ? $current['price']['rounds'] : 0) . ' / ' . $billing->includedRounds(), 'tone' => ''],
+            ];
+
+            return view('client.billing.index', compact(
+                'client', 'model', 'invoices', 'payouts', 'stats', 'outstanding'
+            ));
+        }
+
         if ($model === 'hourly') {
             $payouts = TimePayout::where('client_id', $client->id)
                 ->orderByDesc('period_start')
