@@ -119,31 +119,29 @@ class RoundPackageBilling
      */
     public function periods(int $max = 6): array
     {
-        $anchor = $this->anchor();
         [$start, $end] = $this->periodContaining(Carbon::now(self::TZ));
 
         $payouts = TimePayout::where('client_id', $this->client->id)->get()
             ->keyBy(fn ($p) => $p->period_start->toDateString());
 
         $out = [];
-        for ($i = 0; $i < $max && $start->greaterThanOrEqualTo($anchor); $i++) {
+        while ($start && count($out) < $max) {
             $rounds = $this->roundsIn($start, $end);
             $out[] = [
                 'start'      => $start->copy(),
                 'end'        => $end->copy(),
-                'is_current' => $i === 0,
+                'is_current' => $out === [],
                 'rounds'     => $rounds,
                 'price'      => $this->price($rounds->count()),
                 'payout'     => $payouts->get($start->toDateString()),
             ];
-            $end   = $start->copy()->subDay();
-            $start = $start->copy()->subMonthNoOverflow();
+            [$start, $end] = $this->previousPeriod($start) ?? [null, null];
         }
 
         return $out;
     }
 
-    /** Owed for every period since the anchor that has rounds and no recorded payment. */
+    /** Owed for every period (opening one included) that has rounds and no recorded payment. */
     public function outstanding(): float
     {
         return round(collect($this->periods(240))
@@ -151,17 +149,54 @@ class RoundPackageBilling
             ->sum(fn ($p) => $p['price']['total']), 2);
     }
 
-    /** @return array{0:Carbon, 1:Carbon} */
+    /**
+     * The period a day falls in. Before the anchor that is the opening period —
+     * from the day the owner was added up to the day before the anchor — so the
+     * first, uneven stretch of work is billed as one period rather than lost.
+     *
+     * @return array{0:Carbon, 1:Carbon}
+     */
     public function periodContaining(Carbon $day): array
     {
         $day   = Carbon::parse($day->toDateString(), self::TZ)->startOfDay();
         $start = $this->anchor();
+
+        if ($day->lessThan($start) && ($opening = $this->openingPeriod())) {
+            return $opening;
+        }
 
         while ($start->copy()->addMonthNoOverflow()->lessThanOrEqualTo($day)) {
             $start->addMonthNoOverflow();
         }
 
         return [$start, $start->copy()->addMonthNoOverflow()->subDay()];
+    }
+
+    /** The period before $start, or null once there is nothing earlier to bill. */
+    private function previousPeriod(Carbon $start): ?array
+    {
+        $anchor = $this->anchor();
+
+        if ($start->greaterThan($anchor)) {
+            return [$start->copy()->subMonthNoOverflow()->max($anchor), $start->copy()->subDay()];
+        }
+
+        $opening = $this->openingPeriod();
+
+        return $opening && $start->equalTo($anchor) ? $opening : null;
+    }
+
+    /** From the day the owner was added to the day before the anchor, if that's any time at all. */
+    private function openingPeriod(): ?array
+    {
+        $anchor = $this->anchor();
+        $added  = $this->client->created_at
+            ? Carbon::parse($this->client->created_at)->timezone(self::TZ)->startOfDay()
+            : null;
+
+        return $added && $added->lessThan($anchor)
+            ? [$added, $anchor->copy()->subDay()]
+            : null;
     }
 
     private function anchor(): Carbon

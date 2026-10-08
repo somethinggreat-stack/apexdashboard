@@ -225,7 +225,7 @@ class PaymentController extends Controller
     private function generatePackageInvoice(Client $client, ?string $periodStart)
     {
         $billing = new \App\Services\RoundPackageBilling($client);
-        $day     = $periodStart ? Carbon::parse($periodStart) : now();
+        $day     = $periodStart ? Carbon::parse($periodStart) : Carbon::now(\App\Services\RoundPackageBilling::TZ);
         [$start, $end] = $billing->periodContaining($day);
 
         $rounds = $billing->roundsIn($start, $end);

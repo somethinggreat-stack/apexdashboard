@@ -295,4 +295,39 @@ class RoundPackageBillingTest extends TestCase
         $this->assertSame('2026-10-08', $periods[1]['end']->toDateString());
         $this->assertSame(2, $periods[1]['price']['rounds']);
     }
+
+    public function test_the_first_period_runs_from_the_day_don_was_added_to_oct_9(): void
+    {
+        // Don added Sep 2; monthly tracking from Oct 10, so the opening period ends Oct 9.
+        $this->don->forceFill(['created_at' => Carbon::parse('2026-09-02 10:00', 'Asia/Karachi')->utc()])->save();
+        $this->don->update(['pay_cycle_anchor' => '2026-10-10']);
+        $et = fn (string $t) => Carbon::parse($t, 'America/New_York')->timezone('Asia/Karachi')->format('Y-m-d H:i:s');
+
+        for ($i = 0; $i < 77; $i++) {
+            $this->clientWithRounds([1 => $et('2026-09-08 17:10:20')]);
+        }
+        $this->clientWithRounds([1 => $et('2026-09-20 10:00'), 2 => $et('2026-10-07 23:30')]);   // one client, two rounds
+        $this->clientWithRounds([1 => '2026-10-12 10:00']);                                   // after the opening period
+
+        // On Oct 9 the opening period is the current one.
+        Carbon::setTestNow(Carbon::parse('2026-10-09 20:00', 'Asia/Karachi'));
+        $now = $this->billing()->periods();
+        $this->assertSame('2026-09-02', $now[0]['start']->toDateString());
+        $this->assertSame('2026-10-09', $now[0]['end']->toDateString());
+        $this->assertCount(1, $now, 'nothing should exist before the day Don was added');
+
+        // Later, Oct 10 – Nov 9 is current and the opening period sits behind it.
+        Carbon::setTestNow(Carbon::parse('2026-10-20 12:00', 'Asia/Karachi'));
+        [$current, $opening] = $this->billing()->periods();
+        $this->assertSame(['2026-10-10', '2026-11-09'], [$current['start']->toDateString(), $current['end']->toDateString()]);
+        $this->assertSame(1, $current['price']['rounds']);
+        $this->assertSame(['2026-09-02', '2026-10-09'], [$opening['start']->toDateString(), $opening['end']->toDateString()]);
+        $this->assertSame(79, $opening['price']['rounds']);
+        $this->assertSame(563.0, $opening['price']['total']);   // 500 + 9 × 7
+
+        // The opening period can be invoiced and paid like any other.
+        $this->actingAs($this->super, 'admin')->withSession(['selected_client_id' => $this->don->id])
+            ->post('/admin/payments/invoice', ['period_start' => '2026-09-02'])->assertRedirect();
+        $this->assertSame('563.00', (string) Invoice::latest('id')->first()->total);
+    }
 }
