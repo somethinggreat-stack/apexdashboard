@@ -288,6 +288,9 @@
         </table>
     @else
         @php
+            // Unused advance credit rides along as its own negative item.
+            $creditApplied = -(float) $allItems->where('type', 'advance_credit')->sum('amount');
+            $allItems      = $allItems->reject(fn ($i) => ($i['type'] ?? null) === 'advance_credit')->values();
             $itemsByRound = $allItems->groupBy('round')->sortKeys();
             $rowNum = 0;
             // Complimentary rounds are listed but carry $0, so the billable
@@ -336,8 +339,14 @@
         <table class="inv-totals">
             <tr class="subtotal">
                 <td class="label">Subtotal ({{ $billableCount }} {{ $billableCount === 1 ? 'Client' : 'Clients' }})</td>
-                <td class="amount">${{ number_format($invoice->total, 2) }}</td>
+                <td class="amount">${{ number_format($invoice->total + $creditApplied, 2) }}</td>
             </tr>
+            @if ($creditApplied > 0)
+                <tr>
+                    <td class="label">Less: advance payment already received</td>
+                    <td class="amount">−${{ number_format($creditApplied, 2) }}</td>
+                </tr>
+            @endif
             @if ($freeCount > 0)
                 <tr>
                     <td class="label">Complimentary ({{ $freeCount }} {{ $freeCount === 1 ? 'round' : 'rounds' }} at no charge)</td>

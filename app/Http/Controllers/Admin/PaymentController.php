@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ClientPayment;
 use App\Models\EndUser;
 use App\Models\Invoice;
+use App\Models\OwnerAdvance;
 use App\Models\PeriodHours;
 use App\Models\TimeEntry;
 use App\Models\TimePayout;
@@ -165,12 +166,18 @@ class PaymentController extends Controller
             return back()->with('status', 'No unpaid items to invoice — everything is already paid.');
         }
 
+        // Unused advance credit comes off the bill, so an advance is never charged twice.
+        $credit = min($data['credit'], $data['totalUnpaid']);
+        if ($credit > 0) {
+            $items[] = ['type' => 'advance_credit', 'amount' => -$credit];
+        }
+
         $invoice = Invoice::create([
             'client_id'           => $client->id,
             'invoice_number'      => $this->nextInvoiceNumber($client, now()),
             'invoice_date'        => now()->toDateString(),
             'items'               => $items,
-            'total'               => $data['totalUnpaid'],
+            'total'               => round($data['totalUnpaid'] - max(0, $credit), 2),
             'created_by_admin_id' => Auth::guard('admin')->id(),
         ]);
 
@@ -477,6 +484,97 @@ class PaymentController extends Controller
         return back()->with('status', 'Payment removed.');
     }
 
+    /* =============== ADVANCE PAYMENTS =============== */
+
+    /** Note money the owner paid up front. It sits as credit until applied to rounds. */
+    public function storeAdvance(Request $request)
+    {
+        $client = $this->scopedBO();
+
+        $data = $request->validate([
+            'amount'      => 'required|numeric|min:0.01|max:1000000',
+            'received_at' => 'required|date',
+            'method'      => 'nullable|string|max:50',
+            'notes'       => 'nullable|string|max:1000',
+        ]);
+
+        $client->advances()->create($data + ['created_by_admin_id' => Auth::guard('admin')->id()]);
+
+        return back()->with('status', 'Advance of $' . number_format((float) $data['amount'], 2)
+            . ' recorded. Credit balance: $' . number_format($client->advanceBalance(), 2) . '.');
+    }
+
+    /**
+     * Spend the credit on unpaid rounds, oldest first. Each round is paid in full
+     * or not at all: when the next round costs more than what's left, the rest
+     * stays as credit (and still comes off the invoice).
+     */
+    public function applyAdvance()
+    {
+        $client  = $this->scopedBO();
+        $balance = $client->advanceBalance();
+
+        if ($balance <= 0) {
+            return back()->with('status', 'No advance credit to apply.');
+        }
+
+        $items = collect($this->buildPerRoundData($client)['unpaidItems'])
+            ->sortBy(fn ($i) => [($i['round_started'] ?? '9999-12-31'), $i['round']])
+            ->values();
+
+        $adminId = Auth::guard('admin')->id();
+        $today   = now()->toDateString();
+        $count   = 0;
+        $spent   = 0.0;
+
+        foreach ($items as $item) {
+            $amount = (float) $item['amount'];
+            if ($amount <= 0 || $amount > $balance + 0.001) {
+                continue;
+            }
+
+            ClientPayment::updateOrCreate(
+                ['end_user_id' => $item['end_user_id'], 'round' => $item['round']],
+                [
+                    'amount'              => $amount,
+                    'is_free'             => false,
+                    'from_advance'        => true,
+                    'paid_at'             => $today,
+                    'method'              => 'Advance credit',
+                    'created_by_admin_id' => $adminId,
+                ]
+            );
+            $balance = round($balance - $amount, 2);
+            $spent  += $amount;
+            $count++;
+        }
+
+        if ($count === 0) {
+            return back()->with('status', 'Nothing to apply: no unpaid round costs $' . number_format($balance, 2) . ' or less.');
+        }
+
+        return back()->with('status', "Paid {$count} round(s) from advance credit (\$" . number_format($spent, 2)
+            . '). Credit left: $' . number_format($balance, 2) . '.');
+    }
+
+    /**
+     * Remove an advance noted by mistake. Refused once its money has paid for
+     * rounds — undo those round payments first, or the balance would go negative.
+     */
+    public function destroyAdvance(string $id)
+    {
+        $client  = $this->scopedBO();
+        $advance = OwnerAdvance::where('client_id', $client->id)->findOrFail($id);
+
+        if ($client->advanceBalance() - (float) $advance->amount < -0.001) {
+            return back()->withErrors(['advance' => 'Part of this advance has already paid for rounds. Undo those round payments (marked "Advance credit") first.']);
+        }
+
+        $advance->delete();
+
+        return back()->with('status', 'Advance removed.');
+    }
+
     /* =============== HOURLY — MANUAL HOURS PER PERIOD =============== */
 
     public function storePeriodHours(Request $request)
@@ -630,6 +728,7 @@ class PaymentController extends Controller
                 if (!$paidByRound->has($rn)) {
                     $rnRate = $eu->effectiveRoundFee($rn);
                     $unpaidItems[] = [
+                        'end_user_id'   => $eu->id,
                         'name'          => $eu->full_name,
                         'email'         => $eu->email,
                         'round'         => $rn,
@@ -670,7 +769,12 @@ class PaymentController extends Controller
         $earnedTotal     = (float) $allPayments->sum('amount');
         $earnedThisMonth = (float) $allPayments->where('paid_at', '>=', now()->startOfMonth()->toDateString())->sum('amount');
 
+        $credit = $client->advanceBalance();
+
         return [
+            'credit'          => $credit,
+            'dueAfterCredit'  => max(0.0, round($totalUnpaid - $credit, 2)),
+            'advances'        => OwnerAdvance::where('client_id', $client->id)->orderByDesc('received_at')->orderByDesc('id')->get(),
             'rows'            => $rows,
             'rate'            => $rate,
             'earnedTotal'     => $earnedTotal,

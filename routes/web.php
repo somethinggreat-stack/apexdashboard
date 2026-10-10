@@ -271,6 +271,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('payments/round-rate/{id}', [Admin\PaymentController::class, 'updateRoundFee'])->name('payments.round-rate');
                 Route::post('payments/invoice', [Admin\PaymentController::class, 'generateInvoice'])->name('payments.invoice.generate');
                 Route::get('payments/invoice/{id}', [Admin\PaymentController::class, 'showInvoice'])->name('payments.invoice.show');
+                // Advance payments — credit the owner paid up front
+                Route::post('payments/advances', [Admin\PaymentController::class, 'storeAdvance'])->name('payments.advances.store');
+                Route::post('payments/advances/apply', [Admin\PaymentController::class, 'applyAdvance'])->name('payments.advances.apply');
+                Route::delete('payments/advances/{id}', [Admin\PaymentController::class, 'destroyAdvance'])->whereNumber('id')->name('payments.advances.destroy');
                 Route::put('payments/{id}', [Admin\PaymentController::class, 'updatePayment'])->name('payments.update');
                 Route::delete('payments/{id}', [Admin\PaymentController::class, 'destroyPayment'])->name('payments.destroy');
                 // Hourly — manual hours per period

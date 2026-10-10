@@ -58,6 +58,20 @@ class Client extends Authenticatable
         return (bool) $this->results_tracking;
     }
 
+    public function advances()
+    {
+        return $this->hasMany(OwnerAdvance::class);
+    }
+
+    /** Advance money not yet spent on rounds: advances paid minus rounds paid from them. */
+    public function advanceBalance(): float
+    {
+        $paid = (float) OwnerAdvance::where('client_id', $this->id)->sum('amount');
+        $used = (float) ClientPayment::forClient($this->id)->where('from_advance', true)->sum('amount');
+
+        return round($paid - $used, 2);
+    }
+
     /** Paid a fixed monthly fee for a block of rounds, plus a rate per extra round. */
     public function isPackage(): bool
     {
@@ -207,7 +221,8 @@ class Client extends Authenticatable
         $done    = (float) ClientPayment::forClient($this->id)->sum('amount');
         $pending = (float) $endUsers->sum(fn ($eu) => $eu->pendingRoundTotal());
 
-        return ['done' => $done, 'pending' => $pending];
+        // Unused advance credit already covers that much of what is owed.
+        return ['done' => $done, 'pending' => max(0.0, round($pending - $this->advanceBalance(), 2))];
     }
 
     public function intakeUrl(): string

@@ -10,7 +10,7 @@ class ClientPayment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'end_user_id', 'round', 'amount', 'is_free', 'paid_at',
+        'end_user_id', 'round', 'amount', 'is_free', 'from_advance', 'paid_at',
         'method', 'notes', 'created_by_admin_id',
     ];
 
@@ -18,6 +18,7 @@ class ClientPayment extends Model
         'paid_at' => 'date',
         'amount'  => 'decimal:2',
         'is_free' => 'boolean',
+        'from_advance' => 'boolean',
         'round'   => 'integer',
     ];
 

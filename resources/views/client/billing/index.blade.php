@@ -42,8 +42,11 @@
         @if ($outstanding['count'] > 0)
             <p class="muted" style="font-size:13px; margin-bottom:12px;">
                 {{ $outstanding['count'] }} unpaid round(s) across your clients, totaling
-                <strong>${{ number_format($outstanding['total'], 2) }}</strong>
+                <strong>${{ number_format($outstanding['subtotal'], 2) }}</strong>
                 at ${{ number_format((float) ($client->per_round_fee ?? 0), 2) }} per round.
+                @if ($outstanding['used'] > 0)
+                    Your advance payment covers <strong>${{ number_format($outstanding['used'], 2) }}</strong> of it.
+                @endif
             </p>
             <div class="table-scroll"><table class="data-table">
                 <thead><tr><th>Client</th><th>Round</th><th>Amount</th></tr></thead>
@@ -57,6 +60,12 @@
                     @endforeach
                 </tbody>
                 <tfoot>
+                    @if ($outstanding['used'] > 0)
+                        <tr>
+                            <td colspan="2" style="text-align:right;">Less: your advance payment</td>
+                            <td style="color:#047857;">−${{ number_format($outstanding['used'], 2) }}</td>
+                        </tr>
+                    @endif
                     <tr>
                         <td colspan="2" style="text-align:right; font-weight:600;">Total Outstanding</td>
                         <td style="font-weight:700; color:#ea580c;">${{ number_format($outstanding['total'], 2) }}</td>

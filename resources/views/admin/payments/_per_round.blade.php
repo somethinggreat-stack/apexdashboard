@@ -42,6 +42,11 @@
             @endforeach
             {{ $parts ? implode(' · ', $parts) : 'All paid up' }}
         </div>
+        @if ($data['credit'] > 0 && $data['totalUnpaid'] > 0)
+            <div class="pay-stat-sub" style="color:#047857; font-weight:600;">
+                Due after ${{ number_format(min($data['credit'], $data['totalUnpaid']), 2) }} advance: ${{ number_format($data['dueAfterCredit'], 2) }}
+            </div>
+        @endif
     </div>
     <div class="pay-stat-card">
         <div class="pay-stat-label">Invoice</div>
@@ -62,8 +67,96 @@
     </div>
 </div>
 
+{{-- Advance payments: money the owner paid up front. It sits as credit, comes off
+     every invoice, and pays for rounds when applied — so it's never charged twice. --}}
+<div class="adv-card">
+    <div class="adv-head">
+        <div>
+            <div class="adv-title">Advance Payments</div>
+            <div class="adv-sub">Money {{ $client->business_name }} paid up front. Unused credit comes off the invoice automatically.</div>
+        </div>
+        <div class="adv-balance {{ $data['credit'] > 0 ? 'has' : '' }}">
+            <span>Credit balance</span>
+            <strong>${{ number_format($data['credit'], 2) }}</strong>
+        </div>
+        <div class="adv-actions">
+            <button type="button" class="pay-btn-primary" onclick="openModal('advanceModal')">+ Record Advance</button>
+            <form method="POST" action="{{ route('admin.payments.advances.apply') }}" style="margin:0;"
+                  data-confirm-action
+                  data-confirm-title="Apply advance credit?"
+                  data-confirm-message="Unpaid rounds are marked paid from the ${{ number_format($data['credit'], 2) }} credit, oldest first, at each client's rate."
+                  data-confirm-ok="Apply credit">
+                @csrf
+                <button type="submit" class="inv-gen-btn" {{ $data['credit'] <= 0 || $data['totalUnpaid'] <= 0 ? 'disabled' : '' }}
+                        title="Mark unpaid rounds paid from the advance credit, oldest first">
+                    Apply Credit to Unpaid Rounds
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if ($data['advances']->isNotEmpty())
+        <table class="adv-table">
+            <thead><tr><th>Date received</th><th>Amount</th><th>Method</th><th>Note</th><th></th></tr></thead>
+            <tbody>
+                @foreach ($data['advances'] as $adv)
+                    <tr>
+                        <td>{{ $adv->received_at?->format('M j, Y') }}</td>
+                        <td><strong>${{ number_format($adv->amount, 2) }}</strong></td>
+                        <td>{{ $adv->method ?: '—' }}</td>
+                        <td>{{ $adv->notes ?: '—' }}</td>
+                        <td style="text-align:right;">
+                            <form method="POST" action="{{ route('admin.payments.advances.destroy', $adv->id) }}" data-confirm-delete data-confirm-message="Remove this advance of ${{ number_format($adv->amount, 2) }}?" style="display:inline; margin:0;">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+</div>
+
+<div id="advanceModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Record Advance Payment</h3>
+            <button class="modal-close" onclick="closeModal('advanceModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ route('admin.payments.advances.store') }}">
+            @csrf
+            <div class="form-row">
+                <div class="form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0.01" name="amount" required placeholder="e.g. 150.00"></div>
+                <div class="form-group"><label>Date Received</label><input type="date" name="received_at" value="{{ now()->toDateString() }}" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Method (optional)</label><input type="text" name="method" placeholder="Bank / Zelle / Wire"></div>
+                <div class="form-group"><label>Note (optional)</label><input type="text" name="notes" placeholder="e.g. paid ahead for 10 rounds"></div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('advanceModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Advance</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('head')
 <style>
+    .adv-card { background:var(--surface, #fff); border:1px solid var(--border, #e5e7eb); border-radius:14px; padding:16px 18px; margin:0 0 18px; }
+    .adv-head { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .adv-head > div:first-child { flex:1 1 260px; }
+    .adv-title { font-weight:700; font-size:15px; }
+    .adv-sub { font-size:12px; color:var(--muted, #64748b); margin-top:2px; }
+    .adv-balance { display:flex; flex-direction:column; align-items:flex-end; }
+    .adv-balance span { font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted, #64748b); font-weight:700; }
+    .adv-balance strong { font-size:22px; }
+    .adv-balance.has strong { color:#047857; }
+    .adv-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .adv-table { width:100%; margin-top:12px; border-collapse:collapse; font-size:13px; }
+    .adv-table th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted, #64748b); padding:6px 8px; border-bottom:1px solid var(--border, #e5e7eb); }
+    .adv-table td { padding:8px; border-bottom:1px solid var(--border, #e5e7eb); }
     .inv-gen-btn {
         background: #0b2e5b; color: var(--on-accent, #fff); border: 0;
         font-size: 12px; font-weight: 700; letter-spacing: .3px;

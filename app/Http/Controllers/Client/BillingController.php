@@ -99,6 +99,7 @@ class BillingController extends Controller
             ['label' => 'Outstanding',     'value' => '$' . number_format($outstanding['total'], 2),    'tone' => 'orange'],
             ['label' => 'Paid This Month', 'value' => '$' . number_format($paidThisMonth, 2),           'tone' => ''],
             ['label' => 'Fee per Round',   'value' => '$' . number_format((float) ($client->per_round_fee ?? 0), 2), 'tone' => ''],
+            ['label' => 'Advance Credit',  'value' => '$' . number_format(max(0.0, $outstanding['credit']), 2), 'tone' => $outstanding['credit'] > 0 ? 'green' : ''],
             ['label' => 'Rounds Paid',     'value' => $payments->count(),                               'tone' => ''],
         ];
 
@@ -153,11 +154,18 @@ class BillingController extends Controller
             }
         }
 
+        // An advance the owner already paid covers that much of what's owed.
+        $credit = $client->advanceBalance();
+        $used   = min(max(0.0, $credit), $total);
+
         return [
-            'items'   => $items,
-            'count'   => count($items),
-            'total'   => $total,
-            'byRound' => $byRound,
+            'items'    => $items,
+            'count'    => count($items),
+            'subtotal' => $total,
+            'credit'   => $credit,
+            'used'     => $used,
+            'total'    => round($total - $used, 2),
+            'byRound'  => $byRound,
         ];
     }
 
