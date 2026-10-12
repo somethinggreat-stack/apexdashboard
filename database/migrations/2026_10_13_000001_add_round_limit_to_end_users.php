@@ -14,12 +14,13 @@ use Illuminate\Support\Facades\Schema;
  * Clients are matched by ID only — names on this list have spelling variants.
  * Julia Bailey (61) is pending confirmation; Yvina Jean Baptiste has no ID yet
  * and is added later through the super-admin override on her profile.
+ * Meagan Foster (621) is excluded: she is on Skool with unlimited rounds.
  */
 return new class extends Migration
 {
     private const TWO_ROUND_IDS = [
         953, 61, 896, 1031, 822, 867, 820, 797, 788, 774, 765, 76, 83, 709, 683,
-        85, 643, 641, 715, 642, 624, 620, 1082, 571, 572, 570, 574, 621, 640, 622,
+        85, 643, 641, 715, 642, 624, 620, 1082, 571, 572, 570, 574, 640, 622,
     ];
 
     private const ROUND_OPTIONS = [
