@@ -131,6 +131,16 @@
                 <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
             </label>
 
+            <label class="pro-select">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+                <select name="limit">
+                    <option value="">All Clients</option>
+                    <option value="limited" @selected(request('limit') === 'limited')>2-Round Limit clients</option>
+                    <option value="flagged" @selected(request('limit') === 'flagged')>Flagged: no more rounds</option>
+                </select>
+                <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </label>
+
             <label class="pro-search">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search client...">
@@ -195,6 +205,11 @@
                                             Incomplete · log
                                         </button>
                                     @endif
+                                    @if ($eu->round_limit_flag === 'over_limit')
+                                        <span class="pro-limit" title="{{ $eu->round_limit }}-round limit — flagged for review">Over limit (Round {{ $eu->current_round }})</span>
+                                    @elseif ($eu->round_limit_flag === 'at_limit')
+                                        <span class="pro-limit" title="{{ $eu->round_limit }}-round limit">No more rounds</span>
+                                    @endif
                                 </div>
                             </div>
                         </td>
@@ -203,7 +218,8 @@
                             <span class="inline-edit inline-edit-round pro-rounds"
                                   data-id="{{ $eu->id }}"
                                   data-name="{{ $eu->full_name }}"
-                                  data-current="{{ json_encode($eu->rounds ?? []) }}">
+                                  data-current="{{ json_encode($eu->rounds ?? []) }}"
+                                  data-limit="{{ $eu->round_limit }}">
                                 {{ $eu->started_rounds_full ?: 'Not started' }}
                                 <span class="inline-pencil" aria-hidden="true">✎</span>
                             </span>

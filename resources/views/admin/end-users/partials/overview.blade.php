@@ -574,21 +574,37 @@
             @csrf @method('PUT')
             <input type="hidden" name="round_schedule_present" value="1">
 
-            <button type="button" class="rm-next-btn" onclick="rmStartNextRound()">
+            @php $rmLimit = $endUser->round_limit; @endphp
+            <button type="button" class="rm-next-btn" onclick="rmStartNextRound()"
+                    @if ($endUser->next_round_blocked) disabled title="{{ $rmLimit }}-round limit" @endif>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
                 Start Next Round
             </button>
+            @if ($rmLimit !== null)
+                <p class="rm-limit-note">
+                    {{ $rmLimit }}-round limit —
+                    @if ($endUser->round_limit_flag === 'over_limit')
+                        <strong>over limit (Round {{ $endUser->current_round }}), flagged for review.</strong>
+                    @elseif ($endUser->round_limit_flag === 'at_limit')
+                        <strong>no more rounds.</strong>
+                    @else
+                        rounds past {{ $rmLimit }} can't be started.
+                    @endif
+                </p>
+            @endif
 
             <div class="rm-list">
-                @foreach (\App\Models\EndUser::ROUND_OPTIONS as $rsLabel)
+                @foreach (\App\Models\EndUser::ROUND_OPTIONS as $rsIdx => $rsLabel)
                     @php
                         $rsReached = in_array($rsLabel, $endUser->rounds ?? [], true);
+                        // Past the round limit and not already on → can't be turned on.
+                        $rsLocked  = $rmLimit !== null && $rsIdx + 1 > $rmLimit && ! $rsReached;
                         $rsDate    = $endUser->roundStartedAt($rsLabel);
                         $isCurrent = $rsReached && $rsLabel === $endUser->current_round_label;
                     @endphp
                     <div class="rm-row {{ $rsReached ? 'is-on' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
-                        <label class="rm-toggle" title="{{ $rsReached ? 'Reached' : 'Not started' }}">
-                            <input type="checkbox" name="rounds[]" value="{{ $rsLabel }}" {{ $rsReached ? 'checked' : '' }} onchange="rmToggle(this)">
+                        <label class="rm-toggle" title="{{ $rsLocked ? $rmLimit . '-round limit' : ($rsReached ? 'Reached' : 'Not started') }}">
+                            <input type="checkbox" name="rounds[]" value="{{ $rsLabel }}" {{ $rsReached ? 'checked' : '' }} {{ $rsLocked ? 'disabled' : '' }} onchange="rmToggle(this)">
                             <span class="rm-switch"></span>
                         </label>
                         <div class="rm-name">
@@ -613,6 +629,19 @@
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>
+
+        @if (Auth::guard('admin')->user()?->isSuper())
+            {{-- Super-admin override: change or remove the round limit (logged to Activity). --}}
+            <form method="POST" action="{{ route('admin.end-users.round-limit', $endUser->id) }}" class="rm-limit-form">
+                @csrf @method('PUT')
+                <label>Round limit <span class="muted">(super admin — blank = no limit)</span></label>
+                <div class="rm-limit-row">
+                    <input type="number" name="round_limit" min="1" max="{{ count(\App\Models\EndUser::ROUND_OPTIONS) }}"
+                           value="{{ $endUser->round_limit }}" placeholder="No limit">
+                    <button type="submit" class="btn btn-secondary">Update limit</button>
+                </div>
+            </form>
+        @endif
     </div>
 </div>
 @endif
@@ -958,6 +987,11 @@
     #roundScheduleModal .rm-next-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
     #roundScheduleModal .rm-next-btn svg { width: 18px; height: 18px; }
     #roundScheduleModal .rm-next-btn:disabled { background: var(--muted); box-shadow: none; cursor: default; transform: none; }
+    #roundScheduleModal .rm-limit-note { margin: -4px 0 12px; font-size: 13px; color: #b91c1c; }
+    #roundScheduleModal .rm-limit-form { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+    #roundScheduleModal .rm-limit-form label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    #roundScheduleModal .rm-limit-row { display: flex; gap: 8px; }
+    #roundScheduleModal .rm-limit-row input { width: 120px; }
 
     #roundScheduleModal .rm-list { display: flex; flex-direction: column; gap: 8px; }
     #roundScheduleModal .rm-row {
@@ -1043,6 +1077,7 @@ window.rmStartNextRound = function () {
     var rows = document.querySelectorAll('#roundScheduleModal .rm-row');
     for (var i = 0; i < rows.length; i++) {
         var cb = rows[i].querySelector('input[type=checkbox]');
+        if (cb.disabled) break;   // round limit reached — nothing further can start
         if (!cb.checked) {
             cb.checked = true;
             rmToggle(cb);

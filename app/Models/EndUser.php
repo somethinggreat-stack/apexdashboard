@@ -57,6 +57,24 @@ class EndUser extends Model
             }
         });
 
+        // Round limit (the "2-round list"): no path may start a round past the
+        // client's cap. Enforced here, not in the editors, so the list picker,
+        // the profile pickers, Edit Rounds & Dates and Jarvis all hit the same
+        // wall. Only GROWING past the cap is refused — a client already over it
+        // can still be edited, and rounds can still be turned off.
+        static::saving(function (EndUser $user) {
+            if ($user->round_limit === null || ! $user->isDirty('rounds')) {
+                return;
+            }
+            $before = self::highestRound($user->getOriginal('rounds') ?? []);
+            $after  = self::highestRound($user->rounds ?? []);
+            if ($after > $user->round_limit && $after > $before) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'rounds' => "{$user->round_limit}-round limit — {$user->full_name} can't start Round {$after}.",
+                ]);
+            }
+        });
+
         // Stamp when a client enters the Clients (Done) list — from any path
         // (moved to Clients, or added straight in). Powers the Daily Task report.
         static::saving(function (EndUser $user) {
@@ -164,6 +182,7 @@ class EndUser extends Model
     protected $casts = [
         'start_date' => 'date',
         'next_round_override' => 'date',
+        'round_limit' => 'integer',
         'deleted_with_owner' => 'boolean',
         'from_ghl' => 'boolean',
         'ghl_synced_at' => 'datetime',
@@ -418,6 +437,12 @@ class EndUser extends Model
     }
 
     /** Not in any business-owner custom list (Jumbo / Mr Pierre / Tycoon). */
+    /** Clients with a round limit set (the "2-round list"). */
+    public function scopeRoundLimited($query)
+    {
+        return $query->whereNotNull('round_limit');
+    }
+
     public function scopeNoCustomList($query)
     {
         return $query->whereNull('custom_list');
@@ -788,6 +813,37 @@ class EndUser extends Model
         }
 
         return ['week' => 1, 'steps' => []];
+    }
+
+    /** Highest round number in a rounds array (0 when none). */
+    public static function highestRound(array $rounds): int
+    {
+        $max = 0;
+        foreach ($rounds as $label) {
+            $idx = array_search($label, self::ROUND_OPTIONS, true);
+            if ($idx !== false) {
+                $max = max($max, $idx + 1);
+            }
+        }
+        return $max;
+    }
+
+    /**
+     * Round-limit flag: null (no limit, or below it), 'at_limit' (on the last
+     * allowed round — no more rounds), or 'over_limit' (past it — needs review).
+     */
+    public function getRoundLimitFlagAttribute(): ?string
+    {
+        if ($this->round_limit === null || $this->current_round < $this->round_limit) {
+            return null;
+        }
+        return $this->current_round > $this->round_limit ? 'over_limit' : 'at_limit';
+    }
+
+    /** True when the next round can't be started because of the round limit. */
+    public function getNextRoundBlockedAttribute(): bool
+    {
+        return $this->round_limit !== null && $this->current_round >= $this->round_limit;
     }
 
     public function getCurrentRoundAttribute(): int

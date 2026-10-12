@@ -150,8 +150,15 @@
             try { current = JSON.parse(rd.dataset.current || '[]'); } catch (_) {}
             rpEditingId = rd.dataset.id;
             document.getElementById('rpName').textContent = rd.dataset.name || 'client';
+            // Round limit (2-round list): rounds past the cap can't be turned on.
+            // One already on (a client over the limit) can still be turned off.
+            var limit = parseInt(rd.dataset.limit || '', 10);
             rpModal.querySelectorAll('.rp-pill').forEach(function (p) {
-                p.classList.toggle('on', current.indexOf(p.dataset.round) !== -1);
+                var on = current.indexOf(p.dataset.round) !== -1;
+                var locked = !isNaN(limit) && parseInt(p.dataset.n, 10) > limit && !on;
+                p.classList.toggle('on', on);
+                p.disabled = locked;
+                p.title = locked ? limit + '-round limit' : '';
             });
             openModal('roundPickerModal');
             return;
@@ -195,8 +202,10 @@
             fetch(updateUrlTpl.replace('__ID__', rpEditingId), {
                 method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
             }).then(function (r) {
-                if (r.ok) { closeModal('roundPickerModal'); apexRefreshTable(); }
-                else alert('Could not save rounds.');
+                if (r.ok) { closeModal('roundPickerModal'); apexRefreshTable(); return; }
+                r.json().then(function (j) {
+                    alert((j && j.errors && j.errors.rounds && j.errors.rounds[0]) || 'Could not save rounds.');
+                }, function () { alert('Could not save rounds.'); });
             });
         });
     }

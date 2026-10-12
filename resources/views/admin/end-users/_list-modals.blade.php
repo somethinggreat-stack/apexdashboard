@@ -168,6 +168,7 @@
     }
     #roundPickerModal .rp-pill.on .rp-check { opacity:1; }
     #roundPickerModal .rp-pill:hover { border-color:#4f46e5; }
+    #roundPickerModal .rp-pill:disabled { opacity:.4; cursor:not-allowed; border-color:var(--border); }
     @media (max-width:520px){ #roundPickerModal .rp-grid { grid-template-columns:repeat(3, 1fr); } }
 </style>
 @endpush

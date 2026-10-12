@@ -47,12 +47,18 @@
                                 Incomplete · log
                             </button>
                         @endif
+                        @if ($eu->round_limit_flag === 'over_limit')
+                            <span class="pill pill-limit" title="{{ $eu->round_limit }}-round limit — flagged for review">OVER LIMIT (Round {{ $eu->current_round }})</span>
+                        @elseif ($eu->round_limit_flag === 'at_limit')
+                            <span class="pill pill-limit" title="{{ $eu->round_limit }}-round limit">NO MORE ROUNDS</span>
+                        @endif
                     </td>
                     <td class="no-link">
                         <span class="inline-edit inline-edit-round"
                               data-id="{{ $eu->id }}"
                               data-name="{{ $eu->full_name }}"
-                              data-current="{{ json_encode($eu->rounds ?? []) }}">
+                              data-current="{{ json_encode($eu->rounds ?? []) }}"
+                              data-limit="{{ $eu->round_limit }}">
                             {{ $eu->started_rounds_full ?: 'Not started' }}
                             <span class="inline-pencil" aria-hidden="true">✎</span>
                         </span>

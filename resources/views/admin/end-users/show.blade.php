@@ -812,8 +812,12 @@
                         @php $selectedRounds = old('rounds', $endUser->rounds ?? []); @endphp
                         <div class="round-pick">
                             @foreach (\App\Models\EndUser::ROUND_OPTIONS as $i => $round)
-                                <label class="round-pick-pill">
-                                    <input type="checkbox" name="rounds[]" value="{{ $round }}" @checked(in_array($round, $selectedRounds, true))>
+                                @php
+                                    $rpOn     = in_array($round, $selectedRounds, true);
+                                    $rpLocked = $endUser->round_limit !== null && $i + 1 > $endUser->round_limit && ! in_array($round, $endUser->rounds ?? [], true);
+                                @endphp
+                                <label class="round-pick-pill" @if ($rpLocked) title="{{ $endUser->round_limit }}-round limit" style="opacity:.4; cursor:not-allowed;" @endif>
+                                    <input type="checkbox" name="rounds[]" value="{{ $round }}" @checked($rpOn) @disabled($rpLocked)>
                                     <span class="rp-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                                     <span class="rp-text">Round {{ $i + 1 }}</span>
                                 </label>

@@ -566,6 +566,12 @@ html, body { height: 100%; }
     text-transform: uppercase; letter-spacing: .04em;
 }
 .pro-flag:hover { background: #fecaca; }
+/* round-limit badge (2-round list): solid red so it reads apart from Incomplete */
+.pro-limit {
+    display: inline-block; margin: 4px 0 0 8px; padding: 2px 9px; border-radius: 999px;
+    background: #dc2626; color: #fff; font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+}
 .pro-note { margin-top: 4px; font-size: 12px; font-weight: 600; color: #b91c1c; max-width: 320px; }
 
 /* ------------------------------ pagination ------------------------------- */

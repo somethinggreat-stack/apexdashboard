@@ -199,6 +199,13 @@ class EndUserController extends Controller
             $query->search($request->search);
         }
 
+        // Round-limit filter: everyone on a limit, or only those flagged (at or
+        // past it). The flag reads the rounds strip, so it's applied after load.
+        $limitFilter = $request->query('limit');
+        if (in_array($limitFilter, ['limited', 'flagged'], true)) {
+            $query->roundLimited();
+        }
+
         // Default ordering: the client whose next round is closest (fewest days
         // left) sits on top, so past-due files — which have NEGATIVE days left —
         // naturally float above everyone. Ties break on the next round date, then
@@ -216,6 +223,10 @@ class EndUserController extends Controller
                     ?: (mb_strtolower($a->full_name) <=> mb_strtolower($b->full_name));
             })
             ->values();
+
+        if ($limitFilter === 'flagged') {
+            $endUsers = $endUsers->filter(fn ($e) => $e->round_limit_flag !== null)->values();
+        }
 
         // Optional column sort (pro console). Without it, the default ordering
         // above stands: soonest next round (and past-due) first.
@@ -577,6 +588,31 @@ class EndUserController extends Controller
 
         usort($t, fn ($a, $b) => $b['at'] <=> $a['at']);
         return $t;
+    }
+
+    /**
+     * Super-admin override: set, change or remove a client's round limit.
+     * round_limit is deliberately not mass-assignable, so this is the only
+     * way it changes after the seeding migration. Every change is logged.
+     */
+    public function updateRoundLimit(Request $request, string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+
+        $data = $request->validate([
+            'round_limit' => 'nullable|integer|between:1,' . count(EndUser::ROUND_OPTIONS),
+        ]);
+        $old = $endUser->round_limit;
+        $new = isset($data['round_limit']) ? (int) $data['round_limit'] : null;
+
+        if ($old !== $new) {
+            $endUser->forceFill(['round_limit' => $new])->save();
+            $fmt = fn ($v) => $v === null ? 'no limit' : "{$v} rounds";
+            \App\Models\ClientEvent::log($endUser, 'round_limit', "Round limit changed from {$fmt($old)} to {$fmt($new)}");
+        }
+
+        return back(302, [], route('admin.end-users.show', $endUser->id))
+            ->with('confirm', $new === null ? 'Round limit removed' : "Round limit set to {$new}");
     }
 
     public function statusReport(string $id)

@@ -335,7 +335,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // client — but NEVER the closeout steps (pull report / record deletions).
             Route::post('clear-incomplete', [Admin\EndUserController::class, 'clearIncomplete'])
                 ->middleware('admin.super')->name('end-users.clear-incomplete');
-            Route::post('end-users/{id}/to-done', [Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
+            // Super-admin only: change or remove a client's round limit (logged).
+            Route::put('end-users/{id}/round-limit', [Admin\EndUserController::class, 'updateRoundLimit'])
+                ->whereNumber('id')->middleware('admin.super')->name('end-users.round-limit');
+            Route::post('end-users/{id}/to-done',[Admin\EndUserController::class, 'moveToDone'])->name('end-users.to-done');
             Route::post('end-users/{id}/to-errors', [Admin\EndUserController::class, 'moveToErrors'])->name('end-users.to-errors');
             Route::post('end-users/{id}/to-new-clients', [Admin\EndUserController::class, 'moveToNewClients'])->name('end-users.to-new-clients');
             // Hold / Pause — park a client out of the normal buckets, or resume them
