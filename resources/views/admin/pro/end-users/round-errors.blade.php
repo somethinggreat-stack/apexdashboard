@@ -43,7 +43,10 @@
                                 <span class="pro-avatar" style="background:#ffedd5; color:#c2410c;">
                                     {{ mb_strtoupper(mb_substr($eu->first_name, 0, 1) . mb_substr($eu->last_name, 0, 1)) }}
                                 </span>
-                                <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                <div>
+                                    <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                    @include('admin.end-users.partials.round-limit-badge')
+                                </div>
                             </div>
                         </td>
                         <td>{{ $eu->started_rounds_full ?: 'Not started' }}</td>

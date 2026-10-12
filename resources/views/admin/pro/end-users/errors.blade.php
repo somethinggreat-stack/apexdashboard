@@ -40,7 +40,10 @@
                                 <span class="pro-avatar" style="background:var(--tint-red-bg); color:var(--tint-red-fg);">
                                     {{ mb_strtoupper(mb_substr($eu->first_name, 0, 1) . mb_substr($eu->last_name, 0, 1)) }}
                                 </span>
-                                <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                <div>
+                                    <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                    @include('admin.end-users.partials.round-limit-badge')
+                                </div>
                             </div>
                         </td>
                         <td><span style="color:var(--tint-red-fg); font-weight:600;">{{ $eu->intake_review_note ?: '—' }}</span></td>

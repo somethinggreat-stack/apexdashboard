@@ -125,6 +125,19 @@ class RoundLimitTest extends TestCase
         $page(['limit' => 'flagged'])->assertSee('AtLimit')->assertSee('OverLimit')->assertDontSee('Below')->assertDontSee('Normal');
     }
 
+    public function test_badge_shows_on_hold_and_round_error_lists_too(): void
+    {
+        $held = $this->client(['1st Round', '2nd Round'], 2, 'Held');
+        $held->update(['held_at' => now()]);
+        $err = $this->client(['1st Round', '2nd Round', '3rd Round'], 2, 'Errored');
+        $err->update(['intake_status' => 'round_error']);
+
+        $as = fn () => $this->actingAs($this->va, 'admin')->withSession(['selected_client_id' => $this->bo->id]);
+
+        $as()->get(route('admin.hold'))->assertOk()->assertSee('No more rounds');
+        $as()->get(route('admin.round-errors'))->assertOk()->assertSee('Over limit (Round 3)');
+    }
+
     public function test_only_super_admin_can_change_the_limit_and_it_is_logged(): void
     {
         $eu = $this->client(['1st Round', '2nd Round']);

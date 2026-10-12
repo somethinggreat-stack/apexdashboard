@@ -134,6 +134,7 @@
                                 </span>
                                 <div>
                                     <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                    @include('admin.end-users.partials.round-limit-badge')
                                     @if ($eu->intake_review_note)
                                         <div class="pro-note">⚠ Sent back: {{ $eu->intake_review_note }}</div>
                                     @endif

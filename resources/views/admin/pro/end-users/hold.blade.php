@@ -40,7 +40,10 @@
                                 <span class="pro-avatar" style="background:#e2e8f0; color:#475569;">
                                     {{ mb_strtoupper(mb_substr($eu->first_name, 0, 1) . mb_substr($eu->last_name, 0, 1)) }}
                                 </span>
-                                <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                <div>
+                                    <a href="{{ route('admin.end-users.show', $eu) }}">{{ $eu->full_name }}</a>
+                                    @include('admin.end-users.partials.round-limit-badge')
+                                </div>
                             </div>
                         </td>
                         <td>{{ $eu->held_at?->format('M j, Y g:ia') ?: '—' }}</td>
