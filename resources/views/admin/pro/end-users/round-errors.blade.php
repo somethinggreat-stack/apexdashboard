@@ -95,6 +95,8 @@
                                     <button class="pro-act done">Resolve → Clients</button>
                                 </form>
 
+                                @include('admin.end-users.partials.inactive-button')
+
                                 <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete data-confirm-message="Delete client {{ $eu->full_name }} and all their documents? This cannot be undone.">
                                     @csrf @method('DELETE')

@@ -344,6 +344,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Hold / Pause — park a client out of the normal buckets, or resume them
             Route::get('hold', [Admin\EndUserController::class, 'holdList'])->name('hold');
             Route::post('end-users/{id}/hold', [Admin\EndUserController::class, 'hold'])->name('end-users.hold');
+            // Inactive — gone / not-paying clients, kept out of the EOD
+            Route::get('inactive', [Admin\EndUserController::class, 'inactiveList'])->name('inactive');
+            Route::post('end-users/{id}/inactive', [Admin\EndUserController::class, 'makeInactive'])->name('end-users.inactive');
+            Route::post('end-users/{id}/reactivate', [Admin\EndUserController::class, 'reactivate'])->name('end-users.reactivate');
             Route::post('end-users/{id}/resume', [Admin\EndUserController::class, 'resume'])->name('end-users.resume');
             // Round Errors — 2nd/3rd round import problems, moved from the Clients list
             Route::get('round-errors', [Admin\EndUserController::class, 'roundErrors'])->name('round-errors');
@@ -460,6 +464,7 @@ Route::prefix('business-owner')->name('client.')->group(function () {
 
         // Hold / Pause — clients the team parked (BOs can view only)
         Route::get('hold', [Client\EndUserController::class, 'holdList'])->name('hold');
+        Route::get('inactive', [Client\EndUserController::class, 'inactiveList'])->name('inactive');
 
         // Round Errors — 2nd/3rd round problems the team is fixing (BOs can view only)
         Route::get('round-errors', [Client\EndUserController::class, 'roundErrors'])->name('round-errors');

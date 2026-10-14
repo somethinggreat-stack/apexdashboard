@@ -337,6 +337,8 @@
                                 <button type="button" class="pro-act hold"
                                         onclick="openMoveReason({{ $eu->id }}, '{{ addslashes($eu->full_name) }}', 'hold')">Hold/Pause</button>
 
+                                @include('admin.end-users.partials.inactive-button')
+
                                 <form method="POST" data-inplace action="{{ route('admin.end-users.destroy', $eu) }}"
                                       data-confirm-delete
                                       data-confirm-title="Delete this client?"

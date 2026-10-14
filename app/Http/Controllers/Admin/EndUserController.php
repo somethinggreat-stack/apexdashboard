@@ -1172,6 +1172,43 @@ class EndUserController extends Controller
         return $this->inPlace("{$endUser->full_name} resumed.");
     }
 
+    /** Inactive — gone / not-paying clients. Never in the EOD. */
+    public function inactiveList()
+    {
+        $endUsers = EndUser::forClient(session('selected_client_id'))
+            ->inactive()
+            ->orderByDesc('inactive_at')
+            ->get();
+
+        return view($this->adminView('admin.end-users.inactive'), compact('endUsers'));
+    }
+
+    /**
+     * Move a client to Inactive. held_at is set too (kept if already held), so
+     * every list that hides held clients hides them; the reason is required.
+     */
+    public function makeInactive(Request $request, string $id)
+    {
+        $request->validate(['reason' => 'required|string|max:1000']);
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update([
+            'inactive_at' => now(),
+            'held_at'     => $endUser->held_at ?? now(),
+            'move_reason' => trim($request->input('reason')),
+        ]);
+
+        return $this->inPlace("{$endUser->full_name} moved to Inactive.");
+    }
+
+    /** Reactivate — straight back into whichever list they came from. */
+    public function reactivate(string $id)
+    {
+        $endUser = $this->scoped()->findOrFail($id);
+        $endUser->update(['inactive_at' => null, 'held_at' => null, 'move_reason' => null]);
+
+        return $this->inPlace("{$endUser->full_name} reactivated.");
+    }
+
     public function approveIntake(string $id)
     {
         $endUser = $this->scoped()->findOrFail($id);

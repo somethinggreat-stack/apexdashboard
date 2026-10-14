@@ -42,6 +42,7 @@ final class Columns
         'intake_status',
         'error_type',
         'held_at',
+        'inactive_at',
         'rounds',
         'round_dates',
         'next_round_override',

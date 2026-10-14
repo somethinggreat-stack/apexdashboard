@@ -300,6 +300,10 @@
                 <span>Hold/Pause</span>
                 @if ($holdCount > 0)<span class="nav-count nav-count-slate">{{ $holdCount }}</span>@endif
             </a>
+            <a href="{{ route('client.inactive') }}" class="{{ request()->routeIs('client.inactive') ? 'active' : '' }}">
+                <svg class="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+                <span>Inactive</span>
+            </a>
 
             {{-- Custom lists — only for owners with the feature on (Tycon Stan). --}}
             @if ($bo?->custom_lists_enabled)

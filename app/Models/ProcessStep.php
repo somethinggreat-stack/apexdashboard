@@ -28,6 +28,32 @@ class ProcessStep extends Model
         'week' => 'integer',
     ];
 
+    /** Hold note written when a round-limited client finishes their last round. */
+    public const ROUND_LIMIT_HOLD_NOTE = '%d rounds completed. Progress report sent. On hold pending payment for additional rounds.';
+
+    protected static function booted(): void
+    {
+        // Round limit (2-round list): once the client's last allowed round is
+        // closed out — Pull Latest Report AND Record Deletions logged for it —
+        // they go straight to Hold with the standard note. Not before: the
+        // team still has to pull that round's results and send them on.
+        static::created(function (ProcessStep $step) {
+            if (! in_array($step->step_type, EndUser::CLOSEOUT_STEPS, true)) {
+                return;
+            }
+            $eu = $step->endUser;
+            if (! $eu || $eu->round_limit === null || $eu->held_at || $step->round < $eu->round_limit) {
+                return;
+            }
+            if ($eu->roundClosedOut($step->round)) {
+                $eu->update([
+                    'held_at'     => now(),
+                    'move_reason' => sprintf(self::ROUND_LIMIT_HOLD_NOTE, $eu->round_limit),
+                ]);
+            }
+        });
+    }
+
     public function endUser()
     {
         return $this->belongsTo(EndUser::class);

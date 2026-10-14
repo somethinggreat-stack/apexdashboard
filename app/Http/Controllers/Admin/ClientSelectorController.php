@@ -119,6 +119,9 @@ class ClientSelectorController extends Controller
             ->get();
 
         $label = function (EndUser $e) {
+            if ($e->inactive_at) {
+                return 'Inactive';
+            }
             if ($e->held_at) {
                 return 'On Hold';
             }

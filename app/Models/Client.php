@@ -325,7 +325,7 @@ class Client extends Authenticatable
                  SUM(CASE WHEN held_at IS NULL AND intake_status = 'round_error' AND error_resolved_by_client_at IS NOT NULL THEN 1 ELSE 0 END) AS resolved_by_client,
                  SUM(CASE WHEN held_at IS NULL AND (intake_status IS NULL OR intake_status NOT IN ('pending_review','error','round_error','done')) THEN 1 ELSE 0 END) AS in_progress,
                  SUM(CASE WHEN held_at IS NULL AND round_approval_status = 'awaiting' THEN 1 ELSE 0 END) AS sent_for_approval,
-                 SUM(CASE WHEN held_at IS NOT NULL                                   THEN 1 ELSE 0 END) AS hold"
+                 SUM(CASE WHEN held_at IS NOT NULL AND inactive_at IS NULL              THEN 1 ELSE 0 END) AS hold"
             )
             ->first();
 

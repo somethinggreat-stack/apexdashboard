@@ -152,6 +152,9 @@ class EndUserFeed
      */
     public function bucketLabel(EndUser $e): string
     {
+        if ($e->inactive_at) {
+            return 'Inactive';
+        }
         if ($e->held_at) {
             return 'On Hold';
         }

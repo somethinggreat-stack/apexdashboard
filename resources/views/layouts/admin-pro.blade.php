@@ -167,6 +167,12 @@
                     @if ($nav['hold'] > 0)<span class="pro-count">{{ $nav['hold'] }}</span>@endif
                 </a>
 
+                {{-- Inactive — gone / not paying; no count badge, never in the EOD --}}
+                <a href="{{ route('admin.inactive') }}" class="{{ request()->routeIs('admin.inactive') ? 'active' : '' }}">
+                    <svg class="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+                    Inactive
+                </a>
+
                 <a href="{{ route('admin.messages.index') }}" class="{{ request()->routeIs('admin.messages.*') ? 'active' : '' }}">
                     <svg class="i-web" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     Messages

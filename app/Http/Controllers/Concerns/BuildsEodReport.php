@@ -22,7 +22,9 @@ trait BuildsEodReport
         // the same window as the Daily Task page, so the two always agree.
         [$dayStart, $dayEnd] = WorkDay::bounds($date);   // [start, end) half-open
 
+        // Inactive clients (gone / not paying) are never part of the EOD.
         $clients = EndUser::whereIn('client_id', $boIds)
+            ->whereNull('inactive_at')
             ->with(['negativeItems', 'client'])
             ->get();
 

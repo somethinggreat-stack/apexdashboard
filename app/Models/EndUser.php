@@ -111,7 +111,14 @@ class EndUser extends Model
                 $reason = $user->move_reason ? " — {$user->move_reason}" : '';
                 \App\Models\ClientEvent::log($user, 'moved', 'Moved to ' . \App\Models\ClientEvent::bucketLabel($user->intake_status, false) . $reason);
             }
-            if ($user->wasChanged('held_at')) {
+            if ($user->wasChanged('inactive_at')) {
+                if ($user->inactive_at) {
+                    $reason = $user->move_reason ? " — {$user->move_reason}" : '';
+                    \App\Models\ClientEvent::log($user, 'inactive', "Moved to Inactive{$reason}");
+                } else {
+                    \App\Models\ClientEvent::log($user, 'reactivated', 'Reactivated from Inactive');
+                }
+            } elseif ($user->wasChanged('held_at')) {
                 if ($user->held_at) {
                     $reason = $user->move_reason ? " — {$user->move_reason}" : '';
                     \App\Models\ClientEvent::log($user, 'held', "Placed on Hold / Pause{$reason}");
@@ -166,7 +173,7 @@ class EndUser extends Model
         'credit_monitoring_name', 'credit_monitoring_username', 'credit_monitoring_password',
         'credit_monitoring_security_answer', 'credit_monitoring_security_question', 'credit_monitoring_pin',
         'cfpb_email', 'cfpb_password', 'cfpb_round_credentials', 'cfpb_logged_at', 'cfpb_logged_by_admin_id',
-        'current_score', 'goal_score', 'status', 'held_at', 'rounds', 'round_dates', 'start_date', 'listed_at',
+        'current_score', 'goal_score', 'status', 'held_at', 'inactive_at', 'rounds', 'round_dates', 'start_date', 'listed_at',
         'per_round_fee', 'per_round_fees',
         'intake_status', 'intake_submitted_ip', 'intake_submitted_at', 'intake_review_note', 'error_type', 'move_reason',
         'error_resolved_by_client_at',
@@ -188,6 +195,7 @@ class EndUser extends Model
         'ghl_synced_at' => 'datetime',
         'disputefox_pushed_at' => 'datetime',
         'held_at' => 'datetime',
+        'inactive_at' => 'datetime',
         'listed_at' => 'datetime',
         'cfpb_logged_at' => 'datetime',
         'round_approval_at' => 'datetime',
@@ -427,7 +435,14 @@ class EndUser extends Model
     /** On Hold / Pause — parked out of the normal buckets. */
     public function scopeOnHold($query)
     {
-        return $query->whereNotNull('held_at');
+        // Inactive clients keep held_at set but live in their own list.
+        return $query->whereNotNull('held_at')->whereNull('inactive_at');
+    }
+
+    /** Inactive — gone / not paying; never in the EOD. Its own list. */
+    public function scopeInactive($query)
+    {
+        return $query->whereNotNull('inactive_at');
     }
 
     /** Not held — the default working set (excludes Hold/Pause). */
@@ -436,13 +451,13 @@ class EndUser extends Model
         return $query->whereNull('held_at');
     }
 
-    /** Not in any business-owner custom list (Jumbo / Mr Pierre / Tycoon). */
     /** Clients with a round limit set (the "2-round list"). */
     public function scopeRoundLimited($query)
     {
         return $query->whereNotNull('round_limit');
     }
 
+    /** Not in any business-owner custom list (Jumbo / Mr Pierre / Tycoon). */
     public function scopeNoCustomList($query)
     {
         return $query->whereNull('custom_list');
