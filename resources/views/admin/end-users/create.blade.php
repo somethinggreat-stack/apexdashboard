@@ -28,10 +28,6 @@
 
     <form method="POST" action="{{ route('admin.end-users.store') }}" enctype="multipart/form-data" style="padding:4px 18px 18px;"
           id="addClientForm"
-          data-confirm-action
-          data-confirm-title="Confirm business owner"
-          data-confirm-ok="Yes, add client"
-          data-confirm-message="Add this client to {{ $selectedClient->business_name }}? Is it confirmed?"
           data-owner-name="{{ $selectedClient->business_name }}">
         @csrf
         {{-- Saves to THIS owner even if "Working on" is switched in another tab. --}}
@@ -215,31 +211,93 @@
     .add-owner-label { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#4338ca; }
     .add-owner-name  { font-size:20px; font-weight:800; color:#1e1b4b; }
     .add-owner-hint  { flex-basis:100%; font-size:12.5px; color:#4b5563; }
+
+    /* ---- Add-client owner confirmation (big on purpose: it must be read) ---- */
+    .oc-overlay { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center;
+                  padding:16px; background:rgba(15,23,42,.62); backdrop-filter:blur(3px); }
+    .oc-overlay.open { display:flex; }
+    .oc-card { width:100%; max-width:560px; background:#fff; border-radius:20px; overflow:hidden;
+               box-shadow:0 30px 80px rgba(15,23,42,.45); animation:ocIn .18s ease-out; font-family:inherit; }
+    @keyframes ocIn { from { transform:translateY(12px) scale(.97); opacity:0; } to { transform:none; opacity:1; } }
+    .oc-head { padding:16px 26px; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff;
+               font-size:13px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .oc-body { padding:26px 26px 8px; text-align:center; color:#0f172a; }
+    .oc-lead { font-size:15px; color:#475569; margin:0 0 6px; }
+    .oc-client { font-size:26px; font-weight:800; margin:0 0 14px; word-break:break-word; }
+    .oc-arrow { font-size:15px; color:#475569; margin:0 0 10px; }
+    .oc-owner { display:inline-block; max-width:100%; padding:14px 26px; border-radius:14px; background:#eef2ff;
+                border:3px solid #4f46e5; color:#1e1b4b; font-size:32px; font-weight:900; line-height:1.15; word-break:break-word; }
+    .oc-q { margin:20px 0 4px; font-size:18px; font-weight:700; color:#0f172a; }
+    .oc-warn { display:none; margin:16px 0 0; padding:12px 14px; border-radius:12px; text-align:left;
+               background:#fffbeb; border:2px solid #f59e0b; color:#92400e; font-size:14px; font-weight:600; line-height:1.45; }
+    .oc-warn.show { display:block; }
+    .oc-actions { display:flex; gap:12px; padding:22px 26px 26px; }
+    .oc-actions button { flex:1; padding:15px 16px; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer; }
+    .oc-cancel { background:#f1f5f9; border:2px solid #cbd5e1; color:#0f172a; }
+    .oc-cancel:hover { background:#e2e8f0; }
+    .oc-ok { background:#16a34a; border:2px solid #15803d; color:#fff; }
+    .oc-ok:hover { background:#15803d; }
+    @media (max-width:520px) { .oc-owner { font-size:24px; } .oc-client { font-size:21px; } .oc-actions { flex-direction:column-reverse; } }
 </style>
+
+<div class="oc-overlay" id="ownerConfirm" role="dialog" aria-modal="true" aria-labelledby="ocTitle">
+    <div class="oc-card">
+        <div class="oc-head" id="ocTitle">Confirm business owner</div>
+        <div class="oc-body">
+            <p class="oc-lead">You are adding</p>
+            <p class="oc-client" id="ocClient"></p>
+            <p class="oc-arrow">to business owner</p>
+            <div class="oc-owner" id="ocOwner"></div>
+            <p class="oc-q">Is it confirmed?</p>
+            <div class="oc-warn" id="ocWarn"></div>
+        </div>
+        <div class="oc-actions">
+            <button type="button" class="oc-cancel" id="ocCancel">Cancel</button>
+            <button type="button" class="oc-ok" id="ocOk"></button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // "Add <Client Name> to <Business Owner>? Is it confirmed?" — kept current as
-    // the VA types, and repeats any wrong-owner warning so it can't be missed.
+    // Before saving, ask: Add "<Client Name>" to "<Business Owner>"? Is it confirmed?
+    // Big and impossible to skim past; repeats any wrong-owner warning.
     (function () {
         var form = document.getElementById('addClientForm');
-        if (!form) return;
+        var box  = document.getElementById('ownerConfirm');
+        if (!form || !box) return;
         var owner = form.getAttribute('data-owner-name');
-        function refresh() {
+        var confirmed = false;
+
+        function close() { box.classList.remove('open'); }
+
+        form.addEventListener('submit', function (e) {
+            if (confirmed) return;            // approved — let it through
+            e.preventDefault();
             var first = (form.querySelector('[name="first_name"]').value || '').trim();
             var last  = (form.querySelector('[name="last_name"]').value || '').trim();
-            var name  = (first + ' ' + last).trim() || 'this client';
-            var msg   = 'Add "' + name + '" to "' + owner + '"? Is it confirmed?';
+            document.getElementById('ocClient').textContent = (first + ' ' + last).trim() || 'this client';
+            document.getElementById('ocOwner').textContent  = owner;
+            document.getElementById('ocOk').textContent     = 'Yes, add to ' + owner;
             var warns = Array.prototype.map.call(form.querySelectorAll('.field-dup-error.is-warn'), function (el) {
                 return el.style.display === 'none' ? '' : el.textContent;
             }).filter(Boolean);
-            if (warns.length) msg += '\n\n' + warns.join('\n');
-            form.setAttribute('data-confirm-message', msg);
-        }
-        form.addEventListener('input', refresh);
-        form.addEventListener('focusout', function () { setTimeout(refresh, 600); });
-        // Capture phase on the button runs before the document-level confirm handler.
-        var btn = form.querySelector('[type="submit"]');
-        if (btn) btn.addEventListener('click', refresh, true);
-        refresh();
+            var w = document.getElementById('ocWarn');
+            w.textContent = warns.join('\n');
+            w.style.whiteSpace = 'pre-line';
+            w.classList.toggle('show', warns.length > 0);
+            box.classList.add('open');
+            document.getElementById('ocCancel').focus();
+        });
+
+        document.getElementById('ocCancel').addEventListener('click', close);
+        box.addEventListener('click', function (e) { if (e.target === box) close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        document.getElementById('ocOk').addEventListener('click', function () {
+            confirmed = true;
+            this.disabled = true;
+            this.textContent = 'Adding…';
+            if (form.requestSubmit) form.requestSubmit(); else form.submit();
+        });
     })();
 </script>
 @endsection

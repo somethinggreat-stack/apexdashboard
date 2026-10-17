@@ -78,7 +78,7 @@ class AddClientOwnerGuardTest extends TestCase
             ->assertOk()
             ->assertSee('Adding to')
             ->assertSee('Miranda')
-            ->assertSee('data-confirm-action', false)
+            ->assertSee('id="ownerConfirm"', false)
             ->assertSee('name="client_id" value="' . $this->miranda->id . '"', false);
     }
 
