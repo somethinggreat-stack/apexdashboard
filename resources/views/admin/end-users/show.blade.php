@@ -38,6 +38,9 @@
 @section('topbar-content')
     <div class="page-actions">
         <a href="{{ route('admin.end-users.index') }}" class="btn btn-secondary page-action-btn">← All Clients</a>
+        @if (Auth::guard('admin')->user()?->isSuper())
+            <button type="button" class="btn btn-secondary page-action-btn" onclick="openModal('moveOwnerModal')">Move to another owner</button>
+        @endif
         <form method="POST" action="{{ route('admin.end-users.destroy', $endUser) }}"
               data-confirm-delete
               data-confirm-title="Delete this client?"
@@ -693,6 +696,52 @@
         </form>
     </div>
 </div>
+
+@if (Auth::guard('admin')->user()?->isSuper())
+{{-- Super admin: move this client to the right business owner (logged to Activity). --}}
+@php
+    $moveOwners = \App\Models\Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
+        ->where('id', '!=', $endUser->client_id)->orderBy('business_name')->get(['id', 'business_name']);
+@endphp
+<div id="moveOwnerModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Move {{ $endUser->full_name }}</h3>
+            <button class="modal-close" onclick="closeModal('moveOwnerModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ route('admin.end-users.move-owner', $endUser->id) }}"
+              data-confirm-action data-confirm-title="Move client?" data-confirm-ok="Move client"
+              data-confirm-message="{{ $endUser->full_name }} and all their rounds, documents and history move to the selected business owner.">
+            @csrf @method('PUT')
+            <p class="muted" style="margin:0 0 12px; font-size:13px;">
+                Currently under <strong>{{ $endUser->client?->business_name }}</strong>.
+            </p>
+            <div class="form-group">
+                <label>Move to *</label>
+                <select name="target_client_id" required>
+                    <option value="">— Choose business owner —</option>
+                    @foreach ($moveOwners as $o)
+                        <option value="{{ $o->id }}" @selected(old('target_client_id') == $o->id)>{{ $o->business_name }}</option>
+                    @endforeach
+                </select>
+                @error('target_client_id')<small class="field-error">{{ $message }}</small>@enderror
+            </div>
+            <div class="form-group">
+                <label>Reason *</label>
+                <input type="text" name="reason" required maxlength="500" value="{{ old('reason') }}"
+                       placeholder="e.g. Added to the wrong business owner">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('moveOwnerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Move client</button>
+            </div>
+        </form>
+    </div>
+</div>
+@if ($errors->has('target_client_id'))
+    <script>document.addEventListener('DOMContentLoaded', function () { if (typeof openModal === 'function') openModal('moveOwnerModal'); });</script>
+@endif
+@endif
 
 <div id="editProfileModal" class="modal">
     <div class="modal-content modal-wide">

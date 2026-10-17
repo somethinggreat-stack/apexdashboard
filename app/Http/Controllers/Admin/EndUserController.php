@@ -355,7 +355,20 @@ class EndUserController extends Controller
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request, true);
-        $boId = session('selected_client_id');
+
+        // Save to the owner the form was OPENED for (and the VA confirmed in the
+        // "Add X to Y?" dialog) — never to whatever "Working on" says at submit
+        // time. Switching owners in another tab used to silently drop the
+        // client under the wrong business owner.
+        $formOwner = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())
+            ->findOrFail($request->input('client_id') ?: session('selected_client_id'));
+        $boId = $formOwner->id;
+        $switchedNote = null;
+        if ((int) session('selected_client_id') !== $boId) {
+            $switchedNote = "You'd switched to another business owner in a different tab — "
+                . "the client was still added to {$formOwner->business_name}, as shown on the form.";
+            session(['selected_client_id' => $boId]);
+        }
 
         // Server-side guard against duplicate clients (mirrors the live check on
         // the Add Client form). Scoped to this business owner.
@@ -382,7 +395,40 @@ class EndUserController extends Controller
 
         // No owner-facing message on a team add — we never message the BO.
 
-        return redirect()->route('admin.end-users.show', $endUser)->with('confirm', 'Client added');
+        return redirect()->route('admin.end-users.show', $endUser)
+            ->with('confirm', "Client added to {$formOwner->business_name}" . ($switchedNote ? ". {$switchedNote}" : ''));
+    }
+
+    /**
+     * Super-admin: move a client to another business owner (wrong owner picked
+     * when they were added). Refuses if the target owner already has this
+     * client (same email or SSN); every move is logged to Activity.
+     */
+    public function moveOwner(Request $request, string $id)
+    {
+        $endUser = $this->orgScopedEndUser($id);
+        $data = $request->validate([
+            'target_client_id' => 'required|integer',
+            'reason'           => 'required|string|max:500',
+        ]);
+        $from = $endUser->client;
+        $to = Client::forAdmin(Auth::guard('admin')->user()->dataOwnerId())->findOrFail($data['target_client_id']);
+
+        if ($to->id === $from->id) {
+            return back()->withErrors(['target_client_id' => "{$endUser->full_name} is already under {$to->business_name}."]);
+        }
+        $dupe = $this->matchByEmail($to->id, (string) $endUser->email)
+            ?? ($endUser->ssn ? $this->matchBySsn($to->id, (string) $endUser->ssn) : null);
+        if ($dupe) {
+            return back()->withErrors(['target_client_id' => "{$to->business_name} already has this client ({$dupe->full_name}). Nothing was moved."]);
+        }
+
+        $endUser->update(['client_id' => $to->id]);
+        \App\Models\ClientEvent::log($endUser, 'owner_moved',
+            "Moved from {$from->business_name} to {$to->business_name} — " . trim($data['reason']));
+
+        return redirect()->route('admin.client-list')
+            ->with('confirm', "{$endUser->full_name} moved to {$to->business_name}.");
     }
 
     /**
@@ -491,20 +537,67 @@ class EndUserController extends Controller
     {
         $field = $request->query('field');
         $value = trim((string) $request->query('value', ''));
-        $boId  = session('selected_client_id');
+        // The owner the Add Client form was opened for (falls back to "Working on"),
+        // and only ever one of this admin's own business owners.
+        $ownerId = Auth::guard('admin')->user()->dataOwnerId();
+        $boId = Client::forAdmin($ownerId)
+            ->whereKey($request->query('client_id') ?: session('selected_client_id'))
+            ->value('id');
 
-        if ($value === '' || !$boId || !in_array($field, ['email', 'ssn'], true)) {
+        if ($value === '' || !$boId || !in_array($field, ['email', 'ssn', 'name'], true)) {
             return response()->json(['exists' => false]);
         }
 
-        $match = $field === 'email'
-            ? $this->matchByEmail($boId, $value)
-            : $this->matchBySsn($boId, $value);
+        // Name never blocks (two people can share a name) — it only warns.
+        $match = match ($field) {
+            'email' => $this->matchByEmail($boId, $value),
+            'ssn'   => $this->matchBySsn($boId, $value),
+            default => null,
+        };
+        $warn = null;
+        if ($field === 'name' && ($same = $this->matchByName($boId, $value))) {
+            $warn = "A client named {$same->full_name} already exists for this business owner.";
+        }
+
+        // Same person under ANOTHER business owner — the classic wrong-owner add.
+        $others = EndUser::with('client:id,business_name')
+            ->whereHas('client', fn ($q) => $q->where('admin_id', $ownerId))
+            ->where('client_id', '!=', $boId);
+        $other = match ($field) {
+            'email' => (clone $others)->whereRaw('LOWER(email) = ?', [mb_strtolower($value)])->first(),
+            'ssn'   => (clone $others)->get(['id', 'client_id', 'first_name', 'last_name', 'suffix', 'ssn'])
+                ->first(fn ($eu) => ($d = preg_replace('/\D+/', '', $value)) !== '' && preg_replace('/\D+/', '', (string) $eu->ssn) === $d),
+            default => $this->nameQuery(clone $others, $value)?->first(),
+        };
+        if ($other && !$warn) {
+            $warn = "{$other->full_name} is already a client of {$other->client->business_name}. "
+                . 'Make sure you are adding to the right business owner.';
+        }
 
         return response()->json([
             'exists' => (bool) $match,
             'name'   => $match?->full_name,
+            'warn'   => $warn,
         ]);
+    }
+
+    private function matchByName($boId, string $fullName): ?EndUser
+    {
+        return $this->nameQuery(EndUser::where('client_id', $boId), $fullName)?->first();
+    }
+
+    /** "First Last" → exact (case-insensitive) first + last name match, or null if not two words. */
+    private function nameQuery($query, string $fullName)
+    {
+        $parts = preg_split('/\s+/', trim($fullName));
+        if (count($parts) < 2) {
+            return null;
+        }
+        $first = mb_strtolower($parts[0]);
+        $last  = mb_strtolower(end($parts));
+
+        return $query->whereRaw('LOWER(TRIM(first_name)) = ?', [$first])
+            ->whereRaw('LOWER(TRIM(last_name)) = ?', [$last]);
     }
 
     private function matchByEmail($boId, string $email): ?EndUser

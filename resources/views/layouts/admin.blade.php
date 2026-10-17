@@ -320,8 +320,8 @@
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/theme-toggle.js') }}"></script>
 <script src="{{ asset('js/toast.js') }}"></script>
-<script src="{{ asset('js/confirm-modal.js') }}"></script>
-<script src="{{ asset('js/interactions.js') }}"></script>
+<script src="{{ asset('js/confirm-modal.js') }}?v={{ filemtime(public_path('js/confirm-modal.js')) }}"></script>
+<script src="{{ asset('js/interactions.js') }}?v={{ filemtime(public_path('js/interactions.js')) }}"></script>
 <script src="{{ asset('js/inplace.js') }}?v={{ @filemtime(public_path('js/inplace.js')) ?: '1' }}"></script>
 <script src="{{ asset('js/admin.js') }}"></script>
 <script>

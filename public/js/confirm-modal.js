@@ -52,7 +52,7 @@
 
             '.apex-confirm-title{font-size:20px;font-weight:800;line-height:1.25;',
             'letter-spacing:-.01em;margin:0 0 6px;}',
-            '.apex-confirm-sub{font-size:13.5px;color:var(--muted,#64748b);margin:0 0 22px;',
+            '.apex-confirm-sub{font-size:13.5px;color:var(--muted,#64748b);margin:0 0 22px;white-space:pre-line;',
             'line-height:1.45;}',
 
             '.apex-confirm-input{width:100%;box-sizing:border-box;padding:11px 13px;margin:0 0 18px;',

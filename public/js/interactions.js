@@ -144,7 +144,10 @@
         var CSS = '.field-dup-error{display:none;margin-top:6px;font-size:12.5px;font-weight:600;'
                 + 'color:#dc2626;line-height:1.35;}'
                 + 'input.input-dup{border-color:#dc2626 !important;'
-                + 'box-shadow:0 0 0 2px rgba(220,38,38,.14) !important;}';
+                + 'box-shadow:0 0 0 2px rgba(220,38,38,.14) !important;}'
+                + '.field-dup-error.is-warn{color:#b45309;}'
+                + 'input.input-warn{border-color:#f59e0b !important;'
+                + 'box-shadow:0 0 0 2px rgba(245,158,11,.16) !important;}';
         var styled = false, idSeq = 0;
         function injectOnce() {
             if (styled) return; styled = true;
@@ -171,7 +174,11 @@
             var field   = input.getAttribute('data-dup-field') || 'email';
             var label   = input.getAttribute('data-dup-label') || 'client';
             var digitsN = parseInt(input.getAttribute('data-dup-digits'), 10) || 0;
+            var owner   = input.getAttribute('data-dup-owner') || '';   // owner the form was opened for
             var form    = input.closest('form');
+            // Name check: prefix another field's value (first name + last name).
+            var withEl  = input.getAttribute('data-dup-with') && form
+                ? form.querySelector('[name="' + input.getAttribute('data-dup-with') + '"]') : null;
             var submit  = form ? form.querySelector('[type="submit"]') : null;
 
             var err = document.createElement('div');
@@ -191,11 +198,23 @@
                 });
             }
 
-            function show(msg) { input.classList.add('input-dup'); err.textContent = msg; err.style.display = 'block'; }
-            function hide() { input.classList.remove('input-dup'); err.style.display = 'none'; }
+            function show(msg) {
+                input.classList.remove('input-warn'); input.classList.add('input-dup');
+                err.classList.remove('is-warn'); err.textContent = msg; err.style.display = 'block';
+            }
+            // Non-blocking: the VA can still save, but sees it (and the confirm dialog repeats it).
+            function warn(msg) {
+                input.classList.remove('input-dup'); input.classList.add('input-warn');
+                err.classList.add('is-warn'); err.textContent = '⚠ ' + msg; err.style.display = 'block';
+            }
+            function hide() { input.classList.remove('input-dup', 'input-warn'); err.classList.remove('is-warn'); err.style.display = 'none'; }
 
             function validate() {
                 var val = input.value.trim();
+                if (withEl) {
+                    var pre = withEl.value.trim();
+                    val = pre && val ? pre + ' ' + val : '';
+                }
 
                 // Format gate first (exact digit count).
                 if (digitsN) {
@@ -216,7 +235,8 @@
 
                 var t = ++token;
                 var q = url + (url.indexOf('?') === -1 ? '?' : '&')
-                      + 'field=' + encodeURIComponent(field) + '&value=' + encodeURIComponent(val);
+                      + 'field=' + encodeURIComponent(field) + '&value=' + encodeURIComponent(val)
+                      + (owner ? '&client_id=' + encodeURIComponent(owner) : '');
                 fetch(q, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
                     .then(function (r) { return r.json(); })
                     .then(function (res) {
@@ -225,6 +245,8 @@
                             setBlock(submit, id + ':dup', true);
                             show('A ' + label + ' with this ' + noun(field) + ' already exists'
                                  + (res.name ? ' — ' + res.name : '') + '. Please check before adding.');
+                        } else if (res && res.warn) {
+                            setBlock(submit, id + ':dup', false); warn(res.warn);
                         } else {
                             setBlock(submit, id + ':dup', false); hide();
                         }
@@ -234,6 +256,7 @@
 
             input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(validate, 400); });
             input.addEventListener('blur', validate);
+            if (withEl) withEl.addEventListener('blur', validate);
         }
 
         document.querySelectorAll('input[data-dup-check], input[data-dup-digits]').forEach(wire);

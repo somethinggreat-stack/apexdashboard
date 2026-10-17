@@ -335,6 +335,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // client — but NEVER the closeout steps (pull report / record deletions).
             Route::post('clear-incomplete', [Admin\EndUserController::class, 'clearIncomplete'])
                 ->middleware('admin.super')->name('end-users.clear-incomplete');
+            // Super-admin only: move a client to another business owner (logged).
+            Route::put('end-users/{id}/move-owner', [Admin\EndUserController::class, 'moveOwner'])
+                ->whereNumber('id')->middleware('admin.super')->name('end-users.move-owner');
             // Super-admin only: change or remove a client's round limit (logged).
             Route::put('end-users/{id}/round-limit', [Admin\EndUserController::class, 'updateRoundLimit'])
                 ->whereNumber('id')->middleware('admin.super')->name('end-users.round-limit');

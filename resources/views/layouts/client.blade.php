@@ -376,8 +376,8 @@
 </div>
 <script src="{{ asset('js/responsive-nav.js') }}"></script>
 <script src="{{ asset('js/toast.js') }}"></script>
-<script src="{{ asset('js/confirm-modal.js') }}"></script>
-<script src="{{ asset('js/interactions.js') }}"></script>
+<script src="{{ asset('js/confirm-modal.js') }}?v={{ filemtime(public_path('js/confirm-modal.js')) }}"></script>
+<script src="{{ asset('js/interactions.js') }}?v={{ filemtime(public_path('js/interactions.js')) }}"></script>
 <script src="{{ asset('js/client.js') }}"></script>
 @stack('scripts')
 </body>

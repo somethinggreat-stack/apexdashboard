@@ -19,8 +19,23 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.end-users.store') }}" enctype="multipart/form-data" style="padding:4px 18px 18px;">
+    {{-- The owner this client goes to — impossible to miss. --}}
+    <div class="add-owner-banner">
+        <span class="add-owner-label">Adding to</span>
+        <span class="add-owner-name">{{ $selectedClient->business_name }}</span>
+        <span class="add-owner-hint">Wrong business owner? Cancel and use “Switch Business Owner” first.</span>
+    </div>
+
+    <form method="POST" action="{{ route('admin.end-users.store') }}" enctype="multipart/form-data" style="padding:4px 18px 18px;"
+          id="addClientForm"
+          data-confirm-action
+          data-confirm-title="Confirm business owner"
+          data-confirm-ok="Yes, add client"
+          data-confirm-message="Add this client to {{ $selectedClient->business_name }}? Is it confirmed?"
+          data-owner-name="{{ $selectedClient->business_name }}">
         @csrf
+        {{-- Saves to THIS owner even if "Working on" is switched in another tab. --}}
+        <input type="hidden" name="client_id" value="{{ $selectedClient->id }}">
         <div class="form-section">
             <h4>Business Owner &amp; Status</h4>
             <div class="form-row">
@@ -46,7 +61,9 @@
                 </div>
                 <div class="form-group">
                     <label>Last Name *</label>
-                    <input type="text" name="last_name" value="{{ old('last_name') }}" required maxlength="100">
+                    <input type="text" name="last_name" value="{{ old('last_name') }}" required maxlength="100"
+                           data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="name"
+                           data-dup-with="first_name" data-dup-owner="{{ $selectedClient->id }}" autocomplete="off">
                     @error('last_name')<small class="field-error">{{ $message }}</small>@enderror
                 </div>
             </div>
@@ -66,7 +83,8 @@
                 <div class="form-group">
                     <label>Email Address *</label>
                     <input type="email" name="email" value="{{ old('email') }}" required maxlength="255"
-                           data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="email" autocomplete="off">
+                           data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="email"
+                           data-dup-owner="{{ $selectedClient->id }}" autocomplete="off">
                     @error('email')<small class="field-error">{{ $message }}</small>@enderror
                 </div>
                 <div class="form-group">
@@ -85,7 +103,8 @@
                 <div class="form-group">
                     <label>Social Security Number *</label>
                     <input type="text" name="ssn" value="{{ old('ssn') }}" required placeholder="9 digits, no dashes" autocomplete="off"
-                           data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="ssn" data-dup-digits="9">
+                           data-dup-check="{{ route('admin.end-users.dup-check') }}" data-dup-field="ssn" data-dup-digits="9"
+                           data-dup-owner="{{ $selectedClient->id }}">
                     @error('ssn')<small class="field-error">{{ $message }}</small>@enderror
                 </div>
             </div>
@@ -186,4 +205,41 @@
         </div>
     </form>
 </div>
+
+<style>
+    .add-owner-banner {
+        display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+        margin:14px 18px 6px; padding:14px 18px; border-radius:12px;
+        background:#eef2ff; border:2px solid #6366f1;
+    }
+    .add-owner-label { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#4338ca; }
+    .add-owner-name  { font-size:20px; font-weight:800; color:#1e1b4b; }
+    .add-owner-hint  { flex-basis:100%; font-size:12.5px; color:#4b5563; }
+</style>
+<script>
+    // "Add <Client Name> to <Business Owner>? Is it confirmed?" — kept current as
+    // the VA types, and repeats any wrong-owner warning so it can't be missed.
+    (function () {
+        var form = document.getElementById('addClientForm');
+        if (!form) return;
+        var owner = form.getAttribute('data-owner-name');
+        function refresh() {
+            var first = (form.querySelector('[name="first_name"]').value || '').trim();
+            var last  = (form.querySelector('[name="last_name"]').value || '').trim();
+            var name  = (first + ' ' + last).trim() || 'this client';
+            var msg   = 'Add "' + name + '" to "' + owner + '"? Is it confirmed?';
+            var warns = Array.prototype.map.call(form.querySelectorAll('.field-dup-error.is-warn'), function (el) {
+                return el.style.display === 'none' ? '' : el.textContent;
+            }).filter(Boolean);
+            if (warns.length) msg += '\n\n' + warns.join('\n');
+            form.setAttribute('data-confirm-message', msg);
+        }
+        form.addEventListener('input', refresh);
+        form.addEventListener('focusout', function () { setTimeout(refresh, 600); });
+        // Capture phase on the button runs before the document-level confirm handler.
+        var btn = form.querySelector('[type="submit"]');
+        if (btn) btn.addEventListener('click', refresh, true);
+        refresh();
+    })();
+</script>
 @endsection
