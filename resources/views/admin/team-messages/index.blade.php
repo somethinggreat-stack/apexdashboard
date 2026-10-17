@@ -674,6 +674,7 @@
     var form  = document.getElementById('tcForm');
     var input = document.getElementById('tcInput');
     var csrf  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var CONV = box.dataset.conversation || '';
     var PEER_ID = box.dataset.peer || '';
     var IS_GROUP = box.dataset.group === '1';
@@ -3541,6 +3542,7 @@
     if (!modal || !openBtn) return;
     TCB(modal);
     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var STORE_GROUP = @js(route('admin.team-messages.group.store'));
     var toast = window.apexToast || function () {};
     var chosenIcon = '💬';
@@ -3627,6 +3629,7 @@
     var noRes = document.getElementById('tcNoResults');
     var chatList = document.getElementById('tcChatList');
     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var SEARCH_URL = @js(route('admin.team-messages.search'));
     var FAV_URL = @js(route('admin.team-messages.favorite'));
     var MUTE_URL = @js(route('admin.team-messages.mute'));

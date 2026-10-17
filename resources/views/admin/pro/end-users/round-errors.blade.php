@@ -139,6 +139,7 @@
     var meta = document.querySelector('meta[name="csrf-token"]');
     if (!meta) return;
     var csrf = meta.getAttribute('content');
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var tpl = "{{ url('admin/end-users') }}/__ID__";
     function stop(e) { e.preventDefault(); e.stopPropagation(); }
 

@@ -13,7 +13,9 @@ class AuthController extends Controller
 {
     public function showLoginForm()
     {
-        return view('admin.auth.login');
+        return response()->view('admin.auth.login')
+            // Never let a phone or browser show a stale copy (its old token would 419).
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     public function login(Request $request)
@@ -66,7 +68,9 @@ class AuthController extends Controller
     /** Dedicated Team Chat sign-in (separate from the dashboard login). */
     public function showChatLogin()
     {
-        return view('admin.auth.chat-login');
+        return response()->view('admin.auth.chat-login')
+            // Never let a phone or browser show a stale copy (its old token would 419).
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     /** Authenticate for Team Chat and drop the user straight into the standalone chat. */

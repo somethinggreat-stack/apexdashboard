@@ -148,7 +148,7 @@ input:focus{outline:none;border-color:var(--blue-soft);box-shadow:0 0 0 4px rgba
         </div>
       @endif
 
-      <form method="POST" action="{{ route('admin.chat-login.attempt') }}">
+      <form method="POST" action="{{ route('admin.chat-login.attempt') }}" data-fresh-token>
         @csrf
         <div class="field">
           <label for="email">Email</label>
@@ -251,5 +251,6 @@ input:focus{outline:none;border-color:var(--blue-soft);box-shadow:0 0 0 4px rgba
     });
   })();
 </script>
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>

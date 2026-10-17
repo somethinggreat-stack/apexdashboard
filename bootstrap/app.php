@@ -105,6 +105,41 @@ return Application::configure(basePath: dirname(__DIR__))
          * still logged in full — we only change what the human sees.
          */
         $exceptions->render(function (Throwable $e, Request $request) {
+            $isPortal   = $request->is('business-owner') || $request->is('business-owner/*');
+            $isChat     = ! $isPortal && (str_contains((string) $request->userAgent(), 'ApexDesktop')
+                            || $request->getHost() === config('app.chat_host')
+                            || $request->is('admin/chat-login'));
+            $isTokenMismatch = $e instanceof TokenMismatchException
+                || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 419);
+
+            // "419 Page Expired": record every one (Super Admin → Session Errors),
+            // then never show the raw screen. A stale LOGIN form — the common case:
+            // an owner reopening the pinned login link on their phone hours later —
+            // goes straight back to that same login with their email kept.
+            if ($isTokenMismatch && ! $request->is('api/*') && ! $request->is('partner-intake')) {
+                \App\Models\SessionError::record($request, $isPortal ? 'portal' : ($isChat ? 'chat' : 'admin'));
+
+                // AJAX keeps its 419 JSON; the page's keep-alive fetches a fresh token.
+                if ($request->expectsJson()) {
+                    return null;
+                }
+
+                if ($request->is('admin/login') || $request->is('admin/chat-login') || $request->is('business-owner/login')) {
+                    return redirect()->to(url($request->path()))
+                        ->withInput($request->except(['password', '_token']))
+                        ->with('status', 'This page was open for a while, so it refreshed. Please sign in again.');
+                }
+
+                // Still signed in (the token went stale because they signed in again in
+                // another tab): back to the same page with what they typed, not to login.
+                $guard = $isPortal ? 'client' : 'admin';
+                if (\Illuminate\Support\Facades\Auth::guard($guard)->check()) {
+                    return redirect()->back(302, [], $isPortal ? route('client.dashboard') : route('admin.client-selector.index'))
+                        ->withInput($request->except(['password', '_token', '_method']))
+                        ->with('confirm_error', 'That page had been open for a while, so it refreshed. Nothing was saved — please submit it again.');
+                }
+            }
+
             // Never touch the key-authenticated intake API or any JSON caller —
             // those must keep receiving real status codes.
             if ($request->expectsJson() || $request->is('api/*') || $request->is('partner-intake')) {
@@ -116,9 +151,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            $isPortal   = $request->is('business-owner') || $request->is('business-owner/*');
-            $isChat     = ! $isPortal && (str_contains((string) $request->userAgent(), 'ApexDesktop')
-                            || $request->getHost() === config('app.chat_host'));
             $login      = $isPortal
                 ? route('client.login')
                 : ($isChat ? route('admin.chat-login') : route('admin.login'));

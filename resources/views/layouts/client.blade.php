@@ -380,5 +380,6 @@
 <script src="{{ asset('js/interactions.js') }}?v={{ filemtime(public_path('js/interactions.js')) }}"></script>
 <script src="{{ asset('js/client.js') }}"></script>
 @stack('scripts')
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>

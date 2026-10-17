@@ -311,7 +311,8 @@
 @push('scripts')
 <script>
 (function () {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    window.addEventListener('apex:csrf', function (e) { csrfToken = e.detail; });   // keep-alive refreshed the token
     const shell = document.getElementById('chatShell');
     const scroll = document.getElementById('chatScroll');
     const menu = document.getElementById('actionsMenu');

@@ -407,7 +407,7 @@ body.paused *{animation-play-state:paused!important}
         </div>
       @endif
 
-      <form method="POST" action="{{ route('admin.login') }}">
+      <form method="POST" action="{{ route('admin.login') }}" data-fresh-token>
         @csrf
         <div class="field">
           <label for="email">Email</label>
@@ -571,5 +571,6 @@ body.paused *{animation-play-state:paused!important}
     });
   })();
 </script>
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>

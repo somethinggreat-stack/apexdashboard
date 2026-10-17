@@ -49,6 +49,11 @@ Route::middleware('throttle:20,1')->group(function () {
     Route::get('/intake/{token}/thank-you', [IntakeController::class, 'success'])->name('intake.success')->where('token', '[A-Za-z0-9-]+');
 });
 
+// Fresh CSRF token for any open page (admin, owner portal, chat, login pages) — the
+// keep-alive script calls it so a form left open never fails with "419 Page Expired".
+Route::get('/session/token', \App\Http\Controllers\SessionTokenController::class)
+    ->middleware('throttle:60,1')->name('session.token');
+
 // Server-to-server intake API (key-authenticated; CSRF-exempt via bootstrap/app.php)
 Route::post('/api/intake', [IntakeController::class, 'apiStore'])->middleware('throttle:30,1')->name('api.intake');
 // Same endpoint off the /api prefix. Some WAFs block multipart uploads under
@@ -109,6 +114,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('commissions/{id}', [Admin\CommissionController::class, 'show'])->whereNumber('id')->name('commissions.show');
             Route::post('commissions/{id}/payout', [Admin\CommissionController::class, 'storePayout'])->whereNumber('id')->name('commissions.payout.store');
             Route::delete('commissions/payout/{id}', [Admin\CommissionController::class, 'destroyPayout'])->whereNumber('id')->name('commissions.payout.destroy');
+
+            // Session Errors — every "419 Page Expired" caught (who, where, why). Super admin only.
+            Route::get('session-errors', [Admin\SessionErrorController::class, 'index'])
+                ->middleware('admin.super')->name('session-errors.index');
 
             // Recycle Bin — deleted business owners + clients, recoverable for 10 days. Super admin only.
             Route::middleware('admin.super')->group(function () {

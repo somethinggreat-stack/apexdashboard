@@ -21,6 +21,7 @@ class ChatHostGuard
         'admin/logout',
         'admin/push',            // web-push subscribe/unsubscribe
         'admin/profile',         // own profile (avatar, password)
+        'session/token',         // fresh CSRF token (keeps the session alive; stops 419s)
     ];
 
     public function handle(Request $request, Closure $next)

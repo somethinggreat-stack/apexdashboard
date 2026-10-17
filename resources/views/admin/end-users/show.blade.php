@@ -912,6 +912,7 @@
         var STATUSES = ['active','paused','graduated','cancelled'];
         var csrfMeta = document.querySelector('meta[name="csrf-token"]');
         var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
         var updateUrl = @json(route('admin.end-users.update', $endUser));
 
         // Header status → popup (no inline editing).
@@ -1267,6 +1268,7 @@
         if (!zone || !input) return;
 
         var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
         var endpoint = "{{ route('admin.documents.bulk') }}";
         var endUserId = {{ $endUser->id }};
 

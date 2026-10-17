@@ -51,6 +51,7 @@
     var SUB_URL  = @json(route('admin.push.subscribe'));
     var VAPID    = @json(config('webpush.public_key'));   // null if Web Push isn't configured
     var CSRF     = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    window.addEventListener('apex:csrf', function (e) { CSRF = e.detail; });   // keep-alive refreshed the token
     var onChatPage = !!document.querySelector('.tc-wrap');   // the Team Chat page renders its own surface
 
     // Native desktop app (Tauri): we fire OS-native, Apex-branded notifications instead of

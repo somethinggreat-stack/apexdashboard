@@ -320,6 +320,11 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
                     Recycle Bin
                 </a>
+
+                <a href="{{ route('admin.session-errors.index') }}" class="{{ request()->routeIs('admin.session-errors.*') ? 'active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                    Session Errors
+                </a>
                 @endif
             @endisset
         </nav>
@@ -460,5 +465,6 @@
 </script>
 @include('partials.pwa-install')
 @stack('scripts')
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>

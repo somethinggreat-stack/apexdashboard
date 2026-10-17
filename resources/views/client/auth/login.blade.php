@@ -397,7 +397,7 @@ input:focus{
         </div>
       @endif
 
-      <form method="POST" action="{{ route('client.login') }}">
+      <form method="POST" action="{{ route('client.login') }}" data-fresh-token>
         @csrf
         <div class="field">
           <label for="email">Email</label>
@@ -556,5 +556,6 @@ input:focus{
     });
   })();
 </script>
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>

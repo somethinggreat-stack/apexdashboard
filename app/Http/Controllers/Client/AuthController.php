@@ -13,7 +13,9 @@ class AuthController extends Controller
 {
     public function showLoginForm()
     {
-        return view('client.auth.login');
+        return response()->view('client.auth.login')
+            // Never let a phone or browser show a stale copy (its old token would 419).
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     public function login(Request $request)

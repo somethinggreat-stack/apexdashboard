@@ -42,6 +42,7 @@
 <script>
 (function () {
     var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var STATUSES = @json($statusOptions);
     var ROUNDS   = @json($roundOptions);
     var WEEK_STEPS = @json($weekStepCanonical);

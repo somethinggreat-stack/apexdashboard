@@ -90,6 +90,7 @@
     var selectBase = @json(url('/admin/select-business-owner'));
     var showBase   = @json(url('/admin/end-users'));
     var csrf       = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    window.addEventListener('apex:csrf', function (e) { csrf = e.detail; });   // keep-alive refreshed the token
     var timer, controller;
 
     function esc(s) {

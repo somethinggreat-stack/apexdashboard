@@ -93,5 +93,6 @@
 
     @include('partials.pwa-install')
     @stack('scripts')
+<script src="{{ asset('js/session-keepalive.js') }}?v={{ filemtime(public_path('js/session-keepalive.js')) }}" data-token-url="{{ route('session.token') }}"></script>
 </body>
 </html>
