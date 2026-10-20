@@ -43,7 +43,7 @@ class MailboxController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        // Sizes are a nicety: one call for the whole domain, and an empty array
+        // Sizes are a nicety: one call for every domain, and an empty array
         // when cPanel is unreachable, so a bad morning on the host does not take
         // this page down with it.
         $usage = $this->cpanel->isConfigured() ? $this->cpanel->usage() : [];
@@ -53,6 +53,8 @@ class MailboxController extends Controller
             'usage'       => $usage,
             'configured'  => $this->cpanel->isConfigured(),
             'domain'      => config('cpanel.mail_domain'),
+            // Every domain on the cPanel account — the create dialog asks which one.
+            'domains'     => $this->cpanel->domains(),
             'quotaMb'     => (int) config('cpanel.quota_mb', 100),
             'webmailUrl'  => $this->webmailUrl(),
             'totalUsedMb' => $this->totalUsedMb($usage),
@@ -81,6 +83,7 @@ class MailboxController extends Controller
         $data = $request->validate([
             'end_user_id' => 'nullable|integer',
             'local_part'  => 'nullable|string|max:60',
+            'domain'      => 'nullable|string|max:191',
         ]);
 
 
@@ -96,7 +99,15 @@ class MailboxController extends Controller
             }
         }
 
-        $domain    = (string) config('cpanel.mail_domain');
+        // The domain must be one of THIS cPanel account's domains — never a value
+        // typed into the request. Blank means the configured default, which needs
+        // no lookup. Checked after the client, so a refused client costs no cPanel call.
+        $default = strtolower((string) config('cpanel.mail_domain'));
+        $domain  = strtolower(trim((string) ($data['domain'] ?? ''))) ?: $default;
+        if ($domain !== $default && ! in_array($domain, $this->cpanel->domains(), true)) {
+            return back()->withInput()->withErrors(['mailbox' => "{$domain} is not one of this account's domains."]);
+        }
+
         $localPart = $this->uniqueLocalPart($data['local_part'] ?? null, $endUser, $domain);
         $password  = $this->generatePassword();
         $quota     = (int) config('cpanel.quota_mb', 100);

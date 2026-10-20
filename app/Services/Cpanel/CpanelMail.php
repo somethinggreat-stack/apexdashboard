@@ -3,6 +3,7 @@
 namespace App\Services\Cpanel;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -11,9 +12,10 @@ use RuntimeException;
  * The only thing in this application that talks to cPanel.
  *
  * A cPanel API token is NOT an email-only credential — it carries every
- * permission the cPanel user has. So this class exposes four operations and
- * nothing else: create a mailbox, delete a mailbox, read mailbox sizes, and
- * mint a one-click webmail session for a single mailbox. There
+ * permission the cPanel user has. So this class exposes five operations and
+ * nothing else: create a mailbox, delete a mailbox, read mailbox sizes, list
+ * the account's domains, and mint a one-click webmail session for a single
+ * mailbox. There
  * is no "call any UAPI function" method, and `call()` is private, because the
  * moment a generic proxy exists the blast radius of one bad request becomes
  * the whole hosting account.
@@ -122,7 +124,68 @@ class CpanelMail
     }
 
     /**
+     * Every domain on this cPanel account a mailbox can be created on — the
+     * configured default first, then the main, addon, parked and sub-domains.
+     * Read-only (DomainInfo/list_domains). Cached for 10 minutes; when cPanel
+     * cannot be reached the default domain alone is returned (and NOT cached),
+     * so the create dialog still works on a bad morning.
+     *
+     * @return list<string>
+     */
+    public function domains(): array
+    {
+        $fallback = [$this->domain()];
+
+        if (! $this->isConfigured()) {
+            return $fallback;
+        }
+
+        $cached = Cache::get(self::DOMAINS_CACHE_KEY);
+        if (is_array($cached) && $cached !== []) {
+            return $cached;
+        }
+
+        try {
+            $data = $this->call('DomainInfo/list_domains', []);
+        } catch (RuntimeException $e) {
+            Log::warning('cPanel domain list unavailable: ' . $e->getMessage());
+
+            return $fallback;
+        }
+
+        $found = [];
+        if (is_array($data)) {
+            $found[] = $data['main_domain'] ?? null;
+            foreach (['addon_domains', 'parked_domains', 'sub_domains'] as $key) {
+                foreach ((array) ($data[$key] ?? []) as $d) {
+                    $found[] = $d;
+                }
+            }
+        }
+
+        $domains = [];
+        foreach (array_merge($fallback, $found) as $d) {
+            $d = strtolower(trim((string) $d));
+            // Only plain hostnames — whatever cPanel says, nothing else goes into an address.
+            if ($d !== '' && preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/', $d)) {
+                $domains[$d] = true;
+            }
+        }
+        $domains = array_keys($domains);
+
+        if (count($domains) > 1) {
+            Cache::put(self::DOMAINS_CACHE_KEY, $domains, now()->addMinutes(10));
+        }
+
+        return $domains ?: $fallback;
+    }
+
+    public const DOMAINS_CACHE_KEY = 'cpanel.mail_domains';
+
+    /**
      * Disk used per mailbox, keyed by full address: ['x@y.com' => ['used_mb' => 3.1, 'quota_mb' => 100]].
+     * Covers every domain on the account (no domain filter), so mailboxes on
+     * any domain show their size.
      *
      * Returns an empty array when cPanel cannot be reached. Sizes are a nicety;
      * the page must still render when the host is having a bad morning.
@@ -130,7 +193,7 @@ class CpanelMail
     public function usage(): array
     {
         try {
-            $rows = $this->call('Email/list_pops_with_disk', ['domain' => $this->domain()]);
+            $rows = $this->call('Email/list_pops_with_disk', []);
         } catch (RuntimeException $e) {
             Log::warning('cPanel mailbox usage unavailable: ' . $e->getMessage());
 

@@ -134,6 +134,7 @@
                 color:var(--ink); background:var(--card); transition:border-color .14s, box-shadow .14s; }
     .mb-input:focus { outline:0; border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
     .mb-input::placeholder { color:var(--muted); }
+    .mb-select { cursor:pointer; font-weight:600; }
     .mb-search { padding-left:36px; }
     .mb-search-ico { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
     .mb-search-ico svg { width:15px; height:15px; display:block; }
@@ -341,10 +342,20 @@
 
             <div class="mb-dlg-head">
                 <h3 id="mbTitle">Create a mailbox</h3>
-                <p>Created on <strong>{{ $domain }}</strong> with a {{ $quotaMb }} MB limit. The address and password appear in the list straight away.</p>
+                <p>Created on <strong id="mbDomainLabel">{{ old('domain', $domain) }}</strong> with a {{ $quotaMb }} MB limit. The address and password appear in the list straight away.</p>
             </div>
 
             <div class="mb-dlg-body">
+                {{-- Which of the cPanel account's domains the address goes on. --}}
+                <label class="mb-label" for="mbDomain">Domain</label>
+                <select id="mbDomain" name="domain" class="mb-input mb-select" required>
+                    @foreach ($domains as $d)
+                        <option value="{{ $d }}" @selected(old('domain', $domain) === $d)>{{ $d }}</option>
+                    @endforeach
+                </select>
+
+                <div style="height:16px;"></div>
+
                 <label class="mb-label" for="mbSearch">Client <span>— optional</span></label>
 
                 {{-- Searched, not listed: every client across every business owner.
@@ -395,7 +406,7 @@
 
 <script>
 (function () {
-    var DOMAIN     = @json($domain);
+    var DOMAIN     = @json(old('domain', $domain));
     var SEARCH_URL = @json(route('admin.mailboxes.clients'));
     var TINTS      = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f43f5e'];
 
@@ -412,6 +423,26 @@
     var clear   = document.getElementById('mbClear');
     var nameIn  = document.getElementById('mbName');
     var preview = document.getElementById('mbPreview');
+    var domSel  = document.getElementById('mbDomain');
+    var domLbl  = document.getElementById('mbDomainLabel');
+
+    // The chosen domain drives the preview; the last one used is remembered per browser.
+    if (domSel) {
+        try {
+            var saved = localStorage.getItem('apex.mailboxDomain');
+            if (saved && !@json(old('domain')) && Array.prototype.some.call(domSel.options, function (o) { return o.value === saved; })) {
+                domSel.value = saved;
+            }
+        } catch (e) {}
+        DOMAIN = domSel.value;
+        if (domLbl) domLbl.textContent = DOMAIN;
+        domSel.addEventListener('change', function () {
+            DOMAIN = domSel.value;
+            if (domLbl) domLbl.textContent = DOMAIN;
+            try { localStorage.setItem('apex.mailboxDomain', DOMAIN); } catch (e) {}
+            paintPreview();
+        });
+    }
 
     // ---------- open / close ----------
     function open() {

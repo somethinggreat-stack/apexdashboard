@@ -816,4 +816,112 @@ class MailboxTest extends TestCase
             ->put('/admin/users/' . $this->va->id . '/mailbox-access')
             ->assertForbidden();
     }
+
+    // ------------------------------------------------------------------ domains
+
+    /** cPanel listing four domains, and answering "yes" to everything else. */
+    private function fakeDomains(): void
+    {
+        Http::fake([
+            'cpanel.test:2083/execute/DomainInfo/list_domains*' => Http::response(['status' => 1, 'errors' => null, 'data' => [
+                'main_domain'    => 'apexgrowthsolution.com',
+                'addon_domains'  => ['ScaleByApex.com'],
+                'sub_domains'    => ['bot.apexgrowthsolution.com', 'chat.apexgrowthsolution.com', 'bad domain!'],
+                'parked_domains' => [],
+            ]], 200),
+            'cpanel.test:2083/*' => Http::response(['status' => 1, 'errors' => null, 'data' => []], 200),
+        ]);
+    }
+
+    public function test_every_account_domain_is_offered_default_first_and_junk_dropped(): void
+    {
+        $this->fakeDomains();
+
+        $this->assertSame([
+            'apexgrowthsolution.com', 'scalebyapex.com', 'bot.apexgrowthsolution.com', 'chat.apexgrowthsolution.com',
+        ], app(CpanelMail::class)->domains());
+    }
+
+    public function test_the_domain_list_falls_back_to_the_default_when_cpanel_is_down(): void
+    {
+        Http::fake(['cpanel.test:2083/*' => Http::response('', 503)]);
+
+        $this->assertSame(['apexgrowthsolution.com'], app(CpanelMail::class)->domains());
+    }
+
+    public function test_the_create_dialog_asks_which_domain(): void
+    {
+        $this->fakeDomains();
+
+        $this->actingAs($this->super, 'admin')->get('/admin/mailboxes')
+            ->assertOk()
+            ->assertSee('name="domain"', false)
+            ->assertSee('<option value="scalebyapex.com"', false)
+            ->assertSee('<option value="chat.apexgrowthsolution.com"', false);
+    }
+
+    public function test_a_mailbox_can_be_created_on_another_domain(): void
+    {
+        $this->fakeDomains();
+
+        $this->actingAs($this->grantMailboxes($this->va), 'admin')
+            ->post('/admin/mailboxes', ['local_part' => 'spare', 'domain' => 'scalebyapex.com'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $mailbox = Mailbox::firstOrFail();
+        $this->assertSame('scalebyapex.com', $mailbox->domain);
+        $this->assertStringEndsWith('@scalebyapex.com', $mailbox->address);
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/execute/Email/add_pop') && $r['domain'] === 'scalebyapex.com');
+    }
+
+    public function test_a_domain_that_is_not_on_the_account_is_refused(): void
+    {
+        $this->fakeDomains();
+
+        $this->actingAs($this->super, 'admin')
+            ->post('/admin/mailboxes', ['local_part' => 'spare', 'domain' => 'evil.com'])
+            ->assertSessionHasErrors('mailbox');
+
+        $this->assertSame(0, Mailbox::count());
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), '/execute/Email/add_pop'));
+    }
+
+    public function test_blank_domain_uses_the_default(): void
+    {
+        $this->fakeDomains();
+
+        $this->actingAs($this->super, 'admin')->post('/admin/mailboxes', ['local_part' => 'spare'])->assertRedirect();
+
+        $this->assertSame('apexgrowthsolution.com', Mailbox::firstOrFail()->domain);
+    }
+
+    public function test_sizes_are_read_for_every_domain(): void
+    {
+        $this->fakeDomains();
+
+        app(CpanelMail::class)->usage();
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/execute/Email/list_pops_with_disk') && ! isset($r['domain']));
+    }
+
+    public function test_webmail_and_delete_use_the_mailboxs_own_domain(): void
+    {
+        $mb = Mailbox::create([
+            'admin_id' => $this->super->id, 'created_by_admin_id' => $this->super->id,
+            'local_part' => 'spare1234', 'domain' => 'scalebyapex.com',
+            'address' => 'spare1234@scalebyapex.com', 'password' => 'x', 'quota_mb' => 100,
+        ]);
+
+        Http::fake(['cpanel.test:2083/*' => Http::response(['status' => 1, 'errors' => null,
+            'data' => ['session' => 'abc', 'token' => '/cpsess1234567890']], 200)]);
+
+        $this->actingAs($this->super, 'admin')->post("/admin/mailboxes/{$mb->id}/webmail")->assertRedirect();
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'create_webmail_session_for_mail_user')
+            && $r['login'] === 'spare1234' && $r['domain'] === 'scalebyapex.com');
+
+        $this->actingAs($this->super, 'admin')->delete("/admin/mailboxes/{$mb->id}")->assertRedirect();
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/execute/Email/delete_pop') && $r['domain'] === 'scalebyapex.com');
+        $this->assertNotNull($mb->fresh()->deleted_at);
+    }
 }
