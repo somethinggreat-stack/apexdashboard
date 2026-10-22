@@ -21,49 +21,67 @@
 @endphp
 
 <div data-payments-refresh>
-<div class="pay-stats">
-    <div class="pay-stat-card">
-        <div class="pay-stat-label">Rate per Round</div>
-        <div class="pay-stat-value">${{ number_format($data['rate'], 2) }}</div>
-        <div class="pay-stat-sub">Per client per round</div>
-    </div>
-    <div class="pay-stat-card pay-stat-green">
-        <div class="pay-stat-label">Paid This Month</div>
-        <div class="pay-stat-value">${{ number_format($data['earnedThisMonth'], 2) }}</div>
-        <div class="pay-stat-sub">All-time: ${{ number_format($data['earnedTotal'], 2) }}</div>
-    </div>
-    <div class="pay-stat-card pay-stat-orange">
-        <div class="pay-stat-label">Total Unpaid</div>
-        <div class="pay-stat-value">${{ number_format($data['totalUnpaid'], 2) }}</div>
-        <div class="pay-stat-sub">
-            @php $parts = []; @endphp
-            @foreach ($data['unpaidByRound'] as $rn => $cnt)
-                @if ($cnt > 0) @php $parts[] = "R{$rn}: {$cnt}"; @endphp @endif
-            @endforeach
-            {{ $parts ? implode(' · ', $parts) : 'All paid up' }}
-        </div>
-        @if ($data['credit'] > 0 && $data['totalUnpaid'] > 0)
-            <div class="pay-stat-sub" style="color:#047857; font-weight:600;">
-                Due after ${{ number_format(min($data['credit'], $data['totalUnpaid']), 2) }} advance: ${{ number_format($data['dueAfterCredit'], 2) }}
+@php
+    $unpaidCount = count($data['unpaidItems']);
+    $unpaidParts = [];
+    foreach ($data['unpaidByRound'] as $rn => $cnt) { if ($cnt > 0) { $unpaidParts[$rn] = $cnt; } }
+@endphp
+
+{{-- Top answer: what does this owner owe right now, and the invoice buttons. --}}
+<div class="pay-hero {{ $data['totalUnpaid'] > 0 ? 'owes' : 'clear' }}">
+    <div class="pay-hero-main">
+        @if ($data['totalUnpaid'] > 0)
+            <div class="pay-hero-label">{{ $client->business_name }} currently owes</div>
+            <div class="pay-hero-amt">${{ number_format($data['totalUnpaid'], 2) }}</div>
+            <div class="pay-hero-sub">
+                {{ $unpaidCount }} unpaid {{ \Illuminate\Support\Str::plural('round', $unpaidCount) }} —
+                @foreach ($unpaidParts as $rn => $cnt)<span class="pay-hero-chip">Round {{ $rn }} × {{ $cnt }}</span>@endforeach
             </div>
+            @if ($data['credit'] > 0)
+                <div class="pay-hero-credit">
+                    Advance credit covers ${{ number_format(min($data['credit'], $data['totalUnpaid']), 2) }}
+                    → still due after credit: <strong>${{ number_format($data['dueAfterCredit'], 2) }}</strong>
+                </div>
+            @endif
+        @else
+            <div class="pay-hero-label">Account status</div>
+            <div class="pay-hero-amt">All paid up ✓</div>
+            <div class="pay-hero-sub">Every round that has been worked is marked paid.</div>
         @endif
     </div>
-    <div class="pay-stat-card">
-        <div class="pay-stat-label">Invoice</div>
-        <div class="pay-stat-value" style="font-size:14px; padding-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
+    <div class="pay-hero-actions">
+        <div class="pay-hero-actions-label">Invoice for all unpaid rounds</div>
+        <div class="pay-hero-btns">
             <form method="POST" action="{{ route('admin.payments.invoice.generate') }}" target="_blank" style="margin:0;">
                 @csrf
-                <button type="submit" class="inv-gen-btn" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}
+                <button type="submit" class="inv-gen-btn" {{ $unpaidCount === 0 ? 'disabled' : '' }}
                         title="Creates an invoice for all currently-unpaid items and opens the printable PDF page">
                     Generate Invoice PDF
                 </button>
             </form>
-            <button type="button" class="inv-copy-btn" onclick="openModal('invoiceListModal')" {{ count($data['unpaidItems']) === 0 ? 'disabled' : '' }}
+            <button type="button" class="inv-copy-btn" onclick="openModal('invoiceListModal')" {{ $unpaidCount === 0 ? 'disabled' : '' }}
                     title="Copy a plain-text invoice list (for ChatGPT)">
                 Copy List
             </button>
         </div>
-        <div class="pay-stat-sub">{{ count($data['unpaidItems']) }} unpaid item(s)</div>
+    </div>
+</div>
+
+<div class="pay-stats pay-stats-3">
+    <div class="pay-stat-card">
+        <div class="pay-stat-label">Rate per Round</div>
+        <div class="pay-stat-value">${{ number_format($data['rate'], 2) }}</div>
+        <div class="pay-stat-sub">Default per client per round. A client with a different rate shows it next to their name.</div>
+    </div>
+    <div class="pay-stat-card pay-stat-green">
+        <div class="pay-stat-label">Paid This Month</div>
+        <div class="pay-stat-value">${{ number_format($data['earnedThisMonth'], 2) }}</div>
+        <div class="pay-stat-sub">{{ now()->format('F Y') }}</div>
+    </div>
+    <div class="pay-stat-card pay-stat-green">
+        <div class="pay-stat-label">Paid All-Time</div>
+        <div class="pay-stat-value">${{ number_format($data['earnedTotal'], 2) }}</div>
+        <div class="pay-stat-sub">Everything received so far</div>
     </div>
 </div>
 
@@ -72,8 +90,11 @@
 <div class="adv-card">
     <div class="adv-head">
         <div>
-            <div class="adv-title">Advance Payments</div>
-            <div class="adv-sub">Money {{ $client->business_name }} paid up front. Unused credit comes off the invoice automatically.</div>
+            <div class="adv-title">Advance Payments <span class="adv-tag">prepaid credit</span></div>
+            <div class="adv-sub">Money {{ $client->business_name }} paid up front. Unused credit comes off every invoice automatically.</div>
+            @if ($data['credit'] > 0 && $data['totalUnpaid'] > 0)
+                <div class="adv-hint">Tip: “Apply Credit to Unpaid Rounds” marks the oldest unpaid rounds paid from this credit.</div>
+            @endif
         </div>
         <div class="adv-balance {{ $data['credit'] > 0 ? 'has' : '' }}">
             <span>Credit balance</span>
@@ -187,6 +208,10 @@
     @csrf
     <input type="hidden" name="round" id="bulk-round" value="1">
 
+    <div class="bulk-intro">
+        <strong>Mark rounds paid</strong>
+        <span>Click a square in the table below for one round, tick clients to mark a batch for one round, or mark everything unpaid at once.</span>
+    </div>
     <div class="bulk-bar">
         <label class="bulk-checkbox">
             <input type="checkbox" id="bulk-select-all">
@@ -225,6 +250,15 @@
 {{-- Table is intentionally OUTSIDE #bulk-pay-form so the per-chip mark-paid
      forms are not nested inside another form (which browsers drop, breaking the
      chips). Row checkboxes stay tied to the bulk form via the form="" attribute. --}}
+<div class="pay-legend">
+    <span class="pay-legend-title">Key:</span>
+    <span class="lg"><i class="lg-sw lg-due">$</i> Round worked, not paid yet</span>
+    <span class="lg"><i class="lg-sw lg-open">$</i> Round not reached yet</span>
+    <span class="lg"><i class="lg-sw lg-paid">✓</i> Paid</span>
+    <span class="lg"><i class="lg-sw lg-free">✓</i> Free / test ($0)</span>
+    <span class="lg"><i class="lg-sw lg-custom">$</i> Custom rate</span>
+</div>
+
 <div class="pay-matrix">
         <table>
             <thead>
@@ -436,6 +470,51 @@
 
 @push('head')
 <style>
+    /* Top summary banner */
+    .pay-hero { display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;
+        padding:22px 26px; border-radius:14px; margin:8px 0 14px; border:1px solid var(--border); }
+    .pay-hero.owes { background:var(--tint-amber-bg); border-color:transparent; }
+    .pay-hero.clear { background:var(--tint-green-bg); border-color:transparent; }
+    .pay-hero-label { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .pay-hero.owes .pay-hero-label, .pay-hero.owes .pay-hero-amt { color:var(--tint-amber-fg); }
+    .pay-hero.clear .pay-hero-label, .pay-hero.clear .pay-hero-amt { color:var(--tint-green-fg); }
+    .pay-hero-amt { font-size:42px; font-weight:800; line-height:1.1; margin:4px 0 6px; letter-spacing:-.5px; }
+    .pay-hero-sub { font-size:13.5px; color:var(--text); }
+    .pay-hero-chip { display:inline-block; margin:2px 6px 2px 0; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700;
+        background:var(--surface); color:var(--tint-amber-fg); border:1px solid rgba(0,0,0,.06); }
+    .pay-hero-credit { margin-top:8px; font-size:13px; color:#047857; font-weight:600; }
+    .pay-hero-actions { text-align:right; }
+    .pay-hero-actions-label { font-size:11.5px; color:var(--text-soft); margin-bottom:6px; font-weight:600; }
+    .pay-hero-btns { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+    .pay-hero-btns .inv-gen-btn, .pay-hero-btns .inv-copy-btn { font-size:13px; padding:9px 16px; border-radius:8px; }
+    .pay-stats.pay-stats-3 { grid-template-columns:repeat(3, 1fr); margin-top:0; }
+    .adv-tag { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-left:8px; padding:2px 8px;
+        border-radius:999px; background:var(--tint-indigo-bg); color:var(--tint-indigo-fg); vertical-align:middle; }
+    .adv-hint { font-size:12px; color:#047857; margin-top:6px; font-weight:600; }
+
+    /* "How to mark paid" line above the bulk bar */
+    .bulk-intro { display:flex; flex-direction:column; gap:2px; margin:0 2px 8px; }
+    .bulk-intro strong { font-size:15px; color:var(--text); }
+    .bulk-intro span { font-size:12.5px; color:var(--text-soft); }
+
+    /* Colour key above the table (static swatches — the real squares are untouched) */
+    .pay-legend { display:flex; align-items:center; gap:8px 18px; flex-wrap:wrap; margin:0 2px 10px; font-size:12px; color:var(--text-soft); }
+    .pay-legend-title { font-weight:700; color:var(--text); }
+    .pay-legend .lg { display:inline-flex; align-items:center; gap:6px; }
+    .lg-sw { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px;
+        font-style:normal; font-size:10px; font-weight:700; border:1.5px dashed var(--border); background:var(--surface); color:#94a3b8; }
+    .lg-sw.lg-due { background:#fffbeb; color:#b45309; border:1px solid #fcd34d; }
+    .lg-sw.lg-paid { background:#d1fae5; color:#059669; border:1px solid #a7f3d0; }
+    .lg-sw.lg-free { background:var(--surface-2); color:var(--text-soft); border:1px solid var(--muted); }
+    .lg-sw.lg-custom { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+    @media (max-width:900px) {
+        .pay-hero { padding:18px; }
+        .pay-hero-amt { font-size:34px; }
+        .pay-hero-actions { text-align:left; }
+        .pay-hero-btns { justify-content:flex-start; }
+        .pay-stats.pay-stats-3 { grid-template-columns:1fr; }
+    }
+
     /* Bulk action bar */
     .bulk-bar {
         display: flex; align-items: center; gap: 16px;

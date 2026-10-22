@@ -40,6 +40,8 @@
     .pay-pill-per-round { background:#dbeafe; color:#1e40af; }
     .pay-pill-hourly { background:#ede9fe; color:#5b21b6; }
 
+    .pay-settings-sub { margin:-6px 0 14px; font-size:12.5px; color:var(--text-soft); }
+    .pay-field-hint { display:block; margin-top:4px; font-size:11.5px; color:var(--muted); }
     .pay-settings-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px 16px; align-items:end; }
     .pay-settings-grid label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); font-weight:600; margin-bottom:4px; }
     .pay-settings-grid input, .pay-settings-grid select { width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); }

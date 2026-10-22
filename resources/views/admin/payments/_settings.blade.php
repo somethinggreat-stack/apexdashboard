@@ -12,6 +12,7 @@
             </div>
             <button type="submit" class="pay-btn-primary">Save Settings</button>
         </div>
+        <p class="pay-settings-sub">How {{ $client->business_name }} is billed. These settings apply to all their clients — remember to press <strong>Save Settings</strong> after changing anything.</p>
 
         <div class="pay-settings-grid">
             <div>
@@ -46,6 +47,7 @@
             <div class="pay-field-per-round">
                 <label>Fee per Round ($)</label>
                 <input type="number" step="0.01" min="0" name="per_round_fee" value="{{ old('per_round_fee', $client->per_round_fee) }}" placeholder="12.00">
+                <small class="pay-field-hint">Default charge for one client's one round.</small>
             </div>
 
             <div class="pay-field-hourly">
