@@ -186,11 +186,17 @@
             @endif
         </div>
 
-        <h4 class="profile-section-head">CFPB</h4>
-        <div class="info-grid">
-            <div><label>CFPB Login Email</label><div>{{ $endUser->cfpb_email ?? '—' }}</div></div>
-            <div><label>CFPB Password</label><div>{{ $endUser->cfpb_password ? '•••••••••' : '—' }}</div></div>
-        </div>
+        <h4 class="profile-section-head">Universal CFPB Logins</h4>
+        @include('client.end-users._cfpb-pair', ['email' => $endUser->cfpb_email, 'password' => $endUser->cfpb_password])
+
+        {{-- Per-round CFPB credentials — one block for each round the client has reached. --}}
+        @foreach ($endUser->reachedRoundNumbers() as $rn)
+            @php $rc = $endUser->cfpbForRound($rn); @endphp
+            @if ($rc['email'] || $rc['password'])
+                <h4 class="profile-section-head">{{ \App\Models\EndUser::ROUND_OPTIONS[$rn - 1] ?? ($rn.'th Round') }} CFPB Credentials</h4>
+                @include('client.end-users._cfpb-pair', ['email' => $rc['email'], 'password' => $rc['password']])
+            @endif
+        @endforeach
     </div>
 </div>
 
@@ -312,5 +318,28 @@
         @include('partials.status-report', ['endUser' => $endUser])
     </div>
 </div>
+
+@push('head')
+<style>
+    .cfpb-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cfpb-mask { font-family: monospace; }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+    function toggleCfpbPassword(btn) {
+        var span = btn.previousElementSibling;
+        if (!span) return;
+        if (btn.textContent.trim() === 'Show') {
+            span.textContent = span.dataset.secret || '';
+            btn.textContent = 'Hide';
+        } else {
+            span.textContent = '•••••••••';
+            btn.textContent = 'Show';
+        }
+    }
+</script>
+@endpush
 
 @endsection
