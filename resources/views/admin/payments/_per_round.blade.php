@@ -39,8 +39,8 @@
             </div>
             @if ($data['credit'] > 0)
                 <div class="pay-hero-credit">
-                    Advance credit covers ${{ number_format(min($data['credit'], $data['totalUnpaid']), 2) }}
-                    → still due after credit: <strong>${{ number_format($data['dueAfterCredit'], 2) }}</strong>
+                    <strong>Due after ${{ number_format(min($data['credit'], $data['totalUnpaid']), 2) }} advance: ${{ number_format($data['dueAfterCredit'], 2) }}</strong>
+                    (the advance credit is taken off automatically)
                 </div>
             @endif
         @else

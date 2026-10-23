@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Cookie;
 
 /**
  * Keeps the three public hosts apart (only when config('app.site_split') is on):
@@ -16,6 +17,9 @@ use Illuminate\Http\Request;
  *                                          the same path on the root host, so existing
  *                                          links and bookmarks keep working.
  *  - consumers.*                           the consumer site only; unknown paths go to its home.
+ *                                          Until CONSUMERS_LIVE is on, the public only sees the
+ *                                          "coming soon" page; the team previews the real site with
+ *                                          ?preview=<CONSUMERS_PREVIEW_KEY>.
  *
  * Every other host (chat, localhost, tests) is untouched, and with the flag off this
  * middleware does nothing at all — so it can be deployed safely ahead of the DNS/cPanel work.
@@ -28,10 +32,14 @@ class SiteHostRouter
         'leads', 'contact-submit',          // the marketing forms' POST endpoints
     ];
 
-    /** Consumer site paths (extended as pages are built). */
+    /** Consumer site paths once it is live (or being previewed). */
     private const CONSUMER_PATHS = [
-        '', 'sitemap.xml',
+        '', 'sitemap.xml', 'services', 'how-it-works', 'score-guide', 'packages', 'results',
+        'faq', 'about', 'contact', 'privacy', 'terms', 'consumer-credit-file-rights', 'notice-of-cancellation',
     ];
+
+    /** All the public needs before launch. */
+    private const CONSUMER_PATHS_PRELAUNCH = ['', 'sitemap.xml'];
 
     /** Needed on every public host (CSRF refresh for forms, health check). */
     private const SHARED = ['session/token', 'up'];
@@ -52,9 +60,7 @@ class SiteHostRouter
         }
 
         if ($host === strtolower((string) config('app.consumers_host'))) {
-            return $this->allowed($request, self::CONSUMER_PATHS)
-                ? $next($request)
-                : redirect()->away($this->on($host, $request, '/'), 302);
+            return $this->consumers($request, $next);
         }
 
         if ($host === $root || $host === 'www.' . $root) {
@@ -65,6 +71,40 @@ class SiteHostRouter
         }
 
         return $next($request);
+    }
+
+    private function consumers(Request $request, Closure $next)
+    {
+        $previewKey = (string) config('app.consumers_preview_key');
+        $cookieVal  = $previewKey !== '' ? hash('sha256', 'consumers-preview|' . $previewKey) : '';
+
+        // Raw cookie on purpose: this runs before the web group decrypts cookies.
+        $viaLink   = $previewKey !== '' && hash_equals($previewKey, (string) $request->query('preview', ''));
+        $viaCookie = $cookieVal !== '' && hash_equals($cookieVal, (string) $request->cookies->get('consumers_preview', ''));
+        $live      = (bool) config('app.consumers_live') || $viaLink || $viaCookie;
+
+        $request->attributes->set('consumers_live', $live);
+
+        $paths = $live ? self::CONSUMER_PATHS : self::CONSUMER_PATHS_PRELAUNCH;
+        if (! $this->allowed($request, $paths)) {
+            return redirect()->away($this->on(strtolower($request->getHost()), $request, '/'), 302);
+        }
+
+        $response = $next($request);
+
+        // Remember a preview for 12 hours so the team can click around.
+        if ($viaLink && ! $viaCookie) {
+            $response->headers->setCookie(new Cookie(
+                'consumers_preview', $cookieVal, time() + 43200, '/', null, true, true, false, 'Lax'
+            ));
+        }
+        // A preview must never be cached or indexed.
+        if ($live && ! config('app.consumers_live')) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+            $response->headers->set('Cache-Control', 'no-store, private');
+        }
+
+        return $response;
     }
 
     private function allowed(Request $request, array $paths): bool

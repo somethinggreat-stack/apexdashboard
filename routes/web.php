@@ -10,20 +10,44 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
+| Consumers site (consumers.apexgrowthsolution.com)
+|--------------------------------------------------------------------------
+| Registered BEFORE the marketing routes so these win on the consumers host. They only
+| match that host; with SITE_SPLIT_ENABLED off the pages 404 and "/" serves the marketing
+| home, exactly as the host did before. Until CONSUMERS_LIVE is on, the middleware shows the
+| public only the coming-soon page (the team previews with ?preview=<key>).
+*/
+Route::domain(config('app.consumers_host'))->name('consumers.')->group(function () {
+    Route::get('/',                            [\App\Http\Controllers\ConsumerSiteController::class, 'home'])->name('home');
+    Route::get('/services',                    [\App\Http\Controllers\ConsumerSiteController::class, 'services'])->name('services');
+    Route::get('/how-it-works',                [\App\Http\Controllers\ConsumerSiteController::class, 'howItWorks'])->name('how-it-works');
+    Route::get('/score-guide',                 [\App\Http\Controllers\ConsumerSiteController::class, 'scoreGuide'])->name('score-guide');
+    Route::get('/packages',                    [\App\Http\Controllers\ConsumerSiteController::class, 'packages'])->name('packages');
+    Route::get('/results',                     [\App\Http\Controllers\ConsumerSiteController::class, 'results'])->name('results');
+    Route::get('/faq',                         [\App\Http\Controllers\ConsumerSiteController::class, 'faq'])->name('faq');
+    Route::get('/about',                       [\App\Http\Controllers\ConsumerSiteController::class, 'about'])->name('about');
+    Route::get('/contact',                     [\App\Http\Controllers\ConsumerSiteController::class, 'contact'])->name('contact');
+    Route::middleware('throttle:10,1')->post('/contact', [\App\Http\Controllers\ConsumerSiteController::class, 'storeContact'])->name('contact.submit');
+    Route::get('/privacy',                     [\App\Http\Controllers\ConsumerSiteController::class, 'privacy'])->name('privacy');
+    Route::get('/terms',                       [\App\Http\Controllers\ConsumerSiteController::class, 'terms'])->name('terms');
+    Route::get('/consumer-credit-file-rights', [\App\Http\Controllers\ConsumerSiteController::class, 'creditRights'])->name('credit-rights');
+    Route::get('/notice-of-cancellation',      [\App\Http\Controllers\ConsumerSiteController::class, 'cancellation'])->name('cancellation');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Public Marketing Site
 |--------------------------------------------------------------------------
 */
 
-// "/" depends on the host once the public site is split (SITE_SPLIT_ENABLED). With the
-// flag off — or on any other host (chat, localhost) — it is the marketing home, as before.
+// "/" depends on the host once the public site is split (SITE_SPLIT_ENABLED). The consumers
+// host has its own "/" above. With the flag off — or on any other host (chat, localhost) —
+// it is the marketing home, as before; on the root it is the front door.
 Route::get('/', function (\Illuminate\Http\Request $request) {
     if (config('app.site_split')) {
         $host = strtolower($request->getHost());
         $root = strtolower((string) config('app.root_host'));
 
-        if ($host === strtolower((string) config('app.consumers_host'))) {
-            return view('consumers.coming-soon');
-        }
         if ($host === $root || $host === 'www.' . $root) {
             return view('front-door');
         }

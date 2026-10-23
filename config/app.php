@@ -70,6 +70,10 @@ return [
     'root_host'      => env('ROOT_HOST', 'apexgrowthsolution.com'),
     'partners_host'  => env('PARTNERS_HOST', 'partners.apexgrowthsolution.com'),
     'consumers_host' => env('CONSUMERS_HOST', 'consumers.apexgrowthsolution.com'),
+    // Consumer site launch: false = the public sees "coming soon". CONSUMERS_PREVIEW_KEY lets the
+    // team look at the real site first by opening https://consumers…/?preview=<key> (12-hour cookie).
+    'consumers_live'        => (bool) env('CONSUMERS_LIVE', false),
+    'consumers_preview_key' => (string) env('CONSUMERS_PREVIEW_KEY', ''),
 
     /*
     |--------------------------------------------------------------------------

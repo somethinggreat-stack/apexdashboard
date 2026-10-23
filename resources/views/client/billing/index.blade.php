@@ -97,7 +97,7 @@
             <div class="bl-hero-amt">${{ number_format($oTotal, 2) }}</div>
             <div class="bl-hero-sub">
                 @if ($byPeriod)
-                    That is {{ $model === 'package' ? 'for rounds worked in your monthly package' : 'for hours logged' }} that have not been paid out yet. The period breakdown is in Payment History below.
+                    That is {{ $model === 'package' ? 'in monthly rounds' : 'in logged hours' }} that has not yet been paid out. The period breakdown is in Payment History below.
                 @else
                     {{ $outstanding['count'] }} unpaid {{ \Illuminate\Support\Str::plural('round', $outstanding['count']) }}
                     × ${{ number_format($fee, 2) }} = ${{ number_format($outstanding['subtotal'], 2) }}.
@@ -170,7 +170,7 @@
                 </tr>
                 @if ($outstanding['used'] > 0)
                     <tr class="bl-credit-row">
-                        <td colspan="2" style="text-align:right;">Less: your advance credit</td>
+                        <td colspan="2" style="text-align:right;">Less: your advance payment</td>
                         <td class="bl-num">−${{ number_format($outstanding['used'], 2) }}</td>
                     </tr>
                 @endif

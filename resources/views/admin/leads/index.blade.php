@@ -26,6 +26,9 @@
         <a href="{{ route('admin.leads.index', ['type' => 'contact']) }}" class="lead-tab {{ $type === 'contact' ? 'active' : '' }}">
             Contact Form <span class="lead-tab-count">{{ $counts['contact'] }}</span>
         </a>
+        <a href="{{ route('admin.leads.index', ['type' => 'consumer']) }}" class="lead-tab {{ $type === 'consumer' ? 'active' : '' }}">
+            Consumers <span class="lead-tab-count">{{ $counts['consumer'] ?? 0 }}</span>
+        </a>
     </div>
 
     <div class="table-scroll"><table class="data-table" id="leadsTable">
@@ -55,12 +58,22 @@
                     <td>
                         @if ($lead->type === \App\Models\Lead::TYPE_POPUP)
                             <span class="lead-pill lead-pill-popup">Popup</span>
+                        @elseif ($lead->type === \App\Models\Lead::TYPE_CONSUMER)
+                            <span class="lead-pill lead-pill-consumer">Consumer</span>
                         @else
                             <span class="lead-pill lead-pill-contact">Contact</span>
                         @endif
                     </td>
                     <td class="lead-details">
-                        @if ($lead->type === \App\Models\Lead::TYPE_CONTACT)
+                        @if ($lead->type === \App\Models\Lead::TYPE_CONSUMER)
+                            @php $d = $lead->details ?? []; @endphp
+                            <div><strong>{{ $lead->subject ?: 'Consumer inquiry' }}</strong></div>
+                            @if (! empty($d['state']))<div class="muted">State: {{ $d['state'] }}</div>@endif
+                            @if (! empty($d['needs']))<div class="muted">Needs: {{ implode(', ', $d['needs']) }}</div>@endif
+                            @if (! empty($d['package']))<div class="muted">Interested in: {{ $d['package'] }}</div>@endif
+                            @if ($lead->message)<div class="muted">{{ $lead->message }}</div>@endif
+                            @if (! empty($d['consent_at']))<div class="muted" style="font-size:11px;">Contact consent given {{ $d['consent_at'] }}</div>@endif
+                        @elseif ($lead->type === \App\Models\Lead::TYPE_CONTACT)
                             @if ($lead->subject)<div><strong>{{ $lead->subject }}</strong></div>@endif
                             @if ($lead->message)<div class="muted">{{ $lead->message }}</div>@endif
                         @else
@@ -119,6 +132,7 @@
     }
     .lead-pill-popup   { background: #ede9fe; color: #5b21b6; }
     .lead-pill-contact { background: #e0f2fe; color: #075985; }
+    .lead-pill-consumer { background: #dcfce7; color: #166534; }
     .lead-details { max-width: 360px; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.45; }
 </style>
 @endpush

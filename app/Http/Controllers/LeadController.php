@@ -68,7 +68,7 @@ class LeadController extends Controller
     public function dashboard(Request $request)
     {
         $type = $request->query('type', 'all');
-        if (! in_array($type, ['all', Lead::TYPE_POPUP, Lead::TYPE_CONTACT], true)) {
+        if (! in_array($type, ['all', Lead::TYPE_POPUP, Lead::TYPE_CONTACT, Lead::TYPE_CONSUMER], true)) {
             $type = 'all';
         }
 
@@ -82,6 +82,7 @@ class LeadController extends Controller
             'all'     => Lead::count(),
             'popup'   => Lead::where('type', Lead::TYPE_POPUP)->count(),
             'contact' => Lead::where('type', Lead::TYPE_CONTACT)->count(),
+            'consumer' => Lead::where('type', Lead::TYPE_CONSUMER)->count(),
         ];
 
         return view('admin.leads.index', compact('leads', 'counts', 'type'));

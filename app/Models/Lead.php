@@ -11,6 +11,7 @@ class Lead extends Model
 
     public const TYPE_POPUP   = 'popup';
     public const TYPE_CONTACT = 'contact';
+    public const TYPE_CONSUMER = 'consumer';   // consumers.* contact form
 
     protected $fillable = [
         'type',

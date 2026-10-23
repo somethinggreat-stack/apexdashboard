@@ -18,6 +18,23 @@ class SitemapController extends Controller
         } elseif (config('app.site_split') && $host === strtolower((string) config('app.consumers_host'))) {
             // Nothing to index until the consumer site launches (the coming-soon page is noindex).
             $urls = [];
+            if (config('app.consumers_live')) {
+                $urls = [
+                    ['/',                            'weekly',  '1.0'],
+                    ['/services',                    'monthly', '0.9'],
+                    ['/packages',                    'monthly', '0.9'],
+                    ['/how-it-works',                'monthly', '0.8'],
+                    ['/results',                     'monthly', '0.8'],
+                    ['/score-guide',                 'monthly', '0.7'],
+                    ['/faq',                         'monthly', '0.7'],
+                    ['/about',                       'monthly', '0.6'],
+                    ['/contact',                     'monthly', '0.8'],
+                    ['/privacy',                     'yearly',  '0.3'],
+                    ['/terms',                       'yearly',  '0.3'],
+                    ['/consumer-credit-file-rights', 'yearly',  '0.4'],
+                    ['/notice-of-cancellation',      'yearly',  '0.4'],
+                ];
+            }
         } else {
             // The B2B marketing pages: on the partners host once the site is split, and on
             // the main host as before while it isn't. url() follows the request's own host.
