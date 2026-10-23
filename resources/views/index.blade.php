@@ -2371,10 +2371,6 @@ footer { background: linear-gradient(180deg, var(--ink) 0%, #081530 100%); color
           <span class="num">Weekly</span>
           <span class="label">Client File Updates</span>
         </div>
-        <div class="trust-item">
-          <span class="num">Multi-Channel</span>
-          <span class="label">Dispute Workflow</span>
-        </div>
       </div>
     </div>
 
