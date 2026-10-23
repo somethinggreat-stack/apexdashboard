@@ -38,6 +38,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // The chat subdomain only serves the Team Chat surface (no-op on every other host).
         $middleware->append(\App\Http\Middleware\ChatHostGuard::class);
 
+        // Public site split (root front door / partners / consumers). Does nothing unless
+        // SITE_SPLIT_ENABLED=true, and never touches the chat host.
+        $middleware->append(\App\Http\Middleware\SiteHostRouter::class);
+
         // Team Chat is usable ONLY from the desktop app; browsers are sent to the download page.
         $middleware->append(\App\Http\Middleware\ChatAppOnly::class);
 

@@ -61,6 +61,17 @@ return [
     'chat_host' => env('CHAT_HOST', 'chat.apexgrowthsolution.com'),
 
     /*
+    | Public site split. When SITE_SPLIT_ENABLED=true the root domain becomes a small
+    | front door, the B2B marketing pages live on the partners host (old root URLs
+    | 301 there), and the consumers host serves its own site. OFF by default: with it
+    | off every host behaves exactly as before. See App\Http\Middleware\SiteHostRouter.
+    */
+    'site_split'     => (bool) env('SITE_SPLIT_ENABLED', false),
+    'root_host'      => env('ROOT_HOST', 'apexgrowthsolution.com'),
+    'partners_host'  => env('PARTNERS_HOST', 'partners.apexgrowthsolution.com'),
+    'consumers_host' => env('CONSUMERS_HOST', 'consumers.apexgrowthsolution.com'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

@@ -14,7 +14,23 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/',         fn () => view('index'))->name('home');
+// "/" depends on the host once the public site is split (SITE_SPLIT_ENABLED). With the
+// flag off — or on any other host (chat, localhost) — it is the marketing home, as before.
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    if (config('app.site_split')) {
+        $host = strtolower($request->getHost());
+        $root = strtolower((string) config('app.root_host'));
+
+        if ($host === strtolower((string) config('app.consumers_host'))) {
+            return view('consumers.coming-soon');
+        }
+        if ($host === $root || $host === 'www.' . $root) {
+            return view('front-door');
+        }
+    }
+
+    return view('index');
+})->name('home');
 Route::get('/about',    fn () => view('about'))->name('about');
 Route::get('/contact',  fn () => view('contact'))->name('contact');
 Route::get('/results',  fn () => view('results'))->name('results');
