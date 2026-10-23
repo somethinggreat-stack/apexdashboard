@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="Try Apex on 5 test clients first. We run the full credit repair fulfillment workflow — certified letters, bureau follow-up calls, CFPB / FTC documentation, response monitoring, and Week 4 reporting — and you only pay once results are in. No upfront commitment." />
 <title>Try 5 Test Clients — Pay After Results | Apex Growth Solutions</title>
+<link rel="canonical" href="{{ url()->current() }}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" fetchpriority="high">

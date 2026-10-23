@@ -5,3 +5,4 @@ Disallow: /business-owner/
 Disallow: /business-owner
 
 Sitemap: https://apexgrowthsolution.com/sitemap.xml
+Sitemap: https://partners.apexgrowthsolution.com/sitemap.xml

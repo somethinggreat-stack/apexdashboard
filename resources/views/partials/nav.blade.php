@@ -203,7 +203,7 @@
       <li><a href="/results">Business Results</a></li>
       <li><a href="/service-areas">Service Areas</a></li>
       <li><a href="/contact">Contact</a></li>
-      <li><a href="{{ route('client.login') }}">Business Owner Login</a></li>
+      <li><a href="{{ config('app.site_split') ? 'https://' . config('app.root_host') . route('client.login', [], false) : route('client.login') }}">Business Owner Login</a></li>
     </ul>
     @unless(request()->is('trial'))
       <a href="/trial" class="btn-primary"><span>Try 5 Test Clients</span> <span class="arrow">&rarr;</span></a>

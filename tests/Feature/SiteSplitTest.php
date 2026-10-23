@@ -98,6 +98,41 @@ class SiteSplitTest extends TestCase
         $this->assertStringNotContainsString('partners.apexgrowthsolution.com', (string) $resp->headers->get('Location'));
     }
 
+    public function test_sitemaps_follow_their_own_host(): void
+    {
+        $this->split(true);
+
+        $partners = $this->get(self::PARTNERS . '/sitemap.xml')->assertOk()->getContent();
+        $this->assertStringContainsString('<loc>https://partners.apexgrowthsolution.com/about</loc>', $partners);
+        $this->assertStringNotContainsString('<loc>https://apexgrowthsolution.com/about</loc>', $partners);
+
+        // Root lists only the front door (the old URLs there 301, so they must not be in it).
+        $root = $this->get(self::ROOT . '/sitemap.xml')->assertOk()->getContent();
+        $this->assertStringContainsString('<loc>https://apexgrowthsolution.com</loc>', $root);
+        $this->assertStringNotContainsString('/about', $root);
+
+        // Consumers has nothing to index while it is "coming soon".
+        $this->assertStringNotContainsString('<loc>', $this->get(self::CONSUMERS . '/sitemap.xml')->getContent());
+    }
+
+    public function test_partner_pages_carry_a_self_canonical_on_their_own_host(): void
+    {
+        $this->split(true);
+
+        $this->get(self::PARTNERS . '/about')->assertOk()
+            ->assertSee('<link rel="canonical" href="https://partners.apexgrowthsolution.com/about" />', false);
+        $this->get(self::PARTNERS . '/trial')->assertOk()
+            ->assertSee('<link rel="canonical" href="https://partners.apexgrowthsolution.com/trial" />', false);
+    }
+
+    public function test_partners_login_link_goes_straight_to_the_root_host(): void
+    {
+        $this->split(true);
+
+        $this->get(self::PARTNERS . '/about')->assertOk()
+            ->assertSee('href="https://apexgrowthsolution.com/business-owner/login"', false);
+    }
+
     public function test_contact_details_are_the_new_ones(): void
     {
         $this->split(false);

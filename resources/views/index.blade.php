@@ -9,6 +9,7 @@
 <meta name="facebook-domain-verification" content="y1dk6klawxgk5dafue8fvhyj3grd02" />
 <meta name="description" content="Apex Growth Solutions — backend credit repair fulfillment partner. Dispute prep, bureau follow-up calls, CFPB / FTC documentation, Innovis disputes, and weekly client reporting for credit repair businesses." />
 <title>Apex Growth Solutions | Credit Repair Fulfillment Partner For Credit Repair Businesses</title>
+<link rel="canonical" href="{{ url()->current() }}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="/Images/heroimage.webp" type="image/webp" imagesrcset="/Images/heroimage.webp 1x" fetchpriority="high">

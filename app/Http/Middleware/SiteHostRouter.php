@@ -30,7 +30,7 @@ class SiteHostRouter
 
     /** Consumer site paths (extended as pages are built). */
     private const CONSUMER_PATHS = [
-        '',
+        '', 'sitemap.xml',
     ];
 
     /** Needed on every public host (CSRF refresh for forms, health check). */
