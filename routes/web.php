@@ -116,10 +116,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Dedicated Team Chat sign-in (used by the desktop app), separate from the dashboard.
         Route::get('chat-login', [Admin\AuthController::class, 'showChatLogin'])->name('chat-login');
         Route::post('chat-login', [Admin\AuthController::class, 'chatLogin'])->name('chat-login.attempt');
+
+        // Authenticator-app code, asked for after a correct password (nobody is signed in yet).
+        Route::get('two-factor/challenge', [Admin\TwoFactorController::class, 'challenge'])->name('two-factor.challenge');
+        Route::post('two-factor/challenge', [Admin\TwoFactorController::class, 'verify'])->name('two-factor.verify');
     });
 
-    Route::middleware(['auth:admin', \App\Http\Middleware\TeamChatSession::class, \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {
+    Route::middleware(['auth:admin', \App\Http\Middleware\RequireTwoFactor::class, \App\Http\Middleware\TeamChatSession::class, \App\Http\Middleware\LogActivity::class, \App\Http\Middleware\TrackPresence::class])->group(function () {
         Route::match(['get', 'post'], 'logout', [Admin\AuthController::class, 'logout'])->name('logout');
+
+        // Authenticator-app setup + management (exempt from RequireTwoFactor by route name).
+        Route::get('two-factor', [Admin\TwoFactorController::class, 'manage'])->name('two-factor.manage');
+        Route::get('two-factor/setup', [Admin\TwoFactorController::class, 'setup'])->name('two-factor.setup');
+        Route::post('two-factor/setup', [Admin\TwoFactorController::class, 'confirm'])->middleware('throttle:20,1')->name('two-factor.confirm');
+        Route::get('two-factor/recovery-codes', [Admin\TwoFactorController::class, 'recovery'])->name('two-factor.recovery');
+        Route::post('two-factor/recovery-codes', [Admin\TwoFactorController::class, 'regenerateCodes'])->middleware('throttle:10,1')->name('two-factor.regenerate');
+        Route::post('two-factor/disable', [Admin\TwoFactorController::class, 'disable'])->middleware('throttle:10,1')->name('two-factor.disable');
 
         // Self-service profile — any authenticated admin (super, VA, leads agent)
         // edits their own name, email and password.
@@ -142,6 +154,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('users', [Admin\UserController::class, 'index'])->name('users.index');
             Route::post('users', [Admin\UserController::class, 'store'])->name('users.store');
             Route::put('users/{id}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
+            Route::post('users/{id}/two-factor-reset', [Admin\UserController::class, 'resetTwoFactor'])->name('users.two-factor-reset');
             Route::put('users/{id}/credentials-access', [Admin\UserController::class, 'toggleCredentials'])->name('users.credentials-access');
             Route::put('users/{id}/mailbox-access', [Admin\UserController::class, 'toggleMailboxes'])->name('users.mailbox-access');
             Route::delete('users/{id}', [Admin\UserController::class, 'destroy'])->name('users.destroy');

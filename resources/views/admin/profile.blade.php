@@ -22,6 +22,20 @@
         </div>
     </div>
 
+    <div class="card pf-2fa">
+        <div>
+            <h3>Two-factor sign-in</h3>
+            <p class="muted">
+                @if ($admin->hasTwoFactor())
+                    <strong style="color:#166534;">On</strong> &mdash; a code from Google Authenticator is needed to sign in.
+                @else
+                    <strong style="color:#92400e;">Not set up</strong> &mdash; add a code from Google Authenticator to protect this account.
+                @endif
+            </p>
+        </div>
+        <a href="{{ route('admin.two-factor.manage') }}" class="btn btn-sm">{{ $admin->hasTwoFactor() ? 'Manage' : 'Set up' }}</a>
+    </div>
+
     <form method="POST" action="{{ route('admin.profile.update') }}" class="card pf-card" autocomplete="off">
         @csrf @method('PUT')
 
@@ -83,6 +97,8 @@
     .pf-name { margin:0 0 6px; font-size:20px; }
     .pf-meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .pf-email { color:var(--pro-muted, #64748b); font-size:13px; }
+    .pf-2fa { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 22px; margin-bottom:16px; }
+    .pf-2fa h3 { margin:0 0 2px; font-size:15px; } .pf-2fa .muted { margin:0; font-size:12.5px; }
     .pf-card { padding:6px 22px 20px; }
     .pf-section { padding:18px 0; border-bottom:1px solid var(--pro-line, #e6ebf2); }
     .pf-section:last-of-type { border-bottom:none; }

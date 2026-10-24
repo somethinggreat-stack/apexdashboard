@@ -14,8 +14,93 @@ class Admin extends Authenticatable
     // are set only via explicit assignment (seeder / UserController) so a stray
     // create()/update() can never escalate an account. Security invariant.
     protected $fillable = ['email', 'password', 'full_name', 'avatar'];
-    protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['password' => 'hashed', 'last_seen_at' => 'datetime'];
+    protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'];
+    protected $casts = [
+        'password'                  => 'hashed',
+        'last_seen_at'              => 'datetime',
+        'two_factor_secret'         => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at'   => 'datetime',
+    ];
+
+    // ---- Two-factor sign-in (authenticator app) ----
+
+    /** Has this account finished setting up an authenticator app? */
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    /** Is 2FA switched on for the whole system? (TWO_FACTOR_ENFORCE=false is the emergency off-switch.) */
+    public static function twoFactorEnabled(): bool
+    {
+        return (bool) config('team.two_factor.enabled', true);
+    }
+
+    /** Must this account have 2FA? Decided by role, from TWO_FACTOR_REQUIRED_ROLES. */
+    public function requiresTwoFactor(): bool
+    {
+        return self::twoFactorEnabled()
+            && in_array($this->role ?? 'va', (array) config('team.two_factor.required_roles', ['super']), true);
+    }
+
+    /**
+     * Make 10 single-use recovery codes. Only a hash of each is kept, so the plain codes are
+     * returned here once and can never be shown again.
+     *
+     * @return list<string>
+     */
+    public function issueRecoveryCodes(): array
+    {
+        $plain = [];
+        for ($i = 0; $i < 10; $i++) {
+            $raw     = bin2hex(random_bytes(5));                       // 10 hex characters
+            $plain[] = substr($raw, 0, 5) . '-' . substr($raw, 5, 5);
+        }
+        $this->forceFill([
+            'two_factor_recovery_codes' => array_map(fn ($c) => self::hashRecoveryCode($c), $plain),
+        ])->save();
+
+        return $plain;
+    }
+
+    /** Spend a recovery code. True once; the same code never works again. */
+    public function consumeRecoveryCode(string $code): bool
+    {
+        $hash  = self::hashRecoveryCode($code);
+        $codes = (array) ($this->two_factor_recovery_codes ?? []);
+        foreach ($codes as $i => $stored) {
+            if (hash_equals((string) $stored, $hash)) {
+                unset($codes[$i]);
+                $this->forceFill(['two_factor_recovery_codes' => array_values($codes)])->save();
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function recoveryCodesLeft(): int
+    {
+        return count((array) ($this->two_factor_recovery_codes ?? []));
+    }
+
+    private static function hashRecoveryCode(string $code): string
+    {
+        return hash('sha256', strtolower(preg_replace('/[^a-z0-9]/i', '', $code)));
+    }
+
+    /** Remove the authenticator so the account has to enrol again. */
+    public function clearTwoFactor(): void
+    {
+        $this->forceFill([
+            'two_factor_secret'         => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at'   => null,
+            'two_factor_last_step'      => null,
+        ])->save();
+    }
 
     protected static function booted(): void
     {

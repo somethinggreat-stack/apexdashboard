@@ -88,6 +88,28 @@ class UserController extends Controller
         return back()->with('status', "Password updated for {$user->full_name}.");
     }
 
+    /**
+     * Clear a colleague's authenticator after they lose their phone and recovery codes. They sign in
+     * with their password and, if their role requires it, set the authenticator up again. Needs the
+     * super admin's own password, and leaves a line in the activity log.
+     */
+    public function resetTwoFactor(Request $request, string $id)
+    {
+        $me = Auth::guard('admin')->user();
+        $request->validate(['confirm_password' => 'required|string']);
+
+        if (! \Illuminate\Support\Facades\Hash::check((string) $request->input('confirm_password'), $me->password)) {
+            return back()->withErrors(['user' => 'Your password was not right, so nothing was changed.']);
+        }
+
+        $user = $this->orgScope($me->dataOwnerId())->findOrFail($id);
+        $user->clearTwoFactor();
+
+        \App\Support\AdminSignIn::log($request, $me, 'two_factor_reset', "Cleared the authenticator for {$user->full_name}");
+
+        return back()->with('status', "Authenticator cleared for {$user->full_name}. They will set it up again at their next sign-in.");
+    }
+
     /** Grant or revoke a VA's access to the business owner Credentials vault. */
     public function toggleCredentials(string $id)
     {

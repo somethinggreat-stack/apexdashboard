@@ -17,6 +17,23 @@ return [
     ],
 
     /*
+    | Two-factor sign-in (authenticator app: Google Authenticator, Microsoft Authenticator, Authy).
+    |
+    |   enabled         TWO_FACTOR_ENFORCE=false is the EMERGENCY off-switch: no one is challenged and
+    |                   no one is forced to enrol. Needs a redeploy (config is cached).
+    |   required_roles  Roles that MUST enrol, comma separated: super, va, leads. Roll out one at a
+    |                   time, e.g. "super" first, then "super,va". Anyone can still enrol voluntarily,
+    |                   and once enrolled an account is always challenged.
+    |   pending_minutes How long a correct password waits for its code before starting over.
+    */
+    'two_factor' => [
+        'enabled'         => (bool) env('TWO_FACTOR_ENFORCE', true),
+        'required_roles'  => array_values(array_filter(array_map('trim', explode(',', (string) env('TWO_FACTOR_REQUIRED_ROLES', 'super'))))),
+        'issuer'          => env('TWO_FACTOR_ISSUER', 'Apex Growth Solutions'),
+        'pending_minutes' => 5,
+    ],
+
+    /*
     | Team Chat upload ceiling for ONE message (all its files + form data), in MiB.
     | The chat host sits behind Cloudflare, which rejects request bodies over
     | 100 MiB (measured 2026-09-17: 104,857,600 bytes accepted, 106,000,000

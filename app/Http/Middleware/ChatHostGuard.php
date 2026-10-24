@@ -18,6 +18,7 @@ class ChatHostGuard
     private const ALLOWED = [
         'admin/team-messages',   // the chat itself + all its poll/action endpoints + attachments
         'admin/chat-login',      // the chat sign-in
+        'admin/two-factor',      // authenticator-app challenge + setup (part of signing in)
         'admin/logout',
         'admin/push',            // web-push subscribe/unsubscribe
         'admin/profile',         // own profile (avatar, password)

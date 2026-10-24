@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
+use App\Support\AdminSignIn;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -34,30 +36,15 @@ class AuthController extends Controller
             ]);
         }
 
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+        if ($user = $this->checkPassword($credentials)) {
             RateLimiter::clear($key);
-            $request->session()->regenerate();
-            $this->logLogin($request);
 
-            // Leads agents can't reach the business-owner workflow — land them
-            // on their leads pipeline instead (and don't honour a stored
-            // "intended" URL they'd only get a 403 on).
-            $user = Auth::guard('admin')->user();
-
-            // One-shot flag: the walk-on animation plays on the first page the
-            // super admin or a VA sees after signing in, then clears itself.
-            if ($user->isSuper() || $user->isVa()) {
-                $request->session()->put('walker_once', true);
+            // Enrolled accounts are NOT signed in yet: the authenticator code comes first.
+            if (Admin::twoFactorEnabled() && $user->hasTwoFactor()) {
+                return AdminSignIn::holdForCode($request, $user, $request->boolean('remember'), false);
             }
 
-            if ($user->isLeads()) {
-                return redirect()->route('admin.prospect-leads.index', ['channel' => 'whatsapp']);
-            }
-            if ($user->isSuper()) {
-                return redirect()->intended(route('admin.dashboard'));
-            }
-
-            return redirect()->intended(route('admin.client-selector.index'));
+            return AdminSignIn::complete($request, $user, $request->boolean('remember'), false);
         }
 
         RateLimiter::hit($key, 60);
@@ -90,23 +77,19 @@ class AuthController extends Controller
             ]);
         }
 
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
-            $user = Auth::guard('admin')->user();
-
+        if ($user = $this->checkPassword($credentials)) {
             // Team Chat is for the super admin and VAs only — leads have no chat.
             if ($user->isLeads()) {
-                Auth::guard('admin')->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
                 return back()->withErrors(['email' => 'Team Chat is not available for your account.'])->onlyInput('email');
             }
 
             RateLimiter::clear($key);
-            $request->session()->regenerate();
-            $this->logLogin($request);
 
-            return redirect()->route('admin.team-messages.index', ['standalone' => 1]);
+            if (Admin::twoFactorEnabled() && $user->hasTwoFactor()) {
+                return AdminSignIn::holdForCode($request, $user, $request->boolean('remember'), true);
+            }
+
+            return AdminSignIn::complete($request, $user, $request->boolean('remember'), true);
         }
 
         RateLimiter::hit($key, 60);
@@ -114,16 +97,16 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
     }
 
-    private function logLogin(Request $request): void
+    /**
+     * Check the email + password WITHOUT signing anyone in, so an account that owes an
+     * authenticator code is never logged in half-way. Returns the account, or null.
+     */
+    private function checkPassword(array $credentials): ?Admin
     {
-        \App\Models\ActivityLog::create([
-            'admin_id'    => Auth::guard('admin')->id(),
-            'action'      => 'login',
-            'description' => 'Logged in',
-            'method'      => 'POST',
-            'path'        => '/admin/login',
-            'ip'          => $request->ip(),
-        ]);
+        $provider = Auth::guard('admin')->getProvider();
+        $user     = $provider->retrieveByCredentials($credentials);
+
+        return ($user instanceof Admin && $provider->validateCredentials($user, $credentials)) ? $user : null;
     }
 
     public function logout(Request $request)

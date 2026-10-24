@@ -32,6 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- 2FA is covered by TwoFactorTest, which switches it on explicitly. Everywhere else the
+             tests sign in as plain admins and must not be forced through enrolment. -->
+        <env name="TWO_FACTOR_ENFORCE" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
     </php>
 </phpunit>

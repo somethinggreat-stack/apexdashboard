@@ -47,6 +47,14 @@
                                 <input type="hidden" name="password" value="">
                                 <button type="button" class="btn btn-sm" onclick="resetPw(this, '{{ addslashes($u->full_name) }}')">Reset Password</button>
                             </form>
+                            @if ($u->hasTwoFactor())
+                                <form method="POST" action="{{ route('admin.users.two-factor-reset', $u->id) }}"
+                                      onsubmit="var p = prompt('Clear the authenticator for {{ addslashes($u->full_name) }}?\n\nType YOUR password to confirm:'); if (!p) return false; this.confirm_password.value = p; return true;">
+                                    @csrf
+                                    <input type="hidden" name="confirm_password" value="">
+                                    <button class="btn btn-sm">Reset 2FA</button>
+                                </form>
+                            @endif
                             @if ($u->isVa())
                                 <form method="POST" action="{{ route('admin.users.credentials-access', $u->id) }}">
                                     @csrf @method('PUT')
