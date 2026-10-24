@@ -19,7 +19,6 @@
                 <span>Three-bureau review</span>
                 <span>Weekly status updates</span>
                 <span>Built on the FCRA &amp; FDCPA</span>
-                <span>Clear, upfront pricing</span>
             </div>
         </div>
 
